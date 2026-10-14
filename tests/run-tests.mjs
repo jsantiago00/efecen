@@ -331,7 +331,8 @@ for (const cid of E.courseOrder) {
     const ms = Date.now() - t0;
     if (ms > 8000) console.log(`  (lenta: ${id} tardó ${(ms / 1000).toFixed(1)} s con ${Nt} instancias; considerá testN)`);
     // variedad: una plantilla paramétrica no debería repetir siempre lo mismo
-    ok(answers.size >= (t.type === "tf" ? 2 : 5), id, `poca variedad: ${answers.size} variantes distintas en ${N}`);
+    // (con pocas instancias, por ejemplo en una corrida rápida, el chequeo no tiene sentido)
+    if (Nt >= 10) ok(answers.size >= (t.type === "tf" ? 2 : 5), id, `poca variedad: ${answers.size} variantes distintas en ${N}`);
   }
 }
 ok(totalTemplates >= 30, "contenido", `solo ${totalTemplates} plantillas (meta: 30)`);
