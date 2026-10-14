@@ -239,7 +239,7 @@
       demo: [R`**Pendiente.** Si $x'(t_0) \neq 0$, cerca de $t_0$ se puede despejar $t$ en función de $x$ y $y = y(t(x))$. Por la [[regla-cadena|regla de la cadena]], $\frac{dy}{dx} = y'(t)\frac{dt}{dx} = \frac{y'(t)}{x'(t)}$. $\blacksquare$`],
       examples: [{ q: R`Pendiente de $x = t^2$, $y = t^3$ en $t = 2$.`, steps: [R`$\frac{dy}{dx} = \frac{3t^2}{2t} = \frac{3t}{2} = 3$.`] }],
       tips: [R`$\frac{dy}{dx}$ no es $\frac{dx}{dt}$ ni $\frac{dy}{dt}$: es su cociente.`],
-      see: ["c2-polares"]
+      see: ["c2-polares", "c2-curvas-vectoriales"]
     },
     "c2-polares": {
       title: "Coordenadas polares", aliases: ["coordenadas polares", "polares", "cardioide", "rosa polar", "área en polares", "curvas polares"], concepts: ["c2-polares"],
@@ -677,6 +677,387 @@
           intro: R`$f(x) = \sum\frac{f^{(n)}(a)}{n!}(x - a)^n$. Conviene saber de memoria las de $e^x$, $\sin$, $\cos$, $\frac{1}{1-x}$ y $\ln(1+x)$.` },
         { id: "c2-fourier", title: "Series de Fourier", templates: ["c2-fourier-num"], theory: ["c2-fourier"],
           intro: R`$a_n = \frac1\pi\int f\cos nx$, $b_n = \frac1\pi\int f\sin nx$. Par: solo cosenos; impar: solo senos.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 4 · FUNCIONES VECTORIALES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => num(x, d).replace(".", "{,}");
+  const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+  const norm = a => Math.sqrt(dot(a, a));
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const sub = (a, b) => a.map((x, i) => x - b[i]);
+  // curvatura geométrica: 1/radio de la circunferencia que pasa por tres puntos muy cercanos de la curva
+  const kappa3 = (r, t, h = 1e-3) => { const A = r(t - h), B = r(t), C = r(t + h), a = norm(sub(B, C)), b = norm(sub(A, C)), c = norm(sub(A, B)), area2 = norm(cross(sub(B, A), sub(C, A))); return 2 * area2 / (a * b * c); };
+  const mono = (c, s) => (c === 0 ? "0" : c === 1 ? s : c === -1 ? "-" + s : c + s);
+  // familias de curvas: r(t), r'(t), r''(t) y su tex
+  function curve(r) {
+    if (r.bool()) {
+      const a = r.int(1, 5), b = r.int(1, 5);
+      return { tex: `\\vec r(t) = \\left(${mono(a, "\\cos t")},\\ ${mono(a, "\\sin t")},\\ ${mono(b, "t")}\\right)`, r: t => [a * Math.cos(t), a * Math.sin(t), b * t], d1: t => [-a * Math.sin(t), a * Math.cos(t), b], d2: t => [-a * Math.cos(t), -a * Math.sin(t), 0], helix: [a, b] };
+    }
+    const p = r.nz(-3, 3), q = r.nz(-3, 3), s = r.nz(-2, 2);
+    return { tex: `\\vec r(t) = \\left(${mono(q, "t")},\\ ${mono(p, "t^2")},\\ ${mono(s, "t^3")}\\right)`, r: t => [q * t, p * t * t, s * t ** 3], d1: t => [q, 2 * p * t, 3 * s * t * t], d2: t => [0, 2 * p, 6 * s * t] };
+  }
+
+  T["c2-vel-num"] = {
+    type: "numeric", concepts: ["c2-curvas-vectoriales"], difficulty: 1,
+    generate(r) {
+      const C = curve(r), t0 = r.int(-2, 2), v = C.d1(t0), sp = norm(v);
+      return {
+        prompt: `Una partícula recorre $${C.tex}$. ¿Cuál es su rapidez en $t = ${t0}$?`,
+        answer: sp,
+        solution: [`[[c2-curvas-vectoriales|Velocidad]]: $\\vec v = \\vec r\\,'(t)$, derivando componente a componente; la rapidez es $|\\vec v|$.`, `$\\vec r\\,'(${t0}) \\approx (${v.map(x => nd(x)).join(",\\ ")})$, así que $|\\vec v| \\approx ${nd(sp)}$.`],
+        // verificación: distancia entre dos posiciones muy cercanas dividida por el tiempo
+        verify: { kind: "value", tol: 1e-6, fn: () => { const h = 1e-5; return norm(sub(C.r(t0 + h), C.r(t0 - h))) / (2 * h); } }
+      };
+    }
+  };
+  T["c2-integral-vect-num"] = {
+    type: "numeric", concepts: ["c2-curvas-vectoriales"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-4, 4), b = r.nz(-4, 4), c = r.nz(-3, 3), P = [r.int(-3, 3), r.int(-3, 3), r.int(-3, 3)], t1 = r.int(1, 3), k = r.int(0, 2);
+      const sol = [P[0] + a * t1, P[1] + b * t1 * t1 / 2, P[2] + c * t1 ** 3 / 3];
+      return {
+        prompt: `Una partícula tiene velocidad $\\vec v(t) = \\left(${a},\\ ${mono(b, "t")},\\ ${mono(c, "t^2")}\\right)$ y en $t = 0$ está en $(${P.join(", ")})$. ¿Cuánto vale su coordenada $${"xyz"[k]}$ en $t = ${t1}$?`,
+        answer: sol[k],
+        solution: [`[[c2-curvas-vectoriales|Integral de una función vectorial]]: se integra componente a componente y la constante sale de la posición inicial.`, `$\\vec r(t) = \\left(${P[0]} ${a < 0 ? "-" : "+"} ${Math.abs(a)}t,\\ ${P[1]} ${b < 0 ? "-" : "+"} ${H.frac(Math.abs(b), 2)}t^2,\\ ${P[2]} ${c < 0 ? "-" : "+"} ${H.frac(Math.abs(c), 3)}t^3\\right)$.`, `En $t = ${t1}$: $${"xyz"[k]} = ${nd(sol[k])}$.`],
+        verify: { kind: "ode", f: t => [a, b * t, c * t * t], y0: P.slice(), t1, dt: 1e-3, out: (_, y) => y[k], tol: 1e-8 }
+      };
+    }
+  };
+  T["c2-curvatura-num"] = {
+    type: "numeric", concepts: ["c2-curvatura"], difficulty: 3,
+    generate(r) {
+      if (r.bool()) {
+        const c = r.nz(-3, 3), d = r.int(-3, 3), x0 = r.int(-2, 2), fp = 2 * c * x0 + d, k = Math.abs(2 * c) / (1 + fp * fp) ** 1.5;
+        return {
+          prompt: `Calculá la curvatura de $y = ${H.poly([[c, "x^{2}"], [d, "x"]])}$ en $x = ${x0}$.`,
+          answer: k,
+          solution: [`[[c2-curvatura|Curvatura de un gráfico]]: $\\kappa = \\frac{|y''|}{(1 + y'^2)^{3/2}}$.`, `$y' = ${2 * c}x ${d < 0 ? "-" : "+"} ${Math.abs(d)}$ vale $${fp}$ en $x = ${x0}$; $y'' = ${2 * c}$.`, `$\\kappa = \\frac{${Math.abs(2 * c)}}{(1 + ${fp * fp})^{3/2}} \\approx ${nd(k, 5)}$.`],
+          verify: { kind: "value", tol: 1e-4, fn: () => kappa3(t => [t, c * t * t + d * t, 0], x0) }
+        };
+      }
+      const C = curve(r), t0 = C.helix ? r.int(0, 3) : r.int(-1, 1), v = C.d1(t0), a = C.d2(t0), k = norm(cross(v, a)) / norm(v) ** 3;
+      return {
+        prompt: `Calculá la curvatura de $${C.tex}$ en $t = ${t0}$.`,
+        answer: k,
+        solution: [`[[c2-curvatura|Curvatura]]: $\\kappa = \\frac{|\\vec r\\,' \\times \\vec r\\,''|}{|\\vec r\\,'|^3}$.`, C.helix ? `Para la hélice, $|\\vec r\\,'\\times\\vec r\\,''| = ${C.helix[0]}\\sqrt{${C.helix[0] ** 2 + C.helix[1] ** 2}}$ y $|\\vec r\\,'| = \\sqrt{${C.helix[0] ** 2 + C.helix[1] ** 2}}$: $\\kappa = \\frac{${C.helix[0]}}{${C.helix[0] ** 2 + C.helix[1] ** 2}}$, la misma en todos los puntos.` : `$\\vec r\\,'(${t0}) = (${v.join(", ")})$, $\\vec r\\,''(${t0}) = (${a.join(", ")})$.`, `$\\kappa \\approx ${nd(k, 5)}$.`],
+        verify: { kind: "value", tol: 1e-4, fn: () => kappa3(C.r, t0) }
+      };
+    }
+  };
+  T["c2-aceleracion-num"] = {
+    type: "numeric", concepts: ["c2-curvatura"], difficulty: 3,
+    generate(r) {
+      const p = r.nz(-3, 3), q = r.nz(-2, 2), t0 = r.int(-2, 2), ask = r.pick(["T", "N"]);
+      const rr = t => [t, p * t * t, q * t ** 3], v = [1, 2 * p * t0, 3 * q * t0 * t0], a = [0, 2 * p, 6 * q * t0];
+      const aT = dot(v, a) / norm(v), aN = norm(cross(v, a)) / norm(v);
+      return {
+        prompt: `Para $\\vec r(t) = \\left(t,\\ ${mono(p, "t^2")},\\ ${mono(q, "t^3")}\\right)$, calculá la componente ${ask === "T" ? "tangencial" : "normal"} de la aceleración en $t = ${t0}$.`,
+        answer: ask === "T" ? aT : aN,
+        solution: [`[[c2-curvatura|Componentes de la aceleración]]: $a_T = \\frac{\\vec v\\cdot\\vec a}{|\\vec v|}$ (cambio de rapidez) y $a_N = \\frac{|\\vec v\\times\\vec a|}{|\\vec v|}$ (cambio de dirección).`, `$\\vec v = (${v.join(", ")})$, $\\vec a = (${a.join(", ")})$.`, `$a_${ask} \\approx ${nd(ask === "T" ? aT : aN)}$.`],
+        // verificación: a_T es la derivada de la rapidez, y a_N² = |a|² − a_T² (todo con diferencias finitas sobre la posición)
+        verify: { kind: "value", tol: 1e-4, fn: () => {
+          const speed = t => { const h = 1e-5; return norm(sub(rr(t + h), rr(t - h))) / (2 * h); };
+          const H2 = 1e-3, at = (speed(t0 + H2) - speed(t0 - H2)) / (2 * H2);
+          if (ask === "T") return at;
+          const acc = rr(t0 + H2).map((x, i) => (x - 2 * rr(t0)[i] + rr(t0 - H2)[i]) / (H2 * H2));
+          return Math.sqrt(Math.max(0, dot(acc, acc) - at * at));
+        } }
+      };
+    }
+  };
+  T["c2-helice-vf"] = {
+    type: "tf", concepts: ["c2-curvatura"], difficulty: 2,
+    generate(r) {
+      const [a, b] = r.distinct(2, 1, 5), v = r.pick(["ok", "1/a", "b"]);
+      const X = { ok: [a, a * a + b * b], "1/a": [1, a], b: [b, a * a + b * b] }[v];
+      return {
+        prompt: `<b>Verdadero o falso:</b> la hélice $\\vec r(t) = (${mono(a, "\\cos t")},\\ ${mono(a, "\\sin t")},\\ ${mono(b, "t")})$ tiene curvatura constante igual a $${H.frac(X[0], X[1])}$.`,
+        answer: v === "ok",
+        explanation: `Para la hélice, $\\kappa = \\frac{a}{a^2 + b^2} = ${H.frac(a, a * a + b * b)}$ en todos los puntos ([[c2-curvatura]]). ${v === "1/a" ? "Sería $\\frac1a$ si no subiera ($b = 0$): sería una circunferencia." : ""}`,
+        solution: [`$|\\vec r\\,'\\times\\vec r\\,''| = a\\sqrt{a^2 + b^2}$ y $|\\vec r\\,'|^3 = (a^2 + b^2)^{3/2}$.`],
+        verify: { kind: "truth", fn: () => [0.3, 1.7].every(t => Math.abs(kappa3(tt => [a * Math.cos(tt), a * Math.sin(tt), b * tt], t) - X[0] / X[1]) < 1e-4 * (X[0] / X[1])) }
+      };
+    }
+  };
+
+  const cards = {
+    "c2-curvas-vectoriales": {
+      title: "Funciones vectoriales y curvas en el espacio", aliases: ["función vectorial", "funciones vectoriales", "curva en el espacio", "curvas en el espacio", "hélice"], concepts: ["c2-curvas-vectoriales"],
+      summary: "r(t) = (x(t), y(t), z(t)). Se deriva e integra componente a componente: r' es la velocidad (tangente a la curva) y |r'| la rapidez.",
+      def: [R`Una **función vectorial** asigna a cada $t$ un vector $\vec r(t) = (x(t), y(t), z(t))$; su imagen es una curva en el espacio.`,
+        R`**Límites, derivadas e integrales** se hacen componente a componente: $\vec r\,'(t) = (x'(t), y'(t), z'(t))$ y $\int\vec r(t)\,dt = \left(\int x, \int y, \int z\right) + \vec C$.`],
+      idea: [R`Si $\vec r$ es la posición de una partícula, $\vec r\,'$ es la **velocidad** (tangente a la trayectoria) y $\vec r\,''$ la **aceleración**, como en [[f1-mruv|cinemática]]. Longitud de arco: $\int_a^b|\vec r\,'(t)|\,dt$, igual que en las [[c2-parametricas|curvas paramétricas]].`,
+        R`La **hélice** $(a\cos t, a\sin t, bt)$ gira alrededor del eje $z$ mientras sube: es una circunferencia "estirada".`],
+      examples: [{ q: R`Si $\vec v(t) = (1, 2t, 3t^2)$ y $\vec r(0) = (0, 0, 0)$, ¿dónde está en $t = 1$?`, steps: [R`$\vec r(t) = (t, t^2, t^3)$: en $t = 1$, $(1, 1, 1)$.`] }],
+      tips: [R`La constante de integración es un **vector**: se determina con la condición inicial completa.`],
+      see: ["c2-curvatura", "c2-parametricas"]
+    },
+    "c2-curvatura": {
+      title: "Tangente, normal y curvatura", aliases: ["curvatura", "radio de curvatura", "vector tangente unitario", "vector normal unitario", "componente tangencial", "componente normal"], concepts: ["c2-curvatura"],
+      summary: "T = r'/|r'|; κ = |r' × r''|/|r'|³ mide cuánto se dobla la curva. a = a_T T + a_N N, con a_T = d|v|/dt y a_N = κ|v|².",
+      def: [R`**Tangente unitario** $\vec T = \frac{\vec r\,'}{|\vec r\,'|}$; **normal unitario** $\vec N = \frac{\vec T\,'}{|\vec T\,'|}$.`,
+        R`**Curvatura:** $\kappa = \left|\frac{d\vec T}{ds}\right| = \frac{|\vec r\,'\times\vec r\,''|}{|\vec r\,'|^3}$. Para un gráfico $y = f(x)$: $\kappa = \frac{|f''|}{(1 + f'^2)^{3/2}}$. El **radio de curvatura** es $\frac1\kappa$.`,
+        R`**Componentes de la aceleración:** $\vec a = a_T\vec T + a_N\vec N$, con $a_T = \frac{\vec v\cdot\vec a}{|\vec v|}$ y $a_N = \frac{|\vec v\times\vec a|}{|\vec v|} = \kappa|\vec v|^2$.`],
+      idea: [R`$\frac1\kappa$ es el radio de la circunferencia que mejor se pega a la curva en ese punto: una recta tiene $\kappa = 0$ y una circunferencia de radio $R$, $\kappa = \frac1R$.`,
+        R`$a_T$ cambia la rapidez y $a_N$ cambia la dirección: en una curva a velocidad constante solo hay $a_N$, la [[f1-circular|aceleración centrípeta]].`],
+      examples: [{ q: R`Curvatura de $y = x^2$ en el origen.`, steps: [R`$y' = 0$, $y'' = 2$: $\kappa = 2$; el radio de curvatura es $\frac12$.`] }],
+      tips: [R`No confundas $\kappa$ con $|\vec r\,''|$: la curvatura no depende de la rapidez con que se recorre la curva.`],
+      see: ["c2-curvas-vectoriales", "al-producto-vectorial"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-curvas-vectoriales": { name: "Funciones vectoriales" }, "c2-curvatura": { name: "Tangente, normal y curvatura" } },
+    templates: T,
+    units: [{
+      id: "c2-vectoriales-u", order: 4, program: "Unidad 4", title: "Funciones vectoriales", icon: "rotate-ccw",
+      diagnostic: ["c2-vel-num", "c2-integral-vect-num", "c2-curvatura-num"],
+      lessons: [
+        { id: "c2-curvas-vect", title: "Derivar e integrar curvas", templates: ["c2-vel-num", "c2-integral-vect-num"], theory: ["c2-curvas-vectoriales"],
+          intro: R`Todo componente a componente: $\vec r\,'$ es la velocidad y $|\vec r\,'|$ la rapidez.` },
+        { id: "c2-curvatura", title: "Curvatura y aceleración", templates: ["c2-curvatura-num", "c2-aceleracion-num", "c2-helice-vf"], theory: ["c2-curvatura"],
+          intro: R`$\kappa = \frac{|\vec r\,'\times\vec r\,''|}{|\vec r\,'|^3}$, $a_T = \frac{\vec v\cdot\vec a}{|\vec v|}$, $a_N = \frac{|\vec v\times\vec a|}{|\vec v|}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 5 · FUNCIONES DE VARIAS VARIABLES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => num(x, d).replace(".", "{,}");
+  // polinomios en x, y como listas de términos [c, i, j] = c·x^i·y^j
+  const mon = (i, j) => (i ? (i === 1 ? "x" : `x^{${i}}`) : "") + (j ? (j === 1 ? "y" : `y^{${j}}`) : "");
+  const ptex = P => H.poly(P.map(([c, i, j]) => [c, mon(i, j)]));
+  const pev = (P, x, y) => P.reduce((s, [c, i, j]) => s + c * x ** i * y ** j, 0);
+  const dx = P => P.filter(([, i]) => i > 0).map(([c, i, j]) => [c * i, i - 1, j]);
+  const dy = P => P.filter(([, , j]) => j > 0).map(([c, i, j]) => [c * j, i, j - 1]);
+  function randPoly(r, n = 3) {
+    const seen = new Set(), P = [];
+    while (P.length < n) { const i = r.int(0, 3), j = r.int(0, 3); if (i + j < 1 || i + j > 4 || seen.has(i + "," + j)) continue; seen.add(i + "," + j); P.push([r.nz(-4, 4), i, j]); }
+    return P;
+  }
+  // familia de funciones: polinomio o x^p·e^{ay}
+  function func(r) {
+    if (r.int(0, 2) > 0) { const P = randPoly(r); return { tex: ptex(P), f: (x, y) => pev(P, x, y), fx: (x, y) => pev(dx(P), x, y), fy: (x, y) => pev(dy(P), x, y), dtex: [ptex(dx(P)), ptex(dy(P))] }; }
+    const p = r.int(1, 3), a = r.nz(-2, 2), ey = `e^{${a === 1 ? "" : a === -1 ? "-" : a}y}`;
+    return { tex: `${mon(p, 0)}${ey}`, f: (x, y) => x ** p * Math.exp(a * y), fx: (x, y) => p * x ** (p - 1) * Math.exp(a * y), fy: (x, y) => a * x ** p * Math.exp(a * y),
+      dtex: [`${p === 1 ? "" : p}${mon(p - 1, 0)}${ey}`, `${a === 1 ? "" : a === -1 ? "-" : a}${mon(p, 0)}${ey}`] };
+  }
+  const gss = (g, lo, hi, it = 200) => { const k = (Math.sqrt(5) - 1) / 2; let a = lo, b = hi; for (let i = 0; i < it; i++) { const c = b - k * (b - a), d = a + k * (b - a); if (g(c) > g(d)) b = d; else a = c; } return g((a + b) / 2); };
+
+  T["c2-parcial-num"] = {
+    type: "numeric", concepts: ["c2-parciales"], difficulty: 1,
+    generate(r) {
+      const F = func(r), x0 = r.int(-2, 2), y0 = r.int(-1, 1), w = r.pick(["x", "y"]);
+      const ans = w === "x" ? F.fx(x0, y0) : F.fy(x0, y0);
+      return {
+        prompt: `Si $f(x, y) = ${F.tex}$, calculá $\\frac{\\partial f}{\\partial ${w}}(${x0}, ${y0})$.`,
+        answer: ans,
+        solution: [`[[c2-parciales|Derivada parcial]] respecto de $${w}$: se deriva tratando ${w === "x" ? "$y$" : "$x$"} como constante.`, `$f_${w} = ${F.dtex[w === "x" ? 0 : 1]}$; en $(${x0}, ${y0})$ vale $${nd(ans)}$.`],
+        verify: { kind: "deriv", f: t => (w === "x" ? F.f(t, y0) : F.f(x0, t)), x0: w === "x" ? x0 : y0 }
+      };
+    }
+  };
+  T["c2-cadena-num"] = {
+    type: "numeric", concepts: ["c2-parciales"], difficulty: 2,
+    generate(r) {
+      const P = randPoly(r, 2), a = r.nz(-3, 3), b = r.int(-2, 2), c = r.nz(-2, 2), t0 = r.int(-2, 2);
+      const X = t => a * t + b, Y = t => c * t * t, x0 = X(t0), y0 = Y(t0);
+      const ans = pev(dx(P), x0, y0) * a + pev(dy(P), x0, y0) * 2 * c * t0;
+      return {
+        prompt: `Si $z = ${ptex(P)}$ con $x = ${H.poly([[a, "t"], [b, ""]])}$ e $y = ${H.poly([[c, "t^{2}"]])}$, calculá $\\frac{dz}{dt}$ en $t = ${t0}$.`,
+        answer: ans,
+        solution: [`[[c2-parciales|Regla de la cadena]]: $\\frac{dz}{dt} = \\frac{\\partial z}{\\partial x}\\frac{dx}{dt} + \\frac{\\partial z}{\\partial y}\\frac{dy}{dt}$.`, `En $t = ${t0}$: $(x, y) = (${x0}, ${y0})$, $z_x = ${pev(dx(P), x0, y0)}$, $z_y = ${pev(dy(P), x0, y0)}$, $x' = ${a}$, $y' = ${2 * c * t0}$.`, `$\\frac{dz}{dt} = ${nd(ans)}$.`],
+        verify: { kind: "deriv", f: t => pev(P, X(t), Y(t)), x0: t0 }
+      };
+    }
+  };
+  T["c2-limite-vf"] = {
+    type: "tf", concepts: ["c2-varias"], difficulty: 2,
+    generate(r) {
+      const k = r.nz(-3, 3), v = r.pick(["xy", "x2y", "dif", "cubos"]);
+      const fam = {
+        xy: { tex: `\\frac{${k === 1 ? "" : k === -1 ? "-" : k}xy}{x^2 + y^2}`, f: (x, y) => k * x * y / (x * x + y * y), ex: false, why: `Por la recta $y = mx$ da $\\frac{${k}m}{1 + m^2}$, que depende de $m$.` },
+        x2y: { tex: `\\frac{${k === 1 ? "" : k === -1 ? "-" : k}x^2y}{x^2 + y^2}`, f: (x, y) => k * x * x * y / (x * x + y * y), ex: true, why: `$\\left|\\frac{x^2y}{x^2 + y^2}\\right| \\le |y| \\to 0$: el límite es $0$ (por [[sandwich|sándwich]]).` },
+        dif: { tex: `\\frac{x^2 - y^2}{x^2 + y^2}`, f: (x, y) => (x * x - y * y) / (x * x + y * y), ex: false, why: `Por el eje $x$ da $1$ y por el eje $y$ da $-1$.` },
+        cubos: { tex: `\\frac{x^3 ${k < 0 ? "-" : "+"} ${Math.abs(k) === 1 ? "" : Math.abs(k)}y^3}{x^2 + y^2}`, f: (x, y) => (x ** 3 + k * y ** 3) / (x * x + y * y), ex: true, why: `En polares queda $r(\\cos^3\\theta ${k < 0 ? "-" : "+"} ${Math.abs(k) === 1 ? "" : Math.abs(k)}\\sin^3\\theta) \\to 0$.` }
+      }[v];
+      return {
+        prompt: `<b>Verdadero o falso:</b> existe $\\displaystyle\\lim_{(x,y)\\to(0,0)} ${fam.tex}$.`,
+        answer: fam.ex,
+        explanation: `${fam.why} ([[c2-varias|límites dobles]])`,
+        solution: [`Si por dos caminos distintos el límite da distinto, no existe. Para probar que existe hay que acotar (por ejemplo, en polares).`],
+        // verificación: oscilación de f en una circunferencia muy chica alrededor del origen
+        verify: { kind: "truth", fn: () => { const rho = 1e-6, vals = Array.from({ length: 720 }, (_, i) => fam.f(rho * Math.cos(i * Math.PI / 360 + 0.001), rho * Math.sin(i * Math.PI / 360 + 0.001))); return Math.max(...vals) - Math.min(...vals) < 1e-3; } }
+      };
+    }
+  };
+  T["c2-direccional-num"] = {
+    type: "numeric", concepts: ["c2-gradiente"], difficulty: 2,
+    generate(r) {
+      const F = func(r), x0 = r.int(-2, 2), y0 = r.int(-1, 1), [v1, v2] = r.pick([[3, 4], [1, 1], [1, -1], [-3, 4], [0, 1], [1, 0], [5, 12], [-1, 2], [2, -1]]);
+      const L = Math.hypot(v1, v2), u = [v1 / L, v2 / L], g = [F.fx(x0, y0), F.fy(x0, y0)], ans = g[0] * u[0] + g[1] * u[1];
+      return {
+        prompt: `Si $f(x, y) = ${F.tex}$, calculá la derivada direccional de $f$ en $(${x0}, ${y0})$ en la dirección del vector $(${v1}, ${v2})$.`,
+        answer: ans,
+        solution: [`[[c2-gradiente|Derivada direccional]]: $D_{\\vec u}f = \\nabla f\\cdot\\vec u$ con $\\vec u$ **unitario**: $\\vec u = \\frac{(${v1}, ${v2})}{${nd(L)}}$.`, `$\\nabla f(${x0}, ${y0}) = (${nd(g[0])}, ${nd(g[1])})$, así que $D_{\\vec u}f \\approx ${nd(ans)}$.`],
+        verify: { kind: "deriv", f: t => F.f(x0 + t * u[0], y0 + t * u[1]), x0: 0 }
+      };
+    }
+  };
+  T["c2-gradiente-num"] = {
+    type: "numeric", concepts: ["c2-gradiente"], difficulty: 2,
+    generate(r) {
+      const F = func(r), x0 = r.int(-2, 2), y0 = r.int(-1, 1), g = [F.fx(x0, y0), F.fy(x0, y0)], ans = Math.hypot(g[0], g[1]);
+      if (ans === 0) return null;
+      return {
+        prompt: `Si $f(x, y) = ${F.tex}$, ¿cuál es la máxima tasa de crecimiento de $f$ en $(${x0}, ${y0})$ (la mayor derivada direccional)?`,
+        answer: ans,
+        solution: [`[[c2-gradiente|Gradiente]]: $f$ crece más rápido en la dirección de $\\nabla f$, y esa tasa es $|\\nabla f|$.`, `$\\nabla f(${x0}, ${y0}) = (${nd(g[0])}, ${nd(g[1])})$; $|\\nabla f| \\approx ${nd(ans)}$.`],
+        // verificación: se prueban todas las direcciones con derivadas numéricas y se toma la mayor
+        verify: { kind: "value", tol: 1e-5, fn: () => { const D = th => { const h = 1e-6, c = Math.cos(th), s = Math.sin(th); return (F.f(x0 + h * c, y0 + h * s) - F.f(x0 - h * c, y0 - h * s)) / (2 * h); }; let best = 0, bt = 0; for (let i = 0; i < 720; i++) { const th = i * Math.PI / 360, d = D(th); if (d > best) { best = d; bt = th; } } return gss(D, bt - 0.01, bt + 0.01); } }
+      };
+    }
+  };
+  T["c2-plano-tangente-num"] = {
+    type: "numeric", concepts: ["c2-gradiente"], difficulty: 2,
+    generate(r) {
+      const F = func(r), a = r.int(-2, 2), b = r.int(-1, 1), [hx, hy] = [r.pick([0.1, -0.1, 0.2, -0.2]), r.pick([0.1, -0.1, 0.05, -0.3])];
+      const f0 = F.f(a, b), fx = F.fx(a, b), fy = F.fy(a, b), ans = f0 + fx * hx + fy * hy;
+      return {
+        prompt: `Usá el plano tangente a $z = ${F.tex}$ en $(${a}, ${b})$ para aproximar $f(${nd(a + hx, 2)}, ${nd(b + hy, 2)})$.`,
+        answer: ans,
+        solution: [`[[c2-gradiente|Plano tangente (linealización)]]: $L(x, y) = f(a, b) + f_x(a, b)(x - a) + f_y(a, b)(y - b)$.`, `$f(${a}, ${b}) = ${nd(f0)}$, $f_x = ${nd(fx)}$, $f_y = ${nd(fy)}$.`, `$L \\approx ${nd(f0)} + ${H.par(+fx.toFixed(4))}(${nd(hx, 2)}) + ${H.par(+fy.toFixed(4))}(${nd(hy, 2)}) \\approx ${nd(ans)}$.`],
+        // verificación: pendientes del plano estimadas con diferencias centradas de la propia f
+        verify: { kind: "value", tol: 1e-6, fn: () => { const h = 1e-5, px = (F.f(a + h, b) - F.f(a - h, b)) / (2 * h), py = (F.f(a, b + h) - F.f(a, b - h)) / (2 * h); return F.f(a, b) + px * hx + py * hy; } }
+      };
+    }
+  };
+  const EXT = ["Mínimo local", "Máximo local", "Punto silla", "El criterio no decide"];
+  T["c2-extremos-mc"] = {
+    type: "mc", concepts: ["c2-extremos"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-3, 3), b = r.int(-4, 4), c = r.nz(-3, 3), h = r.int(-2, 2), k = r.int(-2, 2), e = r.int(-3, 3), D = 4 * a * c - b * b;
+      if (D === 0) return null;
+      const kind = D < 0 ? 2 : a > 0 ? 0 : 1;
+      const P = [[a, 2, 0], [b, 1, 1], [c, 0, 2], [-2 * a * h - b * k, 1, 0], [-b * h - 2 * c * k, 0, 1], [a * h * h + b * h * k + c * k * k + e, 0, 0]];
+      const f = (x, y) => pev(P, x, y);
+      return {
+        prompt: `$f(x, y) = ${ptex(P)}$ tiene un punto crítico en $(${h}, ${k})$. ¿Qué es?`,
+        ...H.mc(r, EXT[kind], EXT.filter((_, i) => i !== kind), { text: true }),
+        solution: [`[[c2-extremos|Criterio de las segundas derivadas]]: $D = f_{xx}f_{yy} - f_{xy}^2$.`, `$f_{xx} = ${2 * a}$, $f_{yy} = ${2 * c}$, $f_{xy} = ${b}$: $D = ${D}$.`, D < 0 ? `$D < 0$: punto silla.` : `$D > 0$ y $f_{xx} ${a > 0 ? "> 0" : "< 0"}$: ${a > 0 ? "mínimo" : "máximo"} local.`],
+        // verificación: se compara f en el punto con f en una circunferencia chica a su alrededor
+        verify: { kind: "truth", target: true, fn: () => { const f0 = f(h, k), d = Array.from({ length: 360 }, (_, i) => f(h + 1e-3 * Math.cos(i * Math.PI / 180 + 0.01), k + 1e-3 * Math.sin(i * Math.PI / 180 + 0.01)) - f0); const up = d.every(x => x > 0), down = d.every(x => x < 0); return kind === 0 ? up : kind === 1 ? down : !up && !down; } }
+      };
+    }
+  };
+  T["c2-lagrange-num"] = {
+    type: "numeric", concepts: ["c2-lagrange"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["xy", "lineal", "dist"]), a = r.int(1, 4), b = r.int(1, 4);
+      if (v === "xy") {
+        const c = r.int(4, 20), ans = c * c / (4 * a * b);
+        return { prompt: `Hallá el valor máximo de $f(x, y) = xy$ sobre la recta $${H.poly([[a, "x"], [b, "y"]])} = ${c}$ con $x, y > 0$.`, answer: ans,
+          solution: [`[[c2-lagrange|Multiplicadores de Lagrange]]: $\\nabla f = \\lambda\\nabla g$ da $y = ${a}\\lambda$, $x = ${b}\\lambda$.`, `En la restricción: $${2 * a * b}\\lambda = ${c}$, $\\lambda = ${H.frac(c, 2 * a * b)}$; $x = ${H.frac(c, 2 * a)}$, $y = ${H.frac(c, 2 * b)}$.`, `Máximo: $xy = ${H.frac(c * c, 4 * a * b)} \\approx ${nd(ans)}$.`],
+          verify: { kind: "value", tol: 1e-8, fn: () => gss(x => x * (c - a * x) / b, 0, c / a) } };
+      }
+      if (v === "lineal") {
+        const rr = r.int(1, 5), ans = rr * Math.hypot(a, b);
+        return { prompt: `Hallá el valor máximo de $f(x, y) = ${H.poly([[a, "x"], [b, "y"]])}$ sobre la circunferencia $x^2 + y^2 = ${rr * rr}$.`, answer: ans,
+          solution: [`[[c2-lagrange|Lagrange]]: $(${a}, ${b}) = \\lambda(2x, 2y)$, así que $(x, y)$ es paralelo a $(${a}, ${b})$.`, `$(x, y) = \\frac{${rr}}{\\sqrt{${a * a + b * b}}}(${a}, ${b})$, y el máximo es $${rr}\\sqrt{${a * a + b * b}} \\approx ${nd(ans)}$.`],
+          verify: { kind: "value", tol: 1e-8, fn: () => { let best = -Infinity, bt = 0; for (let i = 0; i < 720; i++) { const t = i * Math.PI / 360, val = a * rr * Math.cos(t) + b * rr * Math.sin(t); if (val > best) { best = val; bt = t; } } return gss(t => a * rr * Math.cos(t) + b * rr * Math.sin(t), bt - 0.01, bt + 0.01); } } };
+      }
+      const c = r.nz(-8, 8), ans = c * c / (a * a + b * b);
+      return { prompt: `Hallá el valor mínimo de $f(x, y) = x^2 + y^2$ sobre la recta $${H.poly([[a, "x"], [b, "y"]])} = ${c}$.`, answer: ans,
+        solution: [`[[c2-lagrange|Lagrange]]: $(2x, 2y) = \\lambda(${a}, ${b})$: el punto más cercano al origen está en la dirección de la normal.`, `$(x, y) = t(${a}, ${b})$ con $${a * a + b * b}t = ${c}$; $f = ${H.frac(c * c, a * a + b * b)} \\approx ${nd(ans)}$ (el cuadrado de la distancia al origen).`],
+        verify: { kind: "value", tol: 1e-8, fn: () => -gss(x => -(x * x + ((c - a * x) / b) ** 2), -50, 50) } };
+    }
+  };
+
+  const cards = {
+    "c2-varias": {
+      title: "Funciones de varias variables: límites y continuidad", aliases: ["funciones de varias variables", "función de varias variables", "función de dos variables", "curvas de nivel", "curva de nivel", "límite doble", "límites dobles"], concepts: ["c2-varias"],
+      summary: "f(x, y) asigna un número a cada punto del plano. El límite existe si f se acerca al mismo valor por todos los caminos.",
+      def: [R`Una **función de dos variables** $f: D \subseteq \mathbb R^2 \to \mathbb R$; su gráfico es una superficie $z = f(x, y)$, y sus **curvas de nivel** son $f(x, y) = k$ (como en un mapa topográfico).`,
+        R`$\lim_{(x,y)\to(a,b)}f(x, y) = L$ si $f$ se acerca a $L$ cuando $(x, y)$ se acerca a $(a, b)$ **por cualquier camino**. $f$ es **continua** en $(a, b)$ si el límite existe y vale $f(a, b)$.`],
+      idea: [R`En una variable hay dos caminos (izquierda y derecha, los [[limites-laterales|laterales]]); en el plano hay infinitos. Para mostrar que **no** existe alcanza con dos caminos que den distinto (rectas $y = mx$, ejes, parábolas). Para mostrar que **sí** existe hay que acotar, por ejemplo en polares: si $|f - L| \le g(r)$ con $g(r) \to 0$, listo.`],
+      examples: [{ q: R`¿Existe $\lim\frac{xy}{x^2 + y^2}$ en el origen?`, steps: [R`Por $y = mx$: $\frac{m}{1 + m^2}$, que cambia con $m$.`, R`No existe.`] }],
+      tips: [R`Que el límite dé lo mismo por todas las rectas **no** alcanza: puede fallar por una parábola.`],
+      see: ["c2-parciales", "limite"]
+    },
+    "c2-parciales": {
+      title: "Derivadas parciales y regla de la cadena", aliases: ["derivada parcial", "derivadas parciales", "derivadas cruzadas", "teorema de Schwarz", "regla de la cadena en varias variables"], concepts: ["c2-parciales"],
+      summary: "f_x es la derivada de f respecto de x con y fija. Regla de la cadena: dz/dt = z_x x' + z_y y'.",
+      def: [R`$\frac{\partial f}{\partial x}(a, b) = \lim_{h\to0}\frac{f(a + h, b) - f(a, b)}{h}$: se deriva respecto de $x$ tratando $y$ como constante (y al revés para $f_y$).`,
+        R`**Regla de la cadena:** si $z = f(x, y)$ con $x = x(t)$, $y = y(t)$: $\frac{dz}{dt} = \frac{\partial f}{\partial x}\frac{dx}{dt} + \frac{\partial f}{\partial y}\frac{dy}{dt}$.`,
+        R`**Schwarz:** si las segundas derivadas son continuas, $f_{xy} = f_{yx}$.`],
+      idea: [R`$f_x$ es la pendiente de la superficie cortada por el plano $y = b$: es una [[derivada]] común de una función de una variable.`,
+        R`La regla de la cadena suma las contribuciones de cada camino por el que $t$ afecta a $z$, igual que la [[regla-cadena|regla de la cadena]] de una variable pero con varias "ramas".`],
+      examples: [{ q: R`$f = x^2y^3$. Calculá $f_x$ y $f_y$.`, steps: [R`$f_x = 2xy^3$ y $f_y = 3x^2y^2$.`] }],
+      see: ["c2-gradiente", "regla-cadena", "derivada"]
+    },
+    "c2-gradiente": {
+      title: "Gradiente, derivada direccional y plano tangente", aliases: ["gradiente", "derivada direccional", "derivadas direccionales", "plano tangente", "linealización", "diferencial total"], concepts: ["c2-gradiente"],
+      summary: "∇f = (f_x, f_y). D_u f = ∇f·u. f crece más rápido en la dirección de ∇f, a tasa |∇f|. Plano tangente: z = f(a,b) + f_x(x − a) + f_y(y − b).",
+      def: [R`**Gradiente:** $\nabla f = (f_x, f_y)$. **Derivada direccional** en la dirección del vector unitario $\vec u$: $D_{\vec u}f = \nabla f\cdot\vec u$.`,
+        R`**Plano tangente** a $z = f(x, y)$ en $(a, b)$: $z = f(a, b) + f_x(a, b)(x - a) + f_y(a, b)(y - b)$. Es la mejor aproximación lineal (**linealización**); el **diferencial total** es $dz = f_x\,dx + f_y\,dy$.`],
+      idea: [R`Como $D_{\vec u}f = |\nabla f|\cos\theta$ ([[al-producto-escalar|producto escalar]]), el máximo se da para $\theta = 0$: el gradiente apunta hacia donde $f$ crece más rápido, y $|\nabla f|$ es esa tasa. Además es perpendicular a las curvas de nivel.`,
+        R`El plano tangente generaliza la [[recta-tangente|recta tangente]]: cerca del punto, la superficie y el plano casi no se distinguen.`],
+      examples: [{ q: R`$f = x^2 + y^2$ en $(1, 2)$: ¿dirección de máximo crecimiento?`, steps: [R`$\nabla f = (2x, 2y) = (2, 4)$, y la tasa máxima es $|\nabla f| = \sqrt{20}$.`] }],
+      tips: [R`La dirección tiene que ser un vector **unitario**: si te dan $(3, 4)$, dividí por $5$.`],
+      see: ["c2-parciales", "c2-extremos", "al-producto-escalar"]
+    },
+    "c2-extremos": {
+      title: "Extremos de funciones de dos variables", aliases: ["punto silla", "puntos silla", "criterio del hessiano", "hessiano", "matriz hessiana", "criterio de las segundas derivadas"], concepts: ["c2-extremos"],
+      summary: "Los extremos locales están donde ∇f = 0. Con D = f_xx f_yy − f_xy²: D > 0 y f_xx > 0 es mínimo; D > 0 y f_xx < 0, máximo; D < 0, silla.",
+      def: [R`Si $f$ tiene un extremo local en $(a, b)$ y es diferenciable, $\nabla f(a, b) = \vec 0$: es un **punto crítico**.`,
+        R`**Criterio de las segundas derivadas:** $D = f_{xx}f_{yy} - f_{xy}^2$ (el determinante de la **matriz hessiana**). Si $D > 0$ y $f_{xx} > 0$: mínimo local; si $D > 0$ y $f_{xx} < 0$: máximo local; si $D < 0$: **punto silla**; si $D = 0$, el criterio no decide.`],
+      idea: [R`Cerca de un punto crítico, $f$ se parece a una forma cuadrática: si curva para arriba en todas las direcciones es un mínimo (copa), si para abajo un máximo, y si en unas sube y en otras baja es una silla de montar, como el [[c2-cuadricas|paraboloide hiperbólico]].`,
+        R`Es la versión en dos variables del criterio de la derivada segunda de los [[extremos]] de una variable.`],
+      examples: [{ q: R`$f = x^2 - y^2$ en $(0, 0)$.`, steps: [R`$f_{xx} = 2$, $f_{yy} = -2$, $f_{xy} = 0$: $D = -4 < 0$, punto silla.`] }],
+      see: ["c2-lagrange", "extremos", "c2-gradiente"]
+    },
+    "c2-lagrange": {
+      title: "Multiplicadores de Lagrange", aliases: ["multiplicadores de Lagrange", "multiplicador de Lagrange", "extremos condicionados", "extremos con restricciones"], concepts: ["c2-lagrange"],
+      summary: "Para optimizar f con la restricción g = c, se resuelve ∇f = λ∇g junto con g = c.",
+      def: [R`Los extremos de $f(x, y)$ sobre la curva $g(x, y) = c$ (con $\nabla g \ne \vec 0$) están entre las soluciones de $$\nabla f = \lambda\nabla g, \qquad g(x, y) = c.$$`],
+      idea: [R`En el óptimo, la curva de nivel de $f$ es **tangente** a la restricción: si la cortara, moviéndose sobre la restricción se podría subir o bajar $f$. Curvas tangentes tienen [[c2-gradiente|gradientes]] paralelos, y eso dice $\nabla f = \lambda\nabla g$.`,
+        R`Es la versión con restricción de la [[optimizacion|optimización]] de una variable: en lugar de despejar, se agrega una incógnita $\lambda$.`],
+      examples: [{ q: R`Máximo de $xy$ con $x + y = 10$.`, steps: [R`$(y, x) = \lambda(1, 1)$: $x = y = 5$.`, R`Máximo $25$.`] }],
+      see: ["c2-extremos", "c2-gradiente", "optimizacion"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-varias": { name: "Límites en varias variables" }, "c2-parciales": { name: "Derivadas parciales" }, "c2-gradiente": { name: "Gradiente y plano tangente" }, "c2-extremos": { name: "Extremos en dos variables" }, "c2-lagrange": { name: "Multiplicadores de Lagrange" } },
+    templates: T,
+    units: [{
+      id: "c2-varias-u", order: 5, program: "Unidad 5", title: "Funciones de varias variables", icon: "grid-3x3",
+      diagnostic: ["c2-parcial-num", "c2-direccional-num", "c2-extremos-mc"],
+      lessons: [
+        { id: "c2-parciales", title: "Límites y derivadas parciales", templates: ["c2-limite-vf", "c2-parcial-num", "c2-cadena-num"], theory: ["c2-varias", "c2-parciales"],
+          intro: R`$f_x$: derivar con $y$ fija. Regla de la cadena: $\frac{dz}{dt} = z_xx' + z_yy'$.` },
+        { id: "c2-gradiente", title: "Gradiente y plano tangente", templates: ["c2-direccional-num", "c2-gradiente-num", "c2-plano-tangente-num"], theory: ["c2-gradiente"],
+          intro: R`$D_{\vec u}f = \nabla f\cdot\vec u$; el máximo crecimiento es $|\nabla f|$.` },
+        { id: "c2-extremos", title: "Extremos y Lagrange", templates: ["c2-extremos-mc", "c2-lagrange-num"], theory: ["c2-extremos", "c2-lagrange"],
+          intro: R`Puntos críticos con $\nabla f = \vec 0$ y el criterio $D = f_{xx}f_{yy} - f_{xy}^2$. Con restricción: $\nabla f = \lambda\nabla g$.` }
       ]
     }],
     cards
