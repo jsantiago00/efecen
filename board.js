@@ -207,7 +207,10 @@
     document.body.appendChild(el);
     base = el.querySelector(".bc-base"); live = el.querySelector(".bc-live");
     bctx = base.getContext("2d");
-    try { lctx = live.getContext("2d", { desynchronized: true }) || live.getContext("2d"); } catch (e) { lctx = live.getContext("2d"); }
+    // sin { desynchronized: true }: en Android esa capa de baja latencia puede quedar en blanco y tapar la hoja
+    lctx = live.getContext("2d");
+    // si el navegador descarta los canvas (falta de memoria de la GPU, app en segundo plano), se redibuja todo
+    for (const c of [base, live]) c.addEventListener("contextrestored", () => { redraw(); drawLive(); });
     el.addEventListener("click", onBar);
     live.addEventListener("pointerdown", onDown);
     live.addEventListener("pointermove", onMove);
@@ -266,7 +269,7 @@
     dpr = Math.min(window.devicePixelRatio || 1, 3);
     cssW = r.width; cssH = r.height;
     for (const c of [base, live]) { c.width = Math.round(cssW * dpr); c.height = Math.round(cssH * dpr); }
-    clampView(); redraw();
+    clampView(); redraw(); drawLive();
   }
   function clampView() {
     const sc = scale(), vw = cssW / sc;
@@ -602,7 +605,7 @@
         if ((k === "z" && !e.shiftKey ? undoAny(page) : redoAny(page))) { redraw(); persist(page); syncBar(); }
       } else if (k === "escape" && !docked && !document.body.classList.contains("learn-open")) { e.stopPropagation(); api.close(); }
     }, true);
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); else if (open) redraw(); });
     const reTheme = () => { if (open) { syncBar(); redraw(); } };
     mq("(prefers-color-scheme: dark)").addEventListener("change", reTheme);
     if (typeof MutationObserver === "function") new MutationObserver(reTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });

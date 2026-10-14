@@ -71,6 +71,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Alias compartidos.** «producto vectorial» pasó de Física a Álgebra Lineal, y en Física «valor medio» se cambió por «promedio», porque choca con el teorema del valor medio. En Física II B no se usa «segunda ley» (es de Newton en F101); el alias es «segunda ley de la termodinámica».
 - **Push a `main` después de cada bloque**, como se pidió durante la noche.
 - **Pizarra local.** Los trazos se guardan en IndexedDB y no se sincronizan con la nube: pesan mucho más que el progreso y son borradores. Sus ajustes (mostrarla y dibujar con el dedo) también son de cada dispositivo, porque cada uno tiene lápiz o no.
+- **Pizarra sin `desynchronized`.** El canvas del trazo en curso usaba `getContext("2d", { desynchronized: true })` para bajar la latencia. En la tablet del usuario (Android, S Pen) el trazo y la hoja desaparecían al escribir y había que recargar. Se sacó esa opción, y la hoja se redibuja si el navegador descarta el canvas o si la app vuelve del segundo plano.
 - **Orientación libre.** En `manifest.json`, `orientation` pasó de `portrait` a `any`, para poder usar la tablet acostada con la pizarra al costado. En la app instalada, Chrome toma el cambio cuando actualiza el ícono instalado, y eso puede tardar.
 
 ## Pendiente (en el orden del trayecto)
