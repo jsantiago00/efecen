@@ -98,7 +98,7 @@
 
   // ---------- preferencias de este dispositivo (no se sincronizan) ----------
   const PREF_KEY = "efecen-board";
-  const prefs = Object.assign({ show: "auto", pen: false, finger: null, tool: "pen", color: "ink", size: 1, hlColor: "yellow", paper: "grid", promptOpen: true }, (() => {
+  const prefs = Object.assign({ show: "auto", pen: false, finger: null, tool: "pen", color: "ink", size: 1, hlColor: "yellow", paper: "grid", promptOpen: true, split: true }, (() => {
     try { return JSON.parse(localStorage.getItem(PREF_KEY)) || {}; } catch (e) { return {}; }
   })());
   const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) { /* sin almacenamiento */ } };
@@ -137,7 +137,8 @@
   let page = null;             // hoja visible (puede ser nueva y todavía no estar en pages)
   let ctxInfo = null;          // { key, label, prompt } del ejercicio actual
   let el = null, base, live, bctx, lctx, dpr = 1, cssW = 0, cssH = 0;
-  let open = false, docked = false, pushed = false, onChange = () => {};
+  // docked: la pizarra comparte la pantalla (al costado con la tablet acostada, abajo con la tablet parada)
+  let open = false, docked = false, side = false, pushed = false, onChange = () => {};
   const view = { x: 0, y: 0, z: 1 };
   const views = new Map();     // posición de cada hoja mientras la app está abierta
   const dirty = new Set();
@@ -194,7 +195,8 @@
         <div class="bgrp">
           <button data-b="paper" aria-label="Tipo de hoja">${ICON("grid-3x3")}</button>
           <button data-b="finger" aria-label="Dibujar con el dedo">${ICON("hand")}</button>
-          <button data-b="clear" aria-label="Borrar la hoja">${ICON("trash-2")}</button></div>
+          <button data-b="clear" aria-label="Borrar la hoja">${ICON("trash-2")}</button>
+          <button data-b="split" aria-label="Pantalla dividida o completa"></button></div>
         <div class="bgrp bpages">
           <button data-b="prev" aria-label="Hoja anterior">${ICON("chevron-left")}</button>
           <span class="bpage-n"></span>
@@ -232,6 +234,10 @@
     });
     el.querySelectorAll('[data-b="size"]').forEach(x => x.classList.toggle("on", +x.dataset.v === prefs.size));
     on("finger", null, fingerDraws());
+    const sp = el.querySelector('[data-b="split"]');
+    sp.hidden = side;
+    sp.innerHTML = ICON(prefs.split ? "maximize-2" : "panel-bottom");
+    sp.title = prefs.split ? "Pizarra a pantalla completa" : "Dividir la pantalla: pizarra abajo";
     el.querySelector('[data-b="paper"]').title = "Hoja " + PAPER_LABEL[prefs.paper].toLowerCase();
     el.querySelector('[data-b="undo"]').disabled = !(page._undo && page._undo.length);
     el.querySelector('[data-b="redo"]').disabled = !(page._redo && page._redo.length);
@@ -542,6 +548,7 @@
       }
       case "new": setPage(newPage(null, "")); break;
       case "prompt": prefs.promptOpen = !prefs.promptOpen; break;
+      case "split": prefs.split = !prefs.split; savePrefs(); layout(); onChange(); return;
       case "close": api.close(); return;
     }
     savePrefs(); syncBar();
@@ -570,10 +577,17 @@
   // ---------- disposición ----------
   function layout() {
     if (!el) return;
-    docked = open && dockMQ.matches;
-    el.classList.toggle("docked", docked);
-    document.body.classList.toggle("board-docked", docked);
+    side = open && dockMQ.matches;
+    const split = open && !side && !!prefs.split;
+    docked = side || split;
+    el.classList.toggle("docked", side);
+    el.classList.toggle("split", split);
+    document.body.classList.toggle("board-docked", side);
+    document.body.classList.toggle("board-split", split);
     document.body.classList.toggle("board-full", open && !docked);
+    // solo a pantalla completa el "atrás" del sistema cierra la pizarra
+    if (open && !docked && !pushed) { history.pushState({ efecenBoard: 1 }, "", location.hash || "#/"); pushed = true; }
+    else if (docked && pushed) { pushed = false; ignorePop = true; history.back(); }
     if (open) syncBar();
   }
   dockMQ.addEventListener("change", () => { layout(); onChange(); });
@@ -604,7 +618,6 @@
       updatePrompt();
       layout();
       // a pantalla completa, el botón "atrás" del celu cierra la pizarra
-      if (!docked) { history.pushState({ efecenBoard: 1 }, "", location.hash || "#/"); pushed = true; }
       resize();
       onChange();
     },
@@ -640,7 +653,7 @@
       if ((e.ctrlKey || e.metaKey) && (k === "z" || k === "y")) {
         e.preventDefault(); e.stopPropagation();
         if ((k === "z" && !e.shiftKey ? undoAny(page) : redoAny(page))) { redraw(); persist(page); syncBar(); }
-      } else if (k === "escape" && !docked && !document.body.classList.contains("learn-open")) { e.stopPropagation(); api.close(); }
+      } else if (k === "escape" && !docked) { e.stopPropagation(); api.close(); }
     }, true);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); else if (open) redraw(); });
     const reTheme = () => { if (open) { syncBar(); redraw(); } };

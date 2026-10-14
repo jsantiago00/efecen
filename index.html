@@ -443,14 +443,20 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 }
 /* ---------- pizarra (board.js) ---------- */
 .board { --board-paper: #FFFFFF; --board-rule: #DCE3F0; --board-margin: #F3B3B6;
-  position: fixed; inset: 0; z-index: 40; background: var(--bg); display: none; flex-direction: column; }
+  position: fixed; inset: 0; z-index: 46; background: var(--bg); display: none; flex-direction: column; }
 :root[data-theme="dark"] .board { --board-paper: #1A1836; --board-rule: #2E2B57; --board-margin: #6B3446; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme]) .board { --board-paper: #1A1836; --board-rule: #2E2B57; --board-margin: #6B3446; } }
 .board.show { display: flex; }
 .board.docked { left: auto; width: 50vw; border-left: 2px solid var(--line); }
 body.board-docked #app { max-width: min(640px, 50vw); margin-left: max(0px, calc(25vw - 320px)); margin-right: auto; }
-body.board-docked .nav, body.board-docked .ses-foot, body.board-docked .sheet { right: 50vw; }
+body.board-docked .nav, body.board-docked .ses-foot, body.board-docked .sheet, body.board-docked .learn { right: 50vw; }
 body.board-full { overflow: hidden; }
+.board.split { top: auto; height: 50dvh; border-top: 2px solid var(--line); }
+.board.split .board-bar { padding-top: 6px; }
+body.board-split { padding-bottom: 50dvh; }
+body.board-split .nav, body.board-split .ses-foot, body.board-split .sheet, body.board-split .learn { bottom: 50dvh; }
+body.board-split .ses-foot { padding-bottom: 14px; }
+body.board-split .nav { padding-bottom: 0; }
 .board-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: calc(6px + env(safe-area-inset-top)) 8px 6px; background: var(--card); border-bottom: 2px solid var(--line); }
 .bgrp { display: flex; align-items: center; gap: 2px; }
 .board-bar button { background: none; border: 0; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--muted); padding: 0; }
@@ -1557,7 +1563,7 @@ body.board-full { overflow: hidden; }
     updateCheck();
     // cada ejercicio tiene su hoja en la pizarra; el enunciado va sin links (la pizarra tapa los apuntes)
     if (!item.boardKey) item.boardKey = s.t0 + "-" + s.i;
-    boardContext({ key: item.boardKey, label: c.code + " · " + (c.concepts[c.templates[item.tpl].concepts[0]] || {}).name,
+    boardContext(ui.boardCtx = { key: item.boardKey, label: c.code + " · " + (c.concepts[c.templates[item.tpl].concepts[0]] || {}).name,
       prompt: tex(inst.prompt).replace(/<a class="term"[^>]*>([\s\S]*?)<\/a>/g, "$1") });
     const ni = $(".numin");
     if (ni && matchMedia("(pointer: fine)").matches) ni.focus();
@@ -2004,6 +2010,7 @@ body.board-full { overflow: hidden; }
     if (!ui.learn) {
       if (el) el.remove();
       document.body.classList.remove("learn-open");
+      boardContext(ui.session ? ui.boardCtx : null);
       if (ui.route === "learn" && !ui.session) render(); // refresca las fichas leídas
       return;
     }
@@ -2015,6 +2022,8 @@ body.board-full { overflow: hidden; }
     }
     const id = ui.learn.stack[ui.learn.stack.length - 1];
     el.innerHTML = id.startsWith("lesson:") ? lessonNotesHtml(id.slice(7)) : cardHtml(cardOf(id));
+    // cada ficha tiene su hoja en la pizarra, con el título y el resumen como "enunciado"
+    if (!id.startsWith("lesson:")) { const card = cardOf(id); boardContext({ key: "learn:" + id, label: card.title, prompt: `<b>${esc(card.title)}</b>: ${tex(card.summary)}` }); }
     document.body.classList.add("learn-open");
     el.scrollTop = 0;
     drawGraphs(el);
@@ -2025,7 +2034,7 @@ body.board-full { overflow: hidden; }
     return `<header class="learn-head">
       ${deep ? `<button class="iconbtn" data-act="learn-back" aria-label="Atrás">${icon("arrow-left")}</button>` : `<span class="iconbtn" aria-hidden="true" style="visibility:hidden">${icon("arrow-left")}</span>`}
       <span class="learn-crumb">${icon("graduation-cap")} ${esc(crumb)}</span>
-      <button class="iconbtn" data-act="learn-close" aria-label="Cerrar apuntes">${icon("x")}</button></header>`;
+      ${boardBtn()}<button class="iconbtn" data-act="learn-close" aria-label="Cerrar apuntes">${icon("x")}</button></header>`;
   }
   const block = b => typeof b === "string" ? `<div class="para">${tex(b)}</div>`
     : b.graph ? `<figure>${graphHtml(b.graph, "fig-graph")}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>`
@@ -2083,7 +2092,7 @@ body.board-full { overflow: hidden; }
     const cur = currentLesson(cid);
     const ids = Object.keys(th.cards), read = ids.filter(id => S.read[id]).length;
     app.innerHTML = `<main class="screen">
-      <h1 style="font-size:1.4rem">Aprender</h1>
+      <div class="row"><h1 class="grow" style="font-size:1.4rem">Aprender</h1>${boardBtn()}</div>
       ${subjectPicker()}
       <section class="hero">${mascot("think")}<div class="bubble grow">Tocá cualquier <span class="term">término subrayado</span> en un ejercicio o en los apuntes y te llevo a su explicación, con demostración y ejemplos.</div></section>
       ${cur && cur.theory.length ? `<button class="course-card" data-act="learn" data-id="lesson:${cur.id}"><span class="course-ico">${icon("graduation-cap")}</span>

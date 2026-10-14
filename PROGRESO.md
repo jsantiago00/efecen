@@ -44,9 +44,14 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - **Hoja:** cuadriculada, rayada o lisa, de alto infinito, con zoom (pellizco con dos dedos o Ctrl + rueda).
   - **Lápiz y dedo:** el lápiz dibuja y el dedo mueve la hoja. Mientras se usa el lápiz se ignoran los toques, así la palma no raya. Botón del S Pen: si lo apretás y soltás sin tocar la pantalla, alterna entre el borrador y la herramienta anterior. Si lo mantenés apretado mientras escribís, borra solo durante ese trazo; si lo apretás en medio de un trazo, lo escrito queda y sigue borrando. Chrome lo informa como botón 2 (barril), o como un «clic derecho» si no manda el estado al pasar el lápiz por encima. Si nunca se usó un lápiz, el dedo dibuja. Hay un interruptor para eso.
   - **Hojas:** cada ejercicio de una sesión tiene la suya, y se puede volver a las anteriores con ‹ ›. Fuera de una sesión se abre la última. Se guardan hasta 80 hojas.
-  - **Disposición:** con la tablet acostada (≥ 900 px de ancho), la pizarra ocupa la mitad derecha y el ejercicio queda a la izquierda. Parada, ocupa toda la pantalla y muestra el enunciado arriba, plegable. El «atrás» del sistema la cierra.
-- **Dónde aparece:** un botón con un lápiz en la barra de inicio y en la de cada ejercicio. Solo se muestra en tablets (puntero táctil y pantalla de al menos 600 px de lado) o si ya se usó un lápiz en ese dispositivo. En Ajustes se puede elegir Auto, Siempre o Nunca.
+  - **Disposición:** con la tablet acostada (≥ 900 px de ancho), la pizarra ocupa la mitad derecha y el ejercicio queda a la izquierda. Parada, por defecto ocupa la mitad de abajo y deja el ejercicio o la ficha arriba. Con el botón de expandir pasa a pantalla completa, con el enunciado arriba, plegable. El «atrás» del sistema la cierra.
+- **Dónde aparece:** un botón con un lápiz en la barra de inicio, en la de cada ejercicio, en *Aprender* y en cada ficha de los apuntes (cada ficha tiene su hoja). Solo se muestra en tablets (puntero táctil y pantalla de al menos 600 px de lado) o si ya se usó un lápiz en ese dispositivo. En Ajustes se puede elegir Auto, Siempre o Nunca.
 - **Tests:** la suite prueba la parte sin DOM: alcance del borrador, deshacer y rehacer, y guardado compacto. El dibujo con lápiz, el borrado, el arrastre con el dedo, el zoom y la persistencia se probaron en Chromium emulando una tablet de 1280 × 800 y de 800 × 1280.
+
+## Demostraciones en los apuntes
+
+- El usuario pidió que las fórmulas tengan su deducción (por ejemplo, faltaba cos(a+b)). La ficha `identidades-trig` (M101) ahora tiene la suma y la resta de seno, coseno y tangente, el ángulo doble, sen² y cos² en función de cos 2x, y la demostración de cada una a partir de cos(a−b) (distancia entre dos puntos de la circunferencia unidad).
+- **Pendiente:** completar la sección «Demostración» en las fichas que deducen fórmulas y todavía no la tienen. Faltan 101 de 157 fichas; parte son definiciones y no la necesitan. Se va materia por materia: M101, M104, F101, F102B y M102.
 
 ## Cuenta y sincronización (Firebase)
 
