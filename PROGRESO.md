@@ -55,7 +55,8 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **M104:** se agregó la demostración en las 14 fichas que no la tenían; ahora todas las de la materia tienen una.
 - **F101:** se agregó la demostración en 18 fichas. Quedan sin ella magnitudes y unidades, cifras significativas y leyes de Newton, que son definiciones o postulados.
 - **F102B:** se agregó la demostración en las 13 fichas que no la tenían; ahora todas las de la materia tienen una.
-- **Pendiente:** el mismo repaso en M102.
+- **M102:** se agregó la demostración en las 22 fichas que no la tenían; ahora todas las de la materia tienen una.
+- **Resultado:** quedan 12 fichas sin demostración en toda la carrera, y son definiciones, recetas o postulados (9 de M101 y 3 de F101). **Para las materias nuevas:** toda ficha que enuncie una fórmula o un teorema lleva su demostración.
 
 ## Cuenta y sincronización (Firebase)
 

@@ -224,6 +224,10 @@
         R`**Parábola:** $(y - k)^2 = 4p(x - h)$ (o con $x$ e $y$ cambiadas): cada punto está a la misma distancia del foco que de la directriz; $e = 1$.`],
       idea: [R`Para reconocerla en la forma $Ax^2 + Cy^2 + Dx + Ey + F = 0$ alcanza con mirar los cuadrados: si falta uno, **parábola**; si tienen el mismo signo, **elipse** (circunferencia si $A = C$); si tienen signo opuesto, **hipérbola**. Para el centro y los semiejes, se completan cuadrados.`,
         R`La excentricidad mide cuánto se aleja de una circunferencia ($e = 0$). Las órbitas de los planetas son elipses con el Sol en un foco ([[f1-gravitacion]]).`],
+      demo: [R`**La ecuación de la elipse.** Con focos $(\pm c, 0)$, pedimos $\sqrt{(x + c)^2 + y^2} + \sqrt{(x - c)^2 + y^2} = 2a$. Pasamos una raíz al otro lado y elevamos al cuadrado: $(x + c)^2 + y^2 = 4a^2 - 4a\sqrt{(x - c)^2 + y^2} + (x - c)^2 + y^2$, que se simplifica a $a\sqrt{(x - c)^2 + y^2} = a^2 - cx$.`,
+        R`Elevando otra vez: $a^2(x^2 - 2cx + c^2 + y^2) = a^4 - 2a^2cx + c^2x^2$, o sea $(a^2 - c^2)x^2 + a^2y^2 = a^2(a^2 - c^2)$. Llamando $b^2 = a^2 - c^2$ y dividiendo por $a^2b^2$: $\frac{x^2}{a^2} + \frac{y^2}{b^2} = 1$. Con la diferencia de distancias, la misma cuenta da la hipérbola con $b^2 = c^2 - a^2$.`,
+        R`**La parábola.** Con foco $(p, 0)$ y directriz $x = -p$: $\sqrt{(x - p)^2 + y^2} = x + p$. Elevando, $x^2 - 2px + p^2 + y^2 = x^2 + 2px + p^2$, o sea $y^2 = 4px$.`,
+        R`**Las asíntotas de la hipérbola.** Despejando, $y = \pm\frac ba\sqrt{x^2 - a^2} = \pm\frac ba\,x\sqrt{1 - \frac{a^2}{x^2}}$. Para $|x|$ grande, la raíz tiende a $1$ y la curva se pega a $y = \pm\frac bax$.`],
       examples: [{ q: R`Clasificá $4x^2 + 9y^2 - 16x + 18y - 11 = 0$.`, steps: [R`$4(x - 2)^2 + 9(y + 1)^2 = 11 + 16 + 9 = 36$.`, R`$\frac{(x-2)^2}{9} + \frac{(y+1)^2}{4} = 1$: elipse de centro $(2, -1)$, $a = 3$, $b = 2$, $c = \sqrt5$.`] }],
       tips: [R`En la elipse $c^2 = a^2 - b^2$, pero en la hipérbola $c^2 = a^2 + b^2$: no se mezclan.`],
       see: ["c2-polares", "cuadratica"]
@@ -249,6 +253,9 @@
         R`**Cónicas en polares** (foco en el origen): $r = \frac{ed}{1 + e\cos\theta}$; $e$ es la excentricidad.`],
       idea: [R`La fórmula del área sale de sumar sectores circulares finitos: un sector de radio $r$ y ángulo $d\theta$ tiene área $\frac12r^2\,d\theta$.`,
         R`Las curvas típicas: circunferencias $r = a$ y $r = 2a\sin\theta$, cardioides $r = a(1 \pm \cos\theta)$, rosas $r = a\cos(n\theta)$ (con $n$ pétalos si $n$ es impar y $2n$ si es par) y espirales $r = a\theta$.`],
+      demo: [R`**Área.** Partimos $[\alpha, \beta]$ en ángulos chicos $\Delta\theta$. Cada tajada es casi un sector circular de radio $f(\theta_i)$, cuya área es la fracción $\frac{\Delta\theta}{2\pi}$ del círculo: $\frac{\Delta\theta}{2\pi}\pi f(\theta_i)^2 = \frac12f(\theta_i)^2\Delta\theta$. La suma es una suma de Riemann que tiende a $\frac12\int_\alpha^\beta f(\theta)^2\,d\theta$.`,
+        R`**Cónicas con foco en el origen.** Una cónica es el conjunto de puntos cuya distancia al foco es $e$ veces su distancia a una recta directriz. Si la directriz es $x = d$, el punto $(r\cos\theta, r\sin\theta)$ está a distancia $d - r\cos\theta$ de ella. Queda $r = e(d - r\cos\theta)$, o sea $r(1 + e\cos\theta) = ed$.`,
+        R`**Cambio de coordenadas.** $x = r\cos\theta$ e $y = r\sin\theta$ son las definiciones de coseno y seno en un triángulo rectángulo de hipotenusa $r$. Por Pitágoras, $x^2 + y^2 = r^2(\cos^2\theta + \sin^2\theta) = r^2$.`],
       examples: [{ q: R`Área de un pétalo de $r = \cos(2\theta)$.`, steps: [R`Un pétalo va de $-\frac\pi4$ a $\frac\pi4$.`, R`$\frac12\int_{-\pi/4}^{\pi/4}\cos^2(2\theta)\,d\theta = \frac\pi8$.`] }],
       tips: [R`$\arctan\frac yx$ solo da ángulos del primer y cuarto cuadrante: si $x < 0$ hay que sumar $\pi$.`, R`Para el área, el intervalo de $\theta$ tiene que recorrer la curva **una sola vez**.`],
       see: ["c2-conicas", "c2-parametricas", "numeros-complejos"]
@@ -434,6 +441,9 @@
         R`**Distancia de $P_0$ al plano:** $D = \frac{|ax_0 + by_0 + cz_0 - d|}{\sqrt{a^2 + b^2 + c^2}}$.`],
       idea: [R`En el espacio, dos rectas pueden ser paralelas, cortarse, o **cruzarse** sin tocarse (alabeadas), algo que en el plano no pasa. Si los directores no son paralelos, se cortan exactamente cuando $\overrightarrow{PQ}$, $\vec u$ y $\vec v$ son coplanares: el producto mixto da $0$.`,
         R`La distancia al plano es la longitud de la [[al-producto-escalar|proyección]] de $\overrightarrow{QP_0}$ (con $Q$ en el plano) sobre la normal.`],
+      demo: [R`**La ecuación del plano.** Un punto $X$ está en el plano por $P$ con normal $\vec n$ si y solo si $\overrightarrow{PX}$ es perpendicular a $\vec n$, o sea $\vec n\cdot(X - P) = 0$. Desarrollando, $ax + by + cz = ax_0 + by_0 + cz_0$, y ese número es $d$.`,
+        R`**Distancia de un punto a un plano.** Tomamos $Q$ en el plano. La distancia es el largo de la proyección de $\overrightarrow{QP_0}$ sobre la normal: $$D = \frac{|\vec n\cdot(P_0 - Q)|}{|\vec n|} = \frac{|ax_0 + by_0 + cz_0 - (ax_Q + by_Q + cz_Q)|}{\sqrt{a^2 + b^2 + c^2}},$$ y como $Q$ está en el plano, $ax_Q + by_Q + cz_Q = d$.`,
+        R`**Normal por tres puntos.** $\overrightarrow{P_1P_2}\times\overrightarrow{P_1P_3}$ es perpendicular a los dos vectores, que están en el plano: es una normal. Si los puntos están alineados da $\vec 0$, y entonces no determinan un plano.`],
       examples: [{ q: R`Plano por $(1, 0, 0)$, $(0, 1, 0)$, $(0, 0, 1)$.`, steps: [R`$\vec n = (-1, 1, 0)\times(-1, 0, 1) = (1, 1, 1)$.`, R`$x + y + z = 1$.`] }],
       tips: [R`El vector $(a, b, c)$ de $ax + by + cz = d$ es **normal** al plano, no paralelo a él.`],
       see: ["al-producto-vectorial", "al-producto-escalar", "c2-cuadricas"]
@@ -446,6 +456,9 @@
         R`**Paraboloide elíptico** $\frac{x^2}{a^2} + \frac{y^2}{b^2} = \frac zc$; **paraboloide hiperbólico** $\frac{x^2}{a^2} - \frac{y^2}{b^2} = \frac zc$ (la silla de montar).`],
       idea: [R`Para reconocerlas se miran las **trazas**: los cortes con planos $z = k$, $x = k$, $y = k$ son [[c2-conicas|cónicas]]. Por ejemplo, en el hiperboloide de dos hojas el corte $z = 0$ es vacío: por eso tiene dos piezas.`,
         R`Regla rápida: una variable lineal es paraboloide; igualado a $0$ es cono; igualado a $1$, el número de signos menos dice si es elipsoide (0), una hoja (1) o dos hojas (2).`],
+      demo: [R`**Hiperboloide de dos hojas.** En $-\frac{x^2}{a^2} - \frac{y^2}{b^2} + \frac{z^2}{c^2} = 1$, el corte $z = k$ da $\frac{x^2}{a^2} + \frac{y^2}{b^2} = \frac{k^2}{c^2} - 1$. Es vacío si $|k| < c$, un punto si $|k| = c$, y una elipse si $|k| > c$. Por eso la superficie tiene dos piezas, separadas por la franja $|z| < c$.`,
+        R`**Hiperboloide de una hoja.** Con $\frac{x^2}{a^2} + \frac{y^2}{b^2} - \frac{z^2}{c^2} = 1$, el corte $z = k$ es la elipse $\frac{x^2}{a^2} + \frac{y^2}{b^2} = 1 + \frac{k^2}{c^2}$, que existe para todo $k$: la superficie es una sola pieza. El corte $x = 0$ es la hipérbola $\frac{y^2}{b^2} - \frac{z^2}{c^2} = 1$.`,
+        R`**La silla.** En $\frac{x^2}{a^2} - \frac{y^2}{b^2} = \frac zc$, el corte $y = 0$ es la parábola $z = \frac{c}{a^2}x^2$, que abre hacia arriba, y el corte $x = 0$ es $z = -\frac{c}{b^2}y^2$, que abre hacia abajo. El origen es un mínimo en una dirección y un máximo en la otra.`],
       examples: [{ q: R`¿Qué es $x^2 - y^2 + z^2 = 1$?`, steps: [R`Un signo menos, igualado a $1$: hiperboloide de una hoja con eje $y$.`] }],
       see: ["c2-conicas", "c2-rectas-planos", "c2-coord-espacio"]
     },
@@ -455,6 +468,9 @@
       def: [R`**Cilíndricas** $(r, \theta, z)$: $x = r\cos\theta$, $y = r\sin\theta$, $z = z$.`,
         R`**Esféricas** $(\rho, \varphi, \theta)$: $x = \rho\sin\varphi\cos\theta$, $y = \rho\sin\varphi\sin\theta$, $z = \rho\cos\varphi$, con $\rho \ge 0$, $0 \le \varphi \le \pi$.`],
       idea: [R`Se elige el sistema según la simetría: cilindros y conos con eje $z$ se escriben fácil en cilíndricas ($r = 2$ es un cilindro); esferas en esféricas ($\rho = 3$). Simplifican mucho las [[c2-triples|integrales triples]].`],
+      demo: [R`**Esféricas.** El punto está a distancia $\rho$ del origen, y $\varphi$ es el ángulo con el eje $z$. En el triángulo rectángulo con hipotenusa $\rho$ y un cateto sobre el eje $z$: la altura es $z = \rho\cos\varphi$ y la distancia al eje es $r = \rho\sin\varphi$.`,
+        R`Esa distancia $r$, con el ángulo $\theta$ de la proyección en el plano $xy$, da $x = r\cos\theta$ e $y = r\sin\theta$, como en [[c2-polares|polares]]. Reemplazando $r$: $x = \rho\sin\varphi\cos\theta$ e $y = \rho\sin\varphi\sin\theta$.`,
+        R`**Chequeo:** $x^2 + y^2 + z^2 = \rho^2\sin^2\varphi(\cos^2\theta + \sin^2\theta) + \rho^2\cos^2\varphi = \rho^2$.`],
       examples: [{ q: R`Pasá $(1, 1, \sqrt2)$ a esféricas.`, steps: [R`$\rho = \sqrt{1 + 1 + 2} = 2$; $\cos\varphi = \frac{\sqrt2}{2}$, $\varphi = \frac\pi4$; $\theta = \frac\pi4$.`] }],
       tips: [R`En algunos libros $\varphi$ y $\theta$ están intercambiados: fijate cuál se mide desde el eje $z$.`],
       see: ["c2-polares", "c2-cuadricas"]
@@ -636,6 +652,9 @@
         R`Si existe, $R = \lim\left|\frac{c_n}{c_{n+1}}\right|$ ([[criterios-series|criterio del cociente]]). En los extremos $x = a \pm R$ hay que estudiar cada [[series|serie]] por separado.`],
       idea: [R`Una serie de potencias es un "polinomio infinito": dentro del radio se puede derivar e integrar término a término, y el radio no cambia.`,
         R`Un factor como $n^p$ no cambia el radio (porque $\left(\frac{n+1}{n}\right)^p \to 1$), pero sí puede cambiar qué pasa en los extremos.`],
+      demo: [R`**Por qué hay un radio.** Si la serie converge en un $x_0 \neq a$, sus términos tienden a $0$, así que están acotados: $|c_n(x_0 - a)^n| \le M$. Para $|x - a| < |x_0 - a|$, con $q = \frac{|x - a|}{|x_0 - a|} < 1$: $$|c_n(x - a)^n| = |c_n(x_0 - a)^n|\,q^n \le Mq^n.$$`,
+        R`Como la geométrica $\sum Mq^n$ converge, la serie converge absolutamente en todo punto más cercano al centro que $x_0$. El conjunto donde converge es entonces un intervalo centrado en $a$ (más, quizás, sus extremos), y su semiancho es $R$.`,
+        R`**El radio por el cociente.** Aplicamos el [[criterios-series|criterio del cociente]] a $\sum|c_n(x - a)^n|$: $\frac{|c_{n+1}||x - a|^{n+1}}{|c_n||x - a|^n} \to \frac{|x - a|}{L}$ con $L = \lim\left|\frac{c_n}{c_{n+1}}\right|$. Converge si eso es $< 1$, o sea si $|x - a| < L$, y diverge si es $> 1$: $R = L$.`],
       examples: [{ q: R`Radio de $\sum \frac{(x-1)^n}{3^n n}$.`, steps: [R`$\left|\frac{c_n}{c_{n+1}}\right| = \frac{3^{n+1}(n+1)}{3^n n} \to 3$.`, R`$R = 3$: converge en $(-2, 4)$; en $x = 4$ es la armónica (diverge) y en $x = -2$, la armónica alternada (converge).`] }],
       tips: [R`El intervalo está centrado en $a$, no en $0$: con $(x - 1)^n$ y $R = 3$ va de $-2$ a $4$.`],
       see: ["c2-taylor", "series", "criterios-series"]
@@ -658,6 +677,10 @@
       def: [R`La **serie de Fourier** de $f$ en $[-\pi, \pi]$ es $\frac{a_0}{2} + \sum_{n=1}^\infty\left(a_n\cos nx + b_n\sin nx\right)$, con $$a_n = \frac1\pi\int_{-\pi}^{\pi}f(x)\cos(nx)\,dx, \qquad b_n = \frac1\pi\int_{-\pi}^{\pi}f(x)\sin(nx)\,dx.$$`],
       idea: [R`Taylor aproxima cerca de un punto; Fourier aproxima en todo un período y admite saltos. Los coeficientes salen de que $\cos(nx)$ y $\sin(mx)$ son **ortogonales**: la integral de su producto en un período es $0$ si no son la misma función, igual que una [[al-gram-schmidt|base ortogonal]].`,
         R`**Paridad:** si $f$ es par, todos los $b_n$ son $0$ (solo cosenos); si es impar, todos los $a_n$ son $0$ (solo senos). En un salto, la serie converge al promedio de los dos lados.`],
+      demo: [R`**Ortogonalidad.** Con las fórmulas de producto a suma (que salen de las de [[identidades-trig|suma y resta de ángulos]]): $\cos(nx)\cos(mx) = \frac12[\cos((n - m)x) + \cos((n + m)x)]$. Para $n \neq m$, las dos integrales en $[-\pi, \pi]$ dan $0$, porque son cosenos de frecuencia entera no nula. Para $n = m \ge 1$ queda $\int_{-\pi}^\pi\frac12\,dx = \pi$.`,
+        R`Igual se ve que $\int_{-\pi}^\pi\sin(nx)\sin(mx)\,dx$ es $0$ si $n \neq m$ y $\pi$ si $n = m$, y que $\int_{-\pi}^\pi\sin(nx)\cos(mx)\,dx = 0$ siempre, porque el integrando es impar.`,
+        R`**Los coeficientes.** Si $f(x) = \frac{a_0}{2} + \sum_k(a_k\cos kx + b_k\sin kx)$, multiplicamos por $\cos(nx)$ e integramos en $[-\pi, \pi]$. Por la ortogonalidad, todos los términos dan $0$ salvo el de $a_n$, que da $a_n\pi$. Así sale $a_n = \frac1\pi\int_{-\pi}^\pi f(x)\cos(nx)\,dx$; con $\sin(nx)$ sale $b_n$.`,
+        R`**Paridad.** Si $f$ es par, $f(x)\sin(nx)$ es impar y su integral en $[-\pi, \pi]$ es $0$: todos los $b_n$ se anulan. Si $f$ es impar, se anulan los $a_n$ (ver [[integral-definida]]).`],
       examples: [{ q: R`Serie de $f(x) = x$ en $[-\pi, \pi]$.`, steps: [R`Impar: $a_n = 0$. Por partes, $b_n = \frac{2(-1)^{n+1}}{n}$.`, R`$x = 2\left(\sin x - \frac{\sin 2x}{2} + \frac{\sin 3x}{3} - \dots\right)$.`] }],
       tips: [R`$\frac{a_0}{2}$ es el promedio de $f$: no te olvides del $\frac12$.`],
       see: ["c2-taylor", "al-gram-schmidt"]
@@ -799,6 +822,9 @@
         R`**Límites, derivadas e integrales** se hacen componente a componente: $\vec r\,'(t) = (x'(t), y'(t), z'(t))$ y $\int\vec r(t)\,dt = \left(\int x, \int y, \int z\right) + \vec C$.`],
       idea: [R`Si $\vec r$ es la posición de una partícula, $\vec r\,'$ es la **velocidad** (tangente a la trayectoria) y $\vec r\,''$ la **aceleración**, como en [[f1-mruv|cinemática]]. Longitud de arco: $\int_a^b|\vec r\,'(t)|\,dt$, igual que en las [[c2-parametricas|curvas paramétricas]].`,
         R`La **hélice** $(a\cos t, a\sin t, bt)$ gira alrededor del eje $z$ mientras sube: es una circunferencia "estirada".`],
+      demo: [R`**La derivada es tangente.** $\frac{\vec r(t + h) - \vec r(t)}{h}$ es un vector en la dirección de la secante que une dos puntos de la curva. Cuando $h \to 0$, la secante tiende a la tangente, y el límite, calculado componente a componente, es $(x'(t), y'(t), z'(t))$.`,
+        R`**Componente a componente.** El vector $\vec r(t) - \vec L$ tiende a $\vec 0$ si y solo si cada componente tiende a $0$, porque $|\vec v| \le |v_x| + |v_y| + |v_z|$ y cada $|v_i| \le |\vec v|$. Por eso límites, derivadas e integrales se calculan por componentes.`,
+        R`**Longitud.** Una poligonal con vértices $\vec r(t_i)$ tiene lados de largo $|\vec r(t_{i+1}) - \vec r(t_i)| \approx |\vec r\,'(t_i)|\,\Delta t$. Sumando y pasando al límite queda $\int_a^b|\vec r\,'(t)|\,dt$. Para la hélice, $|\vec r\,'| = \sqrt{a^2 + b^2}$ es constante.`],
       examples: [{ q: R`Si $\vec v(t) = (1, 2t, 3t^2)$ y $\vec r(0) = (0, 0, 0)$, ¿dónde está en $t = 1$?`, steps: [R`$\vec r(t) = (t, t^2, t^3)$: en $t = 1$, $(1, 1, 1)$.`] }],
       tips: [R`La constante de integración es un **vector**: se determina con la condición inicial completa.`],
       see: ["c2-curvatura", "c2-parametricas"]
@@ -811,6 +837,10 @@
         R`**Componentes de la aceleración:** $\vec a = a_T\vec T + a_N\vec N$, con $a_T = \frac{\vec v\cdot\vec a}{|\vec v|}$ y $a_N = \frac{|\vec v\times\vec a|}{|\vec v|} = \kappa|\vec v|^2$.`],
       idea: [R`$\frac1\kappa$ es el radio de la circunferencia que mejor se pega a la curva en ese punto: una recta tiene $\kappa = 0$ y una circunferencia de radio $R$, $\kappa = \frac1R$.`,
         R`$a_T$ cambia la rapidez y $a_N$ cambia la dirección: en una curva a velocidad constante solo hay $a_N$, la [[f1-circular|aceleración centrípeta]].`],
+      demo: [R`**La fórmula con el producto vectorial.** Sea $s$ la longitud de arco, con $\frac{ds}{dt} = |\vec r\,'| = v$. Entonces $\vec r\,' = v\vec T$, y derivando, $\vec r\,'' = v'\vec T + v\vec T\,'$. Como $\vec T\,' = \frac{d\vec T}{ds}v = \kappa v\vec N$, queda $\vec r\,'' = v'\vec T + \kappa v^2\vec N$.`,
+        R`Multiplicando vectorialmente por $\vec r\,' = v\vec T$: $\vec r\,'\times\vec r\,'' = \kappa v^3\,(\vec T\times\vec N)$, porque $\vec T\times\vec T = \vec 0$. Como $\vec T$ y $\vec N$ son unitarios y perpendiculares, $|\vec T\times\vec N| = 1$, y entonces $\kappa = \frac{|\vec r\,'\times\vec r\,''|}{v^3}$.`,
+        R`**Para un gráfico** $y = f(x)$ usamos $\vec r = (x, f(x), 0)$: $\vec r\,' = (1, f', 0)$ y $\vec r\,'' = (0, f'', 0)$. Su producto vectorial es $(0, 0, f'')$, así que $\kappa = \frac{|f''|}{(1 + f'^2)^{3/2}}$.`,
+        R`**Componentes de la aceleración.** La misma cuenta dice $\vec a = v'\vec T + \kappa v^2\vec N$: $a_T = v'$ y $a_N = \kappa v^2$. Además $\vec v\cdot\vec a = v\,v'$, de donde $a_T = \frac{\vec v\cdot\vec a}{v}$, y $|\vec v\times\vec a| = \kappa v^3$, de donde $a_N = \frac{|\vec v\times\vec a|}{v}$. Para una circunferencia de radio $R$ recorrida a rapidez constante, $\kappa = \frac1R$.`],
       examples: [{ q: R`Curvatura de $y = x^2$ en el origen.`, steps: [R`$y' = 0$, $y'' = 2$: $\kappa = 2$; el radio de curvatura es $\frac12$.`] }],
       tips: [R`No confundas $\kappa$ con $|\vec r\,''|$: la curvatura no depende de la rapidez con que se recorre la curva.`],
       see: ["c2-curvas-vectoriales", "al-producto-vectorial"]
@@ -998,6 +1028,9 @@
       def: [R`Una **función de dos variables** $f: D \subseteq \mathbb R^2 \to \mathbb R$; su gráfico es una superficie $z = f(x, y)$, y sus **curvas de nivel** son $f(x, y) = k$ (como en un mapa topográfico).`,
         R`$\lim_{(x,y)\to(a,b)}f(x, y) = L$ si $f$ se acerca a $L$ cuando $(x, y)$ se acerca a $(a, b)$ **por cualquier camino**. $f$ es **continua** en $(a, b)$ si el límite existe y vale $f(a, b)$.`],
       idea: [R`En una variable hay dos caminos (izquierda y derecha, los [[limites-laterales|laterales]]); en el plano hay infinitos. Para mostrar que **no** existe alcanza con dos caminos que den distinto (rectas $y = mx$, ejes, parábolas). Para mostrar que **sí** existe hay que acotar, por ejemplo en polares: si $|f - L| \le g(r)$ con $g(r) \to 0$, listo.`],
+      demo: [R`**Un límite que no existe.** $f(x, y) = \frac{xy}{x^2 + y^2}$ en $(0, 0)$. Por la recta $y = mx$: $f(x, mx) = \frac{mx^2}{x^2 + m^2x^2} = \frac{m}{1 + m^2}$, que depende de $m$. Por $y = 0$ el límite es $0$ y por $y = x$ es $\frac12$: no existe.`,
+        R`**Un límite que sí existe.** $g(x, y) = \frac{x^2y}{x^2 + y^2}$ en $(0, 0)$. En polares, $g = \frac{r^3\cos^2\theta\sin\theta}{r^2} = r\cos^2\theta\sin\theta$, así que $|g| \le r$. Si $(x, y) \to (0, 0)$, $r \to 0$, y por el [[sandwich|teorema del sándwich]] el límite es $0$, sin importar el camino.`,
+        R`**Por qué no alcanza con las rectas.** $h = \frac{x^2y}{x^4 + y^2}$ da $0$ por toda recta que pasa por el origen, pero por la parábola $y = x^2$ vale $\frac{x^4}{2x^4} = \frac12$. El límite no existe.`],
       examples: [{ q: R`¿Existe $\lim\frac{xy}{x^2 + y^2}$ en el origen?`, steps: [R`Por $y = mx$: $\frac{m}{1 + m^2}$, que cambia con $m$.`, R`No existe.`] }],
       tips: [R`Que el límite dé lo mismo por todas las rectas **no** alcanza: puede fallar por una parábola.`],
       see: ["c2-parciales", "limite"]
@@ -1010,6 +1043,9 @@
         R`**Schwarz:** si las segundas derivadas son continuas, $f_{xy} = f_{yx}$.`],
       idea: [R`$f_x$ es la pendiente de la superficie cortada por el plano $y = b$: es una [[derivada]] común de una función de una variable.`,
         R`La regla de la cadena suma las contribuciones de cada camino por el que $t$ afecta a $z$, igual que la [[regla-cadena|regla de la cadena]] de una variable pero con varias "ramas".`],
+      demo: [R`**Regla de la cadena.** Si $f$ es diferenciable, cerca de $(x, y)$ vale $\Delta f = f_x\Delta x + f_y\Delta y + \varepsilon\sqrt{\Delta x^2 + \Delta y^2}$, con $\varepsilon \to 0$ (la superficie se parece a su [[c2-gradiente|plano tangente]]). Con $x = x(t)$, $y = y(t)$, dividimos por $\Delta t$: $$\frac{\Delta z}{\Delta t} = f_x\frac{\Delta x}{\Delta t} + f_y\frac{\Delta y}{\Delta t} + \varepsilon\sqrt{\left(\frac{\Delta x}{\Delta t}\right)^2 + \left(\frac{\Delta y}{\Delta t}\right)^2}.$$`,
+        R`Cuando $\Delta t \to 0$, los cocientes tienden a $x'(t)$ e $y'(t)$, la raíz queda acotada y $\varepsilon \to 0$. Queda $\frac{dz}{dt} = f_x x' + f_y y'$.`,
+        R`**Schwarz en un ejemplo.** Con $f = x^3y^2 + \sin(xy)$: $f_x = 3x^2y^2 + y\cos(xy)$ y $f_{xy} = 6x^2y + \cos(xy) - xy\sin(xy)$. Por el otro lado, $f_y = 2x^3y + x\cos(xy)$ y $f_{yx} = 6x^2y + \cos(xy) - xy\sin(xy)$. Dan lo mismo, como dice el teorema.`],
       examples: [{ q: R`$f = x^2y^3$. Calculá $f_x$ y $f_y$.`, steps: [R`$f_x = 2xy^3$ y $f_y = 3x^2y^2$.`] }],
       see: ["c2-gradiente", "regla-cadena", "derivada"]
     },
@@ -1020,6 +1056,10 @@
         R`**Plano tangente** a $z = f(x, y)$ en $(a, b)$: $z = f(a, b) + f_x(a, b)(x - a) + f_y(a, b)(y - b)$. Es la mejor aproximación lineal (**linealización**); el **diferencial total** es $dz = f_x\,dx + f_y\,dy$.`],
       idea: [R`Como $D_{\vec u}f = |\nabla f|\cos\theta$ ([[al-producto-escalar|producto escalar]]), el máximo se da para $\theta = 0$: el gradiente apunta hacia donde $f$ crece más rápido, y $|\nabla f|$ es esa tasa. Además es perpendicular a las curvas de nivel.`,
         R`El plano tangente generaliza la [[recta-tangente|recta tangente]]: cerca del punto, la superficie y el plano casi no se distinguen.`],
+      demo: [R`**Derivada direccional.** Recorremos la recta $g(t) = f(a + tu_1, b + tu_2)$. Por la [[c2-parciales|regla de la cadena]], $g'(0) = f_x u_1 + f_y u_2 = \nabla f\cdot\vec u$, y eso es por definición $D_{\vec u}f$.`,
+        R`**Dirección de máximo crecimiento.** $\nabla f\cdot\vec u = |\nabla f|\,|\vec u|\cos\theta = |\nabla f|\cos\theta$, porque $\vec u$ es unitario. Es máximo con $\theta = 0$ (en la dirección de $\nabla f$) y vale $|\nabla f|$. Con $\theta = \pi$ es mínimo, y con $\theta = \frac\pi2$ es $0$.`,
+        R`**Perpendicular a las curvas de nivel.** Si $\vec r(t)$ recorre la curva $f = k$, entonces $f(\vec r(t)) = k$ para todo $t$. Derivando, $\nabla f\cdot\vec r\,'(t) = 0$: el gradiente es perpendicular a la tangente de la curva de nivel.`,
+        R`**Plano tangente.** Es el plano que pasa por $(a, b, f(a, b))$ y tiene, en las direcciones $x$ e $y$, las mismas pendientes que la superficie: $f_x(a, b)$ y $f_y(a, b)$. Eso da $z = f(a, b) + f_x(x - a) + f_y(y - b)$.`],
       examples: [{ q: R`$f = x^2 + y^2$ en $(1, 2)$: ¿dirección de máximo crecimiento?`, steps: [R`$\nabla f = (2x, 2y) = (2, 4)$, y la tasa máxima es $|\nabla f| = \sqrt{20}$.`] }],
       tips: [R`La dirección tiene que ser un vector **unitario**: si te dan $(3, 4)$, dividí por $5$.`],
       see: ["c2-parciales", "c2-extremos", "al-producto-escalar"]
@@ -1031,6 +1071,10 @@
         R`**Criterio de las segundas derivadas:** $D = f_{xx}f_{yy} - f_{xy}^2$ (el determinante de la **matriz hessiana**). Si $D > 0$ y $f_{xx} > 0$: mínimo local; si $D > 0$ y $f_{xx} < 0$: máximo local; si $D < 0$: **punto silla**; si $D = 0$, el criterio no decide.`],
       idea: [R`Cerca de un punto crítico, $f$ se parece a una forma cuadrática: si curva para arriba en todas las direcciones es un mínimo (copa), si para abajo un máximo, y si en unas sube y en otras baja es una silla de montar, como el [[c2-cuadricas|paraboloide hiperbólico]].`,
         R`Es la versión en dos variables del criterio de la derivada segunda de los [[extremos]] de una variable.`],
+      demo: [R`**En un extremo, $\nabla f = \vec 0$.** Si $(a, b)$ es un máximo local de $f$, entonces $x = a$ es un máximo local de la función de una variable $f(x, b)$, y su derivada se anula: $f_x(a, b) = 0$. Igual con $f_y$.`,
+        R`**El criterio del hessiano.** Cerca de un punto crítico, por Taylor, $f(a + h, b + k) - f(a, b) \approx \frac12Q(h, k)$ con $Q = Ah^2 + 2Bhk + Ck^2$, donde $A = f_{xx}$, $B = f_{xy}$ y $C = f_{yy}$. Si $A \neq 0$, completando cuadrados: $$Q = A\left(h + \frac BAk\right)^2 + \frac{AC - B^2}{A}k^2.$$`,
+        R`Si $D = AC - B^2 > 0$, los dos términos tienen el signo de $A$: $Q$ es siempre positiva si $A > 0$ (mínimo) y siempre negativa si $A < 0$ (máximo). Si $D < 0$, los términos tienen signos opuestos y $Q$ toma los dos signos según la dirección: es un punto silla.`,
+        R`**Con $D = 0$ no se decide.** $x^4 + y^4$ (mínimo), $-x^4 - y^4$ (máximo) y $x^4 - y^4$ (silla) tienen, las tres, todas las segundas derivadas nulas en el origen.`],
       examples: [{ q: R`$f = x^2 - y^2$ en $(0, 0)$.`, steps: [R`$f_{xx} = 2$, $f_{yy} = -2$, $f_{xy} = 0$: $D = -4 < 0$, punto silla.`] }],
       see: ["c2-lagrange", "extremos", "c2-gradiente"]
     },
@@ -1040,6 +1084,9 @@
       def: [R`Los extremos de $f(x, y)$ sobre la curva $g(x, y) = c$ (con $\nabla g \ne \vec 0$) están entre las soluciones de $$\nabla f = \lambda\nabla g, \qquad g(x, y) = c.$$`],
       idea: [R`En el óptimo, la curva de nivel de $f$ es **tangente** a la restricción: si la cortara, moviéndose sobre la restricción se podría subir o bajar $f$. Curvas tangentes tienen [[c2-gradiente|gradientes]] paralelos, y eso dice $\nabla f = \lambda\nabla g$.`,
         R`Es la versión con restricción de la [[optimizacion|optimización]] de una variable: en lugar de despejar, se agrega una incógnita $\lambda$.`],
+      demo: [R`Parametrizamos la restricción $g(x, y) = c$ con una curva $\vec r(t)$, de modo que $\vec r(0)$ es el punto óptimo. Como $g(\vec r(t)) = c$ para todo $t$, derivando: $\nabla g\cdot\vec r\,'(0) = 0$.`,
+        R`Sobre la curva, la función $h(t) = f(\vec r(t))$ tiene un extremo en $t = 0$, así que $h'(0) = \nabla f\cdot\vec r\,'(0) = 0$.`,
+        R`En el plano, los dos gradientes son perpendiculares al mismo vector no nulo $\vec r\,'(0)$, así que son paralelos. Como $\nabla g \neq \vec 0$, existe $\lambda$ con $\nabla f = \lambda\nabla g$.`],
       examples: [{ q: R`Máximo de $xy$ con $x + y = 10$.`, steps: [R`$(y, x) = \lambda(1, 1)$: $x = y = 5$.`, R`Máximo $25$.`] }],
       see: ["c2-extremos", "c2-gradiente", "optimizacion"]
     }
@@ -1219,6 +1266,9 @@
         R`**Fubini:** se calcula como una **integral iterada**. **Tipo I:** $D = \{a \le x \le b,\ g_1(x) \le y \le g_2(x)\}$ da $\int_a^b\int_{g_1(x)}^{g_2(x)}f\,dy\,dx$. **Tipo II:** al revés, con $x$ entre dos funciones de $y$.`],
       idea: [R`Es la [[integral-definida|integral definida]] en dos dimensiones: se corta en tajadas (con $x$ fijo), se integra cada tajada y se suman.`,
         R`Para **cambiar el orden** hay que dibujar la región y describirla de nuevo: a veces una integral imposible en un orden es fácil en el otro.`],
+      demo: [R`**Fubini, con el volumen.** Si $f \ge 0$ en el rectángulo $[a, b]\times[c, d]$, cortamos el sólido con planos $x$ = constante. Cada tajada tiene un área $A(x) = \int_c^d f(x, y)\,dy$. El volumen es la suma de las tajadas: $\int_a^b A(x)\,dx = \int_a^b\int_c^d f\,dy\,dx$.`,
+        R`Cortando con planos $y$ = constante sale el otro orden, $\int_c^d\int_a^b f\,dx\,dy$. Los dos calculan el mismo volumen, así que son iguales.`,
+        R`**Regiones tipo I.** Si $D$ tiene, para cada $x$, los $y$ entre $g_1(x)$ y $g_2(x)$, la tajada en $x$ va solo de $g_1(x)$ a $g_2(x)$. Con $f = 1$ queda $\int_a^b(g_2 - g_1)\,dx$: el [[area-curvas|área entre dos curvas]].`],
       examples: [{ q: R`Área entre $y = x^2$ e $y = x$.`, steps: [R`Se cortan en $0$ y $1$, con $x \ge x^2$ ahí.`, R`$\int_0^1\int_{x^2}^{x}dy\,dx = \int_0^1(x - x^2)\,dx = \frac16$.`] }],
       tips: [R`Los límites de la integral de adentro pueden depender de la variable de afuera, nunca al revés.`],
       see: ["c2-jacobiano", "c2-triples", "integral-definida"]
@@ -1230,6 +1280,9 @@
         R`**Cilíndricas:** $dV = r\,dr\,d\theta\,dz$. **Esféricas:** $dV = \rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta$ (los factores son los [[c2-jacobiano|jacobianos]]).`],
       idea: [R`Se elige el sistema por la forma del sólido: cilindros, conos y paraboloides con eje $z$ en [[c2-coord-espacio|cilíndricas]]; esferas en esféricas. Así los límites quedan constantes o simples.`,
         R`Aplicaciones: masa, centro de masa ([[f1-cm]]) y momentos de inercia ([[f1-inercia]]).`],
+      demo: [R`**Cilíndricas.** Variamos un poco cada coordenada: $dr$ en la dirección radial, $d\theta$ en el ángulo y $dz$ en altura. Se forma casi una caja de lados $dr$, $r\,d\theta$ (un arco de radio $r$) y $dz$. Su volumen es $r\,dr\,d\theta\,dz$.`,
+        R`**Esféricas.** Los lados son $d\rho$ en la dirección radial, $\rho\,d\varphi$ (un arco de radio $\rho$ sobre un meridiano) y $\rho\sin\varphi\,d\theta$ (un arco sobre un paralelo, cuyo radio es la distancia al eje, $\rho\sin\varphi$). El volumen es $\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta$.`,
+        R`**Chequeo: la esfera.** $\int_0^{2\pi}\int_0^\pi\int_0^R\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta = \frac{R^3}{3}\cdot 2\cdot 2\pi = \frac43\pi R^3$.`],
       examples: [{ q: R`Volumen de la esfera de radio $R$.`, steps: [R`$\int_0^{2\pi}\int_0^\pi\int_0^R\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta = \frac{R^3}{3}\cdot2\cdot2\pi = \frac43\pi R^3$.`] }],
       tips: [R`El $\rho^2\sin\varphi$ de esféricas y la $r$ de cilíndricas no son opcionales.`],
       see: ["c2-coord-espacio", "c2-jacobiano", "c2-dobles"]
@@ -1240,6 +1293,9 @@
       def: [R`El **jacobiano** de $(u, v) \mapsto (x, y)$ es $\frac{\partial(x, y)}{\partial(u, v)} = \det\begin{pmatrix} x_u & x_v \\ y_u & y_v \end{pmatrix}$, y $$\iint_D f\,dx\,dy = \iint_{D'} f(x(u,v), y(u,v))\left|\frac{\partial(x, y)}{\partial(u, v)}\right|du\,dv.$$`],
       idea: [R`Un rectangulito $du\times dv$ se transforma en (casi) un paralelogramo de lados $\vec r_u\,du$ y $\vec r_v\,dv$, cuya área es $|\det|\,du\,dv$ ([[al-determinante|el determinante mide áreas]]).`,
         R`En [[c2-polares|polares]], $J = r$: los sectores lejos del origen son más grandes. Es el análogo de la [[int-sustitucion|sustitución]] de una variable, donde $dx = g'(u)\,du$.`],
+      demo: [R`**De dónde sale el factor.** El rectangulito de vértice $(u, v)$ y lados $du$, $dv$ va a parar a una figura con vértice $\vec r(u, v)$ y lados $\vec r(u + du, v) - \vec r(u, v) \approx \vec r_u\,du$ y $\vec r_v\,dv$. Es casi un paralelogramo.`,
+        R`El área del paralelogramo de lados $(a, b)$ y $(c, d)$ es $|ad - bc|$, el valor absoluto del [[al-determinante|determinante]]. Con $\vec r_u = (x_u, y_u)$ y $\vec r_v = (x_v, y_v)$ queda $|x_uy_v - x_vy_u|\,du\,dv = |J|\,du\,dv$. Sumando sobre todos los rectangulitos sale la fórmula.`,
+        R`**Polares.** Con $x = r\cos\theta$ e $y = r\sin\theta$: $$J = \det\begin{pmatrix}\cos\theta & -r\sin\theta\\ \sin\theta & r\cos\theta\end{pmatrix} = r\cos^2\theta + r\sin^2\theta = r.$$`],
       examples: [{ q: R`Área del disco de radio $R$ en polares.`, steps: [R`$\int_0^{2\pi}\int_0^R r\,dr\,d\theta = \pi R^2$.`] }],
       see: ["c2-dobles", "al-determinante", "int-sustitucion"]
     }
@@ -1406,6 +1462,9 @@
         R`**Criterio** (en una región sin agujeros): $\vec F = (P, Q)$ es conservativo $\iff \frac{\partial P}{\partial y} = \frac{\partial Q}{\partial x}$.`],
       idea: [R`Es la versión vectorial del [[tfc|teorema fundamental del cálculo]]. En física, las fuerzas conservativas (gravedad, resortes) tienen [[f1-energia|energía potencial]]: el trabajo solo depende de dónde empezás y dónde terminás.`,
         R`Para hallar $\varphi$: se integra $P$ respecto de $x$ y se ajusta la "constante" (una función de $y$) para que la derivada respecto de $y$ dé $Q$.`],
+      demo: [R`**Teorema fundamental.** Si $\vec F = \nabla\varphi$ y $\vec r(t)$, $a \le t \le b$, va de $A$ a $B$, por la regla de la cadena $\frac{d}{dt}\varphi(\vec r(t)) = \nabla\varphi\cdot\vec r\,'(t)$. Entonces $$\int_C\vec F\cdot d\vec r = \int_a^b\frac{d}{dt}\varphi(\vec r(t))\,dt = \varphi(B) - \varphi(A),$$ por el [[tfc|teorema fundamental del cálculo]].`,
+        R`**El criterio es necesario.** Si $P = \varphi_x$ y $Q = \varphi_y$, entonces $P_y = \varphi_{xy}$ y $Q_x = \varphi_{yx}$, que son iguales por Schwarz ([[c2-parciales]]).`,
+        R`**Y alcanza sin agujeros.** Si $P_y = Q_x$, por [[c2-green|Green]] la circulación sobre cualquier curva cerrada es $\iint(Q_x - P_y)\,dA = 0$. Entonces la integral de $A$ a $B$ no depende del camino, y $\varphi(X) = \int_A^X\vec F\cdot d\vec r$ es un potencial. Con un agujero falla: $\left(\frac{-y}{x^2 + y^2}, \frac{x}{x^2 + y^2}\right)$ cumple el criterio, pero su circulación en la circunferencia unidad es $2\pi$.`],
       examples: [{ q: R`¿$\vec F = (2xy, x^2)$ es conservativo?`, steps: [R`$P_y = 2x = Q_x$: sí, con $\varphi = x^2y$.`] }],
       tips: [R`Si $P_y \neq Q_x$ en un solo punto, ya no es conservativo; pero que valga $P_y = Q_x$ no alcanza si la región tiene agujeros.`],
       see: ["c2-linea", "c2-gradiente", "c2-green"]
@@ -1416,6 +1475,9 @@
       def: [R`Con $C$ parametrizada por $\vec r(t)$, $a \le t \le b$: $$\int_C\vec F\cdot d\vec r = \int_a^b\vec F(\vec r(t))\cdot\vec r\,'(t)\,dt = \int_C P\,dx + Q\,dy.$$ Si la curva es cerrada se escribe $\oint_C$ y se llama **circulación**.`],
       idea: [R`Es el [[f1-trabajo|trabajo]] de una fuerza variable a lo largo de un camino: se suma $\vec F\cdot d\vec r$, la componente de la fuerza en la dirección del movimiento por el desplazamiento.`,
         R`No depende de cómo se parametrice la curva, pero sí del sentido: recorrerla al revés cambia el signo.`],
+      demo: [R`**No depende de la parametrización.** Si $t = \phi(u)$, con $\phi$ creciente, $\vec R(u) = \vec r(\phi(u))$ recorre la misma curva y $\vec R\,'(u) = \vec r\,'(\phi(u))\,\phi'(u)$. Entonces $$\int\vec F(\vec R(u))\cdot\vec R\,'(u)\,du = \int\vec F(\vec r(\phi(u)))\cdot\vec r\,'(\phi(u))\,\phi'(u)\,du,$$ que es la integral original con la [[int-sustitucion|sustitución]] $t = \phi(u)$.`,
+        R`**Al revés cambia el signo.** Si $\phi$ es decreciente, los límites quedan invertidos: la sustitución da la misma integral con el signo cambiado.`,
+        R`**Trabajo.** En un tramo chico, el desplazamiento es $d\vec r = \vec r\,'(t)\,dt$ y la fuerza hace trabajo $\vec F\cdot d\vec r$, como en [[f1-trabajo]].`],
       examples: [{ q: R`$\int_C y\,dx + x\,dy$ por $\vec r(t) = (t, t^2)$, $0 \le t \le 1$.`, steps: [R`$\int_0^1(t^2\cdot1 + t\cdot2t)\,dt = \int_0^1 3t^2\,dt = 1$.`] }],
       see: ["c2-campos", "c2-green", "c2-curvas-vectoriales"]
     },
@@ -1425,6 +1487,10 @@
       def: [R`Si $C$ es una curva cerrada simple, recorrida en sentido antihorario, que encierra la región $D$: $$\oint_C P\,dx + Q\,dy = \iint_D\left(\frac{\partial Q}{\partial x} - \frac{\partial P}{\partial y}\right)dA.$$`],
       idea: [R`$Q_x - P_y$ mide cuánto "gira" el campo en cada punto (la componente $z$ del [[c2-flujo|rotor]]). Green dice que el giro total en el borde es la suma de los giros de adentro: las circulaciones de los cuadraditos interiores se cancelan de a pares.`,
         R`Con $\vec F = (-y, x)/2$ sale una fórmula para el área: $A = \frac12\oint_C x\,dy - y\,dx$. Así funcionan los planímetros.`],
+      demo: [R`**Para un rectángulo** $D = [a, b]\times[c, d]$, alcanza con ver cada mitad. Por el [[tfc|teorema fundamental]] en $y$: $$-\iint_D P_y\,dA = -\int_a^b\big(P(x, d) - P(x, c)\big)\,dx.$$`,
+        R`Del lado de la curva, $\oint P\,dx$ solo recibe aportes de los lados horizontales (en los verticales $dx = 0$). Abajo se va hacia la derecha a $y = c$: $\int_a^b P(x, c)\,dx$. Arriba se vuelve hacia la izquierda a $y = d$: $-\int_a^b P(x, d)\,dx$. Es lo mismo que arriba.`,
+        R`Con $Q$ y los lados verticales sale igual que $\oint Q\,dy = \iint Q_x\,dA$. Una región más general se parte en rectangulitos: las integrales sobre los lados interiores se recorren dos veces en sentidos opuestos y se cancelan, y queda solo el borde.`,
+        R`**El área.** Con $P = -\frac y2$ y $Q = \frac x2$: $Q_x - P_y = \frac12 + \frac12 = 1$, así que $\frac12\oint(x\,dy - y\,dx) = \iint_D 1\,dA$.`],
       examples: [{ q: R`$\oint_C -y\,dx + x\,dy$ por la circunferencia unitaria.`, steps: [R`$Q_x - P_y = 1 + 1 = 2$; $\iint_D 2\,dA = 2\pi$.`] }],
       see: ["c2-linea", "c2-flujo", "c2-campos"]
     },
@@ -1436,6 +1502,10 @@
         R`**Teorema de la divergencia (Gauss):** $\oiint_S\vec F\cdot\vec n\,dS = \iiint_W\nabla\cdot\vec F\,dV$, con $S$ el borde de $W$ y $\vec n$ hacia afuera. **Stokes:** $\oint_{\partial S}\vec F\cdot d\vec r = \iint_S(\nabla\times\vec F)\cdot\vec n\,dS$.`],
       idea: [R`La divergencia mide cuánto "sale" por unidad de volumen (fuentes y sumideros); el rotor, cuánto gira el campo. Gauss y Stokes son primos de [[c2-green|Green]] y del [[tfc|teorema fundamental]]: lo que pasa en el borde se calcula con lo de adentro.`,
         R`En electromagnetismo aparecen por todos lados: la ley de Gauss es el teorema de la divergencia aplicado al campo eléctrico.`],
+      demo: [R`**Gauss en una caja.** Tomamos una caja $[x, x + dx]\times[y, y + dy]\times[z, z + dz]$. Por las dos caras perpendiculares a $x$ sale un flujo $\big(P(x + dx) - P(x)\big)\,dy\,dz \approx P_x\,dx\,dy\,dz$. Sumando las tres direcciones: flujo saliente $\approx (P_x + Q_y + R_z)\,dV = \nabla\cdot\vec F\,dV$.`,
+        R`Un sólido cualquiera se parte en cajitas. Por cada cara interior, lo que sale de una cajita entra en la vecina, así que esos flujos se cancelan y queda solo el de la superficie exterior. Eso es $\oiint_S\vec F\cdot\vec n\,dS = \iiint_W\nabla\cdot\vec F\,dV$.`,
+        R`**Stokes** es la misma idea que [[c2-green|Green]], sobre una superficie curva: se parte en pedacitos casi planos, en cada uno vale Green con la componente normal del rotor, y las circulaciones por los bordes interiores se cancelan. Si la superficie está en el plano $xy$, con $\vec n = \vec k$, $(\nabla\times\vec F)\cdot\vec k = Q_x - P_y$ y Stokes es Green.`,
+        R`**Una identidad útil:** $\nabla\cdot(\nabla\times\vec F) = (R_y - Q_z)_x + (P_z - R_x)_y + (Q_x - P_y)_z = 0$, porque las derivadas cruzadas se cancelan de a pares por Schwarz.`],
       examples: [{ q: R`Flujo de $\vec F = (x, y, z)$ por la esfera de radio $R$.`, steps: [R`$\nabla\cdot\vec F = 3$: flujo $= 3\cdot\frac43\pi R^3 = 4\pi R^3$.`] }],
       tips: [R`El teorema de la divergencia necesita una superficie **cerrada**; si falta una tapa, hay que agregarla y restarla.`],
       see: ["c2-green", "c2-campos", "c2-triples"]
@@ -1577,6 +1647,10 @@
         R`**Mezclas:** si $S(t)$ es la cantidad de soluto, $S' = c_\text{in}q_\text{in} - \frac{S}{V}q_\text{out}$. Con $q_\text{in} = q_\text{out}$ el volumen es constante y queda [[c2-edo-lineal|lineal]].`],
       idea: [R`La logística empieza creciendo casi [[modelos|exponencial]] y frena al acercarse a $K$: crece más rápido justo en $P = \frac K2$ (el punto de inflexión).`,
         R`En una mezcla, la cantidad tiende al equilibrio $Vc_\text{in}$, el que tendría el tanque lleno de la solución que entra, y se acerca exponencialmente.`],
+      demo: [R`**Logística.** Separando: $\int\frac{dP}{P(1 - P/K)} = \int k\,dt$. Por [[fracciones-simples]], $\frac{1}{P(1 - P/K)} = \frac1P + \frac{1}{K - P}$, así que $\ln|P| - \ln|K - P| = kt + C$, o sea $\frac{P}{K - P} = Be^{kt}$.`,
+        R`Despejando, $P = \frac{K}{1 + Ae^{-kt}}$ con $A = \frac1B$. En $t = 0$: $P_0 = \frac{K}{1 + A}$, así que $A = \frac{K - P_0}{P_0}$.`,
+        R`**Crece más rápido en $\frac K2$.** $P' = kP - \frac kKP^2$ es una parábola en $P$, máxima en el vértice $P = \frac K2$. Ahí $P'' = \left(k - \frac{2k}{K}P\right)P' = 0$: es el punto de inflexión.`,
+        R`**Mezclas.** Con $q_{in} = q_{out} = q$: $S' = c_{in}q - \frac qVS$. El equilibrio ($S' = 0$) es $S = Vc_{in}$. La diferencia $u = S - Vc_{in}$ cumple $u' = -\frac qVu$, así que $u = u_0e^{-qt/V}$: se acerca al equilibrio exponencialmente.`],
       examples: [{ q: R`$P' = 0{,}5P(1 - P/100)$, $P(0) = 10$. ¿Cuándo llega a 50?`, steps: [R`$A = 9$; $9e^{-0{,}5t} = 1$, así que $t = 2\ln 9 \approx 4{,}39$.`] }],
       see: ["c2-edo-lineal", "edo", "modelos"]
     }
