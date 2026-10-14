@@ -2135,3 +2135,493 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 3 (segunda parte) · APLICACIONES DE LA DERIVADA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { frac, num, poly, polyc, xp, xm, cf, kx, par, sg } = H;
+  const T = {};
+  // herramientas numéricas para las verificaciones (independientes de las fórmulas de cada plantilla)
+  const d1 = (f, x, h = 1e-5) => (f(x + h) - f(x - h)) / (2 * h);
+  const d2 = (f, x, h = 1e-3) => (f(x + h) - 2 * f(x) + f(x - h)) / (h * h);
+  function gridExt(f, a, b, kind, n = 200000) {
+    let bx = a, by = f(a);
+    for (let i = 1; i <= n; i++) { const x = a + (b - a) * i / n, y = f(x); if (kind === "max" ? y > by : y < by) { bx = x; by = y; } }
+    return { x: bx, y: by };
+  }
+  // extremo local interior (el primero que aparece) buscando en una grilla
+  function localExt(f, a, b, kind, n = 200000) {
+    const h = (b - a) / n;
+    for (let i = 1; i < n; i++) {
+      const x = a + i * h, y = f(x), yl = f(x - h), yr = f(x + h);
+      if (kind === "max" ? y >= yl && y > yr : y <= yl && y < yr) return { x, y };
+    }
+    return { x: NaN, y: NaN };
+  }
+
+  // ---------- trigonométricas inversas ----------
+  T["dinv-mc"] = {
+    type: "mc", concepts: ["der-inversas"], difficulty: 1,
+    generate(r) {
+      const a = r.int(2, 4), a2 = a * a, v = r.pick(["asin", "atan", "acos"]);
+      const sq = `\\sqrt{1 - ${a2}x^{2}}`, sqp = `\\sqrt{1 + ${a2}x^{2}}`, den = `1 + ${a2}x^{2}`;
+      const opts = {
+        asin: { f: `\\arcsin(${a}x)`, ok: `\\frac{${a}}{${sq}}`, d: [`\\frac{1}{${sq}}`, `\\frac{${a}}{${sqp}}`, `-\\frac{${a}}{${sq}}`, `\\frac{${a}}{${den}}`],
+          F: x => Math.asin(a * x), dF: x => a / Math.sqrt(1 - a2 * x * x), dom: [-0.15, 0.15] },
+        atan: { f: `\\arctan(${a}x)`, ok: `\\frac{${a}}{${den}}`, d: [`\\frac{1}{${den}}`, `\\frac{${a}}{${sqp}}`, `-\\frac{${a}}{${den}}`, `\\frac{${a}}{1 - ${a2}x^{2}}`],
+          F: x => Math.atan(a * x), dF: x => a / (1 + a2 * x * x), dom: [-2, 2] },
+        acos: { f: `\\arccos(${a}x)`, ok: `-\\frac{${a}}{${sq}}`, d: [`\\frac{${a}}{${sq}}`, `-\\frac{1}{${sq}}`, `-\\frac{${a}}{${den}}`, `\\frac{${a}}{${sqp}}`],
+          F: x => Math.acos(a * x), dF: x => -a / Math.sqrt(1 - a2 * x * x), dom: [-0.15, 0.15] }
+      }[v];
+      return {
+        prompt: `Si $f(x) = ${opts.f}$, ¿cuál es $f'(x)$?`,
+        ...H.mc(r, opts.ok, opts.d),
+        solution: [
+          `$(\\arcsin u)' = \\frac{u'}{\\sqrt{1-u^2}}$, $(\\arccos u)' = -\\frac{u'}{\\sqrt{1-u^2}}$, $(\\arctan u)' = \\frac{u'}{1+u^2}$ ([[derivadas-inversas|derivadas de las inversas]] y [[regla-cadena|cadena]]).`,
+          `Con $u = ${a}x$, $u' = ${a}$ y $u^2 = ${a2}x^2$: $f'(x) = ${opts.ok}$.`
+        ],
+        verify: { kind: "deriv-fn", f: opts.F, df: opts.dF, dom: opts.dom }
+      };
+    }
+  };
+  T["dinv-num"] = {
+    type: "numeric", concepts: ["der-inversas"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["atan2", "xasin", "atanlin"]);
+      if (v === "atan2") {
+        const x0 = r.nz(-3, 3);
+        return {
+          prompt: `Si $f(x) = \\arctan(x^{2})$, calculá $f'(${x0})$.`,
+          answer: 2 * x0 / (1 + x0 ** 4), answerTex: frac(2 * x0, 1 + x0 ** 4),
+          solution: [`Cadena: $f'(x) = \\dfrac{2x}{1 + x^4}$ ([[derivadas-inversas]]).`, `$f'(${x0}) = \\dfrac{${2 * x0}}{${1 + x0 ** 4}} = ${frac(2 * x0, 1 + x0 ** 4)}$.`],
+          verify: { kind: "deriv", f: x => Math.atan(x * x), x0 }
+        };
+      }
+      if (v === "xasin") {
+        const ans = Math.PI / 6 + 0.5 / Math.sqrt(0.75);
+        return {
+          prompt: `Si $f(x) = x\\arcsin x$, calculá $f'\\left(\\tfrac12\\right)$.`,
+          answer: ans, answerTex: "\\frac{\\pi}{6} + \\frac{1}{\\sqrt{3}}",
+          solution: [`[[regla-producto|Producto]]: $f'(x) = \\arcsin x + \\dfrac{x}{\\sqrt{1-x^2}}$.`, `$f'(\\tfrac12) = \\dfrac{\\pi}{6} + \\dfrac{1/2}{\\sqrt{3}/2} = \\dfrac{\\pi}{6} + \\dfrac{1}{\\sqrt 3} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "deriv", f: x => x * Math.asin(x), x0: 0.5 }
+        };
+      }
+      const a = r.nz(-3, 3), b = r.int(-3, 3), x0 = r.int(-2, 2), u = a * x0 + b;
+      return {
+        prompt: `Si $f(x) = \\arctan(${polyc([a, b])})$, calculá $f'(${x0})$.`,
+        answer: a / (1 + u * u), answerTex: frac(a, 1 + u * u),
+        solution: [`$f'(x) = \\dfrac{${a}}{1 + (${polyc([a, b])})^2}$.`, `En $x = ${x0}$: $u = ${u}$, así que $f'(${x0}) = \\dfrac{${a}}{${1 + u * u}} = ${frac(a, 1 + u * u)}$.`],
+        verify: { kind: "deriv", f: x => Math.atan(a * x + b), x0 }
+      };
+    }
+  };
+
+  // ---------- crecimiento y extremos ----------
+  // cúbica con puntos críticos enteros r1 < r2: f'(x) = 3a (x - r1)(x - r2)
+  function cubicCrit(r) {
+    let r1, r2;
+    do { [r1, r2] = r.distinct(2, -3, 3).sort((x, y) => x - y); } while ((r1 + r2) % 2 !== 0);
+    const a = r.pick([1, -1]), d = r.int(-5, 5), s = r1 + r2, p = r1 * r2;
+    const C = [a, -a * 3 * s / 2, a * 3 * p, d];
+    return { r1, r2, a, C, f: x => H.peval(C, x) };
+  }
+  T["crit-num"] = {
+    type: "numeric", concepts: ["extremos"], difficulty: 2,
+    generate(r) {
+      const { r1, r2, a, C, f } = cubicCrit(r);
+      const xmax = a > 0 ? r1 : r2, xmin = a > 0 ? r2 : r1;
+      const ask = r.pick(["xmax", "xmin", "ymax", "ymin"]);
+      const ans = ask === "xmax" ? xmax : ask === "xmin" ? xmin : ask === "ymax" ? f(xmax) : f(xmin);
+      const q = { xmax: "la abscisa del **máximo local**", xmin: "la abscisa del **mínimo local**", ymax: "el **valor máximo local**", ymin: "el **valor mínimo local**" }[ask];
+      return {
+        prompt: `Para $f(x) = ${polyc(C)}$, calculá ${q}.`,
+        answer: ans,
+        solution: [
+          `$f'(x) = ${polyc([3 * C[0], 2 * C[1], C[2]])} = ${3 * a}(${xm(r1)})(${xm(r2)})$: [[extremos|puntos críticos]] en $x = ${r1}$ y $x = ${r2}$.`,
+          `Signo de $f'$: ${a > 0 ? "positivo, negativo, positivo" : "negativo, positivo, negativo"}. Entonces $f$ tiene un máximo local en $x = ${xmax}$ y un mínimo local en $x = ${xmin}$.`,
+          ask.startsWith("y") ? `$f(${ask === "ymax" ? xmax : xmin}) = ${ans}$.` : `Respuesta: $x = ${ans}$.`
+        ],
+        verify: { kind: "value", tol: 1e-6, fn: () => { const e = localExt(f, Math.min(r1, r2) - 1.5, Math.max(r1, r2) + 1.5, ask.endsWith("max") ? "max" : "min"); return ask.startsWith("x") ? Math.round(e.x * 1e4) / 1e4 : e.y; } }
+      };
+    }
+  };
+  T["abs-ext-num"] = {
+    type: "numeric", concepts: ["extremos"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-3, 3), h = r.int(-3, 3), k = r.int(-5, 5);
+      const C = [a, -2 * a * h, a * h * h + k], f = x => H.peval(C, x);
+      const p = r.int(-4, 2), q = p + r.int(2, 5), ask = r.pick(["max", "min"]);
+      const cands = [p, q].concat(h > p && h < q ? [h] : []);
+      const vals = cands.map(f), ans = ask === "max" ? Math.max(...vals) : Math.min(...vals);
+      return {
+        prompt: `Calculá el valor **${ask === "max" ? "máximo" : "mínimo"} absoluto** de $f(x) = ${polyc(C)}$ en $[${p}, ${q}]$.`,
+        answer: ans,
+        solution: [
+          `Por el [[extremos|teorema de los valores extremos]] el ${ask === "max" ? "máximo" : "mínimo"} existe; se busca entre los puntos críticos interiores y los extremos del intervalo.`,
+          `$f'(x) = ${polyc([2 * a, -2 * a * h])}$ se anula en $x = ${h}$, ${h > p && h < q ? "que está adentro del intervalo" : "que queda afuera del intervalo"}.`,
+          `Candidatos: ${cands.map((x, i) => `$f(${x}) = ${vals[i]}$`).join(", ")}. El ${ask === "max" ? "mayor" : "menor"} es $${ans}$.`
+        ],
+        verify: { kind: "value", tol: 1e-6, fn: () => gridExt(f, p, q, ask).y }
+      };
+    }
+  };
+  T["crece-vf"] = {
+    type: "tf", concepts: ["extremos"], difficulty: 1,
+    generate(r) {
+      const { r1, r2, a, C, f } = cubicCrit(r);
+      const iv = r.pick([[r2, r2 + 2], [r1, r2], [r1 - 2, r1]]);
+      const mid = (iv[0] + iv[1]) / 2, sgn = a * (mid - r1) * (mid - r2);
+      const truth = sgn > 0;
+      return {
+        prompt: `Sea $f(x) = ${polyc(C)}$. <b>Verdadero o falso:</b> $f$ es creciente en $(${iv[0]}, ${iv[1]})$.`,
+        answer: truth,
+        explanation: `$f'(x) = ${3 * a}(${xm(r1)})(${xm(r2)})$ es ${truth ? "positiva" : "negativa"} en ese intervalo, así que $f$ es ${truth ? "creciente" : "decreciente"} ahí.`,
+        solution: [`Si $f' > 0$ en un intervalo, $f$ crece ahí; si $f' < 0$, decrece ([[extremos]]).`],
+        verify: { kind: "truth", fn: () => Array.from({ length: 19 }, (_, i) => iv[0] + (iv[1] - iv[0]) * (i + 1) / 20).every(x => d1(f, x) > 0) }
+      };
+    }
+  };
+
+  // ---------- concavidad e inflexión ----------
+  T["inflex-num"] = {
+    type: "numeric", concepts: ["concavidad"], difficulty: 2,
+    generate(r) {
+      if (r.bool(0.65)) {
+        const a = r.nz(-2, 2), xi = r.int(-3, 3), c = r.int(-6, 6), d = r.int(-5, 5);
+        const C = [a, -3 * a * xi, c, d], f = x => H.peval(C, x);
+        return {
+          prompt: `¿En qué $x$ tiene $f(x) = ${polyc(C)}$ su **punto de inflexión**?`,
+          answer: xi,
+          solution: [`$f''(x) = ${polyc([6 * a, -6 * a * xi])}$ ([[derivadas-sucesivas|derivada segunda]]).`, `Se anula en $x = ${xi}$ y cambia de signo ahí: es [[concavidad|punto de inflexión]].`],
+          verify: { kind: "zero", fn: x => [d2(f, x) / Math.max(1, Math.abs(6 * a))], tol: 1e-4 }
+        };
+      }
+      const k = r.pick([1, 2, 4]), f = x => x * Math.exp(-k * x);
+      return {
+        prompt: `¿En qué $x$ tiene $f(x) = x\\,e^{-${k === 1 ? "" : k}x}$ su **punto de inflexión**?`,
+        answer: 2 / k, answerTex: frac(2, k),
+        solution: [
+          `$f'(x) = e^{-${k === 1 ? "" : k}x}(1 - ${kx(k)})$ y $f''(x) = ${k}e^{-${k === 1 ? "" : k}x}(${kx(k)} - 2)$.`,
+          `$f''$ cambia de signo en $${kx(k)} = 2$, o sea $x = ${frac(2, k)}$ ([[concavidad]]).`
+        ],
+        verify: { kind: "zero", fn: x => [d2(f, x)], tol: 1e-4 }
+      };
+    }
+  };
+  T["concav-mc"] = {
+    type: "mc", concepts: ["concavidad"], difficulty: 2,
+    generate(r) {
+      const m = r.int(1, 4), c = m * m, k = r.int(1, 3), up = r.bool();
+      const f = x => k * (x ** 4 - 6 * c * x * x);
+      const iv = (u, v) => `(${u}, ${v})`, out = `(-\\infty, ${-m})\\cup(${m}, +\\infty)`;
+      const right = up ? out : iv(-m, m), wrong = up ? iv(-m, m) : out;
+      return {
+        prompt: `¿Dónde es **cóncava hacia ${up ? "arriba" : "abajo"}** $f(x) = ${k === 1 ? "" : k}x^4 - ${6 * c * k}x^2$?`,
+        ...H.mc(r, right, [wrong, iv(0, m), c !== m ? iv(-c, c) : iv(-2 * m, 2 * m), `(${m}, +\\infty)`]),
+        solution: [
+          `$f''(x) = ${12 * k}x^2 - ${12 * c * k} = ${12 * k}(x^2 - ${c})$.`,
+          `$f'' ${up ? ">" : "<"} 0 \\iff x^2 ${up ? ">" : "<"} ${c}$ ([[concavidad]]): $${right}$. En $x = \pm ${m}$ hay puntos de inflexión.`
+        ],
+        verify: { kind: "zero", fn: () => [d2(f, m) / 1000, d2(f, -m) / 1000, d2(f, 0) < 0 && d2(f, 2 * m) > 0 ? 0 : 1], tol: 1e-3 }
+      };
+    }
+  };
+
+  // ---------- teoremas del valor medio ----------
+  T["tvm-num"] = {
+    type: "numeric", concepts: ["valor-medio"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["quad", "cubic", "inv", "exp"]);
+      let f, p, q, ftex, ans, ansTex, sol;
+      if (v === "quad") { const b = r.int(-4, 4); p = r.int(-3, 1); q = p + r.int(1, 4); f = x => x * x + b * x; ftex = polyc([1, b, 0]); ans = (p + q) / 2; ansTex = frac(p + q, 2); sol = `$f'(c) = 2c ${b < 0 ? "-" : "+"} ${Math.abs(b)} = ${p + q + b}$, así que $c = ${ansTex}$ (el punto medio: pasa con toda cuadrática).`; }
+      else if (v === "cubic") { p = 0; q = r.int(1, 4); f = x => x ** 3; ftex = "x^{3}"; ans = q / Math.sqrt(3); ansTex = `\\frac{${q}}{\\sqrt 3}`; sol = `$3c^2 = \\frac{${q ** 3}}{${q}} = ${q * q}$, así que $c = \\frac{${q}}{\\sqrt3} \\approx ${num(ans, 4)}$.`; }
+      else if (v === "inv") { p = r.int(1, 3); q = p * r.pick([4, 9]); f = x => 1 / x; ftex = "\\frac{1}{x}"; ans = Math.sqrt(p * q); ansTex = String(ans); sol = `$-\\frac{1}{c^2} = \\frac{1/${q} - 1/${p}}{${q - p}} = -\\frac{1}{${p * q}}$, así que $c = \\sqrt{${p * q}} = ${ans}$.`; }
+      else { p = 0; q = 1; f = x => Math.exp(x); ftex = "e^{x}"; ans = Math.log(Math.E - 1); ansTex = "\\ln(e - 1)"; sol = `$e^c = \\frac{e - 1}{1}$, así que $c = \\ln(e - 1) \\approx ${num(ans, 4)}$.`; }
+      return {
+        prompt: `Encontrá el $c \\in (${p}, ${q})$ que garantiza el teorema de Lagrange para $f(x) = ${ftex}$ en $[${p}, ${q}]$.`,
+        answer: ans, answerTex: ansTex,
+        solution: [`[[valor-medio|Lagrange]]: existe $c$ con $f'(c) = \\dfrac{f(b) - f(a)}{b - a}$.`, sol],
+        verify: { kind: "zero", fn: c => [d1(f, c) - (f(q) - f(p)) / (q - p), c > p && c < q ? 0 : 1], tol: 1e-6 }
+      };
+    }
+  };
+  T["rolle-vf"] = {
+    type: "tf", concepts: ["valor-medio"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["poly-yes", "poly-no", "abs"]);
+      let f, a, b, ftex, why;
+      if (v === "poly-yes") { const [u, w] = r.distinct(2, -3, 4).sort((x, y) => x - y); a = u; b = w; const k = r.nz(-2, 2); f = x => k * (x - u) * (x - w); ftex = `${cf(k)}(${xm(u)})(${xm(w)})`; why = `$f(${a}) = f(${b}) = 0$ y $f$ es un polinomio (continua y derivable): Rolle garantiza $c$ con $f'(c) = 0$ (de hecho, $c = ${frac(a + b, 2)}$).`; }
+      else if (v === "poly-no") { a = r.int(-3, 0); b = a + r.int(1, 3); const m = r.nz(-3, 3), n = r.int(-3, 3); f = x => x * x * 0 + m * x + n; ftex = polyc([m, n]); why = `$f(${a}) = ${m * a + n} \\neq ${m * b + n} = f(${b})$: no se cumple la hipótesis $f(a) = f(b)$ (y de hecho $f' = ${m} \\neq 0$ siempre).`; }
+      else { const m = r.int(-2, 2), d = r.int(1, 3); a = m - d; b = m + d; f = x => Math.abs(x - m); ftex = `|${xm(m)}|`; why = `$f(${a}) = f(${b}) = ${d}$, pero $f$ no es [[derivable-continua|derivable]] en $x = ${m}$: Rolle no se aplica (y $f'$ nunca vale $0$).`; }
+      const truth = v === "poly-yes";
+      return {
+        prompt: `<b>Verdadero o falso:</b> el teorema de Rolle garantiza que existe $c \\in (${a}, ${b})$ con $f'(c) = 0$ para $f(x) = ${ftex}$.`,
+        answer: truth, explanation: why,
+        solution: [`[[valor-medio|Rolle]]: si $f$ es continua en $[a,b]$, derivable en $(a,b)$ y $f(a) = f(b)$, existe $c \\in (a,b)$ con $f'(c) = 0$.`],
+        // verificación: hipótesis chequeadas numéricamente (igualdad en los extremos y derivadas laterales iguales)
+        verify: { kind: "truth", fn: () => {
+          const same = Math.abs(f(a) - f(b)) < 1e-9;
+          let smooth = true;
+          for (let i = 1; i < 400; i++) { const x = a + (b - a) * i / 400, h = 1e-6; if (Math.abs((f(x + h) - f(x)) / h - (f(x) - f(x - h)) / h) > 1e-2) smooth = false; }
+          for (const x of [(a + b) / 2]) { const h = 1e-6; if (Math.abs((f(x + h) - f(x)) / h - (f(x) - f(x - h)) / h) > 1e-2) smooth = false; }
+          return same && smooth;
+        } }
+      };
+    }
+  };
+  T["tvm-order"] = {
+    type: "order", concepts: ["valor-medio"], difficulty: 3,
+    generate(r) {
+      const b = r.int(-4, 4), p = r.int(-3, 1), q = p + r.int(2, 4);
+      const f = x => x * x + b * x, m = (f(q) - f(p)) / (q - p);
+      return {
+        prompt: `Ordená la demostración del teorema de Lagrange, ilustrada con $f(x) = ${polyc([1, b, 0])}$ en $[${p}, ${q}]$ (donde la pendiente de la secante es $m = ${num(m)}$).`,
+        steps: [
+          `Definimos $g(x) = f(x) - \\big[f(${p}) + m\\,(x - ${par(p)})\\big]$: $f$ menos la recta secante.`,
+          `$g$ es continua en $[${p}, ${q}]$, derivable en $(${p}, ${q})$ y $g(${p}) = g(${q}) = 0$.`,
+          `Por el teorema de Rolle existe $c \\in (${p}, ${q})$ con $g'(c) = 0$.`,
+          `Como $g'(x) = f'(x) - m$, en ese punto $f'(c) = m = ${num(m)}$.`
+        ],
+        solution: [`La idea: restarle a $f$ la secante deja una función que vale lo mismo en los dos extremos, y ahí se aplica [[valor-medio|Rolle]].`],
+        verify: { kind: "zero", fn: () => { const g = x => f(x) - (f(p) + m * (x - p)); return [g(p), g(q)]; } }
+      };
+    }
+  };
+
+  // ---------- L'Hôpital ----------
+  T["lhop-num"] = {
+    type: "numeric", concepts: ["lhopital"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["exp", "log", "xsin", "ax"]);
+      if (v === "exp") {
+        const [a, b] = r.distinct(2, 1, 6);
+        return { prompt: `Calculá $$\\lim_{x\\to 0}\\frac{e^{${kx(a)}} - 1}{${kx(b)}}$$`, answer: a / b, answerTex: frac(a, b),
+          solution: [`Da $\\frac{0}{0}$: se puede aplicar [[lhopital|L'Hôpital]].`, `Derivamos arriba y abajo: $\\dfrac{${a}e^{${kx(a)}}}{${b}} \\to \\dfrac{${a}}{${b}}$.`],
+          verify: { kind: "limit", a: 0, f: x => (Math.exp(a * x) - 1) / (b * x) } };
+      }
+      if (v === "log") {
+        const [a, b] = r.distinct(2, 1, 6);
+        return { prompt: `Calculá $$\\lim_{x\\to 0}\\frac{\\ln(1 + ${kx(a)})}{${kx(b)}}$$`, answer: a / b, answerTex: frac(a, b),
+          solution: [`$\\frac{0}{0}$: [[lhopital|L'Hôpital]].`, `$\\dfrac{\\frac{${a}}{1 + ${kx(a)}}}{${b}} \\to \\dfrac{${a}}{${b}}$.`],
+          verify: { kind: "limit", a: 0, f: x => Math.log(1 + a * x) / (b * x) } };
+      }
+      if (v === "xsin") {
+        const k = r.int(1, 3);
+        return { prompt: `Calculá $$\\lim_{x\\to 0}\\frac{${kx(k)} - \\sin(${kx(k)})}{x^{3}}$$`, answer: k ** 3 / 6, answerTex: frac(k ** 3, 6),
+          solution: [`$\\frac00$. Primera aplicación de [[lhopital|L'Hôpital]]: $\\dfrac{${k} - ${k}\\cos(${kx(k)})}{3x^2}$, otra vez $\\frac00$.`, `Segunda: $\\dfrac{${k * k}\\sin(${kx(k)})}{6x}$, otra vez $\\frac00$.`, `Tercera: $\\dfrac{${k ** 3}\\cos(${kx(k)})}{6} \\to ${frac(k ** 3, 6)}$.`],
+          verify: { kind: "limit", a: 0, f: x => (k * x - Math.sin(k * x)) / x ** 3, h: 1e-2 } };
+      }
+      const a = r.pick([2, 3, 5, 10]);
+      return { prompt: `Calculá $$\\lim_{x\\to 0}\\frac{${a}^{x} - 1}{x}$$ (con 3 decimales alcanza).`, answer: Math.log(a), answerTex: `\\ln ${a}`,
+        solution: [`$\\frac00$. [[lhopital|L'Hôpital]]: $(${a}^x)' = ${a}^x\\ln ${a}$.`, `El límite es $\\ln ${a} \\approx ${num(Math.log(a), 4)}$.`],
+        verify: { kind: "limit", a: 0, f: x => (a ** x - 1) / x } };
+    }
+  };
+  T["lhop-error"] = {
+    type: "error", concepts: ["lhopital"], difficulty: 2,
+    generate(r) {
+      const [a, b] = r.distinct(2, 2, 7);
+      const ok = [
+        `Sustituyendo $x = 0$ queda $\\frac{0}{0}$: se puede aplicar L'Hôpital.`,
+        `Derivamos **por separado** numerador y denominador: $\\dfrac{${a}e^{${a}x}}{${b}\\cos(${b}x)}$.`,
+        `Evaluamos en $x = 0$: $\\dfrac{${a}}{${b}}$.`
+      ];
+      const steps = ok.slice();
+      const kind = r.pick(["cociente", "eval", "forma"]);
+      let wrongIndex, fix;
+      if (kind === "cociente") {
+        wrongIndex = 1;
+        steps[1] = `Derivamos el cociente con la regla del cociente: $\\dfrac{${a}e^{${a}x}\\sin(${b}x) - (e^{${a}x} - 1)${b}\\cos(${b}x)}{\\sin^2(${b}x)}$.`;
+        steps[2] = `Evaluamos en $x = 0$: queda $\\frac{0}{0}$ otra vez, así que el límite no existe.`;
+        fix = `L'Hôpital **no** es la regla del cociente: se derivan numerador y denominador por separado.`;
+      } else if (kind === "eval") {
+        wrongIndex = 2;
+        steps[2] = `Evaluamos en $x = 0$: $\\dfrac{${b}}{${a}}$.`;
+        fix = `Arriba queda $${a}e^0 = ${a}$ y abajo $${b}\\cos 0 = ${b}$: el límite es $\\frac{${a}}{${b}}$.`;
+      } else {
+        wrongIndex = 0;
+        steps[0] = `Sustituyendo $x = 0$ queda $\\frac{1}{0}$, pero igual se puede aplicar L'Hôpital.`;
+        fix = `En $x = 0$: $e^0 - 1 = 0$ y $\\sin 0 = 0$, así que es $\\frac00$. (Si fuera $\\frac{1}{0}$, L'Hôpital **no** se podría aplicar.)`;
+      }
+      return {
+        prompt: `Alguien calculó $\\displaystyle\\lim_{x\\to 0}\\frac{e^{${a}x} - 1}{\\sin(${b}x)}$ así. <b>Tocá el primer paso incorrecto.</b>`,
+        steps, wrongIndex, fix, solution: ok,
+        verify: { kind: "limit", a: 0, f: x => (Math.exp(a * x) - 1) / Math.sin(b * x), target: a / b }
+      };
+    }
+  };
+  T["lhop-vf"] = {
+    type: "tf", concepts: ["lhopital"], difficulty: 1,
+    generate(r) {
+      const a = r.int(-3, 3), [p, q] = r.distinct(2, -4, 4), s = r.bool() ? a : r.int(-4, 4);
+      // f(x) = (x - a)(x - p), g(x) = (x - s)(x - q)
+      const f = x => (x - a) * (x - p), g = x => (x - s) * (x - q);
+      const fa = f(a), ga = g(a), truth = Math.abs(fa) < 1e-12 && Math.abs(ga) < 1e-12;
+      return {
+        prompt: `<b>Verdadero o falso:</b> se puede aplicar L'Hôpital a $\\displaystyle\\lim_{x\\to ${a}}\\frac{${polyc([1, -(a + p), a * p])}}{${polyc([1, -(s + q), s * q])}}$.`,
+        answer: truth,
+        explanation: truth ? `Arriba y abajo valen $0$ en $x = ${a}$: es $\\frac{0}{0}$ y L'Hôpital se aplica.` : `En $x = ${a}$ queda $\\frac{${fa}}{${ga}}$, que no es una indeterminación: ${ga !== 0 ? "el límite se calcula sustituyendo" : "el denominador se anula y el numerador no"}.`,
+        solution: [`[[lhopital|L'Hôpital]] solo vale para $\\frac{0}{0}$ o $\\frac{\\infty}{\\infty}$.`],
+        verify: { kind: "truth", fn: () => Math.abs(f(a)) < 1e-12 && Math.abs(g(a)) < 1e-12 }
+      };
+    }
+  };
+
+  // ---------- optimización ----------
+  T["optim-caja-num"] = {
+    type: "numeric", concepts: ["optimizacion"], difficulty: 3,
+    generate(r) {
+      const L = r.int(10, 40), W = r.int(10, 40), ask = r.pick(["x", "V"]);
+      const V = x => x * (L - 2 * x) * (W - 2 * x);
+      const x = ((L + W) - Math.sqrt(L * L - L * W + W * W)) / 6;
+      return {
+        prompt: `De una chapa de $${L} \\times ${W}$ cm se cortan cuadrados de lado $x$ en las esquinas y se doblan los bordes para hacer una caja sin tapa. ¿${ask === "x" ? "Qué $x$ (en cm) maximiza el volumen" : "Cuál es el volumen máximo (en cm³)"}?`,
+        answer: ask === "x" ? x : V(x),
+        solution: [
+          `$V(x) = x(${L} - 2x)(${W} - 2x)$ con $0 < x < ${Math.min(L, W) / 2}$ ([[optimizacion]]).`,
+          `$V'(x) = 12x^2 - ${4 * (L + W)}x + ${L * W} = 0 \\Rightarrow x = \\dfrac{${L + W} \\pm \\sqrt{${L * L - L * W + W * W}}}{6}$.`,
+          `Solo la raíz chica cae en el intervalo: $x \\approx ${num(x, 3)}$ cm, y $V \\approx ${num(V(x), 2)}$ cm³.`
+        ],
+        verify: { kind: "value", tol: 1e-5, fn: () => { const e = gridExt(V, 0, Math.min(L, W) / 2, "max", 400000); return ask === "x" ? e.x : e.y; } }
+      };
+    }
+  };
+  T["optim-geo-num"] = {
+    type: "numeric", concepts: ["optimizacion"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["cerca", "lata", "dist"]);
+      if (v === "cerca") {
+        const P = r.int(4, 30) * 10, A = x => x * (P - 2 * x);
+        return { prompt: `Con ${P} m de alambre se cerca un terreno rectangular junto a un río (el lado del río no lleva alambre). ¿Cuál es el área máxima, en m²?`,
+          answer: P * P / 8,
+          solution: [`Si $x$ son los lados perpendiculares al río, el otro mide $${P} - 2x$ y $A(x) = x(${P} - 2x)$ ([[optimizacion]]).`, `$A'(x) = ${P} - 4x = 0 \\Rightarrow x = ${P / 4}$.`, `$A = ${P / 4}\\cdot ${P / 2} = ${P * P / 8}$ m².`],
+          verify: { kind: "value", tol: 1e-6, fn: () => gridExt(A, 0, P / 2, "max").y } };
+      }
+      if (v === "lata") {
+        const Vol = r.pick([250, 330, 500, 1000]), S = rr => 2 * Math.PI * rr * rr + 2 * Vol / rr;
+        const rr = Math.cbrt(Vol / (2 * Math.PI));
+        return { prompt: `Una lata cilíndrica cerrada tiene que contener ${Vol} cm³. ¿Qué radio (en cm) minimiza el material?`,
+          answer: rr,
+          solution: [`$V = \\pi r^2 h = ${Vol} \\Rightarrow h = \\dfrac{${Vol}}{\\pi r^2}$.`, `Superficie: $S(r) = 2\\pi r^2 + \\dfrac{${2 * Vol}}{r}$; $S'(r) = 4\\pi r - \\dfrac{${2 * Vol}}{r^2} = 0$ ([[optimizacion]]).`, `$r = \\sqrt[3]{\\dfrac{${Vol}}{2\\pi}} \\approx ${num(rr, 3)}$ cm (y queda $h = 2r$).`],
+          verify: { kind: "value", tol: 1e-5, fn: () => gridExt(S, 0.5, 30, "min", 600000).x } };
+      }
+      const a = r.int(1, 6);
+      const D = x => Math.sqrt(x * x + (x * x - a) ** 2);
+      return { prompt: `¿Cuál es la distancia mínima entre el punto $(0, ${a})$ y la parábola $y = x^2$?`,
+        answer: Math.sqrt(a - 0.25), answerTex: `\\frac{\\sqrt{${4 * a - 1}}}{2}`,
+        solution: [`Minimizamos el cuadrado de la distancia: $D(x) = x^2 + (x^2 - ${a})^2$ ([[optimizacion]]).`, `$D'(x) = 2x\\,(2x^2 - ${2 * a - 1}) = 0 \\Rightarrow x^2 = ${frac(2 * a - 1, 2)}$.`, `$D = ${frac(2 * a - 1, 2)} + \\frac14 = ${frac(4 * a - 1, 4)}$, así que la distancia es $\\frac{\\sqrt{${4 * a - 1}}}{2}$.`],
+        verify: { kind: "value", tol: 1e-6, fn: () => gridExt(D, -4, 4, "min", 800000).y } };
+    }
+  };
+
+  /* --------------------------- apuntes de la unidad --------------------------- */
+  const cards = {
+    "derivadas-inversas": {
+      title: "Derivadas de las trigonométricas inversas", aliases: ["trigonométricas inversas", "arcoseno", "arcotangente", "arcocoseno"], concepts: ["der-inversas"],
+      summary: "(arcsen x)' = 1/√(1−x²), (arccos x)' = −1/√(1−x²), (arctg x)' = 1/(1+x²).",
+      def: [R`$$(\arcsin x)' = \frac{1}{\sqrt{1-x^2}} \qquad (\arccos x)' = -\frac{1}{\sqrt{1-x^2}} \qquad (\arctan x)' = \frac{1}{1+x^2}$$`],
+      idea: [R`Son las [[funcion-inversa|inversas]] de $\sin$, $\cos$ y $\tan$ restringidas a un intervalo donde son inyectivas ($[-\frac\pi2, \frac\pi2]$ para el seno y la tangente, $[0, \pi]$ para el coseno). Notá que la derivada de $\arctan$ es una función racional: por eso $\arctan$ aparece al integrar $\frac{1}{1+x^2}$.`],
+      demo: [R`**arcoseno:** si $y = \arcsin x$, entonces $\sin y = x$. Derivando implícitamente ([[implicita]]): $\cos y\cdot y' = 1$.`,
+        R`Como $y \in [-\frac\pi2, \frac\pi2]$, $\cos y \ge 0$ y $\cos y = \sqrt{1 - \sin^2 y} = \sqrt{1 - x^2}$. Entonces $y' = \frac{1}{\sqrt{1-x^2}}$. $\blacksquare$`,
+        R`**arcotangente:** $\tan y = x \Rightarrow \sec^2 y\cdot y' = 1$, y $\sec^2 y = 1 + \tan^2 y = 1 + x^2$.`],
+      examples: [{ q: R`Derivá $\arctan(3x)$.`, steps: [R`Por la [[regla-cadena|cadena]]: $\dfrac{3}{1 + 9x^2}$.`] }],
+      see: ["funcion-inversa", "implicita", "regla-cadena"]
+    },
+    "extremos": {
+      title: "Crecimiento, puntos críticos y extremos", aliases: ["punto crítico", "puntos críticos", "máximo local", "mínimo local", "extremo absoluto", "teorema de los valores extremos", "creciente", "decreciente"], concepts: ["extremos"],
+      summary: "f' > 0 ⇒ f crece. Los extremos locales están donde f' = 0 o no existe; los absolutos en [a, b], ahí o en los bordes.",
+      def: [R`**Puntos críticos** de $f$: los $c$ del dominio con $f'(c) = 0$ o donde $f'(c)$ no existe.`,
+        R`**Fermat:** si $f$ tiene un extremo local en $c$ y es derivable ahí, entonces $f'(c) = 0$.`,
+        R`**Teorema de los valores extremos (Weierstrass):** si $f$ es [[continuidad|continua]] en $[a, b]$, alcanza un máximo y un mínimo absolutos en ese intervalo.`],
+      idea: [R`**Crecimiento:** si $f' > 0$ en un intervalo, $f$ crece ahí; si $f' < 0$, decrece (es consecuencia del [[valor-medio|teorema de Lagrange]]).`,
+        R`**Criterio de la primera derivada:** si $f'$ pasa de $+$ a $-$ en $c$, hay un máximo local; de $-$ a $+$, un mínimo local; si no cambia de signo, no hay extremo (como $x^3$ en $0$).`,
+        R`**Receta para extremos absolutos en $[a, b]$:** evaluá $f$ en los puntos críticos interiores y en $a$ y $b$; el mayor valor es el máximo y el menor, el mínimo.`,
+        { graph: { fns: [x => x ** 3 - 3 * x, x => 3 * x * x - 3], points: [{ x: -1, y: 2 }, { x: 1, y: -2 }], xr: [-3, 3], yr: [-4, 4] }, caption: R`En violeta $x^3 - 3x$; en naranja su derivada. $f' = 0$ en $\pm1$: máximo local en $-1$, mínimo local en $1$.` }],
+      demo: [R`**Fermat.** Si hay un máximo local en $c$: para $h > 0$ chico, $\frac{f(c+h) - f(c)}{h} \le 0$, y para $h < 0$, $\ge 0$.`, R`Tomando límite, $f'(c) \le 0$ y $f'(c) \ge 0$, así que $f'(c) = 0$. $\blacksquare$`],
+      examples: [{ q: R`Extremos absolutos de $x^2 - 4x$ en $[0, 5]$.`, steps: [R`$f'(x) = 2x - 4 = 0$ en $x = 2$.`, R`$f(0) = 0$, $f(2) = -4$, $f(5) = 5$.`, R`Máximo absoluto $5$ (en $x = 5$), mínimo absoluto $-4$ (en $x = 2$).`] }],
+      tips: [R`$f'(c) = 0$ **no** garantiza extremo: $x^3$ tiene $f'(0) = 0$ y no tiene ni máximo ni mínimo ahí.`],
+      see: ["concavidad", "optimizacion", "grafico-derivada", "valor-medio"]
+    },
+    "concavidad": {
+      title: "Concavidad y puntos de inflexión", aliases: ["concavidad", "cóncava", "punto de inflexión", "puntos de inflexión", "criterio de la segunda derivada"], concepts: ["concavidad"],
+      summary: "f'' > 0: cóncava hacia arriba (∪). f'' < 0: hacia abajo (∩). Donde f'' cambia de signo hay inflexión.",
+      def: [R`$f$ es **cóncava hacia arriba** en un intervalo si $f'$ es creciente ahí (con $f''$: $f'' > 0$), y **cóncava hacia abajo** si $f'$ es decreciente ($f'' < 0$).`, R`Un **punto de inflexión** es donde cambia la concavidad.`],
+      idea: [R`Cóncava hacia arriba: el gráfico queda **por encima** de sus rectas tangentes y "retiene agua" ($\cup$). Hacia abajo: por debajo de las tangentes ($\cap$).`,
+        R`**Criterio de la segunda derivada:** si $f'(c) = 0$ y $f''(c) > 0$, hay mínimo local; si $f''(c) < 0$, máximo local. Si $f''(c) = 0$, el criterio no decide.`,
+        { graph: { fns: [x => x ** 3 / 3 - x, x => 2 * x], points: [{ x: 0, y: 0 }], xr: [-3, 3], yr: [-3, 3] }, caption: R`En violeta $\frac{x^3}{3} - x$; en naranja $f'' = 2x$. Inflexión en $x = 0$.` }],
+      examples: [{ q: R`Concavidad de $x^4 - 6x^2$.`, steps: [R`$f''(x) = 12x^2 - 12 = 12(x^2 - 1)$.`, R`Hacia arriba en $(-\infty, -1)\cup(1, +\infty)$; hacia abajo en $(-1, 1)$; inflexiones en $x = \pm 1$.`] }],
+      tips: [R`$f''(c) = 0$ no basta para inflexión: $x^4$ tiene $f''(0) = 0$ y es cóncava hacia arriba en todos lados.`],
+      see: ["extremos", "derivadas-sucesivas"]
+    },
+    "valor-medio": {
+      title: "Teoremas de Rolle, Lagrange y Cauchy", aliases: ["Rolle", "Lagrange", "teorema del valor medio", "valor medio", "teorema de Cauchy"], concepts: ["valor-medio"],
+      summary: "Entre a y b hay un punto donde la pendiente de la tangente iguala a la de la secante.",
+      def: [R`Sea $f$ continua en $[a, b]$ y derivable en $(a, b)$.`,
+        R`**Rolle:** si además $f(a) = f(b)$, existe $c \in (a, b)$ con $f'(c) = 0$.`,
+        R`**Lagrange (valor medio):** existe $c \in (a, b)$ con $$f'(c) = \frac{f(b) - f(a)}{b - a}.$$`,
+        R`**Cauchy:** si $g$ cumple lo mismo y $g' \neq 0$ en $(a,b)$, existe $c$ con $\dfrac{f'(c)}{g'(c)} = \dfrac{f(b) - f(a)}{g(b) - g(a)}$.`],
+      idea: [R`Si en un viaje de 2 horas recorriste 200 km, en algún instante el velocímetro marcó exactamente 100 km/h. Lagrange dice eso: la velocidad instantánea iguala a la media en algún momento.`,
+        R`Consecuencias clave: si $f' = 0$ en un intervalo, $f$ es constante; si $f' > 0$, $f$ es creciente ([[extremos]]). Y Cauchy es la base de [[lhopital|L'Hôpital]].`],
+      demo: [R`**Rolle.** Por [[extremos|Weierstrass]], $f$ alcanza máximo y mínimo en $[a, b]$. Si los dos están en los extremos, como $f(a) = f(b)$, $f$ es constante y $f' = 0$ en todo $(a,b)$.`,
+        R`Si no, alguno está en un $c$ interior, y por Fermat $f'(c) = 0$. $\blacksquare$`,
+        R`**Lagrange.** Aplicamos Rolle a $g(x) = f(x) - \left[f(a) + m(x-a)\right]$ con $m = \frac{f(b)-f(a)}{b-a}$, que cumple $g(a) = g(b) = 0$. Existe $c$ con $g'(c) = f'(c) - m = 0$. $\blacksquare$`],
+      examples: [{ q: R`Encontrá el $c$ de Lagrange para $f(x) = x^2$ en $[1, 3]$.`, steps: [R`Pendiente de la secante: $\frac{9 - 1}{2} = 4$.`, R`$f'(c) = 2c = 4 \Rightarrow c = 2$.`] }],
+      tips: [R`Las hipótesis importan: $|x|$ en $[-1, 1]$ cumple $f(-1) = f(1)$ pero no es derivable en $0$, y su derivada nunca vale $0$.`],
+      see: ["extremos", "lhopital", "derivable-continua"]
+    },
+    "lhopital": {
+      title: "Regla de L'Hôpital", aliases: ["L'Hôpital", "regla de L'Hôpital", "L'Hospital"], concepts: ["lhopital"],
+      summary: "Si f/g da 0/0 o ∞/∞, entonces lim f/g = lim f'/g' (cuando este último existe).",
+      def: [R`Si $\lim_{x\to a} f(x) = \lim_{x\to a} g(x) = 0$ (o ambos son $\pm\infty$), $f$ y $g$ son derivables cerca de $a$ con $g' \neq 0$, y existe $\displaystyle\lim_{x\to a}\frac{f'(x)}{g'(x)} = L$, entonces $$\lim_{x\to a}\frac{f(x)}{g(x)} = L.$$ Vale también con $a = \pm\infty$ y para límites laterales.`],
+      idea: [R`Cerca de $a$, si $f(a) = g(a) = 0$: $\frac{f(x)}{g(x)} \approx \frac{f'(a)(x-a)}{g'(a)(x-a)} = \frac{f'(a)}{g'(a)}$. Se derivan **por separado** numerador y denominador (no es la [[regla-cociente|regla del cociente]]).`,
+        R`Otras [[indeterminacion|indeterminaciones]] ($0\cdot\infty$, $\infty - \infty$, $1^\infty$) se llevan primero a la forma de cociente, por ejemplo usando logaritmos.`],
+      demo: [R`**Caso $\frac00$ en $a$ (por derecha).** Definimos $f(a) = g(a) = 0$, así quedan continuas en $[a, x]$.`,
+        R`Por el [[valor-medio|teorema de Cauchy]] existe $c_x \in (a, x)$ con $\dfrac{f(x)}{g(x)} = \dfrac{f(x) - f(a)}{g(x) - g(a)} = \dfrac{f'(c_x)}{g'(c_x)}$.`,
+        R`Cuando $x \to a^+$, también $c_x \to a^+$, así que el cociente tiende a $L$. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\displaystyle\lim_{x\to\infty}\frac{x^2}{e^x}$.`, steps: [R`$\frac{\infty}{\infty}$: L'Hôpital da $\frac{2x}{e^x}$, otra vez $\frac\infty\infty$.`, R`Otra vez: $\frac{2}{e^x} \to 0$. La exponencial le gana a cualquier potencia.`] }],
+      tips: [R`Antes de aplicarla, **chequeá que sea $\frac00$ o $\frac\infty\infty$**: $\lim_{x\to0}\frac{x+1}{x+2} = \frac12$, pero "derivando" daría $1$.`],
+      see: ["indeterminacion", "valor-medio", "lim-trig-notable"]
+    },
+    "optimizacion": {
+      title: "Problemas de optimización", aliases: ["optimización", "optimizar", "maximizar", "minimizar"], concepts: ["optimizacion"],
+      summary: "Escribí la cantidad a optimizar como función de una variable, buscá sus puntos críticos y chequeá que sea el extremo pedido.",
+      def: [R`**Receta:**<br>1. Dibujá y nombrá las variables.<br>2. Escribí la cantidad a optimizar.<br>3. Usá las restricciones para dejarla en función de **una sola** variable, con su dominio.<br>4. Buscá los [[extremos|puntos críticos]] ($f' = 0$).<br>5. Verificá que sea máximo o mínimo (signo de $f'$, [[concavidad|$f''$]] o comparando con los bordes).`],
+      idea: [R`Casi todo el trabajo está en el paso 3: traducir el enunciado a una función. Por ejemplo, en una lata de volumen fijo $V$, la altura se despeja de $V = \pi r^2 h$ y la superficie queda solo en función de $r$.`],
+      examples: [{ q: R`Dos números positivos suman $20$. ¿Cuál es el máximo de su producto?`, steps: [R`$P(x) = x(20 - x)$ con $0 < x < 20$.`, R`$P'(x) = 20 - 2x = 0 \Rightarrow x = 10$, y $P''= -2 < 0$: es máximo.`, R`Producto máximo: $100$.`] }],
+      see: ["extremos", "concavidad"]
+    }
+  };
+
+  E.extendCourse("m101", {
+    concepts: {
+      "der-inversas": { name: "Derivadas de trigonométricas inversas" },
+      "extremos": { name: "Crecimiento y extremos" },
+      "concavidad": { name: "Concavidad e inflexión" },
+      "valor-medio": { name: "Rolle, Lagrange y Cauchy" },
+      "lhopital": { name: "Regla de L'Hôpital" },
+      "optimizacion": { name: "Optimización" }
+    },
+    templates: T,
+    units: [{
+      id: "aplicaciones", order: 3.5, program: "Unidad 3", title: "Aplicaciones de la derivada", icon: "chart-column",
+      diagnostic: ["crit-num", "lhop-num", "optim-geo-num"],
+      lessons: [
+        { id: "der-inversas", title: "Trigonométricas inversas", templates: ["dinv-mc", "dinv-num"], theory: ["derivadas-inversas", "funcion-inversa", "implicita"],
+          intro: R`$(\arcsin x)' = \frac{1}{\sqrt{1-x^2}}$, $(\arctan x)' = \frac{1}{1+x^2}$, y con la cadena se multiplica por la derivada de adentro.` },
+        { id: "crecimiento", title: "Crecimiento y extremos", templates: ["crece-vf", "crit-num", "abs-ext-num"], theory: ["extremos", "grafico-derivada"],
+          intro: R`$f' > 0$: crece; $f' < 0$: decrece. Extremos locales donde $f'$ cambia de signo. Extremos absolutos en $[a,b]$: comparar los puntos críticos con los bordes.` },
+        { id: "concavidad", title: "Concavidad e inflexión", templates: ["inflex-num", "concav-mc"], theory: ["concavidad", "derivadas-sucesivas"],
+          intro: R`$f'' > 0$: cóncava hacia arriba; $f'' < 0$: hacia abajo. Inflexión donde $f''$ cambia de signo.` },
+        { id: "valor-medio", title: "Rolle, Lagrange y Cauchy", templates: ["tvm-num", "rolle-vf", "tvm-order"], theory: ["valor-medio", "extremos"],
+          intro: R`Lagrange: existe $c \in (a,b)$ con $f'(c) = \frac{f(b) - f(a)}{b - a}$. Rolle es el caso $f(a) = f(b)$.` },
+        { id: "lhopital", title: "Regla de L'Hôpital", templates: ["lhop-vf", "lhop-num", "lhop-error"], theory: ["lhopital", "indeterminacion"],
+          intro: R`Si da $\frac00$ o $\frac\infty\infty$: $\lim\frac{f}{g} = \lim\frac{f'}{g'}$, derivando numerador y denominador por separado.` },
+        { id: "optimizacion", title: "Optimización", templates: ["optim-geo-num", "optim-caja-num"], theory: ["optimizacion", "extremos"],
+          intro: R`Escribí lo que querés optimizar en función de una variable, buscá dónde $f' = 0$ y chequeá que sea el extremo pedido.` }
+      ]
+    }],
+    cards
+  });
+})();
