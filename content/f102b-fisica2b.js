@@ -129,6 +129,9 @@
         R`**Dilatación:** $\Delta L = \alpha L_0\Delta T$ (lineal), $\Delta V = \beta V_0\Delta T$ con $\beta \approx 3\alpha$ para sólidos.`],
       idea: [R`Un grado Celsius y un kelvin son del mismo tamaño: las **diferencias** de temperatura son iguales en las dos escalas. Pero en las leyes de los gases y de radiación hay que usar kelvin.`,
         R`El agua es una excepción: entre $0$ y $4\,^\circ$C se **contrae** al calentarse. Por eso los lagos se congelan de arriba hacia abajo.`],
+      demo: [R`**Conversión a Fahrenheit.** Las dos escalas son lineales y coinciden en dos puntos fijos: el agua se congela a $0\,^\circ$C $= 32\,^\circ$F y hierve a $100\,^\circ$C $= 212\,^\circ$F. La recta por esos puntos tiene pendiente $\frac{212 - 32}{100} = \frac95$, así que $T_F = \frac95T_C + 32$.`,
+        R`**$\beta \approx 3\alpha$.** Un cubo de lado $L_0$ pasa a tener lado $L_0(1 + \alpha\Delta T)$. Su volumen es $$V = L_0^3(1 + \alpha\Delta T)^3 = V_0\left(1 + 3\alpha\Delta T + 3\alpha^2\Delta T^2 + \alpha^3\Delta T^3\right).$$`,
+        R`Como $\alpha\Delta T$ es muy chico (del orden de $10^{-3}$ o menos), sus potencias más altas son despreciables: $\Delta V \approx 3\alpha V_0\Delta T$.`],
       examples: [{ q: R`Un riel de acero de 12 m ($\alpha = 1{,}2\times10^{-5}$ K⁻¹) pasa de $0$ a $40\,^\circ$C. ¿Cuánto se alarga?`, steps: [R`$\Delta L = 1{,}2\times10^{-5}\cdot 12\cdot 40 \approx 5{,}8$ mm: por eso se dejan juntas de dilatación.`] }],
       see: ["f2b-calor", "f2b-gas-ideal"]
     },
@@ -139,6 +142,9 @@
         R`**Cambio de fase:** $Q = mL$, con $L$ el **calor latente** (agua: $L_f = 3{,}34\times10^5$ J/kg, $L_v = 2{,}26\times10^6$ J/kg). Durante el cambio de fase la temperatura no cambia.`,
         R`**Calorimetría:** en un sistema aislado, $\sum Q_i = 0$: lo que unos pierden, otros lo ganan.`],
       idea: [R`El agua tiene un calor específico enorme: por eso modera el clima de las costas y se usa para refrigerar. Y evaporar agua cuesta mucha energía, que es por qué transpirar enfría.`],
+      demo: [R`**Temperatura de equilibrio.** Mezclamos una masa $m_1$ (calor específico $c_1$, a $T_1$) con una $m_2$ ($c_2$, a $T_2$), sin cambios de fase ni pérdidas. Las dos terminan a la misma $T_f$, y $\sum Q = 0$: $$m_1c_1(T_f - T_1) + m_2c_2(T_f - T_2) = 0.$$`,
+        R`Despejando, $T_f = \frac{m_1c_1T_1 + m_2c_2T_2}{m_1c_1 + m_2c_2}$: un promedio de las temperaturas pesado por las capacidades caloríficas $mc$. Queda más cerca de la temperatura inicial del cuerpo con mayor $mc$.`,
+        R`Si hay cambio de fase, se agrega el término $mL$ de cada sustancia que cambia, con signo $+$ si absorbe calor (funde o se evapora) y $-$ si lo cede.`],
       examples: [{ q: R`¿Cuánto calor hace falta para hervir (evaporar) 1 L de agua que ya está a $100\,^\circ$C?`, steps: [R`$Q = mL_v = 1\cdot 2{,}26\times10^6 = 2{,}26$ MJ: más de cinco veces lo que costó calentarla desde $0\,^\circ$C.`] }],
       see: ["f2b-temperatura", "f2b-transferencia", "f2b-primera-ley"]
     },
@@ -150,6 +156,9 @@
         R`**Radiación** (Stefan-Boltzmann): $P = e\sigma AT^4$, con $\sigma = 5{,}67\times10^{-8}$ W/(m² K⁴) y $T$ en kelvin. La potencia neta intercambiada con el entorno es $e\sigma A(T^4 - T_{amb}^4)$.`],
       idea: [R`El aire quieto es muy mal conductor ($k \approx 0{,}024$): por eso abrigan la lana, el telgopor y las ventanas de doble vidrio, que atrapan aire.`,
         R`La radiación no necesita medio: así nos llega el calor del Sol. Como depende de $T^4$, duplicar la temperatura absoluta multiplica por 16 la potencia irradiada.`],
+      demo: [R`**Capas en serie.** En régimen estacionario, el mismo calor por segundo $H$ atraviesa cada capa (si no, alguna se calentaría). En la capa $i$: $\Delta T_i = H\,R_i$, con $R_i = \frac{L_i}{k_iA}$.`,
+        R`Sumando las caídas de temperatura: $T_H - T_C = \sum\Delta T_i = H\sum R_i$. O sea, $H = \frac{T_H - T_C}{R_1 + R_2 + \cdots}$: las resistencias térmicas se suman como resistencias eléctricas en serie.`,
+        R`**Por qué el factor 16.** Si $T$ se duplica, $T^4$ pasa a $(2T)^4 = 16\,T^4$.`],
       examples: [{ q: R`Un vidrio de 1 m², 4 mm, $k = 0{,}8$ W/(m K), con $20\,^\circ$C adentro y $0\,^\circ$C afuera.`, steps: [R`$H = \frac{0{,}8\cdot 1\cdot 20}{0{,}004} = 4000$ W (en la práctica es menos, porque las capas de aire pegadas al vidrio también aíslan).`] }],
       see: ["f2b-calor"]
     }
@@ -253,6 +262,9 @@
       def: [R`$$pV = nRT, \qquad R = 8{,}314\ \text{J/(mol K)}$$ o, por molécula, $pV = NkT$ con $k = \frac{R}{N_A} = 1{,}381\times10^{-23}$ J/K.`],
       idea: [R`Vale para gases a baja densidad, donde las moléculas casi no interactúan. Contiene las leyes de Boyle ($pV$ constante a $T$ fija), Charles y Gay-Lussac. Para gases reales a alta presión se corrige, por ejemplo con la ecuación de van der Waals.`,
         R`Siempre con $T$ en **kelvin**, $p$ en Pa y $V$ en m³ (1 L $= 10^{-3}$ m³).`],
+      demo: [R`**Las leyes de los gases son casos particulares.** De $pV = nRT$ con $n$ fijo: si $T$ es constante, $pV$ es constante (Boyle); si $p$ es constante, $\frac VT$ es constante (Charles); si $V$ es constante, $\frac pT$ es constante (Gay-Lussac).`,
+        R`En general, para una misma cantidad de gas entre dos estados, $\frac{p_1V_1}{T_1} = nR = \frac{p_2V_2}{T_2}$.`,
+        R`**Por molécula.** El número de moléculas es $N = nN_A$, así que $nR = \frac{N}{N_A}R = Nk$ con $k = \frac{R}{N_A} = \frac{8{,}314}{6{,}022\times10^{23}} \approx 1{,}381\times10^{-23}$ J/K.`],
       examples: [{ q: R`¿Volumen de 1 mol a $0\,^\circ$C y 1 atm?`, steps: [R`$V = \frac{1\cdot 8{,}314\cdot 273}{101325} \approx 22{,}4$ L.`] }],
       see: ["f2b-cinetica", "f2b-primera-ley"]
     },
@@ -263,6 +275,10 @@
         R`**Equipartición:** cada grado de libertad cuadrático aporta $\frac12kT$. Monoatómico (3 traslaciones): $U = \frac32nRT$, $C_V = \frac32R$. Diatómico a temperatura ambiente (más 2 rotaciones): $C_V = \frac52R$. Siempre $C_p = C_V + R$.`,
         R`**Diagrama de fases** ($p$ vs $T$): curvas de fusión, vaporización y sublimación, que se encuentran en el **punto triple**. La curva de vaporización termina en el **punto crítico**.`],
       idea: [R`A la misma temperatura, todas las moléculas tienen la misma energía cinética media: las livianas (como el hidrógeno) van mucho más rápido. Por eso la Tierra perdió casi todo su hidrógeno y su helio.`],
+      demo: [R`**La presión por los choques.** Una molécula de masa $m$ en una caja de lado $L$ choca elásticamente con la pared perpendicular a $x$: su $v_x$ cambia de signo y le transfiere un impulso $2mv_x$. Vuelve a esa pared cada $\frac{2L}{v_x}$, así que la fuerza media que hace es $\frac{2mv_x}{2L/v_x} = \frac{mv_x^2}{L}$.`,
+        R`Con $N$ moléculas, la presión es $p = \frac{F}{L^2} = \frac{Nm\langle v_x^2\rangle}{V}$. Como ninguna dirección es especial, $\langle v_x^2\rangle = \frac13\langle v^2\rangle$, y queda $pV = \frac13Nm\langle v^2\rangle = \frac23N\langle\tfrac12mv^2\rangle$.`,
+        R`Comparando con $pV = NkT$: $\langle\frac12mv^2\rangle = \frac32kT$. De ahí, $v_{rms} = \sqrt{\langle v^2\rangle} = \sqrt{\frac{3kT}{m}}$, y multiplicando arriba y abajo por $N_A$ queda $\sqrt{\frac{3RT}{M}}$.`,
+        R`**$C_p = C_V + R$.** A presión constante, calentar $\Delta T$ cuesta lo mismo que a volumen constante, $nC_V\Delta T$, más el trabajo de expansión $p\,\Delta V = nR\,\Delta T$ (por $pV = nRT$). Dividiendo por $n\,\Delta T$: $C_p = C_V + R$.`],
       examples: [{ q: R`$v_{rms}$ del $\text{N}_2$ a 300 K.`, steps: [R`$\sqrt{\frac{3\cdot 8{,}314\cdot 300}{0{,}028}} \approx 517$ m/s.`] }],
       see: ["f2b-gas-ideal", "f2b-primera-ley"]
     }
@@ -376,6 +392,9 @@
         R`**Trabajo al cambiar el volumen:** $W = \int_{V_1}^{V_2} p\,dV$: el área bajo la curva en el diagrama $pV$.`],
       idea: [R`Es la [[f1-energia|conservación de la energía]] incluyendo el calor. Entre dos estados se puede ir por caminos distintos con distinto $W$ y distinto $Q$, pero $Q - W$ siempre da lo mismo.`,
         R`Para un gas ideal, $U$ depende solo de $T$: $\Delta U = nC_V\Delta T$ en **cualquier** proceso.`],
+      demo: [R`**El trabajo de un gas.** Un gas empuja un pistón de área $A$ con fuerza $pA$. Si el pistón avanza $dx$, el trabajo es $pA\,dx = p\,dV$. Sumando a lo largo del proceso, $W = \int_{V_1}^{V_2}p\,dV$, que es el área bajo la curva en el diagrama $pV$.`,
+        R`**$Q$ y $W$ dependen del camino.** Para ir de $(p_1, V_1)$ a $(p_2, V_2)$ con $V_2 > V_1$ y $p_1 > p_2$, se puede expandir primero a presión $p_1$ y después enfriar a volumen constante, o primero enfriar y después expandir a $p_2$. Los trabajos son $p_1(V_2 - V_1)$ y $p_2(V_2 - V_1)$: distintos. Como $\Delta U$ es el mismo, también cambia $Q$.`,
+        R`**Gas ideal: $\Delta U = nC_V\Delta T$ siempre.** A volumen constante $W = 0$, así que $\Delta U = Q = nC_V\Delta T$. Como $U$ depende solo de $T$, cualquier otro proceso entre las mismas temperaturas tiene el mismo $\Delta U$.`],
       examples: [{ q: R`Un gas recibe 500 J y se expande haciendo 200 J de trabajo. ¿$\Delta U$?`, steps: [R`$\Delta U = 500 - 200 = 300$ J: se calienta.`] }],
       see: ["f2b-procesos", "f2b-gas-ideal", "f2b-segunda-ley"]
     },
@@ -515,6 +534,9 @@
         R`**Segunda ley en términos de entropía:** en un sistema aislado, $\Delta S \ge 0$; vale el igual solo para procesos reversibles.`],
       idea: [R`La entropía mide el número de microestados compatibles con el estado macroscópico ($S = k\ln\Omega$): mezclar, expandir y calentar la aumentan. Es la "flecha del tiempo": los procesos espontáneos van hacia mayor entropía total.`,
         R`Casos útiles: a temperatura constante, $\Delta S = \frac{Q}{T}$; al calentar, $\Delta S = mc\ln\frac{T_2}{T_1}$; en una expansión isotérmica de gas ideal, $nR\ln\frac{V_2}{V_1}$.`],
+      demo: [R`**Expansión isotérmica de un gas ideal.** Con $T$ constante, $\Delta U = 0$ y $dQ = p\,dV = \frac{nRT}{V}dV$. Entonces $$\Delta S = \int\frac{dQ}{T} = nR\int_{V_1}^{V_2}\frac{dV}{V} = nR\ln\frac{V_2}{V_1}.$$`,
+        R`**Calentar un cuerpo.** Con $dQ = mc\,dT$: $\Delta S = \int_{T_1}^{T_2}\frac{mc\,dT}{T} = mc\ln\frac{T_2}{T_1}$. A temperatura constante (por ejemplo, en un cambio de fase), $\Delta S = \frac QT$.`,
+        R`**El calor va de lo caliente a lo frío.** Si un calor $Q$ pasa de un cuerpo a $T_H$ a otro a $T_C$, el primero pierde $\frac{Q}{T_H}$ de entropía y el segundo gana $\frac{Q}{T_C}$. El total es $Q\left(\frac{1}{T_C} - \frac{1}{T_H}\right)$, que es positivo justo cuando $T_H > T_C$. Al revés daría $\Delta S < 0$, que la segunda ley prohíbe.`],
       examples: [{ q: R`Pasan 1000 J de un cuerpo a 400 K a otro a 300 K. ¿Cambio total de entropía?`, steps: [R`$\Delta S = -\frac{1000}{400} + \frac{1000}{300} \approx +0{,}83$ J/K $> 0$: es espontáneo.`] }],
       see: ["f2b-segunda-ley", "integral-definida"]
     }
@@ -661,6 +683,10 @@
       idea: [R`Lo que viaja es la **forma**, no la materia: cada punto de la cuerda solo sube y baja (un [[f1-mas|MAS]]). La rapidez depende del medio, no de la amplitud ni de la frecuencia.`,
         R`**Ondas estacionarias** en una cuerda con extremos fijos: solo entran longitudes de onda $\lambda_n = \frac{2L}{n}$, y las frecuencias permitidas son $f_n = \frac{nv}{2L}$ (los **armónicos**). Así funcionan las guitarras.`,
         { graph: { fns: [x => Math.sin(x), x => Math.sin(x - 1)], xr: [0, 13], yr: [-2, 2] }, caption: R`Una onda en $t = 0$ (violeta) y un rato después (naranja): la forma se corrió hacia la derecha.` }],
+      demo: [R`**La onda armónica cumple la ecuación de onda.** Con $y = A\sin(kx - \omega t)$: $\frac{\partial^2y}{\partial t^2} = -\omega^2y$ y $\frac{\partial^2y}{\partial x^2} = -k^2y$. Así que $\frac{\partial^2y}{\partial t^2} = \frac{\omega^2}{k^2}\frac{\partial^2y}{\partial x^2}$, con $v = \frac\omega k$.`,
+        R`**$v = \lambda f$.** La fase $kx - \omega t$ es constante si $x = \frac{\omega}{k}t + $ cte: la forma avanza a $\frac{\omega}{k} = \frac{2\pi f}{2\pi/\lambda} = \lambda f$. Dicho de otro modo, en un período avanza una longitud de onda.`,
+        R`**Ondas estacionarias.** Sumando dos ondas iguales que viajan en sentidos opuestos: $A\sin(kx - \omega t) + A\sin(kx + \omega t) = 2A\sin(kx)\cos(\omega t)$ (por la [[identidades-trig|fórmula del seno de una suma]]). Para que los extremos $x = 0$ y $x = L$ queden quietos hace falta $\sin(kL) = 0$, o sea $kL = n\pi$: $\lambda_n = \frac{2L}{n}$ y $f_n = \frac{v}{\lambda_n} = \frac{nv}{2L}$.`,
+        R`**Rapidez en la cuerda.** Un tramo chico de largo $\Delta x$ y masa $\mu\Delta x$ recibe fuerzas de tensión en sus dos extremos. Su componente vertical neta es $F\left(\frac{\partial y}{\partial x}(x + \Delta x) - \frac{\partial y}{\partial x}(x)\right) \approx F\frac{\partial^2y}{\partial x^2}\Delta x$. Igualando a masa por aceleración: $\mu\frac{\partial^2y}{\partial t^2} = F\frac{\partial^2y}{\partial x^2}$, así que $v^2 = \frac{F}{\mu}$.`],
       examples: [{ q: R`Cuerda de guitarra: $L = 0{,}65$ m, $v = 286$ m/s. ¿Fundamental?`, steps: [R`$f_1 = \frac{v}{2L} = \frac{286}{1{,}3} = 220$ Hz (un La).`] }],
       see: ["f2b-sonido", "f2b-em", "f1-mas"]
     },
@@ -670,6 +696,9 @@
       def: [R`El **sonido** es una onda longitudinal de presión. En un gas: $v = \sqrt{\frac{\gamma RT}{M}}$ (aire a $20\,^\circ$C: $\approx 343$ m/s).`,
         R`**Intensidad:** potencia por unidad de área; para una fuente puntual, $I = \frac{P}{4\pi r^2}$. **Nivel de intensidad:** $\beta = 10\log_{10}\frac{I}{I_0}$ dB, con $I_0 = 10^{-12}$ W/m² (umbral de audición).`],
       idea: [R`El oído responde de forma logarítmica: cada $10$ dB más es $10$ veces más intensidad. Duplicar la distancia a una fuente puntual baja la intensidad a la cuarta parte, unos $6$ dB.`],
+      demo: [R`**Una fuente puntual.** La potencia $P$ se reparte sobre esferas cada vez más grandes. A distancia $r$, la superficie es $4\pi r^2$, así que $I = \frac{P}{4\pi r^2}$. Al duplicar $r$, el área se cuadruplica y la intensidad baja a la cuarta parte.`,
+        R`**En decibeles.** Si la intensidad se multiplica por $a$, $\beta$ cambia en $10\log_{10}a$. Con $a = 10$ son $10$ dB; con $a = \frac14$ son $10\log_{10}\frac14 \approx -6{,}0$ dB.`,
+        R`**Rapidez en un gas.** Por el modelo cinético, $v_{rms} = \sqrt{\frac{3RT}{M}}$ ([[f2b-cinetica]]). El sonido es un poco más lento, $\sqrt{\frac{\gamma RT}{M}}$ con $\gamma \approx 1{,}4$ para el aire, pero tiene la misma dependencia: crece con $\sqrt T$ y baja con la masa molar.`],
       examples: [{ q: R`¿Cuántos dB más hay si la intensidad se multiplica por 100?`, steps: [R`$10\log_{10}100 = 20$ dB.`] }],
       see: ["f2b-ondas", "exp-log-func"]
     },
@@ -680,6 +709,9 @@
         R`**Intensidad** de una onda senoidal: $I = \frac12c\varepsilon_0E_0^2$. No necesitan un medio para propagarse.`],
       idea: [R`El **espectro electromagnético** va de las ondas de radio (metros o más) a los rayos gamma, pasando por microondas, infrarrojo, visible ($400$–$700$ nm), ultravioleta y rayos X: es todo lo mismo, cambia solo la frecuencia.`,
         R`Que la luz sea una onda electromagnética fue una de las grandes unificaciones de la física: óptica y electromagnetismo son la misma teoría.`],
+      demo: [R`**$E = cB$.** Para una onda que viaja en $x$, con $\vec E$ en $y$ y $\vec B$ en $z$, la ley de Faraday queda $\frac{\partial E}{\partial x} = -\frac{\partial B}{\partial t}$. Con $E = E_0\sin(kx - \omega t)$ y $B = B_0\sin(kx - \omega t)$: $kE_0 = \omega B_0$, o sea $E_0 = \frac\omega k B_0 = cB_0$.`,
+        R`**De dónde sale $c$.** La ley de Ampère-Maxwell da, del mismo modo, $\frac{\partial B}{\partial x} = -\mu_0\varepsilon_0\frac{\partial E}{\partial t}$, que con la onda queda $kB_0 = \mu_0\varepsilon_0\omega E_0$. Multiplicando las dos relaciones: $k^2E_0B_0 = \mu_0\varepsilon_0\omega^2E_0B_0$, así que $\left(\frac\omega k\right)^2 = \frac{1}{\mu_0\varepsilon_0}$.`,
+        R`**Intensidad.** La energía por unidad de volumen del campo eléctrico es $\frac12\varepsilon_0E^2$, y la del magnético, $\frac{B^2}{2\mu_0}$, que con $B = \frac Ec$ da lo mismo. En total, $\varepsilon_0E^2$, que viaja a $c$. Como el promedio de $\sin^2$ en un período es $\frac12$, queda $I = \frac12c\varepsilon_0E_0^2$.`],
       examples: [{ q: R`¿Longitud de onda de un microondas de 2,45 GHz?`, steps: [R`$\lambda = \frac{3\times10^8}{2{,}45\times10^9} \approx 12$ cm.`] }],
       see: ["f2b-ondas", "f2b-optica"]
     }
@@ -781,6 +813,10 @@
         R`**Reflexión total interna:** si la luz va a un medio de menor índice ($n_1 > n_2$) con un ángulo mayor que el **crítico**, $\sin\theta_c = \frac{n_2}{n_1}$, no hay refracción y toda la luz se refleja.`],
       idea: [R`Al entrar a un medio más denso, la luz se frena y se **acerca** a la normal. La reflexión total es lo que hace funcionar la fibra óptica y el brillo de los diamantes ($\theta_c \approx 24^\circ$).`,
         R`La **óptica geométrica** trata a la luz como rayos: vale cuando todo es mucho más grande que la longitud de onda. Si no, aparecen la [[f2b-interferencia|interferencia]] y la [[f2b-difraccion|difracción]].`],
+      demo: [R`**Snell, por el camino más rápido (Fermat).** La luz va de $A$ (a altura $a$ sobre la superficie) a $B$ (a profundidad $b$, a distancia horizontal $d$), cruzando la superficie en $x$. El tiempo es $$t(x) = \frac{\sqrt{a^2 + x^2}}{v_1} + \frac{\sqrt{b^2 + (d - x)^2}}{v_2}.$$`,
+        R`En el mínimo, $t'(x) = 0$: $\frac{x}{v_1\sqrt{a^2 + x^2}} = \frac{d - x}{v_2\sqrt{b^2 + (d - x)^2}}$. Esas fracciones son $\frac{\sin\theta_1}{v_1}$ y $\frac{\sin\theta_2}{v_2}$. Multiplicando por $c$, con $n = \frac cv$: $n_1\sin\theta_1 = n_2\sin\theta_2$.`,
+        R`**Ángulo crítico.** Si $n_1 > n_2$, $\sin\theta_2 = \frac{n_1}{n_2}\sin\theta_1$ llega a $1$ (rayo rasante, $\theta_2 = 90^\circ$) cuando $\sin\theta_1 = \frac{n_2}{n_1}$. Para ángulos mayores haría falta $\sin\theta_2 > 1$, que es imposible: no hay rayo refractado.`,
+        R`**Reflexión.** Con el mismo razonamiento, pero yendo y volviendo por el mismo medio, el camino más corto que toca el espejo cumple $\theta_r = \theta_i$.`],
       examples: [{ q: R`Ángulo crítico vidrio–aire ($n = 1{,}5$).`, steps: [R`$\theta_c = \arcsin\frac{1}{1{,}5} \approx 41{,}8^\circ$.`] }],
       see: ["f2b-lentes", "f2b-em"]
     },
@@ -901,6 +937,9 @@
         R`**Películas delgadas:** la reflexión en un medio de mayor índice agrega un desfase de media onda. Comparando $2nt$ con $\lambda$ (y contando esos desfases) se ve si la reflexión es constructiva o destructiva.`],
       idea: [R`La interferencia es la prueba de que la luz es una onda. Los colores de las burbujas de jabón y de las manchas de aceite son interferencia en películas delgadas; las capas antirreflejo de los anteojos usan interferencia destructiva.`,
         R`El **interferómetro de Michelson** divide un haz en dos brazos y los recombina: cada franja que pasa corresponde a un cambio de camino de una longitud de onda, así que mide distancias del orden de los nanómetros (hoy detecta ondas gravitacionales).`],
+      demo: [R`**Diferencia de caminos.** Con la pantalla lejos, los rayos que salen de las dos rendijas hacia un mismo punto son casi paralelos, y forman un ángulo $\theta$ con la normal. El de abajo recorre un tramo extra $d\sin\theta$ (el cateto opuesto de un triángulo de hipotenusa $d$). Hay máximo cuando ese tramo es un número entero de longitudes de onda.`,
+        R`**Posición en la pantalla.** A distancia $L$, $y = L\tan\theta$. Para ángulos chicos $\tan\theta \approx \sin\theta$, así que $y_m \approx L\frac{m\lambda}{d}$.`,
+        R`**La intensidad.** Las dos ondas llegan con amplitud $E_0$ y desfase $\phi = \frac{2\pi d\sin\theta}{\lambda}$. Su suma es $E_0\sin(\omega t) + E_0\sin(\omega t + \phi) = 2E_0\cos\frac\phi2\,\sin\left(\omega t + \frac\phi2\right)$. La intensidad va como el cuadrado de la amplitud: $I = I_0\cos^2\frac\phi2 = I_0\cos^2\left(\frac{\pi d\sin\theta}{\lambda}\right)$.`],
       examples: [{ q: R`Rendijas a 0,2 mm, luz de 500 nm, pantalla a 2 m. ¿Separación entre franjas?`, steps: [R`$\frac{\lambda L}{d} = \frac{5\times10^{-7}\cdot 2}{2\times10^{-4}} = 5$ mm.`] }],
       see: ["f2b-difraccion", "f2b-ondas"]
     }
@@ -1002,6 +1041,10 @@
         R`**Red de difracción** (muchas rendijas separadas $d$): máximos muy finos en $d\sin\theta = m\lambda$. **Bragg** (planos de un cristal separados $d$): $2d\sin\theta = m\lambda$.`],
       idea: [R`Cuanto más angosta la rendija, más ancho el máximo central: la difracción importa cuando la abertura es comparable con $\lambda$. Por eso el sonido (de longitud de onda grande) dobla las esquinas y la luz casi no.`,
         R`Las redes separan los colores con muchísima precisión (espectroscopía), y la difracción de rayos X por cristales permitió medir estructuras atómicas, como la del ADN.`],
+      demo: [R`**Mínimos de la rendija simple.** Partimos la rendija en dos mitades de ancho $\frac a2$. Cada punto de la mitad de arriba tiene un compañero en la de abajo, a distancia $\frac a2$, cuyo camino es más largo en $\frac a2\sin\theta$. Si eso es $\frac\lambda2$, cada par se cancela y no llega luz: $a\sin\theta = \lambda$.`,
+        R`Partiendo en $2m$ franjas y cancelándolas de a pares, sale lo mismo para $a\sin\theta = m\lambda$. Para $m = 0$ todas las fuentes están en fase: es el máximo central.`,
+        R`**Bragg.** Un rayo que se refleja en el segundo plano del cristal recorre, de ida y de vuelta, $d\sin\theta$ más que el que se refleja en el primero (con $\theta$ medido desde los planos). La diferencia total es $2d\sin\theta$, y hay refuerzo cuando es $m\lambda$.`,
+        R`**Red de difracción.** Entre rendijas vecinas la diferencia es $d\sin\theta$, como en la doble rendija. Con $N$ rendijas, lejos de $d\sin\theta = m\lambda$ los $N$ aportes tienen fases repartidas y casi se cancelan. Por eso los máximos son mucho más finos que con dos.`],
       examples: [{ q: R`Red de 500 líneas/mm con luz de 600 nm. ¿Ángulo del primer orden?`, steps: [R`$d = 2000$ nm; $\sin\theta = \frac{600}{2000} = 0{,}3$, así que $\theta \approx 17{,}5^\circ$.`] }],
       see: ["f2b-interferencia", "f2b-optica"]
     }

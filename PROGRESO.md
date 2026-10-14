@@ -54,7 +54,8 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **M101:** se agregó la demostración en 22 fichas: identidades trigonométricas, radianes, teorema del factor, conjugado, límites laterales, sustitución directa, límites infinitos, recta tangente, derivación implícita, crecimiento y signo de f′, función inversa, transformaciones, funciones trigonométricas, propiedades del logaritmo, modelos exponenciales, criterio de la segunda derivada, propiedades de la integral, sustitución trigonométrica, fracciones simples, ecuaciones separables, área entre curvas, y volúmenes y longitud de arco. Las que quedan sin demostración son definiciones o recetas: función, indeterminaciones, técnicas de límites trigonométricos, asíntotas, continuidad, tipos de discontinuidad, derivadas sucesivas, composición y optimización.
 - **M104:** se agregó la demostración en las 14 fichas que no la tenían; ahora todas las de la materia tienen una.
 - **F101:** se agregó la demostración en 18 fichas. Quedan sin ella magnitudes y unidades, cifras significativas y leyes de Newton, que son definiciones o postulados.
-- **Pendiente:** el mismo repaso en F102B y M102.
+- **F102B:** se agregó la demostración en las 13 fichas que no la tenían; ahora todas las de la materia tienen una.
+- **Pendiente:** el mismo repaso en M102.
 
 ## Cuenta y sincronización (Firebase)
 
