@@ -8,7 +8,7 @@ Objetivo: reconstruir la **Licenciatura en Ciencias Básicas con orientación en
 |---|---|---|
 | 1 | M101 Cálculo I | **completa**: 5 unidades del programa (7 en la app), 105 plantillas, 64 fichas |
 | 2 | M104 Introducción al Álgebra Lineal | pendiente |
-| 3 | F101 Física General I | en curso: unidad transversal, 1 Cinemática y 2 Dinámica |
+| 3 | F101 Física General I | en curso: transversal y unidades 1-5 (cinemática, dinámica, energía, cantidad de movimiento, fluidos) |
 | 4+ | 2.º año en adelante | pendiente (en la carrera como "Próximamente") |
 
 ## Hecho
@@ -22,13 +22,14 @@ Objetivo: reconstruir la **Licenciatura en Ciencias Básicas con orientación en
 
 ## Pendientes técnicos
 
-- Al escribir las unidades de energía, MAS, gravitación y rotación de F101, volver a enlazar: en `f1-hooke`, «movimiento armónico simple» → `[[f1-mas|…]]` y «energía» → `[[f1-energia]]`; en `f1-dinamica-circular`, «gravedad» → `[[f1-gravitacion|…]]`; y los «ver también» de `f1-hooke`, `f1-dinamica-circular` y `f1-circular`. Se sacaron porque esas fichas todavía no existían y los tests no admiten links rotos.
+- Al escribir las unidades de energía, MAS, gravitación y rotación de F101, volver a enlazar: en `f1-hooke`, «movimiento armónico simple» → `[[f1-mas|…]]` (el de energía ya se restauró); en `f1-dinamica-circular`, «gravedad» → `[[f1-gravitacion|…]]`; y los «ver también» de `f1-hooke`, `f1-dinamica-circular`, `f1-circular` y `f1-cm` (→ `f1-equilibrio`). Se sacaron porque esas fichas todavía no existían y los tests no admiten links rotos.
 
 ## Decisiones tomadas
 
 - **Unidades del programa partidas en dos.** Las unidades 3 y 4 de Cálculo I son muy largas, así que en la app cada una se divide en dos unidades: Derivadas / Aplicaciones de la derivada, e Integrales / Aplicaciones de la integral. Así el test de cada unidad es más fino. El campo `program` de cada unidad indica a qué unidad del programa oficial corresponde.
 - **IDs sin cambios.** Se mantienen los ids de lecciones y conceptos del MVP para no perder progreso. Solo cambia el id de la materia (`calculo` → `m101`).
 - **Plantillas del MVP sin `verify`.** 17 plantillas conceptuales del MVP (V/F, ordenar, unir, error) no traían `verify` y quedan en una lista explícita en los tests. Toda plantilla nueva lo tiene obligatorio.
+- **Push a `main` después de cada bloque**, para poder probar en el celu (pedido durante la noche). La rama `carrera-fcen` queda igual que `main`.
 - **Unidades con progreso quedan abiertas.** Una unidad queda abierta si ya completaste alguna lección suya, aunque falte la anterior. Esto evita que el progreso viejo quede bloqueado al agregarse unidades antes.
 
 ## Fuentes de los temarios

@@ -613,9 +613,9 @@
       title: "Fuerza elástica: ley de Hooke", aliases: ["ley de Hooke", "fuerza elástica", "constante elástica", "constante del resorte"], concepts: ["f1-hooke"],
       summary: "Un resorte estirado o comprimido x hace una fuerza F = −kx, hacia su posición natural.",
       def: [R`$$F = -kx$$ donde $x$ es el estiramiento respecto de la longitud natural y $k$ la **constante elástica** (N/m). El signo menos indica que la fuerza se opone a la deformación (es restauradora).`],
-      idea: [R`Vale para deformaciones chicas: casi todo material se comporta así cerca del equilibrio, y por eso los resortes aparecen en todos lados. La fuerza restauradora lineal es lo que produce el movimiento armónico simple, y la energía guardada en el resorte es $\frac12kx^2$ (ver energía).`],
+      idea: [R`Vale para deformaciones chicas: casi todo material se comporta así cerca del equilibrio, y por eso los resortes aparecen en todos lados. La fuerza restauradora lineal es lo que produce el movimiento armónico simple, y la energía guardada en el resorte es $\frac12kx^2$ (ver [[f1-energia]]).`],
       examples: [{ q: R`Un resorte se estira 5 cm con 2 kg colgados. ¿$k$?`, steps: [R`$k = \frac{mg}{x} = \frac{2\cdot 9{,}8}{0{,}05} = 392$ N/m.`] }],
-      see: ["f1-newton"]
+      see: ["f1-newton", "f1-energia"]
     },
     "f1-dinamica-circular": {
       title: "Dinámica del movimiento circular", aliases: ["fuerza centrípeta", "dinámica circular", "curva peraltada", "rulo"], concepts: ["f1-dinamica-circular"],
@@ -646,6 +646,529 @@
           intro: R`$f_k = \mu_k N$; el estático se ajusta hasta $\mu_s N$. En un plano: $N = mg\cos\theta$ y la componente del peso a lo largo es $mg\sin\theta$.` },
         { id: "f1-hooke-circular", title: "Resortes y dinámica circular", templates: ["f1-hooke-num", "f1-circdin-num"], theory: ["f1-hooke", "f1-dinamica-circular"],
           intro: R`$F = -kx$. En movimiento circular, la suma de fuerzas hacia el centro vale $\frac{mv^2}{R}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 3 · TRABAJO Y ENERGÍA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dec = x => String(x).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180;
+
+  T["f1-trabajo-num"] = {
+    type: "numeric", concepts: ["f1-trabajo"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["const", "resorte", "variable"]);
+      if (v === "const") {
+        const F = r.int(10, 100), d = r.int(2, 20), th = r.pick([0, 30, 45, 60, 90, 120, 180]);
+        const W = F * d * Math.cos(rad(th));
+        return { prompt: `Una fuerza constante de $${F}$ N actúa sobre un cuerpo que se desplaza $${d}$ m en línea recta. La fuerza forma $${th}^\\circ$ con el desplazamiento. ¿Cuánto trabajo (J) hace?`, answer: Math.abs(W) < 1e-9 ? 0 : W,
+          solution: [`[[f1-trabajo|Trabajo]] de una fuerza constante: $W = \\vec F\\cdot\\Delta\\vec r = Fd\\cos\\theta$.`, `$W = ${F}\\cdot${d}\\cos ${th}^\\circ \\approx ${num(W, 3)}$ J${th === 90 ? " (perpendicular: no trabaja)" : th > 90 ? " (negativo: frena)" : ""}.`],
+          verify: { kind: "integral", f: () => F * Math.cos(rad(th)), a: 0, b: d } };
+      }
+      if (v === "resorte") {
+        const k = r.int(5, 50) * 10, x1 = r.int(0, 5) / 100, x2 = x1 + r.int(2, 10) / 100;
+        const W = k * (x2 * x2 - x1 * x1) / 2;
+        return { prompt: `¿Cuánto trabajo (J) hay que hacer para estirar un resorte de $k = ${k}$ N/m desde $${dec(num(x1 * 100))}$ cm hasta $${dec(num(x2 * 100))}$ cm de su longitud natural?`, answer: W,
+          solution: [`La fuerza necesaria varía: $F = kx$. El trabajo es la integral ([[f1-trabajo|trabajo de una fuerza variable]]): $W = \\int_{x_1}^{x_2} kx\\,dx = \\frac12k(x_2^2 - x_1^2)$.`, `$W = \\frac12\\cdot${k}\\,(${dec(num(x2, 3))}^2 - ${dec(num(x1, 3))}^2) \\approx ${num(W, 4)}$ J.`],
+          verify: { kind: "integral", f: x => k * x, a: x1, b: x2 } };
+      }
+      const a = r.int(1, 6), b = r.int(0, 10), d = r.int(1, 4);
+      return { prompt: `Una fuerza $F(x) = ${a}x^{2} + ${b}$ (N, con $x$ en m) empuja un objeto a lo largo del eje $x$ desde $0$ hasta $${d}$ m. ¿Cuánto trabajo (J) hace?`, answer: a * d ** 3 / 3 + b * d,
+        solution: [`$W = \\int_0^{${d}} F(x)\\,dx$ ([[f1-trabajo]], [[tfc|Barrow]]).`, `$= \\left[\\frac{${a}x^3}{3} + ${b}x\\right]_0^{${d}} = ${num(a * d ** 3 / 3 + b * d, 4)}$ J.`],
+        verify: { kind: "integral", f: x => a * x * x + b, a: 0, b: d } };
+    }
+  };
+  T["f1-energia-num"] = {
+    type: "numeric", concepts: ["f1-energia"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["caida", "friccion", "pendulo"]);
+      if (v === "caida") {
+        const h = r.int(1, 40), v0 = r.int(0, 10), ans = Math.sqrt(v0 * v0 + 2 * g * h);
+        return { prompt: `Un carrito pasa por un punto de una montaña rusa a $${v0}$ m/s y baja $${h}$ m por una pista sin rozamiento. ¿Qué velocidad tiene abajo? ($g = 9{,}8$ m/s²)`, answer: ans,
+          solution: [`Sin rozamiento la normal no trabaja y se [[f1-energia|conserva la energía mecánica]]: $\\frac12mv_0^2 + mgh = \\frac12mv^2$.`, `$v = \\sqrt{v_0^2 + 2gh} = \\sqrt{${v0 * v0} + 19{,}6\\cdot${h}} \\approx ${num(ans, 3)}$ m/s (no importa la forma de la pista).`],
+          verify: { kind: "ode", f: (_, y) => [y[1], -g], y0: [h, -v0], t1: 0, until: (_, y) => y[0] <= 0, g: (_, y) => y[0], dt: 1e-4, out: (_, y) => Math.abs(y[1]) } };
+      }
+      if (v === "friccion") {
+        const m = r.int(1, 10), h = r.int(2, 20), Wf = r.int(1, 8) * m * 2, E0 = m * g * h;
+        if (Wf >= E0) return null;
+        const ans = Math.sqrt(2 * (E0 - Wf) / m);
+        return { prompt: `Un bloque de $${m}$ kg parte del reposo y baja $${h}$ m de altura por una rampa. El rozamiento hace $${-Wf}$ J de trabajo. ¿Con qué velocidad llega abajo? ($g = 9{,}8$ m/s²)`, answer: ans,
+          solution: [`[[f1-energia|Teorema del trabajo y la energía]]: $\\Delta K = W_{\\text{peso}} + W_{\\text{roz}} = mgh - ${Wf}$.`, `$\\frac12\\cdot${m}\\,v^2 = ${num(E0, 4)} - ${Wf}$, así que $v \\approx ${num(ans, 3)}$ m/s.`],
+          verify: { kind: "zero", fn: vv => [(0.5 * m * vv * vv - (m * g * h - Wf)) / E0] } };
+      }
+      const L = r.pick([0.5, 1, 1.5, 2]), th = r.pick([20, 30, 45, 60, 90]), ans = Math.sqrt(2 * g * L * (1 - Math.cos(rad(th))));
+      return { prompt: `Un péndulo de $${dec(L)}$ m se suelta desde $${th}^\\circ$ respecto de la vertical. ¿Qué velocidad tiene al pasar por el punto más bajo? ($g = 9{,}8$ m/s²)`, answer: ans,
+        solution: [`La tensión es perpendicular a la velocidad (no trabaja): se [[f1-energia|conserva la energía]]. Baja $h = L(1 - \\cos\\theta)$.`, `$v = \\sqrt{2gL(1 - \\cos ${th}^\\circ)} \\approx ${num(ans, 3)}$ m/s.`],
+        // verificación: integramos la ecuación del péndulo hasta que pasa por la vertical
+        verify: { kind: "ode", f: (_, y) => [y[1], -(g / L) * Math.sin(y[0])], y0: [rad(th), 0], t1: 0, until: (_, y) => y[0] <= 0, g: (_, y) => y[0], dt: 1e-4, out: (_, y) => Math.abs(y[1]) * L } };
+    }
+  };
+  T["f1-resorte-num"] = {
+    type: "numeric", concepts: ["f1-energia"], difficulty: 2,
+    generate(r) {
+      const m = r.int(1, 10) / 2, v0 = r.int(1, 8), k = r.int(5, 80) * 10, x = v0 * Math.sqrt(m / k);
+      return {
+        prompt: `Un bloque de $${dec(m)}$ kg se desliza sin rozamiento a $${v0}$ m/s y choca contra un resorte de $k = ${k}$ N/m. ¿Cuál es la compresión máxima (en cm)?`,
+        answer: 100 * x,
+        solution: [`Toda la energía cinética se guarda en el resorte ([[f1-energia]]): $\\frac12mv_0^2 = \\frac12kx^2$.`, `$x = v_0\\sqrt{\\frac{m}{k}} = ${v0}\\sqrt{\\frac{${dec(m)}}{${k}}} \\approx ${num(x, 4)}$ m $= ${num(100 * x, 3)}$ cm.`],
+        verify: { kind: "ode", f: (_, y) => [y[1], -(k / m) * y[0]], y0: [0, v0], t1: 0, until: (_, y) => y[1] <= 0, g: (_, y) => y[1], dt: Math.sqrt(m / k) / 500, out: (_, y) => 100 * y[0] }
+      };
+    }
+  };
+  T["f1-potencia-num"] = {
+    type: "numeric", concepts: ["f1-potencia"], difficulty: 1,
+    generate(r) {
+      if (r.bool()) {
+        const m = r.int(5, 100) * 10, h = r.int(2, 30), t = r.int(5, 60), P = m * g * h / t;
+        return { prompt: `Un motor sube una carga de $${m}$ kg a velocidad constante una altura de $${h}$ m en $${t}$ s. ¿Qué potencia media (W) desarrolla? ($g = 9{,}8$ m/s²)`, answer: P,
+          solution: [`A velocidad constante, el motor hace un trabajo igual a la energía potencial ganada: $W = mgh$ ([[f1-potencia|potencia]]).`, `$P = \\frac{W}{t} = \\frac{${m}\\cdot 9{,}8\\cdot${h}}{${t}} \\approx ${num(P, 4)}$ W.`],
+          verify: { kind: "value", fn: () => { const vel = h / t; return m * g * vel; } } };
+      }
+      const F = r.int(5, 50) * 100, vk = r.int(36, 144), P = F * vk / 3.6;
+      return { prompt: `Un auto avanza a $${vk}$ km/h constante y el motor ejerce una fuerza de $${F}$ N (que compensa los rozamientos). ¿Qué potencia (kW) entrega?`, answer: P / 1000,
+        solution: [`$P = \\vec F\\cdot\\vec v = Fv$ ([[f1-potencia|potencia]]), con $v = ${vk}/3{,}6 \\approx ${num(vk / 3.6, 3)}$ m/s.`, `$P \\approx ${num(P, 4)}$ W $\\approx ${num(P / 1000, 3)}$ kW.`],
+        verify: { kind: "value", fn: () => F * (vk * 1000 / 3600) * 1e-3 } };
+    }
+  };
+  T["f1-cons-vf"] = {
+    type: "tf", concepts: ["f1-energia"], difficulty: 1,
+    generate(r) {
+      const m1 = r.int(1, 5), m2 = m1 * r.int(2, 5), L = r.pick([0.5, 1, 2]), th = r.pick([30, 45, 60]), q = r.pick(["igual", "pesado"]);
+      return {
+        prompt: `Dos péndulos de $${dec(L)}$ m, con masas de $${m1}$ kg y $${m2}$ kg, se sueltan desde $${th}^\\circ$. Sin rozamiento, <b>verdadero o falso:</b> ${q === "igual" ? "pasan por el punto más bajo con la misma velocidad" : "el más pesado pasa por abajo más rápido"}.`,
+        answer: q === "igual",
+        explanation: `Por [[f1-energia|conservación de la energía]], $mgh = \\frac12mv^2$: la masa se cancela y $v = \\sqrt{2gh}$ es la misma para los dos.`,
+        solution: [`En un campo gravitatorio uniforme, sin rozamiento, la masa no importa para la velocidad.`],
+        verify: { kind: "truth", fn: () => {
+          const vb = m => { let a = rad(th), w = 0; const dt = 1e-4; while (a > 0) { w += -(m * g / (m * L)) * Math.sin(a) * dt; a += w * dt; } return Math.abs(w) * L; };
+          const v1 = vb(m1), v2 = vb(m2);
+          return q === "igual" ? Math.abs(v1 - v2) < 1e-9 : v2 > v1 + 1e-6;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-trabajo": {
+      title: "Trabajo y producto escalar", aliases: ["trabajo de una fuerza", "trabajo de una fuerza variable", "trabajo"], concepts: ["f1-trabajo"],
+      summary: "W = F·Δr = F d cos θ para una fuerza constante; W = ∫ F(x) dx si la fuerza varía.",
+      def: [R`**Producto escalar:** $\vec A\cdot\vec B = AB\cos\theta = A_xB_x + A_yB_y + A_zB_z$.`,
+        R`**Trabajo de una fuerza constante** en un desplazamiento recto: $W = \vec F\cdot\Delta\vec r = Fd\cos\theta$. **Fuerza variable** a lo largo de $x$: $$W = \int_{x_1}^{x_2} F(x)\,dx.$$ Se mide en joules: $1\ \text{J} = 1\ \text{N}\cdot\text{m}$.`],
+      idea: [R`Solo trabaja la componente de la fuerza **a lo largo** del movimiento. Una fuerza perpendicular (la normal en un piso horizontal, la tensión en un péndulo, la fuerza centrípeta en un MCU) no hace trabajo. Si la fuerza se opone al movimiento, el trabajo es negativo (el rozamiento).`,
+        R`Trabajo del resorte: $W = \int kx\,dx = \frac12kx^2$. Es el área bajo el gráfico $F(x)$, igual que en una [[integral-definida]].`],
+      examples: [{ q: R`¿Trabajo del peso de un libro de 2 kg que cae 1,5 m?`, steps: [R`Fuerza y desplazamiento paralelos: $W = mgh = 2\cdot 9{,}8\cdot 1{,}5 = 29{,}4$ J.`] }],
+      see: ["f1-energia", "f1-potencia"]
+    },
+    "f1-energia": {
+      title: "Energía mecánica y su conservación", aliases: ["energía cinética", "energía potencial", "energía mecánica", "conservación de la energía", "conserva la energía", "teorema del trabajo y la energía", "fuerzas conservativas", "fuerza conservativa", "diagrama de energía"], concepts: ["f1-energia"],
+      summary: "W_neto = ΔK. Con solo fuerzas conservativas, K + U se conserva; las no conservativas cambian la energía mecánica.",
+      def: [R`**Energía cinética:** $K = \frac12mv^2$. **Teorema del trabajo y la energía:** $W_{\text{neto}} = \Delta K$.`,
+        R`Una fuerza es **conservativa** si su trabajo no depende del camino: tiene asociada una **energía potencial** $U$ con $W = -\Delta U$. Gravitatoria cerca de la Tierra: $U = mgh$. Elástica: $U = \frac12kx^2$.`,
+        R`**Conservación:** si solo trabajan fuerzas conservativas, $E = K + U$ es constante. En general, $\Delta E = W_{\text{no conservativas}}$ (por ejemplo, el rozamiento).`],
+      idea: [R`La conservación permite calcular velocidades **sin conocer la trayectoria ni el tiempo**: un carrito que baja $h$ sin rozamiento llega con $v = \sqrt{2gh}$ por cualquier pista.`,
+        R`**Diagramas de energía:** graficando $U(x)$ y la recta de la energía total $E$, el cuerpo solo puede estar donde $U(x) \le E$. Los mínimos de $U$ son equilibrios estables y la fuerza es $F = -\frac{dU}{dx}$.`],
+      demo: [R`**Teorema del trabajo y la energía** (1D): $W = \int F\,dx = \int m\frac{dv}{dt}dx = \int m\,v\,dv = \frac12mv_f^2 - \frac12mv_i^2$, usando $\frac{dv}{dt}dx = v\,dv$ (regla de la cadena). $\blacksquare$`],
+      examples: [{ q: R`Se tira una pelota hacia arriba a 15 m/s. ¿Altura máxima?`, steps: [R`$\frac12mv^2 = mgh \Rightarrow h = \frac{v^2}{2g} = \frac{225}{19{,}6} \approx 11{,}5$ m.`] }],
+      see: ["f1-trabajo", "f1-potencia", "f1-hooke", "f1-momento"]
+    },
+    "f1-potencia": {
+      title: "Potencia", aliases: ["potencia mecánica", "potencia media", "watt"], concepts: ["f1-potencia"],
+      summary: "Potencia es trabajo por unidad de tiempo: P = dW/dt = F·v. Se mide en watts (J/s).",
+      def: [R`**Potencia media:** $P_m = \frac{W}{\Delta t}$. **Instantánea:** $P = \frac{dW}{dt} = \vec F\cdot\vec v$. Unidad: $1\ \text{W} = 1\ \text{J/s}$ ($1$ HP $\approx 746$ W).`],
+      idea: [R`Dos motores pueden hacer el mismo trabajo; el más potente lo hace más rápido. Un auto a velocidad constante necesita potencia para compensar el rozamiento con el aire, que crece con la velocidad: por eso consume más en ruta rápida.`,
+        R`La energía también se mide en kWh: $1\ \text{kWh} = 1000\ \text{W}\cdot 3600\ \text{s} = 3{,}6\times10^6$ J.`],
+      examples: [{ q: R`Subís una escalera de 3 m en 4 s y pesás 70 kg. ¿Potencia?`, steps: [R`$P = \frac{mgh}{t} = \frac{70\cdot 9{,}8\cdot 3}{4} \approx 515$ W.`] }],
+      see: ["f1-trabajo", "f1-energia"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: {
+      "f1-trabajo": { name: "Trabajo" },
+      "f1-energia": { name: "Energía y su conservación" },
+      "f1-potencia": { name: "Potencia" }
+    },
+    templates: T,
+    units: [{
+      id: "f1-energia-u", order: 3, program: "Unidad 3", title: "Trabajo y energía", icon: "zap",
+      diagnostic: ["f1-trabajo-num", "f1-energia-num", "f1-potencia-num"],
+      lessons: [
+        { id: "f1-trabajo", title: "Trabajo", templates: ["f1-trabajo-num", "f1-potencia-num"], theory: ["f1-trabajo", "f1-potencia"],
+          intro: R`$W = Fd\cos\theta$ y, si la fuerza varía, $W = \int F\,dx$. Potencia: $P = \frac{W}{t} = Fv$.` },
+        { id: "f1-energia", title: "Energía y su conservación", templates: ["f1-cons-vf", "f1-energia-num", "f1-resorte-num"], theory: ["f1-energia", "f1-trabajo"],
+          intro: R`$W_{\text{neto}} = \Delta K$. Sin fuerzas no conservativas, $K + U$ es constante: $U = mgh$, $U = \frac12kx^2$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 4 · CANTIDAD DE MOVIMIENTO, IMPULSO Y CHOQUES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dec = x => String(x).replace(".", "{,}");
+  // choque 1D simulado con un resorte de contacto (elástico) entre dos partículas
+  function springCollision(m1, v1, m2, v2) {
+    let x1 = -1, x2 = 0, dt = 1e-5;
+    for (let i = 0; i < 2e6; i++) {
+      const pen = Math.max(0, x1 - x2), F = 1e6 * pen;
+      v1 += -F / m1 * dt; v2 += F / m2 * dt; x1 += v1 * dt; x2 += v2 * dt;
+      if (pen === 0 && x1 < x2 && v1 <= v2 && i > 10) { if (x2 - x1 > 0.5) break; }
+    }
+    return [v1, v2];
+  }
+
+  T["f1-impulso-num"] = {
+    type: "numeric", concepts: ["f1-momento"], difficulty: 2,
+    generate(r) {
+      const m = r.int(1, 10) / 2, F0 = r.int(10, 200), dt = r.pick([0.02, 0.05, 0.1, 0.2]), v0 = r.int(0, 5), ask = r.pick(["J", "v"]);
+      const J = F0 * dt / 2;
+      return {
+        prompt: `Sobre un cuerpo de $${dec(m)}$ kg que se mueve a $${v0}$ m/s actúa, en la dirección del movimiento, una fuerza que crece linealmente de $0$ a $${F0}$ N y vuelve a $0$ en $${dec(dt)}$ s (forma de triángulo). ¿${ask === "J" ? "Cuál es el impulso (N·s)" : "Qué velocidad final tiene"}?`,
+        answer: ask === "J" ? J : v0 + J / m,
+        solution: [`El [[f1-momento|impulso]] es el área bajo $F(t)$: $J = \\int F\\,dt = \\frac12\\cdot${F0}\\cdot${dec(dt)} = ${num(J, 4)}$ N·s.`, `$J = \\Delta p \\Rightarrow v_f = v_0 + \\frac{J}{m} = ${v0} + \\frac{${num(J, 4)}}{${dec(m)}} \\approx ${num(v0 + J / m, 4)}$ m/s.`],
+        verify: ask === "J"
+          ? { kind: "integral", f: t => (t < dt / 2 ? 2 * F0 * t / dt : 2 * F0 * (dt - t) / dt), a: 0, b: dt, tol: 1e-3 }
+          : { kind: "ode", f: (t, y) => [(t < dt / 2 ? 2 * F0 * t / dt : 2 * F0 * (dt - t) / dt) / m], y0: [v0], t1: dt, dt: dt / 2000, out: (_, y) => y[0] }
+      };
+    }
+  };
+  T["f1-choque-el-num"] = {
+    type: "numeric", concepts: ["f1-choques"], difficulty: 3,
+    generate(r) {
+      const [m1, m2] = r.distinct(2, 1, 8), v1 = r.int(2, 10), ask = r.pick(["v1", "v2"]);
+      const v1f = (m1 - m2) / (m1 + m2) * v1, v2f = 2 * m1 / (m1 + m2) * v1;
+      return {
+        prompt: `Una esfera de $${m1}$ kg a $${v1}$ m/s choca **elásticamente** y de frente con otra de $${m2}$ kg en reposo. ¿Qué velocidad tiene después la ${ask === "v1" ? "primera (con signo: positivo en el sentido inicial)" : "segunda"}?`,
+        answer: ask === "v1" ? v1f : v2f, answerTex: ask === "v1" ? H.frac((m1 - m2) * v1, m1 + m2) : H.frac(2 * m1 * v1, m1 + m2),
+        solution: [
+          `En un [[f1-choques|choque elástico]] se conservan la cantidad de movimiento y la energía cinética.`,
+          `Resolviendo: $v_1' = \\frac{m_1 - m_2}{m_1 + m_2}v_1 = ${num(v1f, 4)}$ m/s y $v_2' = \\frac{2m_1}{m_1 + m_2}v_1 = ${num(v2f, 4)}$ m/s.`,
+          m1 < m2 ? `La primera rebota (velocidad negativa) porque es más liviana.` : `La primera sigue hacia adelante, más lenta.`
+        ],
+        verify: { kind: "value", tol: 1e-3, fn: () => springCollision(m1, v1, m2, 0)[ask === "v1" ? 0 : 1] }
+      };
+    }
+  };
+  T["f1-choque-inel-num"] = {
+    type: "numeric", concepts: ["f1-choques"], difficulty: 2,
+    generate(r) {
+      const m1 = r.int(1, 10) * 100, m2 = r.int(1, 10) * 100, v1 = r.int(5, 25), v2 = r.int(-15, 10), ask = r.pick(["v", "dK"]);
+      const vf = (m1 * v1 + m2 * v2) / (m1 + m2), dK = 0.5 * m1 * v1 * v1 + 0.5 * m2 * v2 * v2 - 0.5 * (m1 + m2) * vf * vf;
+      return {
+        prompt: `Un auto de $${m1}$ kg a $${v1}$ m/s choca con otro de $${m2}$ kg que va a $${v2}$ m/s (misma recta; signo positivo en el sentido del primero) y quedan **enganchados**. ¿${ask === "v" ? "Con qué velocidad se mueven juntos" : "Cuánta energía cinética (J) se pierde"}?`,
+        answer: ask === "v" ? vf : dK,
+        solution: [
+          `[[f1-choques|Choque plástico]]: solo se conserva la cantidad de movimiento. $${m1}\\cdot${v1} + ${m2}\\cdot(${v2}) = ${m1 + m2}\\,v$.`,
+          `$v = ${num(vf, 4)}$ m/s.`,
+          `$\\Delta K = K_i - K_f \\approx ${num(dK, 5)}$ J (se va en deformación y calor).`
+        ],
+        verify: ask === "v" ? { kind: "zero", fn: vv => [(m1 * v1 + m2 * v2 - (m1 + m2) * vv) / (m1 * v1 + 1)] }
+          : { kind: "value", tol: 1e-6, fn: () => { const mu = m1 * m2 / (m1 + m2); return 0.5 * mu * (v1 - v2) ** 2; } }
+      };
+    }
+  };
+  T["f1-cm-num"] = {
+    type: "numeric", concepts: ["f1-cm"], difficulty: 1,
+    generate(r) {
+      const ms = [r.int(1, 9), r.int(1, 9), r.int(1, 9)], xs = r.distinct(3, -5, 8), ys = [r.int(-4, 4), r.int(-4, 4), r.int(-4, 4)], axis = r.pick(["x", "y"]);
+      const M = ms[0] + ms[1] + ms[2], c = (axis === "x" ? xs : ys);
+      const ans = (ms[0] * c[0] + ms[1] * c[1] + ms[2] * c[2]) / M;
+      return {
+        prompt: `Tres partículas: $${ms[0]}$ kg en $(${xs[0]}, ${ys[0]})$, $${ms[1]}$ kg en $(${xs[1]}, ${ys[1]})$ y $${ms[2]}$ kg en $(${xs[2]}, ${ys[2]})$ (en m). ¿Cuál es la coordenada $${axis}$ del centro de masa?`,
+        answer: ans, answerTex: H.frac(ms[0] * c[0] + ms[1] * c[1] + ms[2] * c[2], M),
+        solution: [`[[f1-cm|Centro de masa]]: $${axis}_{cm} = \\frac{\\sum m_i ${axis}_i}{\\sum m_i}$.`, `$= \\frac{${ms[0]}\\cdot${c[0]} + ${ms[1]}\\cdot${c[1]} + ${ms[2]}\\cdot${c[2]}}{${M}} = ${H.frac(ms[0] * c[0] + ms[1] * c[1] + ms[2] * c[2], M)}$ m.`],
+        // verificación: momentos respecto de otro origen y corrimiento
+        verify: { kind: "value", fn: () => { const o = 17.3; return ms.reduce((s, m, i) => s + m * (c[i] - o), 0) / M + o; } }
+      };
+    }
+  };
+  const CL = ["Elástico", "Inelástico (no plástico)", "Plástico (quedan unidos)", "Imposible: no conserva la cantidad de movimiento"];
+  T["f1-choque-tipo-mc"] = {
+    type: "mc", concepts: ["f1-choques"], difficulty: 2,
+    generate(r) {
+      const m1 = r.int(1, 5), m2 = r.int(1, 5), v1 = r.int(2, 8), kind = r.int(0, 3);
+      let u1, u2;
+      const P = m1 * v1;
+      if (kind === 0) { u1 = (m1 - m2) / (m1 + m2) * v1; u2 = 2 * m1 / (m1 + m2) * v1; }
+      else if (kind === 2) { u1 = u2 = P / (m1 + m2); }
+      else if (kind === 1) { const e = 0.5; u2 = (P + m1 * e * v1) / (m1 + m2); u1 = u2 - e * v1; }
+      else { u1 = 0; u2 = (P + m1) / m2; }
+      const fx = x => num(x, 3);
+      return {
+        prompt: `Una esfera de $${m1}$ kg a $${v1}$ m/s choca de frente con otra de $${m2}$ kg en reposo. Después del choque las velocidades son $${fx(u1)}$ m/s y $${fx(u2)}$ m/s. ¿Qué tipo de choque fue?`,
+        ...H.mc(r, CL[kind], CL.filter((_, i) => i !== kind), { text: true, keepOrder: true }),
+        solution: [
+          `Primero, [[f1-momento|cantidad de movimiento]]: antes $${P}$ kg·m/s; después $${fx(m1 * u1 + m2 * u2)}$ kg·m/s.`,
+          `Energía cinética: antes $${fx(0.5 * m1 * v1 * v1)}$ J; después $${fx(0.5 * m1 * u1 * u1 + 0.5 * m2 * u2 * u2)}$ J.`,
+          `Se conserva $p$ ${kind === 3 ? "**no**: es imposible sin fuerzas externas" : kind === 0 ? "y también $K$: [[f1-choques|elástico]]" : kind === 2 ? "y salen con la misma velocidad: plástico" : "pero se pierde $K$ y no quedan unidos: inelástico"}.`
+        ],
+        // verificación: se clasifica a partir de los números (conservación de p, de K y velocidades finales)
+        verify: { kind: "value", target: kind, fn: () => {
+          const pOk = Math.abs(m1 * u1 + m2 * u2 - P) < 1e-9 * P;
+          if (!pOk) return 3;
+          if (Math.abs(u1 - u2) < 1e-9) return 2;
+          return Math.abs(0.5 * m1 * u1 * u1 + 0.5 * m2 * u2 * u2 - 0.5 * m1 * v1 * v1) < 1e-9 ? 0 : 1;
+        } }
+      };
+    }
+  };
+  T["f1-retroceso-num"] = {
+    type: "numeric", concepts: ["f1-momento"], difficulty: 1,
+    generate(r) {
+      const m1 = r.int(40, 90), m2 = r.int(20, 80), v1 = r.int(1, 6) / 2;
+      return {
+        prompt: `Dos patinadores de $${m1}$ kg y $${m2}$ kg están quietos sobre el hielo y se empujan. El de $${m1}$ kg sale a $${dec(v1)}$ m/s. ¿A qué velocidad sale el otro (en módulo)?`,
+        answer: m1 * v1 / m2,
+        solution: [`Sin fuerzas externas horizontales se [[f1-momento|conserva la cantidad de movimiento]]: antes era $0$, así que después $m_1v_1 + m_2v_2 = 0$.`, `$|v_2| = \\frac{${m1}\\cdot${dec(v1)}}{${m2}} \\approx ${num(m1 * v1 / m2, 3)}$ m/s, en sentido contrario.`],
+        verify: { kind: "zero", fn: vv => [(m1 * v1 - m2 * vv) / (m1 * v1)] }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-momento": {
+      title: "Cantidad de movimiento e impulso", aliases: ["cantidad de movimiento", "momento lineal", "impulso", "conservación de la cantidad de movimiento", "conserva la cantidad de movimiento"], concepts: ["f1-momento"],
+      summary: "p = m v. El impulso J = ∫F dt cambia p. Sin fuerza externa neta, la p total se conserva.",
+      def: [R`**Cantidad de movimiento:** $\vec p = m\vec v$. La segunda ley en general es $\sum\vec F = \frac{d\vec p}{dt}$.`, R`**Impulso:** $\vec J = \int\vec F\,dt = \Delta\vec p$.`,
+        R`**Conservación:** si la fuerza externa neta sobre un sistema es nula, $\vec P_{\text{total}} = \sum m_i\vec v_i$ es constante.`],
+      idea: [R`Las fuerzas internas aparecen de a pares de [[f1-newton|acción y reacción]] y se cancelan en la suma: por eso, en un choque o una explosión, la cantidad de movimiento total se conserva aunque las fuerzas internas sean enormes.`,
+        R`El impulso explica los airbags: para el mismo $\Delta p$, si el choque dura más tiempo la fuerza media $\frac{\Delta p}{\Delta t}$ es menor.`],
+      demo: [R`Para dos cuerpos que solo interactúan entre sí: $\frac{d\vec p_1}{dt} = \vec F_{21}$ y $\frac{d\vec p_2}{dt} = \vec F_{12} = -\vec F_{21}$.`, R`Sumando: $\frac{d}{dt}(\vec p_1 + \vec p_2) = 0$. $\blacksquare$`],
+      examples: [{ q: R`Una pelota de 0,15 kg llega a 30 m/s y sale en sentido contrario a 40 m/s. ¿Impulso?`, steps: [R`$J = m(v_f - v_i) = 0{,}15(40 - (-30)) = 10{,}5$ N·s.`] }],
+      see: ["f1-choques", "f1-cm", "f1-newton"]
+    },
+    "f1-choques": {
+      title: "Choques elásticos e inelásticos", aliases: ["choque elástico", "choque inelástico", "choque plástico", "choques", "coeficiente de restitución"], concepts: ["f1-choques"],
+      summary: "En todo choque se conserva p. En el elástico también la energía cinética; en el plástico los cuerpos quedan unidos.",
+      def: [R`En un choque se conserva la [[f1-momento|cantidad de movimiento]] total. **Elástico:** también se conserva $K$. **Inelástico:** se pierde energía cinética. **Plástico (perfectamente inelástico):** los cuerpos quedan unidos, $v_f = \frac{m_1v_1 + m_2v_2}{m_1 + m_2}$.`,
+        R`**Elástico 1D con $m_2$ en reposo:** $$v_1' = \frac{m_1 - m_2}{m_1 + m_2}v_1, \qquad v_2' = \frac{2m_1}{m_1 + m_2}v_1.$$`],
+      idea: [R`Casos límite: masas iguales intercambian velocidades (el péndulo de Newton); una pelota liviana contra una pared rebota con la misma rapidez; una masa grande contra una chica en reposo la manda al doble de su velocidad.`,
+        R`En un choque elástico, la velocidad relativa se invierte: $v_2' - v_1' = -(v_2 - v_1)$.`],
+      demo: [R`Conservación de $p$: $m_1(v_1 - v_1') = m_2v_2'$. Conservación de $K$: $m_1(v_1^2 - v_1'^2) = m_2v_2'^2$.`, R`Dividiendo (diferencia de cuadrados): $v_1 + v_1' = v_2'$. Reemplazando en la primera se despejan las dos velocidades. $\blacksquare$`],
+      examples: [{ q: R`Un auto de 1000 kg a 20 m/s choca y se engancha con otro de 1500 kg detenido. ¿Velocidad final?`, steps: [R`$v_f = \frac{1000\cdot 20}{2500} = 8$ m/s.`] }],
+      see: ["f1-momento", "f1-energia"]
+    },
+    "f1-cm": {
+      title: "Centro de masa", aliases: ["centro de masa", "centro de masas"], concepts: ["f1-cm"],
+      summary: "x_cm = Σ mᵢxᵢ / Σ mᵢ. El centro de masa se mueve como si toda la masa y la fuerza externa estuvieran ahí.",
+      def: [R`$$\vec r_{cm} = \frac{\sum m_i\vec r_i}{\sum m_i}$$ y para un cuerpo continuo $\vec r_{cm} = \frac{1}{M}\int\vec r\,dm$.`],
+      idea: [R`**Teorema del centro de masa:** $M\vec a_{cm} = \sum\vec F_{\text{ext}}$. Un proyectil que explota en el aire: los pedazos vuelan para cualquier lado, pero su centro de masa sigue la misma parábola.`,
+        R`Para un objeto simétrico y homogéneo, el centro de masa está en el centro de simetría. Con cuerpos compuestos se trata cada parte como una partícula ubicada en su propio centro de masa.`],
+      examples: [{ q: R`Masas de 2 kg en $x = 0$ y 6 kg en $x = 4$ m. ¿$x_{cm}$?`, steps: [R`$x_{cm} = \frac{2\cdot 0 + 6\cdot 4}{8} = 3$ m (más cerca de la masa grande).`] }],
+      see: ["f1-momento"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: {
+      "f1-momento": { name: "Cantidad de movimiento e impulso" },
+      "f1-choques": { name: "Choques" },
+      "f1-cm": { name: "Centro de masa" }
+    },
+    templates: T,
+    units: [{
+      id: "f1-momento-u", order: 4, program: "Unidad 4", title: "Cantidad de movimiento, impulso y choques", icon: "zap",
+      diagnostic: ["f1-impulso-num", "f1-choque-inel-num", "f1-cm-num"],
+      lessons: [
+        { id: "f1-impulso", title: "Impulso y conservación", templates: ["f1-impulso-num", "f1-retroceso-num"], theory: ["f1-momento"],
+          intro: R`$\vec J = \int\vec F\,dt = \Delta\vec p$. Sin fuerza externa neta, $\sum m_i\vec v_i$ se conserva.` },
+        { id: "f1-choques", title: "Choques y centro de masa", templates: ["f1-choque-tipo-mc", "f1-choque-inel-num", "f1-choque-el-num", "f1-cm-num"], theory: ["f1-choques", "f1-cm"],
+          intro: R`Siempre se conserva $p$. Elástico: también $K$. Plástico: quedan unidos. $x_{cm} = \frac{\sum m_ix_i}{\sum m_i}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 5 · MECÁNICA DE FLUIDOS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8, p0 = 101300;
+  const dec = x => String(x).replace(".", "{,}");
+  const LIQ = [{ n: "agua", r: 1000 }, { n: "agua de mar", r: 1025 }, { n: "aceite", r: 920 }, { n: "glicerina", r: 1260 }, { n: "mercurio", r: 13600 }];
+
+  T["f1-presion-num"] = {
+    type: "numeric", concepts: ["f1-hidrostatica"], difficulty: 1,
+    generate(r) {
+      const L = r.pick(LIQ.slice(0, 4)), h = r.int(1, 40), abs = r.bool();
+      const ans = (abs ? p0 : 0) + L.r * g * h;
+      return {
+        prompt: `¿Cuál es la presión ${abs ? "**absoluta**" : "**manométrica**"} (en kPa) a $${h}$ m de profundidad en ${L.n} ($\\rho = ${L.r}$ kg/m³, $g = 9{,}8$ m/s²${abs ? ", $p_{atm} = 101{,}3$ kPa" : ""})?`,
+        answer: ans / 1000,
+        solution: [`[[f1-hidrostatica|Presión hidrostática]]: $p = p_0 + \\rho g h$${abs ? "" : "; la manométrica es solo $\\rho g h$"}.`, `$\\rho g h = ${L.r}\\cdot 9{,}8\\cdot${h} = ${num(L.r * g * h)}$ Pa.`, `Respuesta: $\\approx ${num(ans / 1000, 4)}$ kPa.`],
+        // verificación: integramos dp/dz = ρ g desde la superficie
+        verify: { kind: "ode", f: () => [L.r * g / 1000], y0: [abs ? p0 / 1000 : 0], t1: h, dt: 0.01, out: (_, y) => y[0] }
+      };
+    }
+  };
+  T["f1-pascal-num"] = {
+    type: "numeric", concepts: ["f1-hidrostatica"], difficulty: 1,
+    generate(r) {
+      const d1 = r.int(1, 5), d2 = d1 * r.int(3, 12), F1 = r.int(10, 300);
+      const F2 = F1 * (d2 / d1) ** 2;
+      return {
+        prompt: `En una prensa hidráulica, el pistón chico tiene $${d1}$ cm de diámetro y el grande $${d2}$ cm. Si sobre el chico se hacen $${F1}$ N, ¿qué fuerza (N) aparece en el grande?`,
+        answer: F2,
+        solution: [`[[f1-hidrostatica|Principio de Pascal]]: la presión se transmite igual, $\\frac{F_1}{A_1} = \\frac{F_2}{A_2}$.`, `Las áreas van como el diámetro al cuadrado: $F_2 = F_1\\left(\\frac{${d2}}{${d1}}\\right)^2 = ${num(F2)}$ N.`],
+        verify: { kind: "zero", fn: F => [(F1 / (Math.PI * (d1 / 200) ** 2) - F / (Math.PI * (d2 / 200) ** 2)) / (F1 / (Math.PI * (d1 / 200) ** 2))] }
+      };
+    }
+  };
+  T["f1-arquimedes-num"] = {
+    type: "numeric", concepts: ["f1-arquimedes"], difficulty: 2,
+    generate(r) {
+      if (r.bool()) {
+        const mats = [{ n: "un bloque de madera", r: r.int(4, 8) * 100 }, { n: "un cubo de hielo", r: 917 }, { n: "una boya de plástico", r: r.int(1, 6) * 100 }];
+        const ob = r.pick(mats), L = r.pick([LIQ[0], LIQ[1]]), f = ob.r / L.r;
+        return { prompt: `¿Qué porcentaje del volumen de ${ob.n} ($\\rho = ${ob.r}$ kg/m³) queda sumergido al flotar en ${L.n} ($\\rho = ${L.r}$ kg/m³)?`, answer: 100 * f,
+          solution: [`Flotando, el [[f1-arquimedes|empuje]] iguala al peso: $\\rho_{\\ell}\\,g\\,V_{sum} = \\rho\\,g\\,V$.`, `$\\frac{V_{sum}}{V} = \\frac{\\rho}{\\rho_\\ell} = \\frac{${ob.r}}{${L.r}} \\approx ${num(100 * f, 3)}\\%$.`],
+          // verificación: buscamos por bisección la profundidad de equilibrio de un cubo
+          verify: { kind: "value", tol: 1e-6, fn: () => { let lo = 0, hi = 1; for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (L.r * mid < ob.r) lo = mid; else hi = mid; } return 100 * lo; } } };
+      }
+      const V = r.int(1, 20) / 10, rho = r.pick([2700, 7800, 8900, 11300]), L = r.pick(LIQ.slice(0, 4));
+      const Vm = V / 1000, W = rho * Vm * g, Wap = W - L.r * Vm * g;
+      return { prompt: `Una pieza metálica de $${dec(V)}$ L ($\\rho = ${rho}$ kg/m³) cuelga de un dinamómetro totalmente sumergida en ${L.n} ($\\rho = ${L.r}$ kg/m³). ¿Qué marca el dinamómetro (N)? ($g = 9{,}8$ m/s²)`, answer: Wap,
+        solution: [`Peso: $\\rho V g \\approx ${num(W, 4)}$ N. [[f1-arquimedes|Empuje]]: $\\rho_\\ell V g \\approx ${num(L.r * Vm * g, 4)}$ N.`, `El dinamómetro marca la diferencia (peso aparente): $\\approx ${num(Wap, 4)}$ N.`],
+        verify: { kind: "zero", fn: Tn => [(Tn + L.r * Vm * g - rho * Vm * g) / W] } };
+    }
+  };
+  T["f1-continuidad-num"] = {
+    type: "numeric", concepts: ["f1-hidrodinamica"], difficulty: 1,
+    generate(r) {
+      const d1 = r.int(2, 10), d2 = r.int(1, d1 - 1) || 1, v1 = r.int(1, 6) / 2;
+      if (d2 === d1) return null;
+      const v2 = v1 * (d1 / d2) ** 2;
+      return {
+        prompt: `Por un caño de $${d1}$ cm de diámetro circula agua a $${dec(v1)}$ m/s. El caño se angosta a $${d2}$ cm de diámetro. ¿Qué velocidad tiene el agua en la parte angosta?`,
+        answer: v2,
+        solution: [`[[f1-hidrodinamica|Ecuación de continuidad]] (fluido incompresible): $A_1v_1 = A_2v_2$.`, `$v_2 = v_1\\left(\\frac{d_1}{d_2}\\right)^2 = ${dec(v1)}\\cdot\\left(\\frac{${d1}}{${d2}}\\right)^2 \\approx ${num(v2, 4)}$ m/s.`],
+        verify: { kind: "zero", fn: vv => [(Math.PI * (d1 / 2) ** 2 * v1 - Math.PI * (d2 / 2) ** 2 * vv) / (Math.PI * (d1 / 2) ** 2 * v1)] }
+      };
+    }
+  };
+  T["f1-bernoulli-num"] = {
+    type: "numeric", concepts: ["f1-hidrodinamica"], difficulty: 2,
+    generate(r) {
+      if (r.bool()) {
+        const h = r.int(1, 20) / 2, v = Math.sqrt(2 * g * h);
+        return { prompt: `Un tanque abierto tiene un agujero chico a $${dec(h)}$ m por debajo de la superficie del agua. ¿A qué velocidad sale el chorro? ($g = 9{,}8$ m/s²)`, answer: v,
+          solution: [`[[f1-hidrodinamica|Bernoulli]] entre la superficie (quieta, $p_{atm}$) y el agujero ($p_{atm}$): $\\rho g h = \\frac12\\rho v^2$.`, `Teorema de Torricelli: $v = \\sqrt{2gh} \\approx ${num(v, 3)}$ m/s, como una caída libre desde $h$.`],
+          verify: { kind: "ode", f: (_, y) => [y[1], -g], y0: [h, 0], t1: 0, until: (_, y) => y[0] <= 0, g: (_, y) => y[0], dt: 1e-4, out: (_, y) => Math.abs(y[1]) } };
+      }
+      const v1 = r.int(1, 4), d1 = r.int(4, 10), d2 = r.int(2, d1 - 1), v2 = v1 * (d1 / d2) ** 2, dp = 0.5 * 1000 * (v2 * v2 - v1 * v1);
+      return { prompt: `Por un caño horizontal circula agua a $${v1}$ m/s en una sección de $${d1}$ cm de diámetro, que después se angosta a $${d2}$ cm. ¿Cuánto **baja** la presión (en kPa) en la parte angosta? ($\\rho = 1000$ kg/m³)`, answer: dp / 1000,
+        solution: [`Continuidad: $v_2 = ${v1}\\left(\\frac{${d1}}{${d2}}\\right)^2 \\approx ${num(v2, 4)}$ m/s.`, `[[f1-hidrodinamica|Bernoulli]] a la misma altura: $p_1 - p_2 = \\frac12\\rho(v_2^2 - v_1^2) \\approx ${num(dp, 4)}$ Pa $\\approx ${num(dp / 1000, 4)}$ kPa.`],
+        verify: { kind: "zero", fn: d => [(d * 1000 + 0.5 * 1000 * v1 * v1 - 0.5 * 1000 * (v1 * (d1 / 2) ** 2 / (d2 / 2) ** 2) ** 2) / (dp || 1)] } };
+    }
+  };
+  T["f1-capilar-num"] = {
+    type: "numeric", concepts: ["f1-tension-sup"], difficulty: 2,
+    generate(r) {
+      const rmm = r.pick([0.1, 0.2, 0.25, 0.5, 1]), gam = 0.0728, rr = rmm / 1000, h = 2 * gam / (1000 * g * rr);
+      return {
+        prompt: `¿Cuánto sube el agua (en cm) en un tubo capilar de vidrio de $${dec(rmm)}$ mm de radio? (Tensión superficial $\\gamma = 0{,}0728$ N/m, ángulo de contacto $0^\\circ$, $\\rho = 1000$ kg/m³, $g = 9{,}8$ m/s²)`,
+        answer: 100 * h,
+        solution: [`La [[f1-tension-sup|tensión superficial]] tira hacia arriba a lo largo del borde, $2\\pi r\\gamma$, y sostiene el peso de la columna, $\\rho g\\pi r^2h$.`, `$h = \\frac{2\\gamma}{\\rho g r} \\approx ${num(h, 4)}$ m $= ${num(100 * h, 3)}$ cm (cuanto más fino el tubo, más sube).`],
+        verify: { kind: "zero", fn: hc => [(2 * Math.PI * rr * gam - 1000 * g * Math.PI * rr * rr * hc / 100) / (2 * Math.PI * rr * gam)] }
+      };
+    }
+  };
+  T["f1-flota-vf"] = {
+    type: "tf", concepts: ["f1-arquimedes"], difficulty: 1,
+    generate(r) {
+      const ob = r.pick([{ n: "un trozo de hierro", r: 7800 }, { n: "un corcho", r: 240 }, { n: "una piedra", r: 2600 }, { n: "un trozo de hielo", r: 917 }, { n: "un bloque de pino", r: 500 }]);
+      const L = r.pick([LIQ[0], LIQ[4]]), truth = ob.r < L.r;
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${ob.n} ($\\rho = ${ob.r}$ kg/m³) flota en ${L.n} ($\\rho = ${L.r}$ kg/m³).`,
+        answer: truth,
+        explanation: `Flota si su densidad es menor que la del líquido: así el [[f1-arquimedes|empuje]] puede igualar al peso con solo una parte sumergida. ${L.n === "mercurio" ? "¡En mercurio flota hasta el hierro!" : ""}`,
+        solution: [`Totalmente sumergido, el empuje vale $\\rho_\\ell Vg$ y el peso $\\rho Vg$: gana el mayor.`],
+        verify: { kind: "truth", fn: () => (L.r - ob.r) * 1e-3 * g > 0 }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-hidrostatica": {
+      title: "Hidrostática: densidad, presión y Pascal", aliases: ["presión hidrostática", "presión", "densidad", "principio de Pascal", "prensa hidráulica", "presión manométrica", "presión absoluta"], concepts: ["f1-hidrostatica"],
+      summary: "p = p₀ + ρ g h. La presión en un fluido en reposo solo depende de la profundidad y se transmite igual a todo el fluido (Pascal).",
+      def: [R`**Densidad:** $\rho = \frac{m}{V}$ (agua: $1000$ kg/m³). **Presión:** fuerza perpendicular por unidad de área, $p = \frac{F}{A}$, en pascales ($1$ Pa $= 1$ N/m²; $p_{atm} \approx 101{,}3$ kPa).`,
+        R`**Ley fundamental de la hidrostática:** en un fluido incompresible en reposo, $$p = p_0 + \rho g h,$$ con $h$ la profundidad. La **presión manométrica** es $p - p_{atm}$.`,
+        R`**Principio de Pascal:** un aumento de presión en un fluido encerrado se transmite igual a todos sus puntos.`],
+      idea: [R`Cada 10 m de agua, la presión sube aproximadamente 1 atmósfera. La forma del recipiente no importa: solo la profundidad (paradoja hidrostática).`,
+        R`La **prensa hidráulica** multiplica fuerzas: $\frac{F_1}{A_1} = \frac{F_2}{A_2}$. La energía igual se conserva, porque el pistón grande se mueve mucho menos.`],
+      demo: [R`Tomamos una columnita de fluido de área $A$ y altura $dh$. En equilibrio, la diferencia de presión entre abajo y arriba sostiene su peso: $dp\,A = \rho g A\,dh$.`, R`Entonces $\frac{dp}{dh} = \rho g$, e integrando con $\rho$ constante: $p = p_0 + \rho g h$. $\blacksquare$`],
+      examples: [{ q: R`¿Qué altura de mercurio equilibra la presión atmosférica?`, steps: [R`$h = \frac{p_{atm}}{\rho g} = \frac{101300}{13600\cdot 9{,}8} \approx 0{,}76$ m: los 760 mm de Torricelli.`] }],
+      see: ["f1-arquimedes", "f1-hidrodinamica"]
+    },
+    "f1-arquimedes": {
+      title: "Principio de Arquímedes y flotación", aliases: ["principio de Arquímedes", "Arquímedes", "empuje", "flotación", "peso aparente"], concepts: ["f1-arquimedes"],
+      summary: "Un cuerpo sumergido recibe un empuje hacia arriba igual al peso del fluido que desaloja: E = ρ_fluido g V_sumergido.",
+      def: [R`$$E = \rho_{\text{fluido}}\,g\,V_{\text{sumergido}}$$ Un cuerpo flota si su densidad media es menor que la del fluido; flotando, la fracción sumergida es $\frac{\rho_{\text{cuerpo}}}{\rho_{\text{fluido}}}$.`],
+      idea: [R`El empuje sale de la [[f1-hidrostatica|presión hidrostática]]: abajo del cuerpo la presión es mayor que arriba. Por eso no depende del material del cuerpo, solo del volumen sumergido.`,
+        R`El hielo ($917$ kg/m³) flota en agua con un $92\%$ sumergido: lo que asoma de un iceberg es poquito. Un barco de acero flota porque su densidad **media** (acero más aire) es menor que la del agua.`],
+      demo: [R`Reemplazamos el cuerpo por fluido de la misma forma: ese fluido estaría en equilibrio, así que la fuerza de presión sobre su superficie iguala su peso, $\rho_f g V$.`, R`El cuerpo tiene exactamente la misma superficie y recibe las mismas presiones: el empuje es $\rho_f g V$. $\blacksquare$`],
+      examples: [{ q: R`Una piedra pesa 30 N en el aire y 20 N sumergida en agua. ¿Volumen?`, steps: [R`Empuje $= 10$ N $= 1000\cdot 9{,}8\cdot V$.`, R`$V \approx 1{,}02\times10^{-3}$ m³ (un litro).`] }],
+      see: ["f1-hidrostatica"]
+    },
+    "f1-tension-sup": {
+      title: "Tensión superficial y capilaridad", aliases: ["tensión superficial", "capilaridad", "capilar"], concepts: ["f1-tension-sup"],
+      summary: "La superficie de un líquido se comporta como una membrana tensa: γ es la fuerza por unidad de longitud. En un tubo fino el líquido sube h = 2γcosθ/(ρgr).",
+      def: [R`La **tensión superficial** $\gamma$ es la fuerza por unidad de longitud que ejerce la superficie de un líquido (agua a $20^\circ$C: $\approx 0{,}073$ N/m). Equivale a la energía por unidad de área de la superficie.`,
+        R`**Capilaridad (ley de Jurin):** en un tubo de radio $r$, $$h = \frac{2\gamma\cos\theta}{\rho g r},$$ con $\theta$ el ángulo de contacto.`],
+      idea: [R`Las moléculas de la superficie tienen menos vecinas que las de adentro, y el líquido "prefiere" minimizar su superficie: por eso las gotas son esféricas y algunos insectos caminan sobre el agua.`,
+        R`Si el líquido moja el tubo ($\theta < 90^\circ$, como el agua en vidrio) sube; si no lo moja ($\theta > 90^\circ$, como el mercurio) baja.`],
+      examples: [{ q: R`¿Cuánto sube el agua en un tubo de 1 mm de radio?`, steps: [R`$h = \frac{2\cdot 0{,}073}{1000\cdot 9{,}8\cdot 0{,}001} \approx 0{,}015$ m $= 1{,}5$ cm.`] }],
+      see: ["f1-hidrostatica"]
+    },
+    "f1-hidrodinamica": {
+      title: "Hidrodinámica: continuidad y Bernoulli", aliases: ["ecuación de continuidad", "caudal", "Bernoulli", "ecuación de Bernoulli", "Torricelli", "viscosidad", "fluido ideal"], concepts: ["f1-hidrodinamica"],
+      summary: "Continuidad: A v = constante. Bernoulli: p + ½ρv² + ρgh = constante a lo largo de una línea de corriente.",
+      def: [R`**Continuidad** (fluido incompresible): el caudal $Q = Av$ es el mismo en todas las secciones, $A_1v_1 = A_2v_2$.`,
+        R`**Bernoulli** (fluido ideal: incompresible, sin viscosidad, flujo estacionario): $$p + \tfrac12\rho v^2 + \rho g h = \text{constante}.$$`],
+      idea: [R`Bernoulli es la [[f1-energia|conservación de la energía]] por unidad de volumen: $\frac12\rho v^2$ es energía cinética y $\rho g h$ potencial. Donde el fluido va más rápido, la presión es menor: el principio del atomizador, del efecto Venturi y (en parte) de la sustentación de un ala.`,
+        R`**Torricelli:** el chorro que sale de un agujero a profundidad $h$ tiene $v = \sqrt{2gh}$, igual que una caída libre.`,
+        R`En fluidos reales la **viscosidad** disipa energía (la presión baja a lo largo de un caño) y a velocidades altas el flujo se vuelve **turbulento**.`],
+      demo: [R`Un pedazo de fluido de volumen $V$ pasa de la sección 1 a la 2. Las fuerzas de presión hacen trabajo $(p_1 - p_2)V$, que tiene que igualar el cambio de energía $\frac12\rho V(v_2^2 - v_1^2) + \rho gV(h_2 - h_1)$.`, R`Reordenando se obtiene Bernoulli. $\blacksquare$`],
+      examples: [{ q: R`Una manguera de 2 cm de diámetro con agua a 1 m/s; le ponés una boquilla de 0,5 cm. ¿Velocidad?`, steps: [R`$v_2 = 1\cdot\left(\frac{2}{0{,}5}\right)^2 = 16$ m/s.`] }],
+      see: ["f1-hidrostatica", "f1-energia"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: {
+      "f1-hidrostatica": { name: "Hidrostática y Pascal" },
+      "f1-arquimedes": { name: "Arquímedes y flotación" },
+      "f1-tension-sup": { name: "Tensión superficial y capilaridad" },
+      "f1-hidrodinamica": { name: "Continuidad y Bernoulli" }
+    },
+    templates: T,
+    units: [{
+      id: "f1-fluidos", order: 5, program: "Unidad 5", title: "Mecánica de fluidos", icon: "target",
+      diagnostic: ["f1-presion-num", "f1-arquimedes-num", "f1-bernoulli-num"],
+      lessons: [
+        { id: "f1-hidrostatica", title: "Presión y Pascal", templates: ["f1-presion-num", "f1-pascal-num"], theory: ["f1-hidrostatica"],
+          intro: R`$p = p_0 + \rho g h$. La presión se transmite igual por todo el fluido (Pascal).` },
+        { id: "f1-arquimedes", title: "Arquímedes y capilaridad", templates: ["f1-flota-vf", "f1-arquimedes-num", "f1-capilar-num"], theory: ["f1-arquimedes", "f1-tension-sup"],
+          intro: R`Empuje $= \rho_\ell g V_{sum}$. Flota si $\rho < \rho_\ell$, con fracción sumergida $\frac{\rho}{\rho_\ell}$.` },
+        { id: "f1-bernoulli", title: "Continuidad y Bernoulli", templates: ["f1-continuidad-num", "f1-bernoulli-num"], theory: ["f1-hidrodinamica"],
+          intro: R`$A_1v_1 = A_2v_2$ y $p + \frac12\rho v^2 + \rho gh = $ constante. Donde va más rápido, la presión es menor.` }
       ]
     }],
     cards
