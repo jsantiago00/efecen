@@ -454,7 +454,7 @@
       summary: "Cilíndricas: (r, θ, z), polares en el plano xy más la altura. Esféricas: (ρ, φ, θ), con ρ distancia al origen y φ ángulo desde el eje z.",
       def: [R`**Cilíndricas** $(r, \theta, z)$: $x = r\cos\theta$, $y = r\sin\theta$, $z = z$.`,
         R`**Esféricas** $(\rho, \varphi, \theta)$: $x = \rho\sin\varphi\cos\theta$, $y = \rho\sin\varphi\sin\theta$, $z = \rho\cos\varphi$, con $\rho \ge 0$, $0 \le \varphi \le \pi$.`],
-      idea: [R`Se elige el sistema según la simetría: cilindros y conos con eje $z$ se escriben fácil en cilíndricas ($r = 2$ es un cilindro); esferas en esféricas ($\rho = 3$). Simplifican mucho las integrales triples.`],
+      idea: [R`Se elige el sistema según la simetría: cilindros y conos con eje $z$ se escriben fácil en cilíndricas ($r = 2$ es un cilindro); esferas en esféricas ($\rho = 3$). Simplifican mucho las [[c2-triples|integrales triples]].`],
       examples: [{ q: R`Pasá $(1, 1, \sqrt2)$ a esféricas.`, steps: [R`$\rho = \sqrt{1 + 1 + 2} = 2$; $\cos\varphi = \frac{\sqrt2}{2}$, $\varphi = \frac\pi4$; $\theta = \frac\pi4$.`] }],
       tips: [R`En algunos libros $\varphi$ y $\theta$ están intercambiados: fijate cuál se mide desde el eje $z$.`],
       see: ["c2-polares", "c2-cuadricas"]
@@ -1058,6 +1058,541 @@
           intro: R`$D_{\vec u}f = \nabla f\cdot\vec u$; el máximo crecimiento es $|\nabla f|$.` },
         { id: "c2-extremos", title: "Extremos y Lagrange", templates: ["c2-extremos-mc", "c2-lagrange-num"], theory: ["c2-extremos", "c2-lagrange"],
           intro: R`Puntos críticos con $\nabla f = \vec 0$ y el criterio $D = f_{xx}f_{yy} - f_{xy}^2$. Con restricción: $\nabla f = \lambda\nabla g$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 6 · INTEGRACIÓN MÚLTIPLE
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => num(x, d).replace(".", "{,}");
+  const simp = (f, a, b, n = 200) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  // integral de f sobre el disco de radio R en cartesianas, con x = R sen u e y = s·√(R² − x²) para que todo quede suave
+  const diskCart = (f, Rr, n = 300) => simp(u => { const x = Rr * Math.sin(u), w = Rr * Math.cos(u); return w * w * simp(s => f(x, s * w), -1, 1, n); }, -Math.PI / 2, Math.PI / 2, n);
+  const mon = (i, j) => (i ? (i === 1 ? "x" : `x^{${i}}`) : "") + (j ? (j === 1 ? "y" : `y^{${j}}`) : "");
+  const ptex = P => H.poly(P.map(([c, i, j]) => [c, mon(i, j)]));
+  const pev = (P, x, y) => P.reduce((s, [c, i, j]) => s + c * x ** i * y ** j, 0);
+
+  T["c2-iterada-num"] = {
+    type: "numeric", concepts: ["c2-dobles"], difficulty: 1,
+    generate(r) {
+      const x0 = r.int(-1, 1), x1 = x0 + r.int(1, 3), y0 = r.int(-1, 1), y1 = y0 + r.int(1, 2);
+      const seen = new Set(), P = [];
+      while (P.length < 2) { const i = r.int(0, 2), j = r.int(0, 2); if (seen.has(i + "," + j)) continue; seen.add(i + "," + j); P.push([r.nz(-3, 3), i, j]); }
+      const I1 = (a, b, k) => (b ** (k + 1) - a ** (k + 1)) / (k + 1);
+      const ans = P.reduce((s, [c, i, j]) => s + c * I1(x0, x1, i) * I1(y0, y1, j), 0);
+      return {
+        prompt: `Calculá $\\displaystyle\\int_{${y0}}^{${y1}}\\int_{${x0}}^{${x1}} \\left(${ptex(P)}\\right)dx\\,dy$.`,
+        answer: ans,
+        solution: [`[[c2-dobles|Integral iterada]]: primero se integra respecto de $x$ con $y$ fija, después respecto de $y$. Sobre un rectángulo, cada término $x^iy^j$ se separa en $\\int x^i\\,dx\\cdot\\int y^j\\,dy$.`, `Resultado: $\\approx ${nd(ans)}$.`],
+        verify: { kind: "value", tol: 1e-9, fn: () => simp(y => simp(x => pev(P, x, y), x0, x1, 20), y0, y1, 20) }
+      };
+    }
+  };
+  T["c2-region-num"] = {
+    type: "numeric", concepts: ["c2-dobles"], difficulty: 2,
+    generate(r) {
+      const k = r.int(1, 3), g = r.pick(["1", "x", "y", "xy"]);
+      const ans = { 1: k ** 3 / 6, x: k ** 4 / 12, y: k ** 5 / 15, xy: k ** 6 / 24 }[g], f = { 1: () => 1, x: x => x, y: (x, y) => y, xy: (x, y) => x * y }[g];
+      const kx = k === 1 ? "x" : `${k}x`;
+      return {
+        prompt: `Sea $D$ la región entre la parábola $y = x^2$ y la recta $y = ${kx}$. Calculá $\\displaystyle\\iint_D ${g === "1" ? "1" : g}\\,dA$${g === "1" ? " (el área de $D$)" : ""}.`,
+        answer: ans,
+        solution: [`Las curvas se cortan en $x = 0$ y $x = ${k}$; en ese tramo la recta va arriba. Como [[c2-dobles|región de tipo I]]: $\\int_0^{${k}}\\int_{x^2}^{${kx}} ${g === "1" ? "1" : g}\\,dy\\,dx$.`, `Resultado: $${H.frac({ 1: k ** 3, x: k ** 4, y: k ** 5, xy: k ** 6 }[g], { 1: 6, x: 12, y: 15, xy: 24 }[g])} \\approx ${nd(ans)}$.`],
+        // verificación: en el otro orden (Fubini), como región de tipo II, con y = s² para evitar la raíz
+        verify: { kind: "value", tol: 1e-8, fn: () => simp(s => 2 * s * simp(x => f(x, s * s), s * s / k, s, 20), 0, k, 400) }
+      };
+    }
+  };
+  T["c2-polar-int-num"] = {
+    type: "numeric", concepts: ["c2-dobles"], difficulty: 2,
+    testN: 60,
+    generate(r) {
+      const v = r.pick(["r2", "gauss", "r", "anillo"]), Rr = r.int(1, 3);
+      let f, ans, tex, sol, verifyFn;
+      if (v === "r2") { f = (x, y) => x * x + y * y; ans = Math.PI * Rr ** 4 / 2; tex = `\\iint_D (x^2 + y^2)\\,dA`; sol = `$\\int_0^{2\\pi}\\int_0^{${Rr}} r^2\\cdot r\\,dr\\,d\\theta = 2\\pi\\cdot\\frac{${Rr ** 4}}{4}$`; }
+      else if (v === "gauss") { f = (x, y) => Math.exp(-(x * x + y * y)); ans = Math.PI * (1 - Math.exp(-Rr * Rr)); tex = `\\iint_D e^{-(x^2 + y^2)}\\,dA`; sol = `$\\int_0^{2\\pi}\\int_0^{${Rr}} e^{-r^2}r\\,dr\\,d\\theta = 2\\pi\\cdot\\frac{1 - e^{-${Rr * Rr}}}{2}$`; }
+      else if (v === "r") { f = (x, y) => Math.hypot(x, y); ans = 2 * Math.PI * Rr ** 3 / 3; tex = `\\iint_D \\sqrt{x^2 + y^2}\\,dA`; sol = `$\\int_0^{2\\pi}\\int_0^{${Rr}} r\\cdot r\\,dr\\,d\\theta = 2\\pi\\cdot\\frac{${Rr ** 3}}{3}$`; }
+      else { const a = Rr, b = Rr + r.int(1, 2); f = (x) => x * x; ans = Math.PI * (b ** 4 - a ** 4) / 4; tex = `\\iint_D x^2\\,dA`; sol = `$\\int_0^{2\\pi}\\int_{${a}}^{${b}} r^2\\cos^2\\theta\\cdot r\\,dr\\,d\\theta = \\pi\\cdot\\frac{${b ** 4} - ${a ** 4}}{4}$`;
+        verifyFn = () => diskCart(f, b) - diskCart(f, a);
+        return { prompt: `Sea $D$ el anillo $${a * a} \\le x^2 + y^2 \\le ${b * b}$. Calculá $\\displaystyle ${tex}$.`, answer: ans,
+          solution: [`[[c2-jacobiano|En polares]] $dA = r\\,dr\\,d\\theta$ y el anillo es $${a} \\le r \\le ${b}$.`, `${sol} \\approx ${nd(ans)}$.`], verify: { kind: "value", tol: 1e-5, fn: verifyFn } };
+      }
+      return {
+        prompt: `Sea $D$ el disco $x^2 + y^2 \\le ${Rr * Rr}$. Calculá $\\displaystyle ${tex}$.`,
+        answer: ans,
+        solution: [`[[c2-jacobiano|En polares]] el disco es $0 \\le r \\le ${Rr}$, $0 \\le \\theta \\le 2\\pi$, y $dA = r\\,dr\\,d\\theta$ (¡no te olvides la $r$!).`, `${sol} \\approx ${nd(ans)}$.`],
+        // verificación: la misma integral en cartesianas
+        verify: { kind: "value", tol: v === "r" ? 1e-4 : 1e-5, fn: () => diskCart(f, Rr) }
+      };
+    }
+  };
+  T["c2-triple-num"] = {
+    type: "numeric", concepts: ["c2-triples"], difficulty: 3,
+    testN: 60,
+    generate(r) {
+      const v = r.pick(["masa", "paraboloide", "momento", "cono"]), Rr = r.int(1, 3);
+      if (v === "masa") {
+        const k = r.int(1, 5), ans = 4 * Math.PI * k * Rr ** 5 / 5;
+        return { prompt: `Una esfera maciza de radio $${Rr}$ tiene densidad $\\delta = ${k === 1 ? "" : k}(x^2 + y^2 + z^2)$. ¿Cuál es su masa?`, answer: ans,
+          solution: [`En [[c2-triples|esféricas]], $\\delta = ${k === 1 ? "" : k}\\rho^2$ y $dV = \\rho^2\\sin\\varphi\\,d\\rho\\,d\\varphi\\,d\\theta$.`, `$\\int_0^{2\\pi}\\int_0^\\pi\\int_0^{${Rr}} ${k === 1 ? "" : k}\\rho^4\\sin\\varphi\\,d\\rho\\,d\\varphi\\,d\\theta = ${k === 1 ? "" : k}\\cdot\\frac{${Rr ** 5}}{5}\\cdot2\\cdot2\\pi \\approx ${nd(ans)}$.`],
+          // verificación: en cilíndricas (r, z), con r = R sen u
+          verify: { kind: "value", tol: 1e-6, fn: () => simp(u => { const rr = Rr * Math.sin(u), w = Rr * Math.cos(u); return 2 * Math.PI * rr * Rr * Math.cos(u) * simp(z => k * (rr * rr + z * z), -w, w, 20); }, 0, Math.PI / 2, 400) } };
+      }
+      if (v === "paraboloide") {
+        const h = r.int(1, 6), ans = Math.PI * h * h / 2;
+        return { prompt: `Calculá el volumen del sólido limitado por el paraboloide $z = ${h} - x^2 - y^2$ y el plano $z = 0$.`, answer: ans,
+          solution: [`En [[c2-triples|cilíndricas]]: $0 \\le z \\le ${h} - r^2$, con $0 \\le r \\le \\sqrt{${h}}$.`, `$\\int_0^{2\\pi}\\int_0^{\\sqrt{${h}}}(${h} - r^2)r\\,dr\\,d\\theta = 2\\pi\\left(\\frac{${h * h}}{2} - \\frac{${h * h}}{4}\\right) = \\frac{${h * h}\\pi}{2} \\approx ${nd(ans)}$.`],
+          verify: { kind: "value", tol: 1e-6, fn: () => diskCart((x, y) => h - x * x - y * y, Math.sqrt(h)) } };
+      }
+      if (v === "momento") {
+        const ans = Math.PI * Rr ** 4 / 4;
+        return { prompt: `Calculá $\\displaystyle\\iiint_W z\\,dV$, donde $W$ es la semiesfera $x^2 + y^2 + z^2 \\le ${Rr * Rr}$, $z \\ge 0$.`, answer: ans,
+          solution: [`En [[c2-triples|esféricas]]: $z = \\rho\\cos\\varphi$, $0 \\le \\varphi \\le \\frac\\pi2$.`, `$\\int_0^{2\\pi}\\int_0^{\\pi/2}\\int_0^{${Rr}}\\rho^3\\cos\\varphi\\sin\\varphi\\,d\\rho\\,d\\varphi\\,d\\theta = 2\\pi\\cdot\\frac12\\cdot\\frac{${Rr ** 4}}{4} \\approx ${nd(ans)}$.`],
+          verify: { kind: "value", tol: 1e-6, fn: () => simp(u => { const rr = Rr * Math.sin(u), w = Rr * Math.cos(u); return 2 * Math.PI * rr * Rr * Math.cos(u) * (w * w / 2); }, 0, Math.PI / 2, 400) } };
+      }
+      const a = Rr, h = r.int(1, 6), ans = Math.PI * a * a * h / 3;
+      return { prompt: `Calculá el volumen del sólido entre el cono $z = ${H.frac(h, a)}\\sqrt{x^2 + y^2}$ y el plano $z = ${h}$.`, answer: ans,
+        solution: [`En [[c2-triples|cilíndricas]]: $${H.frac(h, a)}r \\le z \\le ${h}$, con $0 \\le r \\le ${a}$.`, `$\\int_0^{2\\pi}\\int_0^{${a}}\\left(${h} - ${H.frac(h, a)}r\\right)r\\,dr\\,d\\theta = \\frac{\\pi\\cdot${a * a}\\cdot${h}}{3} \\approx ${nd(ans)}$ (el volumen del cono, $\\frac13$ base por altura).`],
+        verify: { kind: "value", tol: 1e-4, fn: () => diskCart((x, y) => h - (h / a) * Math.hypot(x, y), a) } };
+    }
+  };
+  T["c2-jacobiano-num"] = {
+    type: "numeric", concepts: ["c2-jacobiano"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["lin", "cuad", "polar"]);
+      let X, ans, prompt, sol, u0, v0;
+      if (v === "lin") {
+        const a = r.int(-3, 3), b = r.int(-3, 3), c = r.int(-3, 3), d = r.int(-3, 3), p = r.int(1, 3), q = r.int(1, 3), J = a * d - b * c;
+        if (J === 0) return null;
+        X = (u, w) => [a * u + b * w, c * u + d * w]; ans = Math.abs(J) * p * q;
+        prompt = `La transformación $x = ${H.poly([[a, "u"], [b, "v"]])}$, $y = ${H.poly([[c, "u"], [d, "v"]])}$ lleva el rectángulo $[0, ${p}]\\times[0, ${q}]$ del plano $uv$ a un paralelogramo. ¿Cuál es su área?`;
+        sol = `$\\frac{\\partial(x, y)}{\\partial(u, v)} = \\det\\begin{pmatrix} ${a} & ${b} \\\\ ${c} & ${d} \\end{pmatrix} = ${J}$; el área es $|J|\\cdot${p * q} = ${ans}$.`;
+        return { prompt, answer: ans, solution: [`[[c2-jacobiano|Jacobiano]]: las áreas se multiplican por $|J|$.`, sol],
+          // verificación: área del paralelogramo imagen con la fórmula del zapatero
+          verify: { kind: "value", tol: 1e-9, fn: () => { const V = [[0, 0], [p, 0], [p, q], [0, q]].map(([u, w]) => X(u, w)); let A = 0; for (let i = 0; i < 4; i++) { const [x1, y1] = V[i], [x2, y2] = V[(i + 1) % 4]; A += x1 * y2 - x2 * y1; } return Math.abs(A) / 2; } } };
+      }
+      if (v === "cuad") { u0 = r.int(-3, 3); v0 = r.int(1, 3); X = (u, w) => [u * u - w * w, 2 * u * w]; ans = 4 * (u0 * u0 + v0 * v0); prompt = `Calculá el jacobiano $\\left|\\frac{\\partial(x, y)}{\\partial(u, v)}\\right|$ de $x = u^2 - v^2$, $y = 2uv$ en $(u, v) = (${u0}, ${v0})$.`; sol = `$\\det\\begin{pmatrix} 2u & -2v \\\\ 2v & 2u \\end{pmatrix} = 4u^2 + 4v^2 = ${ans}$.`; }
+      else { u0 = r.int(1, 6); v0 = r.pick([0.5, 1, 2]); X = (rr, t) => [rr * Math.cos(t), rr * Math.sin(t)]; ans = u0; prompt = `Calculá el jacobiano $\\frac{\\partial(x, y)}{\\partial(r, \\theta)}$ de las coordenadas polares en $r = ${u0}$.`; sol = `$\\det\\begin{pmatrix} \\cos\\theta & -r\\sin\\theta \\\\ \\sin\\theta & r\\cos\\theta \\end{pmatrix} = r = ${u0}$: por eso $dA = r\\,dr\\,d\\theta$.`; }
+      return { prompt, answer: ans, solution: [`[[c2-jacobiano|Jacobiano]]: el determinante de la matriz de derivadas parciales; mide cuánto se estiran las áreas.`, sol],
+        // verificación: área de la imagen de un cuadradito alrededor del punto, dividida por el área del cuadradito
+        verify: { kind: "value", tol: 1e-5, fn: () => { const h = 1e-3, pts = []; const N = 200; for (let s = 0; s < 4; s++) for (let i = 0; i < N; i++) { const t = i / N, [du, dv] = [[t, 0], [1, t], [1 - t, 1], [0, 1 - t]][s]; pts.push(X(u0 - h / 2 + du * h, v0 - h / 2 + dv * h)); } let A = 0; for (let i = 0; i < pts.length; i++) { const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length]; A += x1 * y2 - x2 * y1; } return Math.abs(A) / 2 / (h * h); } } };
+    }
+  };
+  T["c2-orden-vf"] = {
+    type: "tf", concepts: ["c2-dobles"], difficulty: 2,
+    generate(r) {
+      const a = r.int(1, 4), v = r.pick(["tri", "par"]), ok = r.bool();
+      const g = (x, y) => 1 + x + 2 * y + x * y * Math.exp(x / 4);
+      let lhs, rhs, L, Rv;
+      if (v === "tri") {
+        lhs = `\\int_0^{${a}}\\int_x^{${a}} f\\,dy\\,dx`; L = () => simp(x => simp(y => g(x, y), x, a, 40), 0, a, 400);
+        rhs = ok ? `\\int_0^{${a}}\\int_0^{y} f\\,dx\\,dy` : `\\int_0^{${a}}\\int_y^{${a}} f\\,dx\\,dy`;
+        Rv = ok ? () => simp(y => simp(x => g(x, y), 0, y, 40), 0, a, 400) : () => simp(y => simp(x => g(x, y), y, a, 40), 0, a, 400);
+      } else {
+        lhs = `\\int_0^{${a}}\\int_0^{x^2} f\\,dy\\,dx`; L = () => simp(x => simp(y => g(x, y), 0, x * x, 40), 0, a, 400);
+        rhs = ok ? `\\int_0^{${a * a}}\\int_{\\sqrt y}^{${a}} f\\,dx\\,dy` : `\\int_0^{${a * a}}\\int_0^{\\sqrt y} f\\,dx\\,dy`;
+        Rv = ok ? () => simp(s => 2 * s * simp(x => g(x, s * s), s, a, 40), 0, a, 400) : () => simp(s => 2 * s * simp(x => g(x, s * s), 0, s, 40), 0, a, 400);
+      }
+      return {
+        prompt: `<b>Verdadero o falso:</b> para toda $f$ continua, $\\displaystyle ${lhs} = ${rhs}$.`,
+        answer: ok,
+        explanation: `${v === "tri" ? `La región es el triángulo $0 \\le x \\le y \\le ${a}$: para cada $y$, $x$ va de $0$ a $y$.` : `La región está debajo de $y = x^2$: para cada $y$ entre $0$ y $${a * a}$, $x$ va de $\\sqrt y$ a $${a}$.`} ([[c2-dobles|cambio del orden de integración]])`,
+        solution: [`Para cambiar el orden hay que dibujar la región y describirla de nuevo: los límites no se intercambian sin más.`],
+        // verificación: se integra numéricamente una función de prueba con los dos órdenes
+        verify: { kind: "truth", fn: () => { const A = L(), B = Rv(); return Math.abs(A - B) < 1e-6 * Math.abs(A); } }
+      };
+    }
+  };
+
+  const cards = {
+    "c2-dobles": {
+      title: "Integrales dobles", aliases: ["integral doble", "integrales dobles", "integral iterada", "integrales iteradas", "teorema de Fubini", "Fubini", "cambio del orden de integración", "región de tipo I", "región de tipo II"], concepts: ["c2-dobles"],
+      summary: "∬_D f dA suma f sobre una región plana. Se calcula como dos integrales simples (Fubini), con límites que describen la región.",
+      def: [R`La **integral doble** $\iint_D f\,dA$ es el límite de sumas de Riemann sobre una grilla; si $f \ge 0$, es el volumen bajo la superficie $z = f(x, y)$, y $\iint_D 1\,dA$ es el área de $D$.`,
+        R`**Fubini:** se calcula como una **integral iterada**. **Tipo I:** $D = \{a \le x \le b,\ g_1(x) \le y \le g_2(x)\}$ da $\int_a^b\int_{g_1(x)}^{g_2(x)}f\,dy\,dx$. **Tipo II:** al revés, con $x$ entre dos funciones de $y$.`],
+      idea: [R`Es la [[integral-definida|integral definida]] en dos dimensiones: se corta en tajadas (con $x$ fijo), se integra cada tajada y se suman.`,
+        R`Para **cambiar el orden** hay que dibujar la región y describirla de nuevo: a veces una integral imposible en un orden es fácil en el otro.`],
+      examples: [{ q: R`Área entre $y = x^2$ e $y = x$.`, steps: [R`Se cortan en $0$ y $1$, con $x \ge x^2$ ahí.`, R`$\int_0^1\int_{x^2}^{x}dy\,dx = \int_0^1(x - x^2)\,dx = \frac16$.`] }],
+      tips: [R`Los límites de la integral de adentro pueden depender de la variable de afuera, nunca al revés.`],
+      see: ["c2-jacobiano", "c2-triples", "integral-definida"]
+    },
+    "c2-triples": {
+      title: "Integrales triples", aliases: ["integral triple", "integrales triples"], concepts: ["c2-triples"],
+      summary: "∭_W f dV. En cilíndricas dV = r dr dθ dz; en esféricas dV = ρ² sen φ dρ dφ dθ.",
+      def: [R`$\iiint_W f\,dV$ se calcula como tres integrales iteradas. $\iiint_W 1\,dV$ es el volumen de $W$; con $f$ = densidad, da la masa.`,
+        R`**Cilíndricas:** $dV = r\,dr\,d\theta\,dz$. **Esféricas:** $dV = \rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta$ (los factores son los [[c2-jacobiano|jacobianos]]).`],
+      idea: [R`Se elige el sistema por la forma del sólido: cilindros, conos y paraboloides con eje $z$ en [[c2-coord-espacio|cilíndricas]]; esferas en esféricas. Así los límites quedan constantes o simples.`,
+        R`Aplicaciones: masa, centro de masa ([[f1-cm]]) y momentos de inercia ([[f1-inercia]]).`],
+      examples: [{ q: R`Volumen de la esfera de radio $R$.`, steps: [R`$\int_0^{2\pi}\int_0^\pi\int_0^R\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta = \frac{R^3}{3}\cdot2\cdot2\pi = \frac43\pi R^3$.`] }],
+      tips: [R`El $\rho^2\sin\varphi$ de esféricas y la $r$ de cilíndricas no son opcionales.`],
+      see: ["c2-coord-espacio", "c2-jacobiano", "c2-dobles"]
+    },
+    "c2-jacobiano": {
+      title: "Cambio de variables y jacobiano", aliases: ["jacobiano", "jacobianos", "determinante jacobiano", "cambio de variables en integrales múltiples", "integrales en polares"], concepts: ["c2-jacobiano"],
+      summary: "Con x = x(u, v), y = y(u, v): dA = |∂(x,y)/∂(u,v)| du dv. En polares, dA = r dr dθ.",
+      def: [R`El **jacobiano** de $(u, v) \mapsto (x, y)$ es $\frac{\partial(x, y)}{\partial(u, v)} = \det\begin{pmatrix} x_u & x_v \\ y_u & y_v \end{pmatrix}$, y $$\iint_D f\,dx\,dy = \iint_{D'} f(x(u,v), y(u,v))\left|\frac{\partial(x, y)}{\partial(u, v)}\right|du\,dv.$$`],
+      idea: [R`Un rectangulito $du\times dv$ se transforma en (casi) un paralelogramo de lados $\vec r_u\,du$ y $\vec r_v\,dv$, cuya área es $|\det|\,du\,dv$ ([[al-determinante|el determinante mide áreas]]).`,
+        R`En [[c2-polares|polares]], $J = r$: los sectores lejos del origen son más grandes. Es el análogo de la [[int-sustitucion|sustitución]] de una variable, donde $dx = g'(u)\,du$.`],
+      examples: [{ q: R`Área del disco de radio $R$ en polares.`, steps: [R`$\int_0^{2\pi}\int_0^R r\,dr\,d\theta = \pi R^2$.`] }],
+      see: ["c2-dobles", "al-determinante", "int-sustitucion"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-dobles": { name: "Integrales dobles" }, "c2-triples": { name: "Integrales triples" }, "c2-jacobiano": { name: "Cambio de variables" } },
+    templates: T,
+    units: [{
+      id: "c2-multiple-u", order: 6, program: "Unidad 6", title: "Integración múltiple", icon: "grid-3x3",
+      diagnostic: ["c2-iterada-num", "c2-polar-int-num", "c2-triple-num"],
+      lessons: [
+        { id: "c2-dobles", title: "Integrales dobles", templates: ["c2-iterada-num", "c2-region-num", "c2-orden-vf"], theory: ["c2-dobles"],
+          intro: R`Fubini: dos integrales simples, con límites que describen la región.` },
+        { id: "c2-cambio-var", title: "Polares, triples y jacobianos", templates: ["c2-jacobiano-num", "c2-polar-int-num", "c2-triple-num"], theory: ["c2-jacobiano", "c2-triples"],
+          intro: R`$dA = r\,dr\,d\theta$; $dV = r\,dr\,d\theta\,dz$ o $\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 7 · ANÁLISIS VECTORIAL
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => num(x, d).replace(".", "{,}");
+  const simp = (f, a, b, n = 200) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  const mon = (i, j) => (i ? (i === 1 ? "x" : `x^{${i}}`) : "") + (j ? (j === 1 ? "y" : `y^{${j}}`) : "");
+  const ptex = P => H.poly(P.map(([c, i, j]) => [c, mon(i, j)]));
+  const pev = (P, x, y) => P.reduce((s, [c, i, j]) => s + c * x ** i * y ** j, 0);
+  const dx = P => P.filter(([, i]) => i > 0).map(([c, i, j]) => [c * i, i - 1, j]);
+  const dy = P => P.filter(([, , j]) => j > 0).map(([c, i, j]) => [c * j, i, j - 1]);
+  function randPoly(r, n, maxDeg = 3) {
+    const seen = new Set(), P = [];
+    while (P.length < n) { const i = r.int(0, maxDeg), j = r.int(0, maxDeg); if (i + j < 1 || i + j > maxDeg || seen.has(i + "," + j)) continue; seen.add(i + "," + j); P.push([r.nz(-3, 3), i, j]); }
+    return P;
+  }
+  // integral de línea ∫ P dx + Q dy por una poligonal muy fina (regla del punto medio)
+  const lineInt = (Pf, Qf, curve, N = 20000) => { let s = 0, [px, py] = curve(0); for (let i = 1; i <= N; i++) { const [qx, qy] = curve(i / N), mx = (px + qx) / 2, my = (py + qy) / 2; s += Pf(mx, my) * (qx - px) + Qf(mx, my) * (qy - py); px = qx; py = qy; } return s; };
+  const field = (P, Q) => `\\vec F(x, y) = \\left(${ptex(P)},\\ ${ptex(Q)}\\right)`;
+
+  T["c2-trabajo-num"] = {
+    type: "numeric", concepts: ["c2-linea"], difficulty: 2,
+    generate(r) {
+      const P = randPoly(r, 2, 2), Q = randPoly(r, 2, 2), a = r.nz(-2, 2), b = r.nz(-2, 2), m = r.pick([1, 2]);
+      // x = a t, y = b t^m, 0 ≤ t ≤ 1: cada término c·x^i·y^j·x' (o y') es un monomio en t
+      let ans = 0;
+      for (const [c, i, j] of P) ans += c * a ** i * b ** j * a / (i + m * j + 1);
+      for (const [c, i, j] of Q) ans += c * a ** i * b ** j * m * b / (i + m * j + m);
+      const path = m === 1 ? `el segmento de $(0, 0)$ a $(${a}, ${b})$` : `la parábola $y = ${H.frac(b, a * a) === "1" ? "" : H.frac(b, a * a) === "-1" ? "-" : H.frac(b, a * a)}x^2$ de $(0, 0)$ a $(${a}, ${b})$`;
+      return {
+        prompt: `Calculá el trabajo de $${field(P, Q)}$ a lo largo de ${path}.`,
+        answer: ans,
+        solution: [`[[c2-linea|Integral de línea]]: con $\\vec r(t)$, $0 \\le t \\le 1$, $W = \\int_0^1\\vec F(\\vec r(t))\\cdot\\vec r\\,'(t)\\,dt$.`, `Parametrización: $\\vec r(t) = (${a === 1 ? "" : a === -1 ? "-" : a}t,\\ ${b === 1 ? "" : b === -1 ? "-" : b}t${m === 2 ? "^2" : ""})$. Queda un polinomio en $t$; integrándolo, $W \\approx ${nd(ans)}$.`],
+        verify: { kind: "value", tol: 1e-7, fn: () => lineInt((x, y) => pev(P, x, y), (x, y) => pev(Q, x, y), t => [a * t, b * t ** m]) }
+      };
+    }
+  };
+  T["c2-potencial-num"] = {
+    type: "numeric", concepts: ["c2-campos"], difficulty: 2,
+    generate(r) {
+      const phi = randPoly(r, 3), A = [r.int(-2, 2), r.int(-2, 2)], B = [r.int(-2, 2), r.int(-2, 2)];
+      if (A[0] === B[0] && A[1] === B[1]) return null;
+      const P = dx(phi), Q = dy(phi), ans = pev(phi, B[0], B[1]) - pev(phi, A[0], A[1]);
+      return {
+        prompt: `Calculá $\\int_C \\vec F\\cdot d\\vec r$ para $${field(P, Q)}$, donde $C$ es la curva $\\vec r(t) = \\left(${H.poly([[A[0], ""], [B[0] - A[0], "t"], [1, "\\sin(\\pi t)"]])},\\ ${H.poly([[A[1], ""], [B[1] - A[1], "t"], [1, "t(1 - t)"]])}\\right)$, $0 \\le t \\le 1$.`,
+        answer: ans,
+        solution: [`Antes de parametrizar, conviene ver si $\\vec F$ es [[c2-campos|conservativo]]: $P_y = Q_x$ ($${ptex(dy(P))}$ en los dos casos), así que tiene potencial.`, `$\\varphi(x, y) = ${ptex(phi)}$ cumple $\\nabla\\varphi = \\vec F$. La curva va de $(${A.join(", ")})$ a $(${B.join(", ")})$.`, `[[c2-campos|Teorema fundamental para integrales de línea]]: $\\varphi(B) - \\varphi(A) = ${ans}$.`],
+        verify: { kind: "value", tol: 1e-7, fn: () => lineInt((x, y) => pev(P, x, y), (x, y) => pev(Q, x, y), t => [A[0] + (B[0] - A[0]) * t + Math.sin(Math.PI * t), A[1] + (B[1] - A[1]) * t + t * (1 - t)]) }
+      };
+    }
+  };
+  T["c2-conservativo-vf"] = {
+    type: "tf", concepts: ["c2-campos"], difficulty: 2,
+    generate(r) {
+      const phi = randPoly(r, 3), ok = r.bool(), k = r.nz(-3, 3);
+      const P = dx(phi), Q = ok ? dy(phi) : dy(phi).concat([[k, 1, 0]]);
+      if (!ok && Q.length === 0) return null;
+      // juntamos términos iguales para mostrarlo prolijo
+      const merge = L => { const m = new Map(); for (const [c, i, j] of L) m.set(i + "," + j, (m.get(i + "," + j) || 0) + c); return [...m].filter(([, c]) => c !== 0).map(([key, c]) => [c, ...key.split(",").map(Number)]); };
+      const Qm = merge(Q);
+      return {
+        prompt: `<b>Verdadero o falso:</b> el campo $${field(P, Qm)}$ es conservativo.`,
+        answer: ok,
+        explanation: `[[c2-campos|Criterio]]: en todo el plano, $\\vec F$ es conservativo si y solo si $\\frac{\\partial P}{\\partial y} = \\frac{\\partial Q}{\\partial x}$. Acá $P_y = ${ptex(dy(P))}$ y $Q_x = ${ptex(dx(Qm))}$.`,
+        solution: [ok ? `Son iguales: tiene potencial $\\varphi = ${ptex(phi)}$.` : `Difieren en $${k}$: la circulación por cualquier curva cerrada que encierre área $A$ es $${k}A \\ne 0$.`],
+        // verificación: circulación por varias circunferencias; si el campo es conservativo, todas dan 0
+        verify: { kind: "truth", fn: () => [[0.3, 0.7], [-1.2, 0.4], [1.5, -1]].every(([cx0, cy0]) => Math.abs(lineInt((x, y) => pev(P, x, y), (x, y) => pev(Qm, x, y), t => [cx0 + 0.5 * Math.cos(2 * Math.PI * t), cy0 + 0.5 * Math.sin(2 * Math.PI * t)], 4000)) < 1e-6) }
+      };
+    }
+  };
+  T["c2-green-num"] = {
+    type: "numeric", concepts: ["c2-green"], difficulty: 2,
+    generate(r) {
+      const P = randPoly(r, 2, 2), Q = randPoly(r, 2, 2), a = r.int(1, 3), b = r.int(1, 3);
+      const m0 = new Map(); for (const [c, i, j] of dx(Q).concat(dy(P).map(([c, i, j]) => [-c, i, j]))) m0.set(i + "," + j, (m0.get(i + "," + j) || 0) + c);
+      const curl = [...m0].filter(([, c]) => c !== 0).map(([key, c]) => [c, ...key.split(",").map(Number)]);
+      const ans = curl.reduce((s, [c, i, j]) => s + c * a ** (i + 1) / (i + 1) * b ** (j + 1) / (j + 1), 0);
+      return {
+        prompt: `Calculá la circulación $\\oint_C \\vec F\\cdot d\\vec r$ de $${field(P, Q)}$ alrededor del borde del rectángulo $[0, ${a}]\\times[0, ${b}]$, recorrido en sentido antihorario.`,
+        answer: ans,
+        solution: [`[[c2-green|Teorema de Green]]: $\\oint_C P\\,dx + Q\\,dy = \\iint_D\\left(\\frac{\\partial Q}{\\partial x} - \\frac{\\partial P}{\\partial y}\\right)dA$.`, `$Q_x - P_y = ${ptex(curl.length ? curl : [[0, 0, 0]])}$; integrándolo en el rectángulo, la circulación es $\\approx ${nd(ans)}$.`],
+        // verificación: la integral de línea directa por los cuatro lados
+        verify: { kind: "value", tol: 1e-7, fn: () => lineInt((x, y) => pev(P, x, y), (x, y) => pev(Q, x, y), t => { const s = 4 * t; return s <= 1 ? [a * s, 0] : s <= 2 ? [a, b * (s - 1)] : s <= 3 ? [a * (3 - s), b] : [0, b * (4 - s)]; }, 40000) }
+      };
+    }
+  };
+  T["c2-divergencia-num"] = {
+    type: "numeric", concepts: ["c2-flujo"], difficulty: 3,
+    testN: 80,
+    generate(r) {
+      const a = r.int(-3, 3), b = r.int(-3, 3), c = r.int(-3, 3), k = [r.int(-2, 2), r.int(-2, 2), r.int(-2, 2)], sph = r.bool();
+      if (a + b + c === 0) return null;
+      const F = (x, y, z) => [a * x + k[0] * y * z, b * y + k[1] * x * z, c * z + k[2] * x * y];
+      const comp = (co, v, kk, uv) => H.poly([[co, v], [kk, uv]]);
+      const Ftex = `\\vec F = \\left(${comp(a, "x", k[0], "yz")},\\ ${comp(b, "y", k[1], "xz")},\\ ${comp(c, "z", k[2], "xy")}\\right)`;
+      let ans, region, verifyFn;
+      if (sph) {
+        const Rr = r.int(1, 3); ans = (a + b + c) * 4 / 3 * Math.PI * Rr ** 3; region = `la esfera $x^2 + y^2 + z^2 = ${Rr * Rr}$`;
+        verifyFn = () => simp(ph => simp(th => { const n = [Math.sin(ph) * Math.cos(th), Math.sin(ph) * Math.sin(th), Math.cos(ph)], f = F(Rr * n[0], Rr * n[1], Rr * n[2]); return (f[0] * n[0] + f[1] * n[1] + f[2] * n[2]) * Rr * Rr * Math.sin(ph); }, 0, 2 * Math.PI, 60), 0, Math.PI, 120);
+      } else {
+        const p = r.int(1, 3), q = r.int(1, 3), s = r.int(1, 3); ans = (a + b + c) * p * q * s; region = `la superficie de la caja $[0, ${p}]\\times[0, ${q}]\\times[0, ${s}]$`;
+        verifyFn = () => simp(y => simp(z => F(p, y, z)[0] - F(0, y, z)[0], 0, s, 20), 0, q, 20) + simp(x => simp(z => F(x, q, z)[1] - F(x, 0, z)[1], 0, s, 20), 0, p, 20) + simp(x => simp(y => F(x, y, s)[2] - F(x, y, 0)[2], 0, q, 20), 0, p, 20);
+      }
+      return {
+        prompt: `Calculá el flujo de $${Ftex}$ hacia afuera de ${region}.`,
+        answer: ans,
+        solution: [`[[c2-flujo|Teorema de la divergencia]]: el flujo saliente por una superficie cerrada es $\\iiint_W \\nabla\\cdot\\vec F\\,dV$.`, `$\\nabla\\cdot\\vec F = ${a} ${b < 0 ? "-" : "+"} ${Math.abs(b)} ${c < 0 ? "-" : "+"} ${Math.abs(c)} = ${a + b + c}$ (los términos $yz$, $xz$, $xy$ no aportan), constante: flujo $= ${a + b + c}\\cdot\\text{volumen} \\approx ${nd(ans)}$.`],
+        // verificación: integral de superficie directa, cara por cara o con la parametrización esférica
+        verify: { kind: "value", tol: 1e-6, fn: verifyFn }
+      };
+    }
+  };
+  T["c2-rot-num"] = {
+    type: "numeric", concepts: ["c2-flujo"], difficulty: 2,
+    generate(r) {
+      const cs = Array.from({ length: 3 }, () => [r.nz(-3, 3), r.int(0, 2), r.int(0, 2), r.int(0, 2)]);
+      // F_i = c·x^p·y^q·z^s (un término por componente)
+      const ev = ([c, p, q, s], x, y, z) => c * x ** p * y ** q * z ** s;
+      const ttex = ([c, p, q, s]) => { const m = (p ? (p === 1 ? "x" : `x^{${p}}`) : "") + (q ? (q === 1 ? "y" : `y^{${q}}`) : "") + (s ? (s === 1 ? "z" : `z^{${s}}`) : ""); return m ? (c === 1 ? "" : c === -1 ? "-" : c) + m : String(c); };
+      const pt = [r.int(-2, 2), r.int(-2, 2), r.int(-2, 2)], ask = r.pick(["div", "rotz", "rotx"]);
+      const d = (k, v) => { const t = cs[k], e = [t[1], t[2], t[3]]; if (!e[v]) return 0; const e2 = e.slice(); e2[v]--; return t[0] * e[v] * pt[0] ** e2[0] * pt[1] ** e2[1] * pt[2] ** e2[2]; };
+      const ans = ask === "div" ? d(0, 0) + d(1, 1) + d(2, 2) : ask === "rotz" ? d(1, 0) - d(0, 1) : d(2, 1) - d(1, 2);
+      return {
+        prompt: `Para $\\vec F = \\left(${cs.map(ttex).join(",\\ ")}\\right)$, calculá ${ask === "div" ? "la divergencia $\\nabla\\cdot\\vec F$" : `la componente $${ask === "rotz" ? "z" : "x"}$ del rotor $\\nabla\\times\\vec F$`} en $(${pt.join(", ")})$.`,
+        answer: ans,
+        solution: [`[[c2-flujo|Divergencia y rotor]]: $\\nabla\\cdot\\vec F = P_x + Q_y + R_z$; $\\nabla\\times\\vec F = (R_y - Q_z,\\ P_z - R_x,\\ Q_x - P_y)$.`, `${ask === "div" ? "$P_x + Q_y + R_z$" : ask === "rotz" ? "$Q_x - P_y$" : "$R_y - Q_z$"} en el punto vale $${ans}$.`],
+        // verificación: derivadas parciales por diferencias centradas
+        verify: { kind: "value", tol: 1e-6, fn: () => { const h = 1e-5, D = (k, v) => { const p1 = pt.slice(), p2 = pt.slice(); p1[v] += h; p2[v] -= h; return (ev(cs[k], ...p1) - ev(cs[k], ...p2)) / (2 * h); }; return ask === "div" ? D(0, 0) + D(1, 1) + D(2, 2) : ask === "rotz" ? D(1, 0) - D(0, 1) : D(2, 1) - D(1, 2); } }
+      };
+    }
+  };
+
+  const cards = {
+    "c2-campos": {
+      title: "Campos vectoriales y campos conservativos", aliases: ["campo vectorial", "campos vectoriales", "campo conservativo", "campos conservativos", "función potencial", "independencia de la trayectoria", "teorema fundamental para integrales de línea"], concepts: ["c2-campos"],
+      summary: "F es conservativo si F = ∇φ. Entonces ∫_C F·dr = φ(B) − φ(A), sin importar el camino. En el plano (sin agujeros): conservativo ⟺ P_y = Q_x.",
+      def: [R`Un **campo vectorial** asigna un vector a cada punto: $\vec F(x, y) = (P, Q)$. Es **conservativo** si existe una **función potencial** $\varphi$ con $\nabla\varphi = \vec F$.`,
+        R`**Teorema fundamental:** si $\vec F = \nabla\varphi$, entonces $\int_C\vec F\cdot d\vec r = \varphi(B) - \varphi(A)$ para cualquier curva de $A$ a $B$; en curvas cerradas da $0$.`,
+        R`**Criterio** (en una región sin agujeros): $\vec F = (P, Q)$ es conservativo $\iff \frac{\partial P}{\partial y} = \frac{\partial Q}{\partial x}$.`],
+      idea: [R`Es la versión vectorial del [[tfc|teorema fundamental del cálculo]]. En física, las fuerzas conservativas (gravedad, resortes) tienen [[f1-energia|energía potencial]]: el trabajo solo depende de dónde empezás y dónde terminás.`,
+        R`Para hallar $\varphi$: se integra $P$ respecto de $x$ y se ajusta la "constante" (una función de $y$) para que la derivada respecto de $y$ dé $Q$.`],
+      examples: [{ q: R`¿$\vec F = (2xy, x^2)$ es conservativo?`, steps: [R`$P_y = 2x = Q_x$: sí, con $\varphi = x^2y$.`] }],
+      tips: [R`Si $P_y \neq Q_x$ en un solo punto, ya no es conservativo; pero que valga $P_y = Q_x$ no alcanza si la región tiene agujeros.`],
+      see: ["c2-linea", "c2-gradiente", "c2-green"]
+    },
+    "c2-linea": {
+      title: "Integrales de línea", aliases: ["integral de línea", "integrales de línea", "circulación", "integral curvilínea"], concepts: ["c2-linea"],
+      summary: "∫_C F·dr = ∫ F(r(t))·r'(t) dt: el trabajo de F a lo largo de C. Depende de la orientación de la curva.",
+      def: [R`Con $C$ parametrizada por $\vec r(t)$, $a \le t \le b$: $$\int_C\vec F\cdot d\vec r = \int_a^b\vec F(\vec r(t))\cdot\vec r\,'(t)\,dt = \int_C P\,dx + Q\,dy.$$ Si la curva es cerrada se escribe $\oint_C$ y se llama **circulación**.`],
+      idea: [R`Es el [[f1-trabajo|trabajo]] de una fuerza variable a lo largo de un camino: se suma $\vec F\cdot d\vec r$, la componente de la fuerza en la dirección del movimiento por el desplazamiento.`,
+        R`No depende de cómo se parametrice la curva, pero sí del sentido: recorrerla al revés cambia el signo.`],
+      examples: [{ q: R`$\int_C y\,dx + x\,dy$ por $\vec r(t) = (t, t^2)$, $0 \le t \le 1$.`, steps: [R`$\int_0^1(t^2\cdot1 + t\cdot2t)\,dt = \int_0^1 3t^2\,dt = 1$.`] }],
+      see: ["c2-campos", "c2-green", "c2-curvas-vectoriales"]
+    },
+    "c2-green": {
+      title: "Teorema de Green", aliases: ["teorema de Green", "Green"], concepts: ["c2-green"],
+      summary: "∮_C P dx + Q dy = ∬_D (Q_x − P_y) dA, con C el borde de D recorrido en sentido antihorario.",
+      def: [R`Si $C$ es una curva cerrada simple, recorrida en sentido antihorario, que encierra la región $D$: $$\oint_C P\,dx + Q\,dy = \iint_D\left(\frac{\partial Q}{\partial x} - \frac{\partial P}{\partial y}\right)dA.$$`],
+      idea: [R`$Q_x - P_y$ mide cuánto "gira" el campo en cada punto (la componente $z$ del [[c2-flujo|rotor]]). Green dice que el giro total en el borde es la suma de los giros de adentro: las circulaciones de los cuadraditos interiores se cancelan de a pares.`,
+        R`Con $\vec F = (-y, x)/2$ sale una fórmula para el área: $A = \frac12\oint_C x\,dy - y\,dx$. Así funcionan los planímetros.`],
+      examples: [{ q: R`$\oint_C -y\,dx + x\,dy$ por la circunferencia unitaria.`, steps: [R`$Q_x - P_y = 1 + 1 = 2$; $\iint_D 2\,dA = 2\pi$.`] }],
+      see: ["c2-linea", "c2-flujo", "c2-campos"]
+    },
+    "c2-flujo": {
+      title: "Divergencia, rotor, flujo y teoremas de Gauss y Stokes", aliases: ["divergencia", "rotor", "rotacional", "flujo de un campo", "integral de superficie", "integrales de superficie", "teorema de la divergencia", "teorema de Stokes", "Stokes"], concepts: ["c2-flujo"],
+      summary: "div F = ∇·F; rot F = ∇×F. Gauss: el flujo saliente por una superficie cerrada es ∭ div F dV. Stokes: ∮ F·dr = ∬ (rot F)·n dS.",
+      def: [R`**Divergencia:** $\nabla\cdot\vec F = P_x + Q_y + R_z$. **Rotor:** $\nabla\times\vec F = (R_y - Q_z,\ P_z - R_x,\ Q_x - P_y)$.`,
+        R`**Flujo** de $\vec F$ por una superficie $S$ con normal $\vec n$: $\iint_S\vec F\cdot\vec n\,dS$.`,
+        R`**Teorema de la divergencia (Gauss):** $\oiint_S\vec F\cdot\vec n\,dS = \iiint_W\nabla\cdot\vec F\,dV$, con $S$ el borde de $W$ y $\vec n$ hacia afuera. **Stokes:** $\oint_{\partial S}\vec F\cdot d\vec r = \iint_S(\nabla\times\vec F)\cdot\vec n\,dS$.`],
+      idea: [R`La divergencia mide cuánto "sale" por unidad de volumen (fuentes y sumideros); el rotor, cuánto gira el campo. Gauss y Stokes son primos de [[c2-green|Green]] y del [[tfc|teorema fundamental]]: lo que pasa en el borde se calcula con lo de adentro.`,
+        R`En electromagnetismo aparecen por todos lados: la ley de Gauss es el teorema de la divergencia aplicado al campo eléctrico.`],
+      examples: [{ q: R`Flujo de $\vec F = (x, y, z)$ por la esfera de radio $R$.`, steps: [R`$\nabla\cdot\vec F = 3$: flujo $= 3\cdot\frac43\pi R^3 = 4\pi R^3$.`] }],
+      tips: [R`El teorema de la divergencia necesita una superficie **cerrada**; si falta una tapa, hay que agregarla y restarla.`],
+      see: ["c2-green", "c2-campos", "c2-triples"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-campos": { name: "Campos conservativos" }, "c2-linea": { name: "Integrales de línea" }, "c2-green": { name: "Teorema de Green" }, "c2-flujo": { name: "Divergencia, rotor y flujo" } },
+    templates: T,
+    units: [{
+      id: "c2-vectorial-u", order: 7, program: "Unidad 7", title: "Análisis vectorial", icon: "zap",
+      diagnostic: ["c2-trabajo-num", "c2-green-num", "c2-divergencia-num"],
+      lessons: [
+        { id: "c2-linea", title: "Integrales de línea y campos conservativos", templates: ["c2-trabajo-num", "c2-conservativo-vf", "c2-potencial-num"], theory: ["c2-linea", "c2-campos"],
+          intro: R`$\int_C\vec F\cdot d\vec r = \int\vec F(\vec r(t))\cdot\vec r\,'(t)\,dt$. Si $\vec F = \nabla\varphi$, da $\varphi(B) - \varphi(A)$.` },
+        { id: "c2-teoremas", title: "Green, Gauss y Stokes", templates: ["c2-green-num", "c2-rot-num", "c2-divergencia-num"], theory: ["c2-green", "c2-flujo"],
+          intro: R`Green: $\oint P\,dx + Q\,dy = \iint(Q_x - P_y)\,dA$. Gauss: flujo saliente $= \iiint\nabla\cdot\vec F\,dV$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 8 · ECUACIONES DIFERENCIALES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => num(x, d).replace(".", "{,}");
+  const dec = x => String(x).replace(".", "{,}");
+
+  T["c2-lineal-num"] = {
+    type: "numeric", concepts: ["c2-edo-lineal"], difficulty: 2,
+    generate(r) {
+      if (r.bool()) {
+        const a = r.pick([0.5, 1, 2, 3]), b = r.int(-6, 6), y0 = r.int(-5, 5), t1 = r.pick([1, 2]), eq = b / a, ans = eq + (y0 - eq) * Math.exp(-a * t1);
+        if (y0 === eq) return null;
+        return { prompt: `Resolvé $y' + ${a === 1 ? "" : dec(a)}y = ${b}$ con $y(0) = ${y0}$. ¿Cuánto vale $y(${t1})$?`, answer: ans,
+          solution: [`[[c2-edo-lineal|Lineal de primer orden]], factor integrante $e^{${dec(a)}t}$: $(e^{${dec(a)}t}y)' = ${b}e^{${dec(a)}t}$.`, `$y = ${nd(eq)} + C e^{-${dec(a)}t}$ con $C = ${nd(y0 - eq)}$.`, `$y(${t1}) \\approx ${nd(ans)}$.`],
+          verify: { kind: "ode", f: (t, y) => [b - a * y[0]], y0: [y0], t1, dt: 1e-3, out: (_, y) => y[0], tol: 1e-8 } };
+      }
+      const k = r.int(1, 3), y0 = r.int(-3, 4), x1 = r.pick([2, 3]), C = y0 - 1 / (k + 2), ans = x1 * x1 / (k + 2) + C / x1 ** k;
+      return { prompt: `Resolvé $y' + \\frac{${k}}{x}y = x$ para $x > 0$, con $y(1) = ${y0}$. ¿Cuánto vale $y(${x1})$?`, answer: ans,
+        solution: [`[[c2-edo-lineal|Factor integrante]] $\\mu = e^{\\int ${k}/x\\,dx} = x^{${k}}$: $(x^{${k}}y)' = x^{${k + 1}}$.`, `$x^{${k}}y = \\frac{x^{${k + 2}}}{${k + 2}} + C$, con $C = ${y0} - \\frac{1}{${k + 2}}$.`, `$y(${x1}) = \\frac{${x1 * x1}}{${k + 2}} + \\frac{C}{${x1 ** k}} \\approx ${nd(ans)}$.`],
+        verify: { kind: "ode", f: (s, y) => [(s + 1) - k * y[0] / (s + 1)], y0: [y0], t1: x1 - 1, dt: 1e-3, out: (_, y) => y[0], tol: 1e-8 } };
+    }
+  };
+  T["c2-separable-num"] = {
+    type: "numeric", concepts: ["c2-edo-lineal"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["kxy", "xsobrey", "y2"]), y0 = r.int(1, 4);
+      if (v === "kxy") { const k = r.pick([-2, -1, 1, 2]) / 2, x1 = r.pick([1, 2]), ans = y0 * Math.exp(k * x1 * x1 / 2);
+        return { prompt: `Resolvé $y' = ${k === 1 ? "" : k === -1 ? "-" : dec(k) + "\\,"}xy$ con $y(0) = ${y0}$. ¿Cuánto vale $y(${x1})$?`, answer: ans,
+          solution: [`[[edo|Separable]]: $\\frac{dy}{y} = ${dec(k)}x\\,dx$, así que $\\ln|y| = ${dec(k / 2)}x^2 + C$.`, `$y = ${y0}e^{${dec(k / 2)}x^2}$; en $x = ${x1}$, $\\approx ${nd(ans)}$.`],
+          verify: { kind: "ode", f: (x, y) => [k * x * y[0]], y0: [y0], t1: x1, dt: 1e-3, out: (_, y) => y[0], tol: 1e-8 } }; }
+      if (v === "xsobrey") { const x1 = r.int(1, 4), ans = Math.sqrt(y0 * y0 + x1 * x1);
+        return { prompt: `Resolvé $y' = \\frac{x}{y}$ con $y(0) = ${y0}$. ¿Cuánto vale $y(${x1})$?`, answer: ans,
+          solution: [`[[edo|Separable]]: $y\\,dy = x\\,dx$, así que $y^2 = x^2 + C$ con $C = ${y0 * y0}$.`, `$y = \\sqrt{x^2 + ${y0 * y0}}$ (la rama positiva, por la condición inicial): $y(${x1}) = \\sqrt{${x1 * x1 + y0 * y0}} \\approx ${nd(ans)}$.`],
+          verify: { kind: "ode", f: (x, y) => [x / y[0]], y0: [y0], t1: x1, dt: 1e-3, out: (_, y) => y[0], tol: 1e-8 } }; }
+      const x1 = r.pick([0.1, 0.2, 0.25]); if (y0 * x1 >= 0.9) return null;
+      const ans = y0 / (1 - y0 * x1);
+      return { prompt: `Resolvé $y' = y^2$ con $y(0) = ${y0}$. ¿Cuánto vale $y(${dec(x1)})$?`, answer: ans,
+        solution: [`[[edo|Separable]]: $\\frac{dy}{y^2} = dx$, así que $-\\frac1y = x + C$ con $C = -\\frac{1}{${y0}}$.`, `$y = \\frac{${y0}}{1 - ${y0}x}$ (explota en $x = ${H.frac(1, y0)}$); $y(${dec(x1)}) \\approx ${nd(ans)}$.`],
+        verify: { kind: "ode", f: (x, y) => [y[0] * y[0]], y0: [y0], t1: x1, dt: 1e-4, out: (_, y) => y[0], tol: 1e-7 } };
+    }
+  };
+  T["c2-logistica-num"] = {
+    type: "numeric", concepts: ["c2-edo-modelos"], difficulty: 3,
+    generate(r) {
+      const K = r.pick([100, 500, 1000, 2000]), P0 = K * r.pick([0.05, 0.1, 0.2, 0.25]), k = r.pick([0.1, 0.2, 0.3, 0.5]), A = (K - P0) / P0, ask = r.pick(["P", "t"]);
+      if (ask === "t") {
+        const ans = Math.log(A) / k;
+        return { prompt: `Una población sigue $P' = ${dec(k)}P\\left(1 - \\frac{P}{${K}}\\right)$ con $P(0) = ${num(P0)}$. ¿En cuánto tiempo llega a la mitad de la capacidad de carga?`, answer: ans,
+          solution: [`[[c2-edo-modelos|Logística]]: $P(t) = \\frac{K}{1 + Ae^{-kt}}$ con $A = \\frac{K - P_0}{P_0} = ${nd(A)}$.`, `$P = \\frac K2$ cuando $Ae^{-kt} = 1$: $t = \\frac{\\ln A}{k} \\approx ${nd(ans)}$.`],
+          verify: { kind: "ode", f: (t, y) => [k * y[0] * (1 - y[0] / K)], y0: [P0], t1: 1e9, dt: 1e-2, until: (t, y) => y[0] >= K / 2, g: (t, y) => y[0] - K / 2, out: t => t, tol: 1e-6 } };
+      }
+      const t1 = r.int(5, 30), ans = K / (1 + A * Math.exp(-k * t1));
+      return { prompt: `Una población sigue $P' = ${dec(k)}P\\left(1 - \\frac{P}{${K}}\\right)$ con $P(0) = ${num(P0)}$. ¿Cuánto vale $P(${t1})$?`, answer: ans,
+        solution: [`[[c2-edo-modelos|Logística]]: $P(t) = \\frac{K}{1 + Ae^{-kt}}$ con $K = ${K}$ y $A = \\frac{K - P_0}{P_0} = ${nd(A)}$.`, `$P(${t1}) = \\frac{${K}}{1 + ${nd(A)}e^{-${nd(k * t1)}}} \\approx ${nd(ans)}$.`],
+        verify: { kind: "ode", f: (t, y) => [k * y[0] * (1 - y[0] / K)], y0: [P0], t1, dt: 1e-2, out: (_, y) => y[0], tol: 1e-7 } };
+    }
+  };
+  T["c2-mezcla-num"] = {
+    type: "numeric", concepts: ["c2-edo-modelos"], difficulty: 2,
+    generate(r) {
+      const V = r.pick([100, 200, 500, 1000]), S0 = r.int(0, 20), c = r.pick([0.05, 0.1, 0.2, 0.5]), q = r.pick([2, 5, 10, 20]), t1 = r.pick([10, 20, 30, 60]);
+      const Seq = V * c, ans = Seq + (S0 - Seq) * Math.exp(-q * t1 / V);
+      if (S0 === Seq) return null;
+      return {
+        prompt: `Un tanque tiene $${V}$ L de agua con $${S0}$ kg de sal. Entra salmuera con $${dec(c)}$ kg/L a $${q}$ L/min y sale la mezcla (bien revuelta) al mismo ritmo. ¿Cuántos kg de sal hay a los $${t1}$ minutos?`,
+        answer: ans,
+        solution: [`[[c2-edo-modelos|Problema de mezcla]]: $S' = (\\text{entra}) - (\\text{sale}) = ${dec(c)}\\cdot${q} - \\frac{S}{${V}}\\cdot${q}$.`, `Es [[c2-edo-lineal|lineal]]: $S(t) = ${num(Seq)} + (${S0} - ${num(Seq)})e^{-${H.frac(q, V)}t}$.`, `$S(${t1}) \\approx ${nd(ans)}$ kg.`],
+        verify: { kind: "ode", f: (t, y) => [c * q - y[0] * q / V], y0: [S0], t1, dt: 1e-2, out: (_, y) => y[0], tol: 1e-8 }
+      };
+    }
+  };
+  T["c2-solucion-vf"] = {
+    type: "tf", concepts: ["c2-edo-lineal"], difficulty: 1,
+    generate(r) {
+      const v = r.pick(["exp", "x", "osc"]), ok = r.bool();
+      let prompt, f, F, why;
+      if (v === "exp") { const k = r.nz(-3, 3), m = r.nz(-4, 4); prompt = `$y = Ce^{${k === 1 ? "" : k === -1 ? "-" : k}x} ${ok === (m / k < 0) ? "+" : "-"} ${H.frac(Math.abs(m), Math.abs(k))}$ es solución de $y' = ${k === 1 ? "" : k === -1 ? "-" : k}y ${m < 0 ? "-" : "+"} ${Math.abs(m)}$ para todo $C$`;
+        const s = ok ? -m / k : m / k; f = (x, C) => C * Math.exp(k * x) + s; F = (x, y) => k * y + m; why = `La solución general es $y = Ce^{${k === 1 ? "" : k === -1 ? "-" : k}x} ${-m / k < 0 ? "-" : "+"} ${H.frac(Math.abs(m), Math.abs(k))}$: la constante es el equilibrio, donde $y' = 0$.`; }
+      else if (v === "x") { const a = r.int(1, 3); prompt = `$y = ${ok ? "" : "x^2 + "}${H.frac(2, a + 1) === "1" ? "" : H.frac(2, a + 1)}x + \\frac{C}{x^{${a}}}$ es solución de $y' + \\frac{${a}}{x}y = 2$ (con $x > 0$) para todo $C$`;
+        f = (x, C) => (ok ? 0 : x * x) + 2 / (a + 1) * x + C / x ** a; F = (x, y) => 2 - a * y / x; why = `Con el factor integrante $x^{${a}}$: $(x^{${a}}y)' = 2x^{${a}}$, así que $y = \\frac{2}{${a + 1}}x + \\frac{C}{x^{${a}}}$.`; }
+      else { const w = r.int(2, 5); prompt = `$y = C\\cos(${ok ? w : "x/" + w}x)$`.replace("x/" + w + "x", `\\frac{x}{${w}}`) + ` es solución de $y'' + ${w * w}y = 0$ para todo $C$`;
+        f = (x, C) => C * Math.cos(ok ? w * x : x / w); F = null; why = `$y = \\cos(\\omega x)$ cumple $y'' = -\\omega^2y$, así que hace falta $\\omega^2 = ${w * w}$.`; }
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${prompt}.`,
+        answer: ok,
+        explanation: `${why} ([[c2-edo-lineal|verificar una solución]]: se reemplaza en la ecuación).`,
+        solution: [`Para chequear una solución no hace falta resolver: se deriva y se reemplaza.`],
+        // verificación: residuo de la ecuación con derivadas numéricas, en varios puntos y para dos valores de C
+        verify: { kind: "truth", fn: () => [0.7, 1.3, 2.1].every(x => [1.7, -0.6].every(C => { const h = 1e-4, d1 = (f(x + h, C) - f(x - h, C)) / (2 * h); if (F) return Math.abs(d1 - F(x, f(x, C))) < 1e-6 * Math.max(1, Math.abs(d1)); const d2 = (f(x + h, C) - 2 * f(x, C) + f(x - h, C)) / (h * h); const w2 = v === "osc" ? Number(/y'' \+ (\d+)y/.exec(prompt)[1]) : 0; return Math.abs(d2 + w2 * f(x, C)) < 1e-3; })) }
+      };
+    }
+  };
+
+  const cards = {
+    "c2-edo-lineal": {
+      title: "Ecuaciones lineales de primer orden", aliases: ["ecuación lineal de primer orden", "ecuaciones lineales de primer orden", "factor integrante", "ecuación diferencial lineal", "condición inicial", "problema de valor inicial"], concepts: ["c2-edo-lineal"],
+      summary: "y' + p(x)y = q(x). Se multiplica por μ = e^{∫p}: (μy)' = μq, y se integra.",
+      def: [R`Una **ecuación diferencial ordinaria** de primer orden relaciona $x$, $y$ e $y'$. Es **lineal** si se puede escribir $y' + p(x)y = q(x)$.`,
+        R`**Factor integrante:** con $\mu(x) = e^{\int p(x)\,dx}$, la ecuación queda $(\mu y)' = \mu q$, y $y = \frac{1}{\mu}\left(\int\mu q\,dx + C\right)$. La constante sale de la **condición inicial**.`],
+      idea: [R`El factor integrante convierte el lado izquierdo en la derivada de un producto ([[regla-producto|regla del producto]] al revés), y entonces se integra directo.`,
+        R`Las [[edo|separables]] $y' = g(x)h(y)$ se resuelven separando; algunas ecuaciones son de los dos tipos (por ejemplo $y' = ky$).`,
+        R`Para **verificar** una solución no hace falta resolver: se deriva y se reemplaza en la ecuación.`],
+      demo: [R`**Por qué funciona.** $\mu' = p\mu$, así que $(\mu y)' = \mu'y + \mu y' = \mu(y' + py) = \mu q$. Integrando, $\mu y = \int\mu q\,dx + C$. $\blacksquare$`],
+      examples: [{ q: R`$y' + 2y = 4$, $y(0) = 0$.`, steps: [R`$\mu = e^{2x}$: $(e^{2x}y)' = 4e^{2x}$, $e^{2x}y = 2e^{2x} + C$.`, R`$y = 2 + Ce^{-2x}$ con $C = -2$: $y = 2 - 2e^{-2x}$.`] }],
+      tips: [R`Antes de calcular $\mu$, el coeficiente de $y'$ tiene que ser $1$: dividí si hace falta.`],
+      see: ["edo", "c2-edo-modelos", "regla-producto"]
+    },
+    "c2-edo-modelos": {
+      title: "Modelos: logística y mezclas", aliases: ["ecuación logística", "modelo logístico", "crecimiento logístico", "capacidad de carga", "problema de mezcla", "problemas de mezcla"], concepts: ["c2-edo-modelos"],
+      summary: "Logística: P' = kP(1 − P/K), con P = K/(1 + Ae^{−kt}). Mezcla: S' = (entra) − (sale), una lineal.",
+      def: [R`**Logística:** $P' = kP\left(1 - \frac PK\right)$. Es [[edo|separable]], con solución $P(t) = \frac{K}{1 + Ae^{-kt}}$, $A = \frac{K - P_0}{P_0}$. $K$ es la **capacidad de carga**.`,
+        R`**Mezclas:** si $S(t)$ es la cantidad de soluto, $S' = c_\text{in}q_\text{in} - \frac{S}{V}q_\text{out}$. Con $q_\text{in} = q_\text{out}$ el volumen es constante y queda [[c2-edo-lineal|lineal]].`],
+      idea: [R`La logística empieza creciendo casi [[modelos|exponencial]] y frena al acercarse a $K$: crece más rápido justo en $P = \frac K2$ (el punto de inflexión).`,
+        R`En una mezcla, la cantidad tiende al equilibrio $Vc_\text{in}$, el que tendría el tanque lleno de la solución que entra, y se acerca exponencialmente.`],
+      examples: [{ q: R`$P' = 0{,}5P(1 - P/100)$, $P(0) = 10$. ¿Cuándo llega a 50?`, steps: [R`$A = 9$; $9e^{-0{,}5t} = 1$, así que $t = 2\ln 9 \approx 4{,}39$.`] }],
+      see: ["c2-edo-lineal", "edo", "modelos"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-edo-lineal": { name: "EDO lineales de primer orden" }, "c2-edo-modelos": { name: "Modelos con EDO" } },
+    templates: T,
+    units: [{
+      id: "c2-edo-u", order: 8, program: "Unidad 8", title: "Ecuaciones diferenciales", icon: "zap",
+      diagnostic: ["c2-lineal-num", "c2-separable-num", "c2-mezcla-num"],
+      lessons: [
+        { id: "c2-edo-primer-orden", title: "Separables y lineales", templates: ["c2-solucion-vf", "c2-separable-num", "c2-lineal-num"], theory: ["c2-edo-lineal"],
+          intro: R`Separables: $\frac{dy}{h(y)} = g(x)\,dx$. Lineales: factor integrante $\mu = e^{\int p}$.` },
+        { id: "c2-edo-modelos", title: "Modelos", templates: ["c2-mezcla-num", "c2-logistica-num"], theory: ["c2-edo-modelos"],
+          intro: R`Logística $P' = kP(1 - P/K)$ y mezclas $S' = \text{entra} - \text{sale}$.` }
       ]
     }],
     cards
