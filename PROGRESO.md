@@ -58,6 +58,23 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **M102:** se agregó la demostración en las 22 fichas que no la tenían; ahora todas las de la materia tienen una.
 - **Resultado:** quedan 12 fichas sin demostración en toda la carrera, y son definiciones, recetas o postulados (9 de M101 y 3 de F101). **Para las materias nuevas:** toda ficha que enuncie una fórmula o un teorema lleva su demostración.
 
+## Evaluaciones: parciales y finales simulados
+
+- **Material de la cátedra:** el usuario subió a su Google Drive la carpeta «Apunteca» (Matemáticas y Física, con parciales, finales y resoluciones). Se lee con el conector de Drive y **no va al repo**, que es público. Por cada materia se lee una muestra (los años recientes, con resoluciones) y se deja el análisis en `docs/parciales/<materia>.md`. Los enunciados de la app son propios y tienen los números sorteados.
+- **Motor** (`index.html`, engine): `E.registerExams(cid, { self, exams })`, `E.buildExam`, `E.instantiateSelf` y `E.rubricPoints`. Un examen tiene ítems con partes:
+  - `tpl`: una plantilla fija, que se corrige sola;
+  - `pick`: una plantilla al azar entre varias;
+  - `self`: un ejercicio de desarrollo generado, con `prompt`, `rubric` (criterios con peso) y `solution`.
+- **Interfaz:** en la pantalla de cada materia hay una tarjeta «Evaluaciones».
+  - Al empezar, una portada con el tiempo, la cantidad de ejercicios y la nota para aprobar.
+  - Durante el examen: reloj (al terminar el tiempo se entrega solo), navegación libre entre ejercicios, sin correcciones ni apuntes, y con la pizarra disponible.
+  - Al entregar: corrección automática y autocorrección con rúbrica de los ejercicios de desarrollo.
+  - Al final: la nota, aprobado o no, la XP y los conceptos para reforzar. Cada parte cuenta para el repaso espaciado.
+- **Estado:** `S.exams["m101/p1"] = { best, attempts: [{ d, t, score }] }`. `E.store.merge` hace la unión de los intentos y se queda con la mejor nota (tiene tests).
+- **Tests:** cada examen suma 100 y sus plantillas existen. Los ejercicios de desarrollo se generan con 40 semillas: la rúbrica tiene que repartir exacto los puntos, el LaTeX tiene que ser válido y no puede haber «undefined».
+- **M101:** 1.er, 2.º y 3.er parcial, y el final práctico, armados según `docs/parciales/m101.md`.
+- **Pendiente:** el mismo trabajo para M104, F101, F102B y M102, en ese orden de prioridad según lo que pida el usuario. También plantillas de nivel parcial más exigentes (ver el final de `docs/parciales/m101.md`).
+
 ## Cuenta y sincronización (Firebase)
 
 - Proyecto Firebase `efecen-46bfd`, con login de Google. La app web se llama `efecen-web` y Firestore está en `southamerica-east1`.

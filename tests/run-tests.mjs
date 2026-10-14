@@ -427,12 +427,14 @@ for (const cid of E.courseOrder) {
     xpByDay: { "2026-10-09": 50, "2026-10-10": 70 }, read: { derivada: true }, activeCourse: "m101",
     srs: { "m101/limite": { ef: 2.5, int: 4, reps: 2, due: "2026-10-14", last: "2026-10-10", seen: 6, ok: 5 } },
     courses: { m101: { lessons: { l1: { done: true, plays: 2, best: 0.8 } }, diag: null, unitsOpen: { u1: true } } },
-    log: [{ d: "2026-10-10", kind: "lesson", title: "A", n: 5, ok: 4, xp: 40, c: "m101" }] });
+    log: [{ d: "2026-10-10", kind: "lesson", title: "A", n: 5, ok: 4, xp: 40, c: "m101" }],
+    exams: { "m101/p1": { best: 72, attempts: [{ d: "2026-10-10", t: 2, score: 72 }, { d: "2026-10-09", t: 1, score: 50 }] } } });
   const b = Object.assign(D(), { xp: 90, answered: 25, answeredOk: 22, bestStreak: 5, streak: 1, lastActive: "2026-10-12",
     xpByDay: { "2026-10-10": 30, "2026-10-12": 60 }, read: { tfc: true }, activeCourse: "f101", settings: { goal: 100, sound: false, theme: "dark" },
     srs: { "m101/limite": { ef: 2.6, int: 6, reps: 3, due: "2026-10-18", last: "2026-10-12", seen: 9, ok: 8 }, "f101/f1-mruv": { ef: 2.5, int: 1, reps: 1, due: "2026-10-13", last: "2026-10-12", seen: 3, ok: 3 } },
     courses: { m101: { lessons: { l1: { done: false, plays: 1, best: 0.9 }, l2: { done: true, plays: 1, best: 1 } }, diag: null }, f101: { lessons: {}, diag: null } },
-    log: [{ d: "2026-10-12", kind: "lesson", title: "B", n: 5, ok: 5, xp: 50, c: "f101" }] });
+    log: [{ d: "2026-10-12", kind: "lesson", title: "B", n: 5, ok: 5, xp: 50, c: "f101" }],
+    exams: { "m101/p1": { best: 64, attempts: [{ d: "2026-10-12", t: 3, score: 64 }, { d: "2026-10-09", t: 1, score: 50 }] }, "m101/p2": { best: 80, attempts: [{ d: "2026-10-12", t: 4, score: 80 }] } } });
   const m = E.store.merge(a, b), w = "store.merge";
   // comparación con las claves ordenadas (el orden de las claves no importa)
   const canon = x => JSON.stringify(x, (k, v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([p], [q]) => (p < q ? -1 : 1))) : v));
@@ -445,6 +447,7 @@ for (const cid of E.courseOrder) {
   const l1 = m.courses.m101.lessons.l1;
   ok(l1.done && l1.plays === 2 && l1.best === 0.9 && m.courses.m101.lessons.l2.done && m.courses.f101 && m.courses.m101.unitsOpen.u1, w, "lecciones: hechas si lo están en alguno, con el mejor resultado");
   ok(m.log.length === 2 && m.log[0].title === "B", w, "historial: unión ordenada, la más nueva primero");
+  ok(m.exams["m101/p1"].best === 72 && m.exams["m101/p1"].attempts.map(x => x.t).join() === "3,2,1" && m.exams["m101/p2"].best === 80, w, "evaluaciones: unión de intentos y la mejor nota");
   ok(canon(E.store.merge(m, m)) === canon(m), w, "no es idempotente");
   ok(canon(E.store.merge(m, a)) === canon(m) && canon(E.store.merge(b, m)) === canon(m), w, "volver a combinar con un estado viejo cambia el resultado");
   const ba = E.store.merge(b, a);
@@ -474,6 +477,39 @@ for (const cid of E.courseOrder) {
   ok(JSON.stringify(packed.s[0]) === '{"c":"ink","w":4,"h":0,"p":[1.2,5.7,0.5]}', w, "guardado compacto: " + JSON.stringify(packed.s[0]));
   const bb = B.bbox(mk([[10, 20], [30, 5]], 4));
   ok(Math.abs(bb.x0 - (10 - 1.75)) < 1e-9 && Math.abs(bb.y1 - (20 + 1.75)) < 0.01, w, "caja del trazo con el grosor");
+}
+
+// evaluaciones (parciales y finales simulados): puntajes, plantillas y ejercicios de desarrollo
+for (const [cid, ex] of Object.entries(E.exams || {})) {
+  const c = E.courses[cid];
+  ok(!!c, "examenes", `materia inexistente: ${cid}`);
+  if (!c) continue;
+  for (const x of ex.list) {
+    const w = `${cid}/examen/${x.id}`;
+    const parts = x.items.flatMap(it => it.parts);
+    ok(parts.reduce((t, p) => t + p.pts, 0) === 100, w, "los puntajes no suman 100");
+    ok(x.minutes > 0 && x.pass > 0 && x.pass <= 100 && !!x.title && !!x.topics, w, "faltan minutos, aprobación, título o temas");
+    for (const p of parts) {
+      const tpls = p.tpl ? [p.tpl] : p.pick || [];
+      ok(tpls.length > 0 || !!p.self, w, "parte sin plantilla ni ejercicio de desarrollo");
+      for (const t of tpls) ok(!!c.templates[t], w, `plantilla inexistente: ${t}`);
+      if (p.self) ok(!!ex.self[p.self], w, `ejercicio de desarrollo inexistente: ${p.self}`);
+      ok(p.pts > 0, w, "parte con puntaje no positivo");
+    }
+    for (let k = 0; k < Math.min(N, 40); k++) {
+      const b = E.buildExam(cid, x.id, 1000 + k);
+      for (const p of b.parts) {
+        if (!p.self) { E.instantiate(c, p.tpl, p.seed); continue; }
+        const o = E.instantiateSelf(cid, p.self, p.seed, p.args), ws = `${w}/${p.self}`;
+        ok(typeof o.prompt === "string" && o.prompt.length > 10 && Array.isArray(o.solution) && o.solution.length > 0, ws, "falta enunciado o resolución");
+        ok(Array.isArray(o.rubric) && o.rubric.length > 0 && o.rubric.every(q => q.w > 0 && q.text), ws, "rúbrica inválida");
+        const pts = E.rubricPoints(o.rubric, p.pts);
+        ok(Math.abs(pts.reduce((t, v) => t + v, 0) - p.pts) < 1e-9 && pts.every(v => v >= 0), ws, "la rúbrica no reparte bien los puntos: " + pts.join(","));
+        for (const str of [o.prompt, ...o.solution, ...o.rubric.map(q => q.text)]) checkTex(ws, str);
+        ok(!/undefined|NaN/.test(o.prompt + o.solution.join("") + o.rubric.map(q => q.text).join("")), ws, "texto con undefined o NaN");
+      }
+    }
+  }
 }
 
 console.log(`\n${checks} chequeos, ${failures} fallas`);

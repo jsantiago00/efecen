@@ -441,6 +441,35 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+/* ---------- evaluaciones ---------- */
+.exams-card { display: flex; flex-direction: column; gap: 8px; }
+.exams-card > .row .ic { width: 26px; height: 26px; color: var(--primary); }
+.exam-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--bg); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.exam-best { font-weight: 900; font-size: .8rem; padding: 4px 10px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 2px solid var(--line); white-space: nowrap; }
+.exam-best.pass { background: var(--ok-soft); color: var(--ok-d); border-color: var(--ok); }
+.exam-best.fail { background: var(--bad-soft); color: var(--bad-d); border-color: var(--bad); }
+.exam-rules { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.exam-timer { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; font-variant-numeric: tabular-nums; padding: 4px 12px; border-radius: 999px; background: var(--card); border: 2px solid var(--line); }
+.exam-timer.low { color: var(--bad); border-color: var(--bad); }
+.exam-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 8px; }
+.exam-nav button { min-width: 44px; height: 34px; border-radius: 10px; border: 2px solid var(--line); background: var(--card); font-weight: 800; font-size: .85rem; color: var(--muted); }
+.exam-nav button.done { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); }
+.exam-nav button.on { border-color: var(--primary); color: var(--primary); }
+.self-note { display: flex; gap: 10px; align-items: flex-start; }
+.self-note > .ic { width: 26px; height: 26px; color: var(--primary); }
+.rv { display: flex; flex-direction: column; gap: 4px; }
+.rv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rv-pts { font-weight: 900; font-size: .85rem; color: var(--muted); }
+.rv-pts.ok { color: var(--ok-d); } .rv-pts.bad { color: var(--bad-d); }
+.rv-prompt { font-size: .92rem; color: var(--muted); }
+.rv-total { display: flex; align-items: center; gap: 10px; }
+.rv-score { font-size: 2rem; font-weight: 900; }
+.rub { display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; background: var(--bg); border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-top: 6px; font-size: .92rem; }
+.rub .box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--lock-d); flex: none; display: grid; place-items: center; color: var(--on-primary); }
+.rub.on { border-color: var(--ok); background: var(--ok-soft); }
+.rub.on .box { background: var(--ok); border-color: var(--ok); }
+.ok-ic { color: var(--ok); } .bad-ic { color: var(--bad); }
+
 /* ---------- pizarra (board.js) ---------- */
 .board { --board-paper: #FFFFFF; --board-rule: #DCE3F0; --board-margin: #F3B3B6;
   position: fixed; inset: 0; z-index: 46; background: var(--bg); display: none; flex-direction: column; }
@@ -814,6 +843,41 @@ body.board-split .nav { padding-bottom: 0; }
     throw new Error("No se pudo generar " + tplId);
   };
 
+  // ---------- evaluaciones: parciales y finales simulados ----------
+  // E.exams[cid] = { self: { id: { concepts, generate(r, H, args) → { prompt, rubric: [{ text, w }], solution } } }, list: [examen] }
+  // examen: { id, kind: "parcial" | "final", title, topics, minutes, pass, items: [{ title, parts: [parte] }] }
+  // parte: { pts, tpl } (plantilla fija), { pts, pick: [...] } (una al azar) o { pts, self, args } (de desarrollo, autocorregida)
+  E.exams = {};
+  E.registerExams = function (cid, def) { E.exams[cid] = { self: def.self || {}, list: def.exams || [] }; };
+  E.instantiateSelf = function (cid, id, seed, args) {
+    const g = E.exams[cid].self[id];
+    for (let tries = 0; tries < 30; tries++) {
+      const o = g.generate(E.rng(seed + tries * 7919), H, args);
+      if (o) return Object.assign({ type: "self", concepts: g.concepts || [] }, o);
+    }
+    throw new Error("No se pudo generar " + id);
+  };
+  // reparte los puntos de una parte entre los criterios de la rúbrica (en medios puntos, sumando exacto)
+  E.rubricPoints = function (rubric, pts) {
+    const W = rubric.reduce((t, x) => t + x.w, 0);
+    let acc = 0;
+    return rubric.map((x, i) => {
+      if (i === rubric.length - 1) return pts - acc;
+      const v = Math.round(pts * x.w / W * 2) / 2;
+      acc += v;
+      return v;
+    });
+  };
+  // arma un intento: cada parte con su plantilla (sorteada si hay varias) y su semilla
+  E.buildExam = function (cid, examId, seed) {
+    const ex = E.exams[cid].list.find(e => e.id === examId), r = E.rng(seed), parts = [];
+    ex.items.forEach((it, i) => it.parts.forEach((p, j) => parts.push({
+      item: i, label: it.parts.length > 1 ? `${i + 1}.${j + 1}` : `${i + 1}`, pts: p.pts,
+      tpl: p.tpl || (p.pick ? r.pick(p.pick) : null), self: p.self || null, args: p.args || null, seed: r.int(1, 1e9)
+    })));
+    return { exam: ex, parts };
+  };
+
   // ---------- Estado persistente ----------
   E.store = {
     key: "efecen:v1",
@@ -822,7 +886,8 @@ body.board-split .nav { padding-bottom: 0; }
       settings: { goal: 50, sound: true, theme: "auto" },
       xp: 0, streak: 0, bestStreak: 0, lastActive: null,
       xpByDay: {}, activeCourse: null,
-      courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0, read: {}
+      courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0, read: {},
+      exams: {} // "m101/p1" -> { best, attempts: [{ d, t, score }] } (los más nuevos primero)
     }),
     migrate(s) {
       const d = E.store.defaults();
@@ -878,6 +943,12 @@ body.board-split .nav { padding-bottom: 0; }
         }
       }
       for (const st of Object.values(out.courses)) { st.lessons = st.lessons || {}; st.unitsOpen = st.unitsOpen || {}; if (st.diag === undefined) st.diag = null; }
+      // evaluaciones: la unión de los intentos (sin repetir) y la mejor nota
+      for (const [k, oe] of Object.entries(older.exams)) {
+        const e = out.exams[k] = out.exams[k] || { best: 0, attempts: [] }, have = new Set(e.attempts.map(x => x.t));
+        e.best = max(e.best, oe.best);
+        e.attempts = e.attempts.concat((oe.attempts || []).filter(x => !have.has(x.t))).sort((x, y) => y.t - x.t).slice(0, 30);
+      }
       const seen = new Set();
       out.log = a.log.concat(b.log).filter(l => { const k = JSON.stringify(l); return seen.has(k) ? false : seen.add(k); })
         .sort((x, y) => (y.d > x.d ? 1 : y.d < x.d ? -1 : 0)).slice(0, 60);
@@ -894,6 +965,8 @@ body.board-split .nav { padding-bottom: 0; }
 <script src="content/f101-fisica1.js"></script>
 <script src="content/f102b-fisica2b.js"></script>
 <script src="content/m102-calculo2.js"></script>
+<!-- evaluaciones (parciales y finales simulados) -->
+<script src="content/m101-examenes.js"></script>
 <!-- pizarra para escribir con lápiz (tablets); va antes de la app para atajar el botón "atrás" -->
 <script src="board.js"></script>
 
@@ -1407,7 +1480,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary };
+    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary, "exam-result": renderExamResult };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1516,6 +1589,7 @@ body.board-split .nav { padding-bottom: 0; }
         <p class="muted small" style="margin:4px 0 10px">Hacé el test diagnóstico (3 ejercicios por unidad) y desbloqueá directo las unidades que dominás. Igual vuelven como repaso. También podés tomar el test de cualquier unidad suelta.</p>
         <div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="diag" data-cid="${cid}">Hacer el test</button>
         <button class="btn sm ghost" data-act="skipdiag" data-cid="${cid}">Empezar de cero</button></div></div></section>` : ""}
+      ${examsCard(cid)}
       ${units || `<p class="muted">Esta materia todavía no tiene unidades.</p>`}
     </main>${nav("career")}`;
   }
@@ -1664,6 +1738,7 @@ body.board-split .nav { padding-bottom: 0; }
     $("#answer").innerHTML = answerHtml(s.inst, s.ans, s.phase !== "answer");
     drawGraphs($("#answer"));
     updateCheck();
+    if (s.kind === "exam") examNavRefresh();
   }
   function correctText(inst) {
     switch (inst.type) {
@@ -1679,6 +1754,7 @@ body.board-split .nav { padding-bottom: 0; }
 
   function check() {
     const s = ui.session;
+    if (s && s.kind === "exam") { if (s.phase === "answer") s.i < s.parts.length - 1 ? examGo(s.i + 1) : submitExam(); return; }
     if (!s || s.phase !== "answer" || !ready(s.inst, s.ans)) return;
     const item = s.items[s.i], icid = item.cid || s.cid, c = course(icid), t = c.templates[item.tpl];
     const ok = isCorrect(s.inst, s.ans);
@@ -1762,6 +1838,19 @@ body.board-split .nav { padding-bottom: 0; }
     if (!s.diag.single) cs.diag = "done";
   }
 
+  // suma XP del día y actualiza la racha (lecciones, repasos y evaluaciones)
+  function addXp(xp) {
+    const t = today(), before = xpToday();
+    S.xp += xp;
+    S.xpByDay[t] = before + xp;
+    let streakUp = false;
+    if (S.lastActive !== t) {
+      S.streak = S.lastActive && E.diffDays(S.lastActive, t) === 1 ? S.streak + 1 : 1;
+      S.lastActive = t; streakUp = true;
+      S.bestStreak = Math.max(S.bestStreak, S.streak);
+    }
+    return { streakUp, goalHit: before < S.settings.goal && S.xpByDay[t] >= S.settings.goal };
+  }
   function finish() {
     const s = ui.session, cid = s.cid, cs = cState(cid), t = today();
     // 1) repetición espaciada: una actualización por concepto y por día
@@ -1783,16 +1872,7 @@ body.board-split .nav { padding-bottom: 0; }
     }
     if (s.kind === "diag") applyDiagnostic(s);
     // 3) XP, racha y registro
-    const before = xpToday();
-    S.xp += s.xp;
-    S.xpByDay[t] = before + s.xp;
-    let streakUp = false;
-    if (S.lastActive !== t) {
-      S.streak = S.lastActive && E.diffDays(S.lastActive, t) === 1 ? S.streak + 1 : 1;
-      S.lastActive = t; streakUp = true;
-      S.bestStreak = Math.max(S.bestStreak, S.streak);
-    }
-    const goalHit = before < S.settings.goal && S.xpByDay[t] >= S.settings.goal;
+    const { streakUp, goalHit } = addXp(s.xp);
     const lesson = s.lessonId && course(cid).lessonList.find(x => x.id === s.lessonId);
     const title = s.kind === "diag" ? "Test diagnóstico" : s.kind === "practice" ? "Práctica: " + s.title : lesson ? lesson.title : "Repaso";
     S.log.unshift({ d: t, kind: s.kind, title, n: s.firstN, ok: s.firstOk, xp: s.xp, c: cid });
@@ -2127,6 +2207,218 @@ body.board-split .nav { padding-bottom: 0; }
     rd.readAsText(file);
   }
 
+  // ---------- EVALUACIONES: parciales y finales simulados ----------
+  // Como un examen de verdad: tiempo límite, sin corrección hasta entregar y sin apuntes (la pizarra sí).
+  // Las partes automáticas se corrigen solas; las de desarrollo se autocorrigen con la rúbrica al entregar.
+  const examKey = (cid, id) => cid + "/" + id;
+  const examState = (cid, id) => S.exams[examKey(cid, id)] || { best: 0, attempts: [] };
+  const noLinks = html => html.replace(/<a class="term"[^>]*>([\s\S]*?)<\/a>/g, "$1");
+  const ptsTxt = v => (Number.isInteger(v) ? String(v) : String(v).replace(".", ",")) + " p";
+  function examsCard(cid) {
+    const ex = E.exams[cid];
+    if (!ex || !ex.list.length) return "";
+    return `<section class="card exams-card"><div class="row" style="gap:10px">${icon("file-text")}<div class="grow"><b>Evaluaciones</b>
+      <p class="muted small" style="margin:2px 0 0">Parciales y finales simulados, con la estructura de los de la cátedra y números nuevos en cada intento.</p></div></div>
+      ${ex.list.map(x => {
+        const st = examState(cid, x.id), n = st.attempts.length;
+        return `<button class="exam-row" data-act="exam" data-cid="${cid}" data-id="${x.id}"><span class="grow"><b>${esc(x.title)}</b>
+          <span class="muted small" style="display:block">${esc(x.topics)} · ${x.minutes} min</span></span>
+          <span class="exam-best ${n ? (st.best >= x.pass ? "pass" : "fail") : ""}">${n ? `${H.num(st.best, 1).replace(".", ",")}/100` : "Sin rendir"}</span>${icon("chevron-right")}</button>`;
+      }).join("")}</section>`;
+  }
+  function startExam(cid, examId) {
+    const c = course(cid), b = E.buildExam(cid, examId, E.newSeed());
+    for (const p of b.parts) {
+      p.inst = p.self ? E.instantiateSelf(cid, p.self, p.seed, p.args) : E.instantiate(c, p.tpl, p.seed);
+      p.ans = p.self ? { v: null } : initAns(p.inst);
+    }
+    S.activeCourse = cid;
+    ui.session = { kind: "exam", cid, exam: b.exam, parts: b.parts, i: 0, phase: "intro", xp: 0 };
+    ui.route = "session";
+    if (location.hash !== "#/sesion") history.pushState(null, "", "#/sesion");
+    renderExamIntro();
+  }
+  function renderExamIntro() {
+    const s = ui.session, x = s.exam, st = examState(s.cid, x.id);
+    const nSelf = s.parts.filter(p => p.self).length;
+    app.innerHTML = `<div class="session"><div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="grow"></div>${boardBtn()}</div>
+      <div class="center-col" style="text-align:left;align-items:stretch">
+        <div class="row" style="gap:12px">${mascot("think")}<div class="grow"><span class="subj-code">${esc(course(s.cid).code)}</span><h1 style="font-size:1.4rem;margin-top:4px">${esc(x.title)}</h1>
+          <p class="muted" style="margin:4px 0 0">${esc(x.topics)}</p></div></div>
+        <div class="tiles"><div class="tile"><div class="lab">Tiempo</div><div class="val">${x.minutes} min</div></div>
+          <div class="tile"><div class="lab">Ejercicios</div><div class="val">${x.items.length}</div></div>
+          <div class="tile ok"><div class="lab">Aprobás con</div><div class="val">${x.pass}/100</div></div></div>
+        <div class="card"><ul class="exam-rules">
+          <li>Corre el reloj: al terminar el tiempo se entrega solo.</li>
+          <li>No hay correcciones ni apuntes hasta entregar. Podés ir y volver entre los ejercicios.</li>
+          <li>Usá la pizarra o papel para las cuentas.</li>
+          ${nSelf ? `<li>${nSelf === 1 ? "Hay un ejercicio" : `Hay ${nSelf} ejercicios`} de desarrollo: al entregar ves la resolución y te corregís con los criterios de la cátedra.</li>` : ""}
+          ${st.attempts.length ? `<li>Tu mejor nota: <b>${H.num(st.best, 1).replace(".", ",")}/100</b> en ${st.attempts.length} ${st.attempts.length === 1 ? "intento" : "intentos"}.</li>` : ""}
+        </ul></div>
+      </div>
+      <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="exam-begin">${icon("play")}Empezar</button></div></div></div>`;
+  }
+  function examBegin() {
+    const s = ui.session;
+    s.t0 = Date.now(); s.deadline = s.t0 + s.exam.minutes * 60000; s.phase = "answer";
+    clearInterval(s.timer);
+    s.timer = setInterval(() => {
+      if (ui.session !== s || s.phase !== "answer") return clearInterval(s.timer);
+      examTick();
+    }, 1000);
+    renderExamPart();
+  }
+  const partDone = p => (p.self ? p.ans.v === true : ready(p.inst, p.ans));
+  function examNavHtml() {
+    const s = ui.session;
+    return s.parts.map((p, k) => `<button class="${k === s.i ? "on" : ""} ${partDone(p) ? "done" : ""}" data-act="exam-go" data-i="${k}" aria-label="Ejercicio ${p.label}">${p.label}</button>`).join("");
+  }
+  function examNavRefresh() { const n = $("#examNav"); if (n) n.innerHTML = examNavHtml(); }
+  function selfHtml(p) {
+    return `<div class="card self-note">${icon("pen-line")}<div class="grow"><b>Ejercicio de desarrollo</b>
+      <p class="muted small" style="margin:4px 0 8px">Resolvelo en la pizarra o en papel. Al entregar vas a ver la resolución y los criterios para corregirte.</p>
+      <button class="btn sm ${p.ans.v ? "ok" : "ghost"}" data-act="exam-self">${icon("check")}${p.ans.v ? "Resuelto" : "Marcar como resuelto"}</button></div></div>`;
+  }
+  function renderExamPart() {
+    const s = ui.session, p = s.parts[s.i], it = s.exam.items[p.item], last = s.i === s.parts.length - 1;
+    s.inst = p.inst; s.ans = p.ans; s.phase = "answer"; s.tStart = Date.now();
+    const prompt = noLinks(tex(p.inst.prompt));
+    app.innerHTML = `<div class="session exam">
+      <div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button>
+        <span class="exam-timer" id="examTimer">${icon("clock")}<span id="examTimerTxt"></span></span><div class="grow"></div>${boardBtn()}</div>
+      <div class="exam-nav" id="examNav">${examNavHtml()}</div>
+      <div class="ses-body"><span class="ses-tag">${icon("file-text")}Ejercicio ${p.label} · ${ptsTxt(p.pts)}${it.title ? ` · ${esc(it.title)}` : ""}</span>
+        <div class="prompt">${prompt}</div>
+        ${p.inst.graph ? graphHtml(p.inst.graph) : ""}
+        <div id="answer">${p.self ? selfHtml(p) : answerHtml(p.inst, p.ans)}</div>
+      </div>
+      <div class="ses-foot"><div class="ses-foot-inner">
+        <button class="btn ghost" data-act="exam-prev" ${s.i ? "" : "disabled"} aria-label="Anterior">${icon("chevron-left")}</button>
+        <button class="btn block ${last ? "gold" : ""}" data-act="${last ? "exam-submit" : "exam-next"}">${last ? "Entregar" : "Siguiente"}</button></div></div></div>`;
+    examTick();
+    drawGraphs();
+    boardContext({ key: `exam-${s.t0}-${s.i}`, label: `${s.exam.title} · ${p.label}`, prompt });
+  }
+  // el reloj escribe en el span de texto (el ícono queda)
+  function examTick() {
+    const s = ui.session, left = Math.max(0, s.deadline - Date.now()), el = $("#examTimerTxt");
+    if (el) {
+      const m = Math.floor(left / 60000), sec = Math.floor(left / 1000) % 60;
+      el.textContent = `${m}:${String(sec).padStart(2, "0")}`;
+      el.parentNode.classList.toggle("low", left < 5 * 60000);
+    }
+    if (left <= 0 && s.phase === "answer") { toast("¡Se terminó el tiempo!"); submitExam(true); }
+  }
+  function examGo(i) {
+    const s = ui.session;
+    if (i < 0 || i >= s.parts.length) return;
+    s.i = i; renderExamPart(); window.scrollTo(0, 0);
+  }
+  function submitExam(auto) {
+    const s = ui.session;
+    if (!s || s.phase !== "answer") return;
+    const missing = s.parts.filter(p => !partDone(p)).length;
+    if (!auto && missing && !confirm(`Te ${missing === 1 ? "queda 1 ejercicio" : `quedan ${missing} ejercicios`} sin responder. ¿Entregar igual?`)) return;
+    clearInterval(s.timer);
+    s.phase = "review"; s.tEnd = Date.now();
+    for (const p of s.parts) {
+      if (p.self) { p.rubricPts = E.rubricPoints(p.inst.rubric, p.pts); p.checks = p.inst.rubric.map(() => false); }
+      else { p.ok = ready(p.inst, p.ans) && isCorrect(p.inst, p.ans); }
+    }
+    renderExamReview();
+  }
+  const partScore = p => (p.self ? p.rubricPts.reduce((t, v, k) => t + (p.checks[k] ? v : 0), 0) : p.ok ? p.pts : 0);
+  const examScore = s => s.parts.reduce((t, p) => t + partScore(p), 0);
+  function answerText(inst, a) {
+    if (!ready(inst, a)) return "<i>sin responder</i>";
+    switch (inst.type) {
+      case "mc": return tex(inst.options[a.v]);
+      case "tf": return a.v ? "Verdadero" : "Falso";
+      case "numeric": return esc(a.v) + (isFinite(E.parseNum(a.v)) ? ` <span class="muted">(${previewText(a.v)})</span>` : "");
+      case "error": return `paso ${a.v + 1}`;
+      default: return "respondido";
+    }
+  }
+  function renderExamReview() {
+    const s = ui.session, y = window.scrollY, score = examScore(s), nSelf = s.parts.filter(p => p.self).length;
+    const parts = s.parts.map((p, k) => {
+      const head = `<div class="rv-head"><b>Ejercicio ${p.label}</b><span class="rv-pts ${p.self ? "" : p.ok ? "ok" : "bad"}">${ptsTxt(partScore(p))} / ${ptsTxt(p.pts)}</span></div>
+        <div class="rv-prompt">${noLinks(tex(p.inst.prompt))}</div>`;
+      if (p.self) return `<section class="card rv">${head}
+        <details class="ex-sol" open><summary>Resolución</summary><ol>${p.inst.solution.map(x => `<li>${tex(x)}</li>`).join("")}</ol></details>
+        <div class="muted small" style="font-weight:800;margin-top:8px">Corregite: marcá lo que hiciste bien</div>
+        ${p.inst.rubric.map((q, j) => `<button class="rub ${p.checks[j] ? "on" : ""}" data-act="exam-rub" data-i="${k}" data-j="${j}"><span class="box">${p.checks[j] ? icon("check") : ""}</span><span class="grow">${tex(q.text)}</span><span class="muted small">${ptsTxt(p.rubricPts[j])}</span></button>`).join("")}</section>`;
+      const sol = p.inst.solution || [];
+      return `<section class="card rv">${head}
+        <p class="small" style="margin:6px 0">Tu respuesta: ${answerText(p.inst, p.ans)} ${p.ok ? icon("check", "ok-ic") : icon("x", "bad-ic")}</p>
+        ${p.ok ? "" : `<p class="small" style="margin:0 0 6px">${correctText(p.inst)}</p>`}
+        ${sol.length ? `<details class="ex-sol" ${p.ok ? "" : "open"}><summary>Resolución</summary><ol>${sol.map(x => `<li>${texL(x)}</li>`).join("")}</ol></details>` : ""}</section>`;
+    }).join("");
+    app.innerHTML = `<div class="session exam"><div class="ses-top"><span class="ses-tag">${icon("file-text")}Corrección · ${esc(s.exam.title)}</span><div class="grow"></div>${boardBtn()}</div>
+      <div class="ses-body">
+        <div class="card rv-total"><div class="grow"><div class="muted small">Nota${nSelf ? " (con tu autocorrección)" : ""}</div><div class="rv-score">${H.num(score, 1).replace(".", ",")}<span class="muted">/100</span></div></div>
+          <span class="exam-best ${score >= s.exam.pass ? "pass" : "fail"}">${score >= s.exam.pass ? "Aprobado" : `Aprobás con ${s.exam.pass}`}</span></div>
+        ${nSelf ? `<p class="muted small" style="margin:0">Corregí los ejercicios de desarrollo con la rúbrica, como lo haría la cátedra: marcá solo lo que está completo y justificado.</p>` : ""}
+        ${parts}
+      </div>
+      <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="exam-save">Guardar la nota</button></div></div></div>`;
+    window.scrollTo(0, y);
+  }
+  function finishExam() {
+    const s = ui.session, c = course(s.cid), t = today(), score = Math.round(examScore(s) * 10) / 10;
+    // repaso espaciado: cada parte cuenta como una respuesta de sus conceptos
+    const grades = {};
+    for (const p of s.parts) {
+      const okp = p.self ? partScore(p) >= 0.6 * p.pts : p.ok;
+      const concepts = p.self ? p.inst.concepts : c.templates[p.tpl].concepts;
+      for (const k of concepts) if (c.concepts[k]) (grades[ckey(s.cid, k)] = grades[ckey(s.cid, k)] || []).push(okp ? 4 : 1);
+      if (!p.self) { S.answered++; if (p.ok) S.answeredOk++; }
+    }
+    for (const [key, qs] of Object.entries(grades)) {
+      const card = S.srs[key] || E.srs.newCard();
+      card.seen += qs.length; card.ok += qs.filter(q => q >= 3).length;
+      S.srs[key] = card.last === t ? card : E.srs.update(card, Math.round(qs.reduce((a, b) => a + b, 0) / qs.length), t);
+    }
+    const st = S.exams[examKey(s.cid, s.exam.id)] = examState(s.cid, s.exam.id);
+    st.best = Math.max(st.best, score);
+    st.attempts.unshift({ d: t, t: Date.now(), score });
+    st.attempts = st.attempts.slice(0, 30);
+    s.xp = Math.round(score / 2);
+    const { streakUp, goalHit } = addXp(s.xp);
+    S.log.unshift({ d: t, kind: "exam", title: s.exam.title, n: s.parts.length, ok: s.parts.filter(p => (p.self ? partScore(p) >= 0.6 * p.pts : p.ok)).length, xp: s.xp, c: s.cid });
+    S.log = S.log.slice(0, 60);
+    save();
+    // los conceptos a reforzar: partes con menos de la mitad del puntaje
+    const weak = [];
+    for (const p of s.parts) if (partScore(p) < 0.5 * p.pts) for (const k of (p.self ? p.inst.concepts : c.templates[p.tpl].concepts)) if (c.concepts[k] && !weak.includes(k)) weak.push(k);
+    ui.examResult = { s, score, weak, streakUp, goalHit, ms: s.tEnd - s.t0, best: st.best };
+    ui.session = null;
+    ui.route = "exam-result";
+    history.replaceState(null, "", "#/");
+    renderExamResult();
+    Snd.play(score >= s.exam.pass ? "complete" : "tap");
+    if (score >= s.exam.pass) confetti();
+  }
+  function renderExamResult() {
+    const z = ui.examResult;
+    if (!z) { ui.route = "home"; return render(); }
+    const s = z.s, pass = z.score >= s.exam.pass, mm = Math.floor(z.ms / 60000), c = course(s.cid);
+    app.innerHTML = `<main class="center-col">
+      ${mascot(pass ? "party" : "sad")}
+      <div class="big-title">${pass ? "¡Aprobado!" : "Esta vez no"}</div>
+      <p class="muted" style="margin:0">${esc(s.exam.title)} · ${esc(c.title)}</p>
+      <div class="tiles">
+        <div class="tile ${pass ? "ok" : ""}"><div class="lab">Nota</div><div class="val">${H.num(z.score, 1).replace(".", ",")}</div></div>
+        <div class="tile gold"><div class="lab">XP</div><div class="val">${icon("star")}${s.xp}</div></div>
+        <div class="tile"><div class="lab">Tiempo</div><div class="val">${mm} min</div></div>
+      </div>
+      <p class="muted small" style="margin:0">Tu mejor nota en este examen: ${H.num(z.best, 1).replace(".", ",")}/100</p>
+      ${z.weak.length ? `<section class="card" style="width:100%;text-align:left"><b>Para reforzar</b>
+        ${z.weak.map(k => `<div class="weak"><span class="grow">${esc(c.concepts[k].name)}</span><button class="btn sm" data-act="practice" data-cid="${s.cid}" data-k="${k}">Practicar</button></div>`).join("")}</section>` : ""}
+      <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="go" data-r="course" data-id="${s.cid}">Continuar</button></div></div>
+    </main>`;
+  }
+
   // ---------- eventos ----------
   document.addEventListener("click", e => {
     const el = e.target.closest("[data-act]");
@@ -2152,6 +2444,15 @@ body.board-split .nav { padding-bottom: 0; }
         if (confirm("¿Salir de la sesión? Se pierde el progreso de esta sesión.")) { ui.session = null; history.replaceState(null, "", "#/"); fromHash(); render(); }
         break;
       case "check": check(); break;
+      case "exam": startExam(el.dataset.cid, el.dataset.id); break;
+      case "exam-begin": examBegin(); break;
+      case "exam-go": examGo(+el.dataset.i); break;
+      case "exam-prev": examGo(s.i - 1); break;
+      case "exam-next": examGo(s.i + 1); break;
+      case "exam-submit": submitExam(); break;
+      case "exam-self": { const p = s.parts[s.i]; p.ans.v = !p.ans.v; $("#answer").innerHTML = selfHtml(p); examNavRefresh(); Snd.play("tap"); break; }
+      case "exam-rub": { const p = s.parts[+el.dataset.i], j = +el.dataset.j; p.checks[j] = !p.checks[j]; renderExamReview(); break; }
+      case "exam-save": finishExam(); break;
       case "next": next(); break;
       case "sol": { const sol = $("#sol"); sol.hidden = !sol.hidden; el.lastChild.textContent = sol.hidden ? " Ver resolución" : " Ocultar resolución"; break; }
       case "opt": if (s && s.phase === "answer") { s.ans.v = +el.dataset.i; Snd.play("tap"); rerenderAnswer(); } break;
@@ -2198,6 +2499,7 @@ body.board-split .nav { padding-bottom: 0; }
       ui.session.ans.v = e.target.value;
       $("#preview").textContent = previewText(e.target.value);
       updateCheck();
+      if (ui.session.kind === "exam") examNavRefresh();
     }
   });
   document.addEventListener("input", e => {
@@ -2218,6 +2520,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (!s || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === "Enter") {
       e.preventDefault();
+      if (s.kind === "exam") { if (s.phase === "intro") examBegin(); else if (s.phase === "answer") check(); return; }
       if (!s.inst) { renderExercise(); return; }
       if (s.phase === "answer") check(); else next();
       return;

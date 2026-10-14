@@ -36,6 +36,7 @@
 | `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
 | `board.js` | Pizarra para escribir con lápiz en tablets (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. |
+| `content/<código>-examenes.js` | Parciales y finales simulados de la materia (`E.registerExams`). El análisis de los originales está en `docs/parciales/`. |
 | `service-worker.js` | Precache offline (stale-while-revalidate). `CACHE` y `CONTENT`. |
 | `tests/run-tests.mjs` | Suite: carga el motor y el contenido en un `vm` de Node y verifica todo. |
 | `PROGRESO.md` | Bitácora del proyecto. |
@@ -115,6 +116,16 @@ node tests/run-tests.mjs 20           # pasada rápida antes de commitear
 
 - **Escapes.** Los textos de las plantillas son template literals: en TeX va `\\frac`. En los campos de las fichas se usa `R\`…\`` (String.raw), con una sola barra. Si generás o editás código con Python, usá strings crudos `r'''…'''` o escribí el archivo directamente; un heredoc o un string normal se come las barras invertidas.
 - **Bloques nuevos.** Escribilos en un archivo aparte, revisalos y recién ahí agregalos al de la materia. Después corré los tests de esa materia.
+
+## Evaluaciones (parciales y finales)
+
+- **Material original:** está en el Google Drive del usuario, carpeta **Apunteca**, y se lee con el conector de Drive. **Nunca lo subas al repo**: es público y el material es de la cátedra.
+- **Cómo leerlo con criterio:**
+  - primero listá nombres y tamaños;
+  - después leé una muestra: los años recientes, con sus resoluciones, y PDF con texto antes que escaneos;
+  - salteá «Apuntes y Libros» y los duplicados «(1)».
+- **Qué anotar:** solo la estructura (temas, tipos de ejercicio y puntajes), en `docs/parciales/<materia>.md`. No copies enunciados ni nombres de estudiantes.
+- **Cómo armarlos:** en `content/<código>-examenes.js`, con plantillas existentes (`tpl` o `pick`) y ejercicios de desarrollo propios (`self`, con rúbrica). Cada examen suma 100 puntos (lo verifica un test).
 
 ## Firebase (sincronización)
 
