@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="efecen">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="assets/img/nabla.svg" type="image/svg+xml">
+<link rel="icon" href="assets/img/schrodi.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
 <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
 <style>
@@ -77,7 +77,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .screen { flex: 1; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: env(safe-area-inset-top); }
 .logo { font-weight: 900; font-size: 1.6rem; letter-spacing: -.02em; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-.logo .nabla { width: 34px; height: 34px; }
+.logo .schrodi { width: 34px; height: 34px; }
 .chips { display: flex; gap: 8px; }
 .chip { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: var(--card); border: 2px solid var(--line); }
 .chip.fire .ic { color: var(--fire); }
@@ -126,30 +126,72 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .switch.on { background: var(--ok); }
 .switch.on::after { transform: translateX(22px); }
 
-/* ---------- mascot ---------- */
-.nabla { display: block; overflow: visible; }
-.nabla .body { fill: var(--gold); stroke: var(--gold); }
-.nabla .shine { fill: #fff; opacity: .45; }
-.nabla .ink { fill: #2A2448; }
-.nabla .inks { stroke: #2A2448; fill: none; stroke-width: 4; stroke-linecap: round; }
-.nabla .white { fill: #fff; }
-.nabla .cheek { fill: #FF8FA3; opacity: .55; }
-.nabla [data-m] { display: none; }
-.nabla[data-mood="idle"] [data-m~="idle"], .nabla[data-mood="happy"] [data-m~="happy"],
-.nabla[data-mood="sad"] [data-m~="sad"], .nabla[data-mood="think"] [data-m~="think"],
-.nabla[data-mood="wow"] [data-m~="wow"] { display: inline; }
-.nabla .eyes-open { transform-origin: 60px 46px; animation: blink 4.5s infinite; }
-@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
-.nabla[data-mood="happy"] { animation: hop .6s ease; }
-.nabla[data-mood="sad"] { animation: shake .45s ease; }
-@keyframes hop { 0%,100% { transform: translateY(0); } 35% { transform: translateY(-14px) rotate(-4deg); } 65% { transform: translateY(0) rotate(3deg); } }
+/* ---------- mascota: Schrödi ---------- */
+.schrodi { display: block; overflow: visible; }
+.schrodi .shadow { fill: currentColor; opacity: .08; }
+.schrodi .fur { fill: #ADA5EA; }
+.schrodi .fur-s { stroke: #ADA5EA; fill: none; stroke-linecap: round; }
+.schrodi .muzzle { fill: #DCD8F8; }
+.schrodi .ear-in, .schrodi .nose { fill: #FF8FA8; }
+.schrodi .cheek { fill: #FF8FA8; opacity: .5; }
+.schrodi .ink { fill: #2A2448; }
+.schrodi .inks { stroke: #2A2448; fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.schrodi .whisk { stroke: #2A2448; opacity: .3; stroke-width: 1.5; stroke-linecap: round; }
+.schrodi .white { fill: #fff; }
+.schrodi .box { fill: #FFC23D; }
+.schrodi .box-band { fill: #F0AE24; }
+.schrodi .flap { fill: #E9A520; }
+.schrodi .box-in { fill: #9A6512; }
+.schrodi .psi { fill: #C9860F; font: italic 700 26px "Times New Roman", Georgia, serif; }
+.schrodi .ghost { fill: none; stroke: #8E85D8; stroke-width: 2.2; stroke-dasharray: 3.5 3; }
+.schrodi .hat { fill: #5B4BDB; }
+.schrodi .hat-dot, .schrodi .pom { fill: #FFC23D; }
+.schrodi .star { fill: #FF8A1F; }
+.schrodi .flame { fill: #FF8A1F; } .schrodi .flame-in { fill: #FFC23D; }
+.schrodi .drop { fill: #7CC4FF; }
+.schrodi [data-m] { display: none; }
+.schrodi[data-mood="idle"] [data-m~="idle"], .schrodi[data-mood="think"] [data-m~="think"],
+.schrodi[data-mood="wow"] [data-m~="wow"], .schrodi[data-mood="happy"] [data-m~="happy"],
+.schrodi[data-mood="sad"] [data-m~="sad"], .schrodi[data-mood="party"] [data-m~="party"],
+.schrodi[data-mood="streak"] [data-m~="streak"] { display: inline; }
+/* cuánto se asoma de la caja según el estado */
+.schrodi { --y: 16px; }
+.schrodi[data-mood="wow"] { --y: 10px; }
+.schrodi[data-mood="happy"], .schrodi[data-mood="streak"] { --y: 2px; }
+.schrodi[data-mood="party"] { --y: -8px; }
+.schrodi[data-mood="sad"] { --y: 44px; }
+.schrodi .cat { transform: translateY(var(--y)); }
+.schrodi[data-mood="idle"] .cat, .schrodi[data-mood="think"] .cat, .schrodi[data-mood="wow"] .cat { animation: sc-peek .8s cubic-bezier(.2,.9,.3,1.15) both; }
+.schrodi[data-mood="happy"] .cat, .schrodi[data-mood="streak"] .cat { animation: sc-pop .5s cubic-bezier(.3,1.6,.5,1) both; }
+.schrodi[data-mood="sad"] .cat { animation: sc-hide .35s ease-in both; }
+.schrodi[data-mood="party"] .cat { animation: sc-jump 1.3s ease-out both; }
+.schrodi[data-mood="sad"] .boxg { transform-box: view-box; transform-origin: 60px 112px; animation: sc-wobble .5s .3s ease both; }
+.schrodi .ghost { animation: sc-ghost 3.2s ease-in-out infinite; }
+.schrodi .eyeA { animation: sc-swap 4s infinite; }
+.schrodi .eyeB { animation: sc-swap 4s -2s infinite; }
+.schrodi .flameg { transform-box: fill-box; transform-origin: 50% 100%; animation: sc-flicker .7s ease-in-out infinite alternate; }
+.schrodi .confetti-bits rect { transform-box: fill-box; transform-origin: center; animation: sc-twinkle 1.2s ease-in-out infinite alternate; }
+.schrodi .confetti-bits rect:nth-child(2n) { animation-delay: -.6s; }
+.schrodi[data-mood="happy"] { animation: hop .6s ease; }
+@keyframes sc-peek { from { transform: translateY(46px); } to { transform: translateY(var(--y)); } }
+@keyframes sc-pop { from { transform: translateY(34px); } to { transform: translateY(var(--y)); } }
+@keyframes sc-hide { from { transform: translateY(14px); } to { transform: translateY(var(--y)); } }
+@keyframes sc-jump { 0% { transform: translateY(46px); } 30% { transform: translateY(-20px); } 50% { transform: translateY(var(--y)); } 70% { transform: translateY(-15px); } 100% { transform: translateY(var(--y)); } }
+@keyframes sc-wobble { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } 75% { transform: rotate(-1.5deg); } }
+@keyframes sc-ghost { 0%,100% { transform: translate(-7px,-3px); opacity: .25; } 50% { transform: translate(7px,-3px); opacity: .7; } }
+@keyframes sc-swap { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes sc-flicker { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.14) rotate(3deg); } }
+@keyframes sc-twinkle { from { transform: rotate(0) scale(.7); } to { transform: rotate(90deg) scale(1.1); } }
+@keyframes hop { 0%,100% { transform: translateY(0); } 35% { transform: translateY(-10px); } 65% { transform: translateY(0); } }
 @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+.fb-quip { font-weight: 700; font-size: .95rem; color: var(--ink); opacity: .85; }
 .bubble { position: relative; background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 10px 14px; font-weight: 700; }
+.center-col .bubble::before { display: none; }
 .bubble::before { content: ""; position: absolute; left: -9px; top: 22px; width: 14px; height: 14px; background: var(--card); border-left: 2px solid var(--line); border-bottom: 2px solid var(--line); transform: rotate(45deg); }
 
 /* ---------- home ---------- */
 .hero { display: flex; align-items: center; gap: 14px; }
-.hero .nabla { width: 92px; height: 92px; flex: none; }
+.hero .schrodi { width: 92px; height: 92px; flex: none; }
 .goal { display: flex; align-items: center; gap: 14px; }
 .ring { width: 64px; height: 64px; flex: none; }
 .ring circle { fill: none; stroke-width: 8; }
@@ -190,7 +232,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .start-tip { position: absolute; top: -34px; background: var(--card); color: var(--primary); border: 2px solid var(--line); font-weight: 900; font-size: .75rem; letter-spacing: .06em; padding: 3px 10px; border-radius: 10px; animation: bob 1.4s ease-in-out infinite; white-space: nowrap; }
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 .diag-card { display: flex; gap: 12px; align-items: center; }
-.diag-card .nabla { width: 64px; height: 64px; flex: none; }
+.diag-card .schrodi { width: 64px; height: 64px; flex: none; }
 
 /* ---------- session ---------- */
 .session { flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
@@ -264,7 +306,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .sheet.ok .sheet-inner { background: var(--ok-soft); color: var(--ink); border-top: 3px solid var(--ok); }
 .sheet.bad .sheet-inner { background: var(--bad-soft); color: var(--ink); border-top: 3px solid var(--bad); }
 .fb-head { display: flex; align-items: center; gap: 12px; }
-.fb-head .nabla { width: 54px; height: 54px; flex: none; }
+.fb-head .schrodi { width: 54px; height: 54px; flex: none; }
 .fb-title { font-size: 1.35rem; font-weight: 900; }
 .sheet.ok .fb-title { color: var(--ok-d); }
 .sheet.bad .fb-title { color: var(--bad-d); }
@@ -278,7 +320,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 
 /* intro + summary */
 .center-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px; padding: 24px 16px calc(120px + env(safe-area-inset-bottom)); }
-.center-col .nabla { width: 120px; height: 120px; }
+.center-col .schrodi { width: 120px; height: 120px; }
 .intro-card { text-align: left; width: 100%; }
 .intro-card h3 { margin-bottom: 6px; }
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
@@ -663,27 +705,109 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     }).join("");
   }
 
-  // ---------- mascota: Nabla (∇) ----------
+  // ---------- mascota: Schrödi, el gato de Schrödinger (diseño original, CC0) ----------
+  // Estados: idle (asomado a medias, en superposición), think, wow, happy (acierto),
+  // sad (escondido en la caja), party (lección terminada), streak (racha).
+  // El gato vive en el grupo .cat, recortado en el borde de la caja (y = 72):
+  // cuánto se asoma lo define --y en el CSS de cada estado.
+  let mascotN = 0;
+  const starPath = (cx, cy, R, r) => "M" + Array.from({ length: 10 }, (_, i) => {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r : R;
+    return `${(cx + rad * Math.cos(a)).toFixed(2)} ${(cy + rad * Math.sin(a)).toFixed(2)}`;
+  }).join(" L") + " Z";
+  const STAR_EYES = starPath(51, 47, 5.2, 2.3) + " " + starPath(69, 47, 5.2, 2.3);
   function mascot(mood = "idle", cls = "") {
-    return `<svg class="nabla ${cls}" data-mood="${mood}" viewBox="0 0 120 120" aria-hidden="true">
-      <ellipse cx="60" cy="114" rx="26" ry="4" fill="currentColor" opacity=".08"/>
-      <path class="body" d="M18 22 H102 L60 98 Z" stroke-width="18" stroke-linejoin="round"/>
-      <ellipse class="shine" cx="30" cy="22" rx="9" ry="4" transform="rotate(-12 30 22)"/>
-      <g data-m="idle sad think wow"><g class="eyes-open">
-        <ellipse class="white" cx="46" cy="44" rx="8" ry="9"/><ellipse class="white" cx="74" cy="44" rx="8" ry="9"/>
-        <circle class="ink" cx="47.5" cy="46" r="4" data-m="idle sad wow"/><circle class="ink" cx="75.5" cy="46" r="4" data-m="idle sad wow"/>
-        <circle class="ink" cx="49" cy="41" r="4" data-m="think"/><circle class="ink" cx="77" cy="41" r="4" data-m="think"/>
-      </g></g>
-      <g data-m="happy"><path class="inks" d="M39 46 q7 -9 14 0 M67 46 q7 -9 14 0"/>
-        <ellipse class="cheek" cx="38" cy="56" rx="5" ry="3"/><ellipse class="cheek" cx="82" cy="56" rx="5" ry="3"/></g>
-      <path class="inks" data-m="sad" d="M38 33 L51 29 M82 33 L69 29"/>
-      <path class="inks" data-m="idle" d="M52 62 q8 7 16 0"/>
-      <path class="ink" data-m="happy" d="M49 59 q11 16 22 0 z"/>
-      <path class="inks" data-m="sad" d="M52 67 q8 -7 16 0"/>
-      <path class="inks" data-m="think" d="M54 64 h11"/>
-      <ellipse class="ink" data-m="wow" cx="60" cy="64" rx="5" ry="6"/>
+    const clip = "schrodi-clip-" + (++mascotN);
+    return `<svg class="schrodi ${cls}" data-mood="${mood}" viewBox="0 0 120 120" aria-hidden="true">
+      <defs><clipPath id="${clip}"><rect x="-20" y="-60" width="160" height="132"/></clipPath></defs>
+      <ellipse class="shadow" cx="60" cy="115" rx="42" ry="4"/>
+      <g class="boxg">
+        <path class="box-in" d="M26 72 L31 62 H89 L94 72 Z"/>
+        <path class="flap" d="M18 72 L3 62 L27 57 L40 72 Z"/>
+        <path class="flap" d="M102 72 L117 62 L93 57 L80 72 Z"/>
+        <g clip-path="url(#${clip})"><g class="cat">
+          <path class="ghost" data-m="idle" d="M40 38 L41 17 L54 29 Q60 27.5 66 29 L79 17 L80 38 A23 20 0 1 1 40 38 Z"/>
+          <path class="fur-s" data-m="party" stroke-width="6" d="M78 76 q17 -4 15 -24 q-1 -7 5 -9"/>
+          <g data-m="party"><path class="fur-s" stroke-width="8" d="M46 72 Q40 60 33 50 M74 72 Q80 60 87 50"/>
+            <circle class="fur" cx="33" cy="49" r="5"/><circle class="fur" cx="87" cy="49" r="5"/></g>
+          <ellipse class="fur" cx="60" cy="82" rx="18" ry="16"/>
+          <path class="fur" d="M40 38 L41 17 L56 30 Z M80 38 L79 17 L64 30 Z"/>
+          <path class="ear-in" d="M43.5 33 L44 22.5 L51.5 29.5 Z M76.5 33 L76 22.5 L68.5 29.5 Z"/>
+          <ellipse class="fur" cx="60" cy="48" rx="23" ry="20"/>
+          <ellipse class="muzzle" cx="60" cy="56.5" rx="10" ry="6.5"/>
+          <path class="whisk" d="M38 54 L27 52 M38 57.5 L27 59 M82 54 L93 52 M82 57.5 L93 59"/>
+          <g data-m="happy party streak"><ellipse class="cheek" cx="45" cy="55" rx="3.6" ry="2.3"/><ellipse class="cheek" cx="75" cy="55" rx="3.6" ry="2.3"/></g>
+          <g data-m="idle">
+            <g class="eyeA"><ellipse class="ink" cx="51" cy="47" rx="3.4" ry="4.4"/><circle class="white" cx="52.1" cy="45.4" r="1.1"/><path class="inks" d="M65.5 47.5 q3.5 2.5 7 0"/></g>
+            <g class="eyeB"><path class="inks" d="M47.5 47.5 q3.5 2.5 7 0"/><ellipse class="ink" cx="69" cy="47" rx="3.4" ry="4.4"/><circle class="white" cx="70.1" cy="45.4" r="1.1"/></g>
+          </g>
+          <g data-m="think"><ellipse class="ink" cx="52.5" cy="44.8" rx="3.2" ry="4"/><ellipse class="ink" cx="70.5" cy="44.8" rx="3.2" ry="4"/></g>
+          <g data-m="wow"><circle class="white" cx="51" cy="46.5" r="5.6"/><circle class="white" cx="69" cy="46.5" r="5.6"/>
+            <circle class="ink" cx="51" cy="47" r="3.3"/><circle class="ink" cx="69" cy="47" r="3.3"/></g>
+          <path class="inks" data-m="happy party" stroke-width="3" d="M47 49 q4 -6 8 0 M65 49 q4 -6 8 0"/>
+          <path class="star" data-m="streak" d="${STAR_EYES}"/>
+          <path class="nose" d="M57.6 53.4 h4.8 l-2.4 2.8 z"/>
+          <path class="inks" data-m="idle" d="M55 57.8 q2.5 2.6 5 0 q2.5 2.6 5 0"/>
+          <path class="inks" data-m="think" d="M56 59.5 q4 -1.6 8 0"/>
+          <ellipse class="ink" data-m="wow" cx="60" cy="59.8" rx="2.6" ry="3.2"/>
+          <path class="ink" data-m="happy party streak" d="M55 57.5 q5 8.5 10 0 z"/>
+          <g data-m="party"><path class="hat" d="M50 31 L58 6 L67 30 Z"/><circle class="hat-dot" cx="57" cy="22" r="1.8"/><circle class="hat-dot" cx="60" cy="14" r="1.5"/><circle class="pom" cx="58" cy="6" r="3.6"/></g>
+        </g></g>
+        <rect class="box" x="18" y="72" width="84" height="40" rx="5"/>
+        <rect class="box-band" x="18" y="72" width="84" height="6" rx="2"/>
+        <text class="psi" x="60" y="103" text-anchor="middle">ψ</text>
+        <g data-m="happy streak"><ellipse class="fur" cx="47" cy="72.5" rx="6.5" ry="4.5"/><ellipse class="fur" cx="73" cy="72.5" rx="6.5" ry="4.5"/></g>
+      </g>
+      <path class="drop" data-m="sad" d="M86 52 q5 7 0 10 q-5 -3 0 -10 z"/>
+      <g class="flameg" data-m="streak"><path class="flame" d="M97 8 q9 9 6 18 a8 8 0 0 1 -15 -1 q-1 -6 3 -9 q0 4 3 5 q3 -6 3 -13 z"/>
+        <path class="flame-in" d="M96 17 q4 5 2 9 a3.5 3.5 0 0 1 -6.5 -1 q0 -3 2 -4 q0 2 1.5 2 q1.5 -3 1 -6 z"/></g>
+      <g class="confetti-bits" data-m="party">
+        <rect x="12" y="20" width="5" height="5" rx="1" fill="#5B4BDB"/><rect x="100" y="16" width="5" height="5" rx="1" fill="#1FA866"/>
+        <rect x="8" y="46" width="4" height="4" rx="1" fill="#FF8A1F"/><rect x="106" y="40" width="4" height="4" rx="1" fill="#E5484D"/>
+        <rect x="22" y="4" width="4" height="4" rx="1" fill="#FFC23D"/><rect x="92" y="2" width="4" height="4" rx="1" fill="#5B4BDB"/>
+      </g>
     </svg>`;
   }
+
+  // ---------- frases de Schrödi (humor científico, en criollo) ----------
+  const QUIPS = {
+    ok: [
+      "Colapsaste la función de onda justo en la respuesta correcta.",
+      "Medición exitosa: el gato está vivo.",
+      "Ni Heisenberg tendría incerteza sobre esto.",
+      "Más preciso que un reloj atómico.",
+      "La entropía de tu ignorancia acaba de bajar.",
+      "Eso merece un mate en el Pabellón 1.",
+      "Derivaste como los dioses del Olimpo (y de Exactas).",
+      "Correcto, y sin aproximar π por 3.",
+      "Esa respuesta pasa cualquier revisión por pares.",
+      "Newton estaría orgulloso. Leibniz también, aunque le cueste."
+    ],
+    bad: [
+      "Uy, colapsó para el otro lado.",
+      "Tranqui: Einstein también le erró a la constante cosmológica.",
+      "Es solo ruido experimental. Volvemos a medir.",
+      "Me escondo un ratito en la caja… pero vos seguí.",
+      "Ese resultado no es reproducible. Probemos de nuevo.",
+      "Tiene más error que un TP entregado a las 3 AM.",
+      "Casi. La incerteza era por acá cerca.",
+      "Hasta el mejor experimento tiene barras de error."
+    ],
+    streak: [
+      "¡{n} días seguidos! Más constante que la de Planck.",
+      "Racha de {n} días: tu momento angular de estudio se conserva.",
+      "{n} días al hilo. Eso es inercia de la buena.",
+      "¡{n} días! Ni la segunda ley de la termodinámica te frena.",
+      "{n} días seguidos: esto ya es un movimiento rectilíneo uniforme."
+    ],
+    party: [
+      "¡Abrí la caja y estabas aprobado!",
+      "Probabilidad de festejo: 1. Sin incerteza.",
+      "¡Terminaste! Esto amerita un experimento con facturas.",
+      "¡Listo! Tu función de onda ahora sabe un poco más."
+    ]
+  };
+  const quip = (kind, n) => { const l = QUIPS[kind]; return l[Math.floor(Math.random() * l.length)].replace("{n}", n); };
 
   // ---------- sonido (Kenney CC0 + síntesis de respaldo) ----------
   const Snd = {
@@ -1006,8 +1130,11 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     const due = dueConcepts(cid).length, l = currentLesson(cid), xt = xpToday(), goal = S.settings.goal;
     const firstTime = !cState(cid).diag && !c.lessonList.some(x => lessonDone(cid, x));
     let msg;
-    if (firstTime) msg = "¡Hola! Soy Nabla. Arranquemos con un test cortito para ver qué te acordás.";
-    else if (xt >= goal) msg = "¡Meta del día cumplida! Si querés, seguí sumando.";
+    const st = shownStreak();
+    let mood = "idle";
+    if (firstTime) msg = "¡Hola! Soy Schrödi. Hasta que no abras la caja, sabés y no sabés cálculo al mismo tiempo. Hagamos un test cortito para averiguarlo.";
+    else if (xt >= goal) { msg = "¡Meta del día cumplida! Si querés, seguí sumando."; mood = "happy"; }
+    else if (st >= 2 && S.lastActive !== today()) { msg = `Llevás ${st} días seguidos. ¡No rompas la racha!`; mood = "streak"; }
     else if (due) msg = `Tenés ${due} ${due === 1 ? "concepto" : "conceptos"} para repasar hoy.`;
     else if (l) msg = `Seguimos con «${l.title}».`;
     else msg = "Todo al día. ¡Bien ahí!";
@@ -1016,7 +1143,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     if (l) parts.push(`lección: ${l.title}`);
     app.innerHTML = `<main class="screen">
       ${topbar()}
-      <section class="hero">${mascot(xt >= goal ? "happy" : "idle")}<div class="bubble grow">${esc(msg)}</div></section>
+      <section class="hero">${mascot(mood)}<div class="bubble grow">${esc(msg)}</div></section>
       <section class="card goal">${ring(xt, goal)}<div class="grow"><b>Meta diaria</b><div class="muted small">${xt} / ${goal} XP hoy</div></div></section>
       <button class="btn big block" data-act="daily">${icon("play")}${firstTime ? "Empezar" : "Sesión del día"}</button>
       ${parts.length && !firstTime ? `<div class="daily-sub muted small">${esc(parts.join(" · "))}</div>` : ""}
@@ -1239,13 +1366,13 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     if (!ok && navigator.vibrate) navigator.vibrate(40);
     rerenderAnswer();
     $(".ses-top .bar > i").style.width = ((s.i + 1) / s.items.length * 100) + "%";
-    const titles = ok ? ["¡Bien!", "¡Excelente!", "¡Eso!", "¡Joya!", "¡Genial!", "¡Impecable!"] : ["Casi...", "Ojo acá", "No pasa nada", "Uy, no"];
+    const titles = ok ? ["¡Bien!", "¡Excelente!", "¡Eso!", "¡Joya!", "¡Genial!", "¡Impecable!"] : ["Casi...", "Ojo acá", "Uy, no", "Mmm…"];
     const sol = s.inst.solution || [];
     const sheet = $("#sheet");
     sheet.className = "sheet " + (ok ? "ok" : "bad");
     sheet.innerHTML = `<div class="sheet-inner">
       <div class="fb-head">${mascot(ok ? "happy" : "sad")}<div class="grow"><div class="fb-title">${titles[Math.floor(Math.random() * titles.length)]}</div>
-        ${gain ? `<div class="xp-pop pop">+${gain} XP</div>` : ""}</div></div>
+        <div class="fb-quip">${esc(quip(ok ? "ok" : "bad"))}${gain ? ` <span class="xp-pop pop">+${gain} XP</span>` : ""}</div></div></div>
       <div class="fb-scroll">
         ${ok && s.inst.type !== "tf" && s.inst.type !== "error" ? "" : `<div class="fb-answer">${correctText(s.inst)}</div>`}
         ${s.inst.explanation ? `<div>${tex(s.inst.explanation)}</div>` : ""}
@@ -1356,12 +1483,22 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
       sub = units.length ? `Desbloqueaste: ${units.join(", ")}. Esos temas van a volver como repaso.` : "No pasa nada: así repasás todo con calma, desde la primera lección.";
     } else if (z.lessonDoneNow) { title = "¡Lección completada!"; sub = "Se desbloqueó lo que sigue en el mapa."; }
     else if (z.lessonAcc != null && z.lessonAcc < 0.75) { title = "¡Casi!"; sub = `Para completar la lección necesitás 75% de aciertos al primer intento (sacaste ${Math.round(z.lessonAcc * 100)}%). Repetila cuando quieras.`; }
+    // Schrödi: festeja si terminaste la lección, se prende fuego con la racha
+    if (!z.mood) {
+      const party = z.lessonDoneNow || (s.kind === "diag" && s.diag.passed.length);
+      const streak = z.streakUp && S.streak >= 2;
+      z.mood = party ? "party" : streak ? "streak" : acc >= 0.6 || s.kind === "diag" ? "happy" : "idle";
+      z.quip = party ? quip("party") : streak ? quip("streak", S.streak) : "";
+      z.streakQuip = party && streak ? quip("streak", S.streak) : "";
+    }
     const extra = [];
     if (z.streakUp) extra.push(`<div class="chip fire pop">${icon("flame")} Racha de ${S.streak} ${S.streak === 1 ? "día" : "días"}</div>`);
+    if (z.streakQuip) extra.push(`<p class="muted small" style="width:100%;margin:0">${esc(z.streakQuip)}</p>`);
     if (z.goalHit) extra.push(`<div class="chip xp pop">${icon("target")} ¡Meta diaria cumplida!</div>`);
     app.innerHTML = `<main class="center-col">
-      ${mascot(acc >= 0.6 || s.kind === "diag" ? "happy" : "idle")}
+      ${mascot(z.mood)}
       <div class="big-title">${esc(title)}</div>
+      ${z.quip ? `<div class="bubble">${esc(z.quip)}</div>` : ""}
       ${sub ? `<p class="muted" style="margin:0">${esc(sub)}</p>` : ""}
       <div class="tiles">
         <div class="tile gold"><div class="lab">XP</div><div class="val">${icon("star")}${s.xp}</div></div>
@@ -1467,7 +1604,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
         <li><b>Íconos</b>: <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> — licencia ISC.</li>
         <li><b>Tipografía</b>: <a href="https://fonts.google.com/specimen/Nunito" target="_blank" rel="noopener">Nunito</a> de Vernon Adams y colaboradores — SIL Open Font License 1.1.</li>
         <li><b>Fórmulas</b>: <a href="https://katex.org" target="_blank" rel="noopener">KaTeX</a> — licencia MIT.</li>
-        <li><b>Mascota «Nabla»</b>: diseño original de este proyecto — CC0.</li>
+        <li><b>Mascota «Schrödi»</b> (el gato de Schrödinger en su caja): diseño original de este proyecto — CC0.</li>
         <li><b>Ejercicios</b>: todos originales y generados por plantillas. El orden del temario sigue la estructura clásica de los cursos de Cálculo de la universidad.</li>
       </ul></section>
     </main>${nav("settings")}`;
@@ -1595,7 +1732,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
   }
   // ayuda para desarrollo: efecenDebug.preview("der-cadena-mc", 42) abre esa plantilla
   window.efecenDebug = {
-    get state() { return S; }, ui,
+    get state() { return S; }, ui, mascot,
     preview(tpl, seed = E.newSeed(), cid = activeCourse()) { startSession({ kind: "practice", cid, title: "Vista previa", items: [{ tpl, seed, src: "lesson" }] }); }
   };
 })();

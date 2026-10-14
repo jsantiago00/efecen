@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 6 120 110">
+  <!-- Schrödi, el gato de Schrödinger de efecen. Diseño original, CC0. -->
+  <path d="M26 72 L31 62 H89 L94 72 Z" fill="#9A6512"/>
+  <path d="M18 72 L3 62 L27 57 L40 72 Z M102 72 L117 62 L93 57 L80 72 Z" fill="#E9A520"/>
+  <g transform="translate(0 2)">
+    <path d="M40 38 L41 17 L56 30 Z M80 38 L79 17 L64 30 Z" fill="#ADA5EA"/>
+    <path d="M43.5 33 L44 22.5 L51.5 29.5 Z M76.5 33 L76 22.5 L68.5 29.5 Z" fill="#FF8FA8"/>
+    <ellipse cx="60" cy="48" rx="23" ry="20" fill="#ADA5EA"/>
+    <ellipse cx="60" cy="56.5" rx="10" ry="6.5" fill="#DCD8F8"/>
+    <ellipse cx="45" cy="55" rx="3.6" ry="2.3" fill="#FF8FA8" opacity=".5"/><ellipse cx="75" cy="55" rx="3.6" ry="2.3" fill="#FF8FA8" opacity=".5"/>
+    <path d="M47 49 q4 -6 8 0 M65 49 q4 -6 8 0" stroke="#2A2448" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M57.6 53.4 h4.8 l-2.4 2.8 z" fill="#FF8FA8"/>
+    <path d="M55 57.5 q5 8.5 10 0 z" fill="#2A2448"/>
+  </g>
+  <rect x="18" y="72" width="84" height="40" rx="5" fill="#FFC23D"/>
+  <rect x="18" y="72" width="84" height="6" rx="2" fill="#F0AE24"/>
+  <ellipse cx="47" cy="72.5" rx="6.5" ry="4.5" fill="#ADA5EA"/><ellipse cx="73" cy="72.5" rx="6.5" ry="4.5" fill="#ADA5EA"/>
+  <text x="60" y="103" text-anchor="middle" fill="#C9860F" font-family="Times New Roman, Georgia, serif" font-style="italic" font-weight="700" font-size="26">ψ</text>
+</svg>
