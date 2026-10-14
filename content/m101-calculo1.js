@@ -2625,3 +2625,1190 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 4 (primera parte) · INTEGRALES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { frac, num, poly, polyc, xp, xm, cf, kx, par, sg } = H;
+  const T = {};
+  // integral numérica simple (Simpson) para las verificaciones que la necesitan adentro de la plantilla
+  const integ = (f, a, b, n = 2000) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  // término con coeficiente fraccionario: ft(3, 4, "x^{4}") -> "\frac{3}{4}x^{4}"
+  function ft(p, q, mono, first) {
+    if (p === 0) return "";
+    if (q < 0) { p = -p; q = -q; }
+    const g = H.gcd(p, q); p /= g; q /= g;
+    if (q === 1) return H.term(p, mono, first);
+    const sign = p < 0 ? "-" : first ? "" : "+";
+    const body = `\\frac{${Math.abs(p)}}{${q}}${mono}`;
+    return first ? sign + body : ` ${sign} ${body}`;
+  }
+  const PI_FR = { 1: "\\pi", 2: "\\frac{\\pi}{2}", 3: "\\frac{\\pi}{3}", 4: "\\frac{\\pi}{4}", 6: "\\frac{\\pi}{6}", 8: "\\frac{\\pi}{8}" };
+
+  // ---------- antiderivadas ----------
+  T["anti-mc"] = {
+    type: "mc", concepts: ["antiderivada"], difficulty: 1,
+    generate(r) {
+      const a = r.nz(-6, 6), n = r.int(1, 4), c = r.nz(-4, 4), k = r.int(2, 4), trig = r.pick(["cos", "sin"]);
+      const Tg = `\\${trig}(${k}x)`, To = trig === "cos" ? `\\sin(${k}x)` : `\\cos(${k}x)`;
+      const sgnT = trig === "cos" ? 1 : -1; // ∫cos = sin/k ; ∫sin = -cos/k
+      const ok = ft(a, n + 1, xp(n + 1), true) + ft(sgnT * c, k, To, false) + " + C";
+      return {
+        prompt: `¿Cuál es $\\displaystyle\\int \\left(${H.term(a, xp(n), true)}${H.term(c, Tg, false)}\\right)dx$?`,
+        ...H.mc(r, ok, [
+          H.term(a * n, xp(n - 1), true) + H.term(-sgnT * c * k, To, false),
+          ft(a, n + 1, xp(n + 1), true) + ft(-sgnT * c, k, To, false) + " + C",
+          ft(a, n, xp(n + 1), true) + ft(sgnT * c, k, To, false) + " + C",
+          ft(a, n + 1, xp(n + 1), true) + H.term(sgnT * c * k, To, false) + " + C"
+        ]),
+        solution: [
+          `Se integra término a término ([[antiderivada|tabla de primitivas]]): $\\int x^n dx = \\frac{x^{n+1}}{n+1}$, $\\int\\cos(kx)dx = \\frac{\\sin(kx)}{k}$, $\\int\\sin(kx)dx = -\\frac{\\cos(kx)}{k}$.`,
+          `Resultado: $${ok}$. Chequeo: derivando se vuelve al integrando.`
+        ],
+        verify: { kind: "antideriv", F: x => a / (n + 1) * x ** (n + 1) + sgnT * c / k * (trig === "cos" ? Math.sin(k * x) : Math.cos(k * x)), f: x => a * x ** n + c * (trig === "cos" ? Math.cos(k * x) : Math.sin(k * x)), dom: [-2, 2] }
+      };
+    }
+  };
+  T["anti-pvi-num"] = {
+    type: "numeric", concepts: ["antiderivada"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-2, 2), b = r.int(-3, 3), c = r.int(-4, 4), x0 = r.int(-2, 1), y0 = r.int(-5, 5), x1 = x0 + r.int(1, 3);
+      const f = x => 3 * a * x * x + 2 * b * x + c, F0 = x => a * x ** 3 + b * x * x + c * x;
+      const C = y0 - F0(x0), ans = F0(x1) + C;
+      return {
+        prompt: `Si $F'(x) = ${polyc([3 * a, 2 * b, c])}$ y $F(${x0}) = ${y0}$, calculá $F(${x1})$.`,
+        answer: ans,
+        solution: [
+          `Integramos: $F(x) = ${polyc([a, b, c, 0])} + C$ ([[antiderivada]]).`,
+          `$F(${x0}) = ${F0(x0)} + C = ${y0} \\Rightarrow C = ${C}$.`,
+          `$F(${x1}) = ${F0(x1)} ${sg(C)} = ${ans}$.`
+        ],
+        // verificación: integrar y' = F'(x) con RK4 desde el dato inicial
+        verify: { kind: "ode", f: (t, y) => [f(x0 + t)], y0: [y0], t1: x1 - x0, dt: 1e-3, out: (_, y) => y[0] }
+      };
+    }
+  };
+
+  // ---------- sumas de Riemann e integral definida ----------
+  T["riemann-num"] = {
+    type: "numeric", concepts: ["integral-definida"], difficulty: 2,
+    generate(r) {
+      const q = r.int(-2, 3), a = r.int(-2, 1), dx = r.pick([0.5, 1]), n = 4, b = a + n * dx;
+      const m = r.pick(["izq", "der", "medio"]);
+      const f = x => x * x + q, pt = i => a + (i + (m === "izq" ? 0 : m === "der" ? 1 : 0.5)) * dx;
+      let S = 0; for (let i = 0; i < n; i++) S += f(pt(i)) * dx;
+      const pts = Array.from({ length: n }, (_, i) => num(pt(i), 2));
+      return {
+        prompt: `Aproximá $\\displaystyle\\int_{${a}}^{${num(b)}} (${polyc([1, 0, q])})\\,dx$ con una suma de Riemann de $4$ rectángulos iguales, evaluando en el **${m === "izq" ? "extremo izquierdo" : m === "der" ? "extremo derecho" : "punto medio"}** de cada uno.`,
+        answer: S,
+        solution: [
+          `$\\Delta x = \\frac{${num(b)} - ${par(a)}}{4} = ${num(dx)}$ ([[integral-definida|sumas de Riemann]]).`,
+          `Puntos: $${pts.join(",\\ ")}$.`,
+          `$S = \\Delta x\\,\\big[${pts.map(p => `f(${p})`).join(" + ")}\\big] = ${num(S, 4)}$.`,
+          `(El valor exacto es $${num((b ** 3 - a ** 3) / 3 + q * (b - a), 4)}$: con más rectángulos la suma se acerca.)`
+        ],
+        verify: { kind: "sum", from: 0, to: n - 1, term: i => f(a + (i + (m === "izq" ? 0 : m === "der" ? 1 : 0.5)) * dx) * dx }
+      };
+    }
+  };
+  T["intprop-num"] = {
+    type: "numeric", concepts: ["integral-definida"], difficulty: 1,
+    generate(r) {
+      const a = r.int(-2, 1), b = a + r.int(1, 3);
+      const [p1, q1, p2, q2] = [r.int(-3, 3), r.int(-3, 3), r.int(-3, 3), r.int(-3, 3)];
+      const I = (p, q) => p * (b * b - a * a) / 2 + q * (b - a);
+      const A = I(p1, q1), B = I(p2, q2);
+      if (A === 0 && B === 0) return null;
+      const al = r.nz(-3, 3), be = r.nz(-3, 3), rev = r.bool(0.3);
+      const ans = rev ? -A : al * A + be * B;
+      return {
+        prompt: `Si $\\displaystyle\\int_{${a}}^{${b}} f(x)\\,dx = ${num(A)}$ y $\\displaystyle\\int_{${a}}^{${b}} g(x)\\,dx = ${num(B)}$, calculá ${rev ? `$\\displaystyle\\int_{${b}}^{${a}} f(x)\\,dx$` : `$\\displaystyle\\int_{${a}}^{${b}} \\big(${H.term(al, "f(x)", true)}${H.term(be, "g(x)", false)}\\big)\\,dx$`}.`,
+        answer: ans,
+        solution: rev
+          ? [`Invertir los límites cambia el signo ([[integral-definida|propiedades de la integral]]): $\\int_b^a f = -\\int_a^b f = ${num(ans)}$.`]
+          : [`La integral es lineal ([[integral-definida]]): $\\int(\\alpha f + \\beta g) = \\alpha\\int f + \\beta\\int g$.`, `$${al}\\cdot${par(A)} ${sg(be).trim()}\\cdot${par(B)} = ${num(ans)}$.`],
+        // verificación: funciones lineales concretas con esas integrales, integradas con Simpson
+        verify: { kind: "integral", f: rev ? x => -(p1 * x + q1) : x => al * (p1 * x + q1) + be * (p2 * x + q2), a, b }
+      };
+    }
+  };
+  T["sym-vf"] = {
+    type: "tf", concepts: ["integral-definida"], difficulty: 1,
+    generate(r) {
+      const a = r.int(1, 4), k = r.int(1, 5);
+      const fs = [
+        { t: `x^{3} - ${k}x`, f: x => x ** 3 - k * x, odd: true }, { t: `x^{2}\\sin x`, f: x => x * x * Math.sin(x), odd: true },
+        { t: `x\\cos x`, f: x => x * Math.cos(x), odd: true }, { t: `x^{2} + ${k}`, f: x => x * x + k, odd: false },
+        { t: `\\cos x`, f: x => Math.cos(x), odd: false }, { t: `x^{3} + ${k}`, f: x => x ** 3 + k, odd: false }
+      ];
+      const c = r.pick(fs);
+      return {
+        prompt: `<b>Verdadero o falso:</b> $\\displaystyle\\int_{-${a}}^{${a}} \\big(${c.t}\\big)\\,dx = 0$.`,
+        answer: c.odd,
+        explanation: c.odd ? `La función es **impar** ($f(-x) = -f(x)$): las áreas a los dos lados del $0$ se cancelan.` : `La función no es impar, así que no hay cancelación garantizada (de hecho la integral no da $0$).`,
+        solution: [`Si $f$ es impar, $\\int_{-a}^{a} f = 0$; si es par, $\\int_{-a}^{a} f = 2\\int_0^a f$ ([[integral-definida]]).`],
+        verify: { kind: "truth", fn: () => Math.abs(integ(c.f, -a, a)) < 1e-8 }
+      };
+    }
+  };
+
+  // ---------- teorema fundamental ----------
+  T["tfc-num"] = {
+    type: "numeric", concepts: ["tfc"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["poly", "poly", "exp", "cos", "inv"]);
+      if (v === "poly") {
+        const a = r.nz(-2, 2), b = r.int(-3, 3), c = r.int(-4, 4), p = r.int(-2, 1), q = p + r.int(1, 3);
+        const F = x => a * x ** 3 + b * x * x + c * x, ans = F(q) - F(p);
+        return { prompt: `Calculá $\\displaystyle\\int_{${p}}^{${q}} \\big(${polyc([3 * a, 2 * b, c])}\\big)\\,dx$.`, answer: ans,
+          solution: [`Primitiva: $F(x) = ${polyc([a, b, c, 0])}$.`, `[[tfc|Barrow]]: $F(${q}) - F(${par(p)}) = ${F(q)} - ${par(F(p))} = ${ans}$.`],
+          verify: { kind: "integral", f: x => 3 * a * x * x + 2 * b * x + c, a: p, b: q } };
+      }
+      if (v === "exp") {
+        const k = r.nz(-3, 3);
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{1} e^{${kx(k)}}\\,dx$ (con 3 decimales alcanza).`, answer: (Math.exp(k) - 1) / k, answerTex: `\\frac{e^{${k}} - 1}{${k}}`,
+          solution: [`Primitiva: $\\frac{e^{${kx(k)}}}{${k}}$.`, `[[tfc|Barrow]]: $\\frac{e^{${k}} - 1}{${k}} \\approx ${num((Math.exp(k) - 1) / k, 4)}$.`],
+          verify: { kind: "integral", f: x => Math.exp(k * x), a: 0, b: 1 } };
+      }
+      if (v === "cos") {
+        const k = r.int(1, 4), d = r.pick([2, 3, 6]);
+        const ans = Math.sin(k * Math.PI / d) / k;
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{${PI_FR[d]}} \\cos(${kx(k)})\\,dx$.`, answer: ans,
+          solution: [`Primitiva: $\\frac{\\sin(${kx(k)})}{${k}}$.`, `[[tfc|Barrow]]: $\\frac{1}{${k}}\\sin\\left(${k}\\cdot${PI_FR[d]}\\right) - 0 \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => Math.cos(k * x), a: 0, b: Math.PI / d } };
+      }
+      const b = r.int(2, 9);
+      return { prompt: `Calculá $\\displaystyle\\int_{1}^{${b}} \\frac{dx}{x}$ (con 3 decimales alcanza).`, answer: Math.log(b), answerTex: `\\ln ${b}`,
+        solution: [`Primitiva de $\\frac1x$: $\\ln|x|$.`, `[[tfc|Barrow]]: $\\ln ${b} - \\ln 1 = \\ln ${b} \\approx ${num(Math.log(b), 4)}$.`],
+        verify: { kind: "integral", f: x => 1 / x, a: 1, b } };
+    }
+  };
+  T["tfc-deriv-num"] = {
+    type: "numeric", concepts: ["tfc"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["sq", "gauss", "lower"]);
+      if (v === "sq") {
+        const x0 = r.nz(-2, 2), g = t => Math.sqrt(1 + t ** 3);
+        const ans = 2 * x0 * g(x0 * x0);
+        return { prompt: `Si $G(x) = \\displaystyle\\int_{0}^{x^{2}} \\sqrt{1 + t^{3}}\\,dt$, calculá $G'(${x0})$.`, answer: ans,
+          solution: [`[[tfc|TFC]] + [[regla-cadena|cadena]]: $G'(x) = \\sqrt{1 + (x^2)^3}\\cdot 2x$.`, `$G'(${x0}) = ${2 * x0}\\sqrt{${1 + x0 ** 6}} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "deriv", f: x => integ(g, 0, x * x), x0 } };
+      }
+      if (v === "gauss") {
+        const x0 = r.pick([0, 0.5, 1, 1.5, 2]), g = t => Math.exp(-t * t);
+        return { prompt: `Si $G(x) = \\displaystyle\\int_{0}^{x} e^{-t^{2}}\\,dt$, calculá $G'(${x0})$.`, answer: g(x0),
+          solution: [`Por el [[tfc|teorema fundamental]], $G'(x) = e^{-x^2}$ (aunque $G$ no tenga fórmula elemental).`, `$G'(${x0}) = e^{-${x0 * x0}} \\approx ${num(g(x0), 4)}$.`],
+          verify: { kind: "deriv", f: x => integ(g, 0, x), x0 } };
+      }
+      const b = r.int(2, 5), x0 = r.int(-1, 1), g = t => Math.cos(t * t) + 2;
+      return { prompt: `Si $G(x) = \\displaystyle\\int_{x}^{${b}} \\big(\\cos(t^{2}) + 2\\big)\\,dt$, calculá $G'(${x0})$.`, answer: -g(x0),
+        solution: [`$\\int_x^b = -\\int_b^x$, así que por el [[tfc|TFC]] $G'(x) = -\\big(\\cos(x^2) + 2\\big)$.`, `$G'(${x0}) = -(\\cos(${x0 * x0}) + 2) \\approx ${num(-g(x0), 4)}$.`],
+        verify: { kind: "deriv", f: x => integ(g, x, b), x0 } };
+    }
+  };
+  T["tfc-error"] = {
+    type: "error", concepts: ["tfc"], difficulty: 2,
+    generate(r) {
+      const b = r.int(-3, 3), c = r.int(-4, 4), p = r.int(-2, 0), q = p + r.int(2, 3);
+      const F = x => x ** 3 + b * x * x + c * x, ans = F(q) - F(p);
+      const ok = [
+        `Una primitiva de $3x^2 ${sg(2 * b).trim()}x ${sg(c).trim()}$ es $F(x) = ${polyc([1, b, c, 0])}$.`.replace("+ 0x", "").replace("- 0x", ""),
+        `Barrow: $F(${q}) - F(${par(p)}) = ${F(q)} - ${par(F(p))}$.`,
+        `Resultado: $${ans}$.`
+      ];
+      const steps = ok.slice();
+      const kind = r.pick(["prim", "orden", "cuenta"]);
+      let wrongIndex, fix;
+      if (kind === "prim") {
+        wrongIndex = 0;
+        const Fw = x => 6 * x + 2 * b;
+        steps[0] = `Una primitiva de $3x^2 ${sg(2 * b).trim()}x ${sg(c).trim()}$ es $F(x) = ${polyc([6, 2 * b])}$.`;
+        steps[1] = `Barrow: $F(${q}) - F(${par(p)}) = ${Fw(q)} - ${par(Fw(p))}$.`;
+        steps[2] = `Resultado: $${Fw(q) - Fw(p)}$.`;
+        fix = `Eso es la **derivada**, no una primitiva: hay que subir el exponente y dividir, $F(x) = ${polyc([1, b, c, 0])}$.`;
+      } else if (kind === "orden") {
+        if (ans === 0) return null;
+        wrongIndex = 1;
+        steps[1] = `Barrow: $F(${par(p)}) - F(${q}) = ${F(p)} - ${par(F(q))}$.`;
+        steps[2] = `Resultado: $${-ans}$.`;
+        fix = `Es $F(b) - F(a)$: el límite de arriba menos el de abajo.`;
+      } else {
+        wrongIndex = 2;
+        steps[2] = `Resultado: $${ans + r.pick([-2, -1, 1, 2])}$.`;
+        fix = `La cuenta da $${F(q)} - ${par(F(p))} = ${ans}$.`;
+      }
+      return {
+        prompt: `Alguien calculó $\\displaystyle\\int_{${p}}^{${q}} \\big(${polyc([3, 2 * b, c])}\\big)\\,dx$ así. <b>Tocá el primer paso incorrecto.</b>`,
+        steps, wrongIndex, fix, solution: ok,
+        verify: { kind: "integral", f: x => 3 * x * x + 2 * b * x + c, a: p, b: q, target: ans }
+      };
+    }
+  };
+
+  // ---------- sustitución ----------
+  T["sust-mc"] = {
+    type: "mc", concepts: ["int-sustitucion"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["pow", "sinn", "lnx", "xexp"]);
+      if (v === "pow") {
+        const a = r.int(1, 6), n = r.int(2, 5), U = `(x^{2} + ${a})`;
+        return { prompt: `¿Cuál es $\\displaystyle\\int x\\,${U}^{${n}}\\,dx$?`,
+          ...H.mc(r, `\\frac{${U}^{${n + 1}}}{${2 * (n + 1)}} + C`, [`\\frac{${U}^{${n + 1}}}{${n + 1}} + C`, `\\frac{x^{2}${U}^{${n + 1}}}{${2 * (n + 1)}} + C`, `${2 * n}x${U}^{${n - 1}} + C`, `\\frac{${U}^{${n}}}{${2 * n}} + C`]),
+          solution: [`[[int-sustitucion|Sustitución]] $u = x^2 + ${a}$, $du = 2x\\,dx$: queda $\\frac12\\int u^{${n}}du$.`, `$= \\frac{u^{${n + 1}}}{${2 * (n + 1)}} + C$ y volvemos a $x$.`],
+          verify: { kind: "antideriv", F: x => (x * x + a) ** (n + 1) / (2 * (n + 1)), f: x => x * (x * x + a) ** n, dom: [-1.5, 1.5] } };
+      }
+      if (v === "sinn") {
+        const n = r.int(2, 6);
+        return { prompt: `¿Cuál es $\\displaystyle\\int \\sin^{${n}}x\\,\\cos x\\,dx$?`,
+          ...H.mc(r, `\\frac{\\sin^{${n + 1}}x}{${n + 1}} + C`, [`\\frac{\\cos^{${n + 1}}x}{${n + 1}} + C`, `${n}\\sin^{${n - 1}}x\\cos^{2}x + C`, `-\\frac{\\sin^{${n + 1}}x}{${n + 1}} + C`, `\\frac{\\sin^{${n + 1}}x\\,\\sin x}{${n + 1}} + C`]),
+          solution: [`$u = \\sin x$, $du = \\cos x\\,dx$ ([[int-sustitucion|cambio de variable]]): $\\int u^{${n}}du = \\frac{u^{${n + 1}}}{${n + 1}}$.`],
+          verify: { kind: "antideriv", F: x => Math.sin(x) ** (n + 1) / (n + 1), f: x => Math.sin(x) ** n * Math.cos(x), dom: [-2, 2] } };
+      }
+      if (v === "lnx") {
+        const n = r.int(1, 4);
+        return { prompt: `¿Cuál es $\\displaystyle\\int \\frac{(\\ln x)^{${n}}}{x}\\,dx$?`,
+          ...H.mc(r, `\\frac{(\\ln x)^{${n + 1}}}{${n + 1}} + C`, [`(\\ln x)^{${n + 1}} + C`, `\\frac{(\\ln x)^{${n + 1}}}{${n + 1}x} + C`, `${n}(\\ln x)^{${n - 1}} + C`, `\\frac{x(\\ln x)^{${n + 1}}}{${n + 1}} + C`]),
+          solution: [`$u = \\ln x$, $du = \\frac{dx}{x}$ ([[int-sustitucion|sustitución]]): $\\int u^{${n}}du$.`, `$= \\frac{(\\ln x)^{${n + 1}}}{${n + 1}} + C$.`],
+          verify: { kind: "antideriv", F: x => Math.log(x) ** (n + 1) / (n + 1), f: x => Math.log(x) ** n / x, dom: [0.5, 3] } };
+      }
+      const k = r.int(1, 4);
+      return { prompt: `¿Cuál es $\\displaystyle\\int x\\,e^{${k === 1 ? "" : k}x^{2}}\\,dx$?`,
+        ...H.mc(r, `\\frac{e^{${k === 1 ? "" : k}x^{2}}}{${2 * k}} + C`, [`e^{${k === 1 ? "" : k}x^{2}} + C`, `\\frac{x^{2}e^{${k === 1 ? "" : k}x^{2}}}{2} + C`, `${2 * k}e^{${k === 1 ? "" : k}x^{2}} + C`, `\\frac{e^{${k === 1 ? "" : k}x^{2}}}{${2 * k}x} + C`]),
+        solution: [`$u = ${k === 1 ? "" : k}x^2$, $du = ${2 * k}x\\,dx$ ([[int-sustitucion|sustitución]]).`, `Queda $\\frac{1}{${2 * k}}\\int e^u du = \\frac{e^u}{${2 * k}} + C$.`],
+        verify: { kind: "antideriv", F: x => Math.exp(k * x * x) / (2 * k), f: x => x * Math.exp(k * x * x), dom: [-1, 1] } };
+    }
+  };
+  T["sust-num"] = {
+    type: "numeric", concepts: ["int-sustitucion"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["xex2", "log", "sincos", "lnpow"]);
+      if (v === "xex2") {
+        const b = r.pick([1, 1.5, 2]), ans = (Math.exp(b * b) - 1) / 2;
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{${b}} x\\,e^{x^{2}}\\,dx$ (con 3 decimales alcanza).`, answer: ans, answerTex: `\\frac{e^{${num(b * b)}} - 1}{2}`,
+          solution: [`$u = x^2$, $du = 2x\\,dx$; los límites pasan a $0$ y $${num(b * b)}$ ([[int-sustitucion|sustitución]]).`, `$\\frac12\\int_0^{${num(b * b)}} e^u\\,du = \\frac{e^{${num(b * b)}} - 1}{2} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => x * Math.exp(x * x), a: 0, b } };
+      }
+      if (v === "log") {
+        const b = r.int(1, 5), ans = Math.log(b * b + 1);
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{${b}} \\frac{2x}{x^{2} + 1}\\,dx$ (con 3 decimales alcanza).`, answer: ans, answerTex: `\\ln ${b * b + 1}`,
+          solution: [`$u = x^2 + 1$, $du = 2x\\,dx$ ([[int-sustitucion|sustitución]]): $\\int_1^{${b * b + 1}}\\frac{du}{u}$.`, `$= \\ln ${b * b + 1} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => 2 * x / (x * x + 1), a: 0, b } };
+      }
+      if (v === "sincos") {
+        const n = r.int(1, 6);
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{\\pi/2} \\sin^{${n}}x\\,\\cos x\\,dx$.`, answer: 1 / (n + 1), answerTex: frac(1, n + 1),
+          solution: [`$u = \\sin x$: los límites pasan a $0$ y $1$ ([[int-sustitucion|sustitución]]).`, `$\\int_0^1 u^{${n}}du = ${frac(1, n + 1)}$.`],
+          verify: { kind: "integral", f: x => Math.sin(x) ** n * Math.cos(x), a: 0, b: Math.PI / 2 } };
+      }
+      const n = r.int(1, 5);
+      return { prompt: `Calculá $\\displaystyle\\int_{1}^{e} \\frac{(\\ln x)^{${n}}}{x}\\,dx$.`, answer: 1 / (n + 1), answerTex: frac(1, n + 1),
+        solution: [`$u = \\ln x$: $x = 1 \\to u = 0$, $x = e \\to u = 1$ ([[int-sustitucion|sustitución]]).`, `$\\int_0^1 u^{${n}}du = ${frac(1, n + 1)}$.`],
+        verify: { kind: "integral", f: x => Math.log(x) ** n / x, a: 1, b: Math.E } };
+    }
+  };
+
+  // ---------- por partes ----------
+  T["partes-mc"] = {
+    type: "mc", concepts: ["int-partes"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["xexp", "xcos", "lnx", "xln"]);
+      if (v === "xexp") {
+        const a = r.int(2, 4);
+        return { prompt: `¿Cuál es $\\displaystyle\\int x\\,e^{${a}x}\\,dx$?`,
+          ...H.mc(r, `\\frac{x\\,e^{${a}x}}{${a}} - \\frac{e^{${a}x}}{${a * a}} + C`, [`\\frac{x\\,e^{${a}x}}{${a}} + \\frac{e^{${a}x}}{${a * a}} + C`, `\\frac{x^{2}e^{${a}x}}{2} + C`, `${a}x\\,e^{${a}x} - ${a}e^{${a}x} + C`, `\\frac{x\\,e^{${a}x}}{${a}} + C`]),
+          solution: [`[[int-partes|Partes]] con $u = x$, $dv = e^{${a}x}dx$: $du = dx$, $v = \\frac{e^{${a}x}}{${a}}$.`, `$\\frac{x e^{${a}x}}{${a}} - \\int\\frac{e^{${a}x}}{${a}}dx = \\frac{x e^{${a}x}}{${a}} - \\frac{e^{${a}x}}{${a * a}} + C$.`],
+          verify: { kind: "antideriv", F: x => x * Math.exp(a * x) / a - Math.exp(a * x) / (a * a), f: x => x * Math.exp(a * x), dom: [-1, 1] } };
+      }
+      if (v === "xcos") {
+        const a = r.int(2, 5);
+        return { prompt: `¿Cuál es $\\displaystyle\\int x\\cos(${a}x)\\,dx$?`,
+          ...H.mc(r, `\\frac{x\\sin(${a}x)}{${a}} + \\frac{\\cos(${a}x)}{${a * a}} + C`, [`\\frac{x\\sin(${a}x)}{${a}} - \\frac{\\cos(${a}x)}{${a * a}} + C`, `\\frac{x^{2}\\sin(${a}x)}{${2 * a}} + C`, `-\\frac{x\\sin(${a}x)}{${a}} + \\frac{\\cos(${a}x)}{${a * a}} + C`, `x\\sin(${a}x) + \\cos(${a}x) + C`]),
+          solution: [`[[int-partes|Partes]] con $u = x$, $dv = \\cos(${a}x)dx$: $v = \\frac{\\sin(${a}x)}{${a}}$.`, `$\\frac{x\\sin(${a}x)}{${a}} - \\int\\frac{\\sin(${a}x)}{${a}}dx = \\frac{x\\sin(${a}x)}{${a}} + \\frac{\\cos(${a}x)}{${a * a}} + C$.`],
+          verify: { kind: "antideriv", F: x => x * Math.sin(a * x) / a + Math.cos(a * x) / (a * a), f: x => x * Math.cos(a * x), dom: [-2, 2] } };
+      }
+      if (v === "lnx") {
+        const k = r.int(1, 3);
+        return { prompt: `¿Cuál es $\\displaystyle\\int ${k === 1 ? "" : k}\\ln x\\,dx$?`,
+          ...H.mc(r, `${k === 1 ? "" : k}(x\\ln x - x) + C`, [`${k === 1 ? "" : k}x\\ln x + C`, `\\frac{${k}}{x} + C`, `${k === 1 ? "" : k}(x\\ln x + x) + C`, `${k === 1 ? "" : k}\\frac{(\\ln x)^{2}}{2} + C`]),
+          solution: [`[[int-partes|Partes]] con $u = \\ln x$, $dv = dx$: $du = \\frac{dx}{x}$, $v = x$.`, `$x\\ln x - \\int x\\cdot\\frac1x\\,dx = x\\ln x - x + C$.`],
+          verify: { kind: "antideriv", F: x => k * (x * Math.log(x) - x), f: x => k * Math.log(x), dom: [0.5, 3] } };
+      }
+      return { prompt: `¿Cuál es $\\displaystyle\\int x\\ln x\\,dx$?`,
+        ...H.mc(r, `\\frac{x^{2}\\ln x}{2} - \\frac{x^{2}}{4} + C`, [`\\frac{x^{2}\\ln x}{2} + \\frac{x^{2}}{4} + C`, `x^{2}\\ln x - x^{2} + C`, `\\frac{x^{2}\\ln x}{2} + C`, `\\ln x + 1 + C`]),
+        solution: [`[[int-partes|Partes]] con $u = \\ln x$, $dv = x\\,dx$: $v = \\frac{x^2}{2}$.`, `$\\frac{x^2\\ln x}{2} - \\int\\frac{x^2}{2}\\cdot\\frac1x\\,dx = \\frac{x^2\\ln x}{2} - \\frac{x^2}{4} + C$.`],
+        verify: { kind: "antideriv", F: x => x * x * Math.log(x) / 2 - x * x / 4, f: x => x * Math.log(x), dom: [0.5, 3] } };
+    }
+  };
+  T["partes-num"] = {
+    type: "numeric", concepts: ["int-partes"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["xsin", "lnb", "xex"]);
+      if (v === "xsin") {
+        const a = r.int(1, 4), ans = Math.PI / (a * a);
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{${a === 1 ? "\\pi" : `\\pi/${a}`}} x\\sin(${kx(a)})\\,dx$.`, answer: ans, answerTex: a === 1 ? "\\pi" : `\\frac{\\pi}{${a * a}}`,
+          solution: [`[[int-partes|Partes]]: $\\int x\\sin(${kx(a)})dx = -\\frac{x\\cos(${kx(a)})}{${a}} + \\frac{\\sin(${kx(a)})}{${a * a}}$.`, `Evaluando: $-\\frac{(\\pi/${a})\\cos\\pi}{${a}} + 0 = \\frac{\\pi}{${a * a}}$.`],
+          verify: { kind: "integral", f: x => x * Math.sin(a * x), a: 0, b: Math.PI / a } };
+      }
+      if (v === "lnb") {
+        const b = r.int(2, 6), ans = b * Math.log(b) - b + 1;
+        return { prompt: `Calculá $\\displaystyle\\int_{1}^{${b}} \\ln x\\,dx$ (con 3 decimales alcanza).`, answer: ans, answerTex: `${b}\\ln ${b} - ${b - 1}`,
+          solution: [`[[int-partes|Partes]]: $\\int\\ln x\\,dx = x\\ln x - x$.`, `$(${b}\\ln ${b} - ${b}) - (0 - 1) = ${b}\\ln ${b} - ${b - 1} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => Math.log(x), a: 1, b } };
+      }
+      const b = r.int(1, 2), ans = (b - 1) * Math.exp(b) + 1;
+      return { prompt: `Calculá $\\displaystyle\\int_{0}^{${b}} x\\,e^{x}\\,dx$ (con 3 decimales alcanza).`, answer: ans, answerTex: b === 1 ? "1" : `e^{${b}} + 1`,
+        solution: [`[[int-partes|Partes]]: $\\int x e^x dx = (x - 1)e^x$.`, `$(${b} - 1)e^{${b}} - (0 - 1) = ${b === 1 ? "1" : `e^{${b}} + 1`}${b === 1 ? "" : ` \\approx ${num(ans, 4)}`}$.`],
+        verify: { kind: "integral", f: x => x * Math.exp(x), a: 0, b } };
+    }
+  };
+  T["partes-order"] = {
+    type: "order", concepts: ["int-partes"], difficulty: 2,
+    generate(r) {
+      const a = r.int(2, 6);
+      return {
+        prompt: `Ordená los pasos para calcular $\\displaystyle\\int x\\cos(${a}x)\\,dx$.`,
+        steps: [
+          `Elegimos $u = x$ y $dv = \\cos(${a}x)\\,dx$.`,
+          `Entonces $du = dx$ y $v = \\frac{\\sin(${a}x)}{${a}}$.`,
+          `Fórmula: $\\int u\\,dv = uv - \\int v\\,du = \\frac{x\\sin(${a}x)}{${a}} - \\int\\frac{\\sin(${a}x)}{${a}}\\,dx$.`,
+          `Resultado: $\\frac{x\\sin(${a}x)}{${a}} + \\frac{\\cos(${a}x)}{${a * a}} + C$.`
+        ],
+        solution: [`Se elige como $u$ lo que se simplifica al derivar (acá $x$) y como $dv$ algo fácil de integrar ([[int-partes]]).`],
+        verify: { kind: "antideriv", F: x => x * Math.sin(a * x) / a + Math.cos(a * x) / (a * a), f: x => x * Math.cos(a * x), dom: [-2, 2] }
+      };
+    }
+  };
+
+  // ---------- trigonométricas y sustitución trigonométrica ----------
+  T["trigint-num"] = {
+    type: "numeric", concepts: ["int-trig"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["sin2", "sin3", "sincos", "circ", "atan"]);
+      if (v === "sin2") return { prompt: `Calculá $\\displaystyle\\int_{0}^{\\pi/2} \\sin^{2}x\\,dx$.`, answer: Math.PI / 4, answerTex: "\\frac{\\pi}{4}",
+        solution: [`Ángulo doble ([[integrales-trig]]): $\\sin^2 x = \\frac{1 - \\cos 2x}{2}$.`, `$\\int_0^{\\pi/2}\\frac{1 - \\cos 2x}{2}dx = \\frac{\\pi}{4} - 0$.`],
+        verify: { kind: "integral", f: x => Math.sin(x) ** 2, a: 0, b: Math.PI / 2 } };
+      if (v === "sin3") return { prompt: `Calculá $\\displaystyle\\int_{0}^{\\pi} \\sin^{3}x\\,dx$.`, answer: 4 / 3, answerTex: "\\frac{4}{3}",
+        solution: [`Potencia impar del seno ([[integrales-trig]]): $\\sin^3 x = (1 - \\cos^2 x)\\sin x$ y $u = \\cos x$.`, `$\\int_{1}^{-1}(1 - u^2)(-du) = \\int_{-1}^{1}(1 - u^2)du = \\frac{4}{3}$.`],
+        verify: { kind: "integral", f: x => Math.sin(x) ** 3, a: 0, b: Math.PI } };
+      if (v === "sincos") {
+        const k = r.int(1, 4);
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{${k === 1 ? "\\pi/2" : `\\pi/${2 * k}`}} \\sin(${kx(k)})\\cos(${kx(k)})\\,dx$.`, answer: 1 / (2 * k), answerTex: frac(1, 2 * k),
+          solution: [`$\\sin(${kx(k)})\\cos(${kx(k)}) = \\frac12\\sin(${2 * k}x)$ ([[integrales-trig]]).`, `$\\frac12\\left[-\\frac{\\cos(${2 * k}x)}{${2 * k}}\\right]_0^{\\pi/${2 * k}} = \\frac{1}{${4 * k}}(1 + 1) = ${frac(1, 2 * k)}$.`],
+          verify: { kind: "integral", f: x => Math.sin(k * x) * Math.cos(k * x), a: 0, b: Math.PI / (2 * k) } };
+      }
+      if (v === "circ") {
+        const a = r.int(1, 4);
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{${a}} \\sqrt{${a * a} - x^{2}}\\,dx$.`, answer: Math.PI * a * a / 4, answerTex: `\\frac{${a * a === 1 ? "" : a * a}\\pi}{4}`,
+          solution: [`[[integrales-trig|Sustitución trigonométrica]] $x = ${a === 1 ? "" : a}\\sin\\theta$: $\\sqrt{${a * a} - x^2} = ${a === 1 ? "" : a}\\cos\\theta$, $dx = ${a === 1 ? "" : a}\\cos\\theta\\,d\\theta$, $\\theta \\in [0, \\frac\\pi2]$.`, `$${a * a === 1 ? "" : a * a}\\int_0^{\\pi/2}\\cos^2\\theta\\,d\\theta = ${a * a === 1 ? "" : a * a}\\cdot\\frac{\\pi}{4}$.`, `Es el área de un cuarto de círculo de radio $${a}$.`],
+          verify: { kind: "integral", f: x => Math.sqrt(Math.max(0, a * a - x * x)), a: 0, b: a, tol: 1e-3 } };
+      }
+      const a = r.int(1, 5);
+      return { prompt: `Calculá $\\displaystyle\\int_{0}^{${a}} \\frac{dx}{${a * a} + x^{2}}$.`, answer: Math.PI / (4 * a), answerTex: `\\frac{\\pi}{${4 * a}}`,
+        solution: [`$x = ${a === 1 ? "" : a}\\tan\\theta$ ([[integrales-trig|sustitución trigonométrica]]), o directo: $\\int\\frac{dx}{a^2 + x^2} = \\frac1a\\arctan\\frac{x}{a}$.`, `$\\frac{1}{${a}}\\left(\\arctan 1 - 0\\right) = \\frac{\\pi}{${4 * a}}$.`],
+        verify: { kind: "integral", f: x => 1 / (a * a + x * x), a: 0, b: a } };
+    }
+  };
+  T["trigsust-mc"] = {
+    type: "mc", concepts: ["int-trig"], difficulty: 1,
+    generate(r) {
+      const a = r.int(2, 5), v = r.pick(["sin", "tan", "sec"]);
+      const rad = { sin: `${a * a} - x^{2}`, tan: `${a * a} + x^{2}`, sec: `x^{2} - ${a * a}` }[v];
+      const sub = { sin: `x = ${a}\\sin\\theta`, tan: `x = ${a}\\tan\\theta`, sec: `x = ${a}\\sec\\theta` };
+      const idn = { sin: `${a * a} - ${a * a}\\sin^2\\theta = ${a * a}\\cos^2\\theta`, tan: `${a * a} + ${a * a}\\tan^2\\theta = ${a * a}\\sec^2\\theta`, sec: `${a * a}\\sec^2\\theta - ${a * a} = ${a * a}\\tan^2\\theta` }[v];
+      return {
+        prompt: `Para integrar una expresión con $\\sqrt{${rad}}$, ¿qué sustitución conviene?`,
+        ...H.mc(r, sub[v], Object.keys(sub).filter(k => k !== v).map(k => sub[k]).concat([`x = ${a}\\theta`])),
+        solution: [`Se busca que el radicando se vuelva un cuadrado perfecto ([[integrales-trig|sustitución trigonométrica]]):`, `$${idn}$, así que la raíz desaparece.`],
+        // verificación: con la sustitución correcta, el radicando es un cuadrado perfecto en θ
+        verify: { kind: "zero", fn: () => [0.3, 0.7, 1.1].map(t => {
+          const x = { sin: a * Math.sin(t), tan: a * Math.tan(t), sec: a / Math.cos(t) }[v];
+          const radv = { sin: a * a - x * x, tan: a * a + x * x, sec: x * x - a * a }[v];
+          const sq = { sin: (a * Math.cos(t)) ** 2, tan: (a / Math.cos(t)) ** 2, sec: (a * Math.tan(t)) ** 2 }[v];
+          return radv - sq;
+        }), tol: 1e-9 }
+      };
+    }
+  };
+
+  // ---------- fracciones simples ----------
+  T["fracs-num"] = {
+    type: "numeric", concepts: ["fracciones-simples"], difficulty: 2,
+    generate(r) {
+      const [rr, s] = r.distinct(2, -4, 4), p = r.int(-4, 4), q = r.int(-6, 6);
+      if (p * rr + q === 0 || p * s + q === 0) return null;
+      const A = (p * rr + q) / (rr - s), B = (p * s + q) / (s - rr), askA = r.bool();
+      return {
+        prompt: `Si $\\dfrac{${polyc([p, q])}}{(${xm(rr)})(${xm(s)})} = \\dfrac{A}{${xm(rr)}} + \\dfrac{B}{${xm(s)}}$, ¿cuánto vale $${askA ? "A" : "B"}$?`,
+        answer: askA ? A : B, answerTex: askA ? frac(p * rr + q, rr - s) : frac(p * s + q, s - rr),
+        solution: [
+          `Multiplicamos por el denominador ([[fracciones-simples]]): $${polyc([p, q])} = A(${xm(s)}) + B(${xm(rr)})$.`,
+          askA ? `En $x = ${rr}$: $${p * rr + q} = A(${rr - s})$, así que $A = ${frac(p * rr + q, rr - s)}$.` : `En $x = ${s}$: $${p * s + q} = B(${s - rr})$, así que $B = ${frac(p * s + q, s - rr)}$.`
+        ],
+        verify: { kind: "zero", fn: ans => { const a1 = askA ? ans : A, b1 = askA ? B : ans; return [0.37, 1.91, -2.53].map(x => a1 / (x - rr) + b1 / (x - s) - (p * x + q) / ((x - rr) * (x - s))); } }
+      };
+    }
+  };
+  T["racional-num"] = {
+    type: "numeric", concepts: ["fracciones-simples"], difficulty: 3,
+    generate(r) {
+      const [rr, s] = r.distinct(2, -3, 3), c = Math.max(rr, s) + r.int(1, 2), d = c + r.int(1, 3);
+      const F = x => (Math.log(Math.abs(x - rr)) - Math.log(Math.abs(x - s))) / (rr - s), ans = F(d) - F(c);
+      return {
+        prompt: `Calculá $\\displaystyle\\int_{${c}}^{${d}} \\frac{dx}{(${xm(rr)})(${xm(s)})}$ (con 3 decimales alcanza).`,
+        answer: ans,
+        solution: [
+          `[[fracciones-simples|Fracciones simples]]: $\\dfrac{1}{(${xm(rr)})(${xm(s)})} = \\dfrac{1}{${rr - s}}\\left(\\dfrac{1}{${xm(rr)}} - \\dfrac{1}{${xm(s)}}\\right)$.`,
+          `Primitiva: $\\dfrac{1}{${rr - s}}\\ln\\left|\\dfrac{${xm(rr)}}{${xm(s)}}\\right|$.`,
+          `Evaluando entre $${c}$ y $${d}$: $\\approx ${num(ans, 4)}$.`
+        ],
+        verify: { kind: "integral", f: x => 1 / ((x - rr) * (x - s)), a: c, b: d }
+      };
+    }
+  };
+
+  /* --------------------------- apuntes de la unidad --------------------------- */
+  const cards = {
+    "antiderivada": {
+      title: "Antiderivadas (primitivas)", aliases: ["antiderivada", "antiderivadas", "primitiva", "primitivas", "integral indefinida", "tabla de primitivas"], concepts: ["antiderivada"],
+      summary: "F es primitiva de f si F' = f. Dos primitivas difieren en una constante: ∫ f dx = F(x) + C.",
+      def: [R`$F$ es una **primitiva** (o antiderivada) de $f$ en un intervalo si $F'(x) = f(x)$ ahí. Se escribe $$\int f(x)\,dx = F(x) + C.$$`,
+        R`**Tabla básica:** $\int x^n dx = \frac{x^{n+1}}{n+1}$ ($n \neq -1$), $\int\frac{dx}{x} = \ln|x|$, $\int e^{x}dx = e^x$, $\int\cos x\,dx = \sin x$, $\int\sin x\,dx = -\cos x$, $\int\sec^2 x\,dx = \tan x$, $\int\frac{dx}{1+x^2} = \arctan x$, $\int\frac{dx}{\sqrt{1-x^2}} = \arcsin x$ (todas $+ C$).`],
+      idea: [R`Integrar es "derivar al revés": cada fórmula de [[derivadas-trig|derivación]] da una de integración. La constante $C$ aparece porque derivar borra las constantes. Una condición inicial como $F(x_0) = y_0$ fija el valor de $C$.`],
+      demo: [R`**¿Por qué solo difieren en una constante?** Si $F' = G' = f$ en un intervalo, entonces $(F - G)' = 0$.`, R`Por el [[valor-medio|teorema de Lagrange]], una función con derivada nula en un intervalo es constante. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\int\left(3x^2 - \frac{2}{x} + e^x\right)dx$.`, steps: [R`Término a término: $x^3 - 2\ln|x| + e^x + C$.`] }],
+      tips: [R`Para chequear una primitiva, derivala: tiene que dar el integrando.`],
+      see: ["integral-definida", "tfc", "int-sustitucion"]
+    },
+    "integral-definida": {
+      title: "Sumas de Riemann e integral definida", aliases: ["integral definida", "suma de Riemann", "sumas de Riemann", "propiedades de la integral"], concepts: ["integral-definida"],
+      summary: "∫ₐᵇ f es el límite de las sumas de Riemann: el área con signo entre el gráfico y el eje x.",
+      def: [R`Partimos $[a, b]$ en $n$ intervalos de ancho $\Delta x = \frac{b-a}{n}$ y elegimos un punto $x_i^*$ en cada uno. La **suma de Riemann** es $\sum_{i=1}^n f(x_i^*)\,\Delta x$, y $$\int_a^b f(x)\,dx = \lim_{n\to\infty}\sum_{i=1}^n f(x_i^*)\,\Delta x.$$ Toda función [[continuidad|continua]] en $[a,b]$ es integrable.`],
+      idea: [R`Cada sumando es el área (con signo) de un rectángulo; al afinar la partición, la suma tiende al **área con signo**: lo que está arriba del eje cuenta positivo y lo de abajo, negativo.`,
+        { graph: { fns: [x => x * x / 2], xr: [-1, 4], yr: [-1, 5] }, caption: R`El área bajo $\frac{x^2}{2}$ entre $0$ y $3$ es el límite de las sumas de rectángulos.` },
+        R`**Propiedades:** linealidad $\int(\alpha f + \beta g) = \alpha\int f + \beta\int g$; $\int_a^b = \int_a^c + \int_c^b$; $\int_b^a f = -\int_a^b f$; si $f \le g$ entonces $\int f \le \int g$. Si $f$ es impar, $\int_{-a}^a f = 0$; si es par, $\int_{-a}^a f = 2\int_0^a f$.`],
+      examples: [{ q: R`Calculá $\int_0^1 x\,dx$ como límite de sumas de Riemann (extremo derecho).`, steps: [R`$\Delta x = \frac1n$, $x_i = \frac in$: $\sum_{i=1}^n \frac{i}{n}\cdot\frac1n = \frac{1}{n^2}\cdot\frac{n(n+1)}{2}$.`, R`Tiende a $\frac12$: el área del triángulo.`] }],
+      see: ["tfc", "antiderivada", "area-curvas"]
+    },
+    "tfc": {
+      title: "Teorema fundamental del cálculo", aliases: ["teorema fundamental del cálculo", "teorema fundamental", "regla de Barrow", "Barrow", "TFC"], concepts: ["tfc"],
+      summary: "Derivar e integrar son operaciones inversas: (∫ₐˣ f)' = f y ∫ₐᵇ f = F(b) − F(a).",
+      def: [R`Sea $f$ continua en $[a, b]$.`, R`**Parte 1:** $G(x) = \int_a^x f(t)\,dt$ es derivable y $G'(x) = f(x)$.`, R`**Parte 2 (Barrow):** si $F$ es cualquier primitiva de $f$, $$\int_a^b f(x)\,dx = F(b) - F(a).$$`],
+      idea: [R`La parte 1 dice que la "función área" crece, en cada punto, a un ritmo igual a la altura del gráfico. La parte 2 convierte un límite de sumas en una resta: **para integrar alcanza con encontrar una [[antiderivada|primitiva]]**.`,
+        R`Con la [[regla-cadena|cadena]]: $\frac{d}{dx}\int_a^{g(x)} f(t)\,dt = f(g(x))\,g'(x)$.`],
+      demo: [R`**Parte 1.** $\dfrac{G(x+h) - G(x)}{h} = \dfrac1h\displaystyle\int_x^{x+h} f(t)\,dt$.`,
+        R`Por el teorema del valor medio para integrales existe $c_h$ entre $x$ y $x+h$ con $\int_x^{x+h} f = f(c_h)\,h$. Entonces el cociente vale $f(c_h)$, y como $c_h \to x$ y $f$ es continua, tiende a $f(x)$.`,
+        R`**Parte 2.** $G$ y $F$ son primitivas de $f$, así que $F = G + C$. Entonces $F(b) - F(a) = G(b) - G(a) = \int_a^b f - 0$. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\int_0^\pi \sin x\,dx$.`, steps: [R`Primitiva: $-\cos x$.`, R`$-\cos\pi - (-\cos 0) = 1 + 1 = 2$.`] }],
+      tips: [R`Es $F(b) - F(a)$, en ese orden. Y la primitiva tiene que valer en **todo** $[a,b]$: $\int_{-1}^1\frac{dx}{x^2}$ no se puede hacer con Barrow, porque el integrando no está definido en $0$ (es [[impropias|impropia]]).`],
+      see: ["antiderivada", "integral-definida", "regla-cadena"]
+    },
+    "int-sustitucion": {
+      title: "Integración por sustitución", aliases: ["cambio de variable", "método de sustitución", "sustitución u"], concepts: ["int-sustitucion"],
+      summary: "∫ f(g(x)) g'(x) dx = ∫ f(u) du con u = g(x): es la regla de la cadena al revés.",
+      def: [R`$$\int f\big(g(x)\big)\,g'(x)\,dx = \int f(u)\,du \qquad (u = g(x),\ du = g'(x)\,dx)$$ En una integral definida también se cambian los límites: $\int_a^b f(g(x))g'(x)\,dx = \int_{g(a)}^{g(b)} f(u)\,du$.`],
+      idea: [R`Es la [[regla-cadena|regla de la cadena]] leída al revés. La pista: buscá una función "de adentro" cuya derivada aparezca multiplicando (salvo una constante).`],
+      demo: [R`Si $F' = f$, por la cadena $\frac{d}{dx}F(g(x)) = f(g(x))\,g'(x)$. Así que $F(g(x))$ es primitiva del integrando, que es lo que dice la fórmula. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\int\frac{\cos x}{1 + \sin x}\,dx$.`, steps: [R`$u = 1 + \sin x$, $du = \cos x\,dx$.`, R`$\int\frac{du}{u} = \ln|u| = \ln(1 + \sin x) + C$.`] }],
+      tips: [R`Si después de sustituir queda algo de $x$ suelto, la sustitución no era la indicada (o hay que despejar $x$ en función de $u$).`],
+      see: ["regla-cadena", "int-partes", "antiderivada"]
+    },
+    "int-partes": {
+      title: "Integración por partes", aliases: ["por partes", "integración por partes", "LIATE"], concepts: ["int-partes"],
+      summary: "∫ u dv = uv − ∫ v du: la regla del producto al revés.",
+      def: [R`$$\int u\,dv = uv - \int v\,du \qquad\qquad \int_a^b u\,dv = \big[uv\big]_a^b - \int_a^b v\,du$$`],
+      idea: [R`Sirve cuando el integrando es un producto donde un factor se **simplifica al derivarlo** (polinomios, $\ln x$, $\arctan x$) y el otro es **fácil de integrar** ($e^x$, $\sin x$, $\cos x$). Una regla mnemotécnica para elegir $u$ es LIATE: Logarítmicas, Inversas trigonométricas, Algebraicas, Trigonométricas, Exponenciales.`],
+      demo: [R`Por la [[regla-producto|regla del producto]], $(uv)' = u'v + uv'$. Integrando: $uv = \int u'v\,dx + \int uv'\,dx$, y despejando sale la fórmula. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\int x e^x\,dx$.`, steps: [R`$u = x$, $dv = e^x dx$: $du = dx$, $v = e^x$.`, R`$xe^x - \int e^x dx = (x - 1)e^x + C$.`] }, { q: R`Calculá $\int e^x\sin x\,dx$.`, steps: [R`Dos veces por partes vuelve a aparecer la integral original: $I = e^x\sin x - e^x\cos x - I$.`, R`Despejando: $I = \frac{e^x(\sin x - \cos x)}{2} + C$.`] }],
+      see: ["regla-producto", "int-sustitucion"]
+    },
+    "integrales-trig": {
+      title: "Integrales trigonométricas y sustitución trigonométrica", aliases: ["integrales trigonométricas", "sustitución trigonométrica"], concepts: ["int-trig"],
+      summary: "Potencias de seno y coseno con identidades; raíces de a² ± x² con x = a·sen θ, a·tg θ o a·sec θ.",
+      def: [R`**Potencias de $\sin$ y $\cos$:** si alguna potencia es impar, se separa un factor y se usa $\sin^2 + \cos^2 = 1$ con $u = \cos x$ o $u = \sin x$. Si las dos son pares, ángulo doble: $\sin^2 x = \frac{1 - \cos 2x}{2}$ y $\cos^2 x = \frac{1 + \cos 2x}{2}$.`,
+        R`**Sustitución trigonométrica:**<br>• $\sqrt{a^2 - x^2}$: $x = a\sin\theta$ (queda $a\cos\theta$).<br>• $\sqrt{a^2 + x^2}$: $x = a\tan\theta$ (queda $a\sec\theta$).<br>• $\sqrt{x^2 - a^2}$: $x = a\sec\theta$ (queda $a\tan\theta$).`],
+      idea: [R`Todo sale de la [[identidades-trig|identidad pitagórica]]: la sustitución convierte la raíz en un cuadrado perfecto. $\int_0^a\sqrt{a^2 - x^2}\,dx = \frac{\pi a^2}{4}$ es el área de un cuarto de círculo.`],
+      examples: [{ q: R`Calculá $\int\cos^3 x\,dx$.`, steps: [R`$\cos^3 x = (1 - \sin^2 x)\cos x$, con $u = \sin x$.`, R`$\int(1 - u^2)du = \sin x - \frac{\sin^3 x}{3} + C$.`] }],
+      see: ["identidades-trig", "int-sustitucion"]
+    },
+    "fracciones-simples": {
+      title: "Fracciones simples (funciones racionales)", aliases: ["fracciones simples", "fracciones parciales"], concepts: ["fracciones-simples"],
+      summary: "Un cociente de polinomios se parte en sumandos A/(x − r), que se integran como logaritmos.",
+      def: [R`Si el grado del numerador es menor que el del denominador y el denominador se [[factorizar|factoriza]] en factores lineales distintos: $$\frac{p(x)}{(x - r_1)\cdots(x - r_k)} = \frac{A_1}{x - r_1} + \dots + \frac{A_k}{x - r_k}.$$ Con factores repetidos aparecen términos $\frac{B}{(x - r)^2}$, y con cuadráticos irreducibles, $\frac{Cx + D}{x^2 + bx + c}$.`],
+      idea: [R`Para hallar $A$: multiplicá por el denominador y evaluá en $x = r_1$; todos los otros términos se anulan. Después cada sumando se integra: $\int\frac{A}{x - r}dx = A\ln|x - r|$. Si el grado de arriba no es menor, primero se divide.`],
+      examples: [{ q: R`Calculá $\int\frac{dx}{x^2 - 1}$.`, steps: [R`$\frac{1}{(x-1)(x+1)} = \frac{1/2}{x - 1} - \frac{1/2}{x + 1}$.`, R`$\frac12\ln|x - 1| - \frac12\ln|x + 1| + C = \frac12\ln\left|\frac{x-1}{x+1}\right| + C$.`] }],
+      see: ["factorizar", "antiderivada"]
+    }
+  };
+
+  E.extendCourse("m101", {
+    concepts: {
+      "antiderivada": { name: "Antiderivadas" },
+      "integral-definida": { name: "Integral definida y Riemann" },
+      "tfc": { name: "Teorema fundamental del cálculo" },
+      "int-sustitucion": { name: "Integración por sustitución" },
+      "int-partes": { name: "Integración por partes" },
+      "int-trig": { name: "Integrales trigonométricas" },
+      "fracciones-simples": { name: "Fracciones simples" }
+    },
+    templates: T,
+    units: [{
+      id: "integrales", order: 4, program: "Unidad 4", title: "Integrales", icon: "sigma",
+      diagnostic: ["tfc-num", "sust-num", "partes-num"],
+      lessons: [
+        { id: "antiderivadas", title: "Antiderivadas", templates: ["anti-mc", "anti-pvi-num"], theory: ["antiderivada"],
+          intro: R`$F$ es primitiva de $f$ si $F' = f$. $\int x^n dx = \frac{x^{n+1}}{n+1} + C$; la constante se fija con una condición inicial.` },
+        { id: "riemann", title: "Sumas de Riemann e integral definida", templates: ["riemann-num", "intprop-num", "sym-vf"], theory: ["integral-definida"],
+          intro: R`$\int_a^b f = \lim\sum f(x_i^*)\Delta x$: área con signo. Es lineal y aditiva respecto del intervalo.` },
+        { id: "tfc", title: "Teorema fundamental del cálculo", templates: ["tfc-num", "tfc-deriv-num", "tfc-error"], theory: ["tfc", "antiderivada"],
+          intro: R`$\left(\int_a^x f\right)' = f(x)$ y $\int_a^b f = F(b) - F(a)$ para cualquier primitiva $F$.` },
+        { id: "sustitucion", title: "Sustitución", templates: ["sust-mc", "sust-num"], theory: ["int-sustitucion", "regla-cadena"],
+          intro: R`Si aparece $f(g(x))\,g'(x)$: $u = g(x)$, $du = g'(x)dx$. En una definida, se cambian también los límites.` },
+        { id: "partes", title: "Por partes", templates: ["partes-mc", "partes-num", "partes-order"], theory: ["int-partes", "regla-producto"],
+          intro: R`$\int u\,dv = uv - \int v\,du$. Como $u$ va lo que se simplifica al derivar.` },
+        { id: "int-trig", title: "Trigonométricas y sustitución trigonométrica", templates: ["trigint-num", "trigsust-mc"], theory: ["integrales-trig", "identidades-trig"],
+          intro: R`$\sin^2 x = \frac{1 - \cos 2x}{2}$. Para $\sqrt{a^2 - x^2}$, $x = a\sin\theta$; para $\sqrt{a^2 + x^2}$, $x = a\tan\theta$.` },
+        { id: "racionales", title: "Fracciones simples", templates: ["fracs-num", "racional-num"], theory: ["fracciones-simples", "factorizar"],
+          intro: R`$\frac{p(x)}{(x - r)(x - s)} = \frac{A}{x - r} + \frac{B}{x - s}$, y cada sumando se integra como un logaritmo.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 4 (segunda parte) · IMPROPIAS, EDO Y APLICACIONES DE LA INTEGRAL
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { frac, num, poly, polyc, xp, xm, cf, kx, par, sg } = H;
+  const T = {};
+
+  // ---------- integrales impropias ----------
+  T["impropia-num"] = {
+    type: "numeric", concepts: ["impropias"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["pinf", "exp", "sqrt0", "atan"]);
+      if (v === "pinf") {
+        const p = r.pick([2, 3, 4, 1.5]), a = r.int(1, 3), ans = a ** (1 - p) / (p - 1);
+        const pt = p === 1.5 ? "\\frac{3}{2}" : String(p);
+        return { prompt: `Calculá $\\displaystyle\\int_{${a}}^{\\infty} \\frac{dx}{x^{${pt}}}$.`, answer: ans,
+          solution: [`Es [[impropias|impropia]]: $\\lim_{t\\to\\infty}\\int_{${a}}^{t} x^{-${pt}}dx = \\lim_{t\\to\\infty}\\left[\\frac{x^{1-${pt}}}{1-${pt}}\\right]_{${a}}^{t}$.`, `Como $${pt} > 1$, $t^{1 - ${pt}} \\to 0$: queda $\\frac{${a}^{1-${pt}}}{${pt} - 1} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => x ** -p, a, inf: true } };
+      }
+      if (v === "exp") {
+        const k = r.int(1, 5);
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{\\infty} e^{-${k === 1 ? "" : k}x}\\,dx$.`, answer: 1 / k, answerTex: frac(1, k),
+          solution: [`$\\lim_{t\\to\\infty}\\left[-\\frac{e^{-${k === 1 ? "" : k}x}}{${k}}\\right]_0^t = 0 + \\frac{1}{${k}}$ ([[impropias]]).`],
+          verify: { kind: "integral", f: x => Math.exp(-k * x), a: 0, inf: true } };
+      }
+      if (v === "sqrt0") {
+        const b = r.pick([1, 4, 9]);
+        // ∫_0^b dx/√x = 2√b ; se verifica con x = t² (dx = 2t dt), que elimina la singularidad en 0
+        return { prompt: `Calculá $\\displaystyle\\int_{0}^{${b}} \\frac{dx}{\\sqrt{x}}$.`, answer: 2 * Math.sqrt(b),
+          solution: [`El integrando explota en $0$: es [[impropias|impropia]] de segunda especie.`, `$\\lim_{\\varepsilon\\to0^+}\\left[2\\sqrt{x}\\right]_\\varepsilon^{${b}} = 2\\sqrt{${b}} = ${2 * Math.sqrt(b)}$.`],
+          verify: { kind: "integral", f: t => (t === 0 ? 2 : (1 / Math.sqrt(t * t)) * 2 * t), a: 0, b: Math.sqrt(b) } };
+      }
+      const a = r.int(1, 4);
+      return { prompt: `Calculá $\\displaystyle\\int_{0}^{\\infty} \\frac{dx}{${a * a} + x^{2}}$.`, answer: Math.PI / (2 * a), answerTex: `\\frac{\\pi}{${2 * a}}`,
+        solution: [`$\\int\\frac{dx}{${a * a} + x^2} = \\frac{1}{${a}}\\arctan\\frac{x}{${a}}$ ([[integrales-trig]]).`, `$\\lim_{t\\to\\infty}\\frac{1}{${a}}\\arctan\\frac{t}{${a}} = \\frac{1}{${a}}\\cdot\\frac{\\pi}{2}$ ([[impropias]]).`],
+        verify: { kind: "integral", f: x => 1 / (a * a + x * x), a: 0, inf: true } };
+    }
+  };
+  T["impropia-vf"] = {
+    type: "tf", concepts: ["impropias"], difficulty: 2,
+    generate(r) {
+      const p = r.pick([0.5, 1, 1.5, 2, 3, 0.8]), a = r.int(1, 3), inf = r.bool();
+      const pt = { 0.5: "\\frac12", 1: "1", 1.5: "\\frac32", 2: "2", 3: "3", 0.8: "\\frac45" }[p];
+      const truth = inf ? p > 1 : p < 1;
+      return {
+        prompt: `<b>Verdadero o falso:</b> $\\displaystyle\\int_{${inf ? a : 0}}^{${inf ? "\\infty" : a}} \\frac{dx}{x^{${pt}}}$ converge.`,
+        answer: truth,
+        explanation: inf ? `En $[a, \\infty)$, $\\int\\frac{dx}{x^p}$ converge si y solo si $p > 1$. Acá $p = ${pt}$.` : `En $(0, a]$, $\\int\\frac{dx}{x^p}$ converge si y solo si $p < 1$. Acá $p = ${pt}$.`,
+        solution: [`Para $p \\neq 1$: $\\int x^{-p}dx = \\frac{x^{1-p}}{1-p}$, y todo depende de si $x^{1-p}$ tiende a $0$ o a $\\infty$ en el extremo problemático ([[impropias]]).`],
+        // verificación: la integral sobre tramos que se alejan del extremo problemático, ¿se achica?
+        verify: { kind: "truth", fn: () => {
+          const I = (u, v) => { let s = 0; const n = 4000, h = (v - u) / n; for (let i = 0; i < n; i++) { const x = u + (i + 0.5) * h; s += x ** -p * h; } return s; };
+          // lo que aporta cada década hacia el extremo problemático: si se achica, converge
+          return inf ? I(1e7, 1e8) / I(1e6, 1e7) < 0.99 : I(1e-8, 1e-7) / I(1e-7, 1e-6) < 0.99;
+        } }
+      };
+    }
+  };
+
+  // ---------- ecuaciones diferenciales separables ----------
+  T["edo-sep-num"] = {
+    type: "numeric", concepts: ["edo"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["exp", "xy", "logistic0", "y2"]);
+      if (v === "exp") {
+        const k = r.pick([-0.5, -0.2, 0.1, 0.3, 0.5]), y0 = r.int(1, 9) * 10, t1 = r.int(1, 6);
+        return { prompt: `Si $y' = ${num(k)}\\,y$ e $y(0) = ${y0}$, calculá $y(${t1})$.`, answer: y0 * Math.exp(k * t1),
+          solution: [`[[edo|Separamos variables]]: $\\frac{dy}{y} = ${num(k)}\\,dt \\Rightarrow \\ln|y| = ${num(k)}t + C$.`, `$y(t) = ${y0}\\,e^{${num(k)}t}$, así que $y(${t1}) = ${y0}e^{${num(k * t1)}} \\approx ${num(y0 * Math.exp(k * t1), 3)}$.`],
+          verify: { kind: "ode", f: (t, y) => [k * y[0]], y0: [y0], t1, dt: 1e-3, out: (_, y) => y[0] } };
+      }
+      if (v === "xy") {
+        const y0 = r.int(1, 5), x1 = r.pick([0.5, 1, 1.5]);
+        return { prompt: `Si $y' = x\\,y$ e $y(0) = ${y0}$, calculá $y(${x1})$.`, answer: y0 * Math.exp(x1 * x1 / 2),
+          solution: [`[[edo|Separando]]: $\\frac{dy}{y} = x\\,dx \\Rightarrow \\ln|y| = \\frac{x^2}{2} + C$.`, `$y = ${y0}e^{x^2/2}$, y $y(${x1}) = ${y0}e^{${num(x1 * x1 / 2)}} \\approx ${num(y0 * Math.exp(x1 * x1 / 2), 4)}$.`],
+          verify: { kind: "ode", f: (t, y) => [t * y[0]], y0: [y0], t1: x1, dt: 1e-4, out: (_, y) => y[0] } };
+      }
+      if (v === "y2") {
+        const y0 = r.int(1, 4), t1 = r.pick([0.5, 1, 2, 3]);
+        return { prompt: `Si $y' = -y^{2}$ e $y(0) = ${y0}$, calculá $y(${t1})$.`, answer: y0 / (1 + y0 * t1), answerTex: frac(y0 * 2, 2 * (1 + y0 * t1)),
+          solution: [`[[edo|Separamos]]: $-\\frac{dy}{y^2} = dt \\Rightarrow \\frac{1}{y} = t + C$, con $C = \\frac{1}{${y0}}$.`, `$y(t) = \\frac{${y0}}{1 + ${y0}t}$, así que $y(${t1}) = ${frac(y0 * 2, 2 * (1 + y0 * t1))}$.`],
+          verify: { kind: "ode", f: (t, y) => [-y[0] * y[0]], y0: [y0], t1, dt: 1e-4, out: (_, y) => y[0] } };
+      }
+      // ley de enfriamiento de Newton
+      const Ta = r.int(15, 25), T0 = r.int(70, 95), k = r.pick([0.05, 0.1, 0.2]), t1 = r.int(5, 20);
+      const ans = Ta + (T0 - Ta) * Math.exp(-k * t1);
+      return { prompt: `Un café a ${T0} °C se enfría en una habitación a ${Ta} °C según $T' = -${k}\\,(T - ${Ta})$ ($t$ en minutos). ¿Qué temperatura tiene a los ${t1} minutos?`, answer: ans,
+        solution: [`[[edo|Separable]]: $\\frac{dT}{T - ${Ta}} = -${k}\\,dt \\Rightarrow T - ${Ta} = (${T0} - ${Ta})e^{-${k}t}$.`, `$T(${t1}) = ${Ta} + ${T0 - Ta}e^{-${num(k * t1)}} \\approx ${num(ans, 2)}$ °C.`],
+        verify: { kind: "ode", f: (t, y) => [-k * (y[0] - Ta)], y0: [T0], t1, dt: 1e-3, out: (_, y) => y[0] } };
+    }
+  };
+  T["edo-verif-mc"] = {
+    type: "mc", concepts: ["edo"], difficulty: 1,
+    generate(r) {
+      const v = r.pick(["osc", "exp", "lin"]);
+      if (v === "osc") {
+        const w = r.int(2, 5);
+        return { prompt: `¿Cuál de estas funciones es solución de $y'' + ${w * w}y = 0$?`,
+          ...H.mc(r, `y = \\sin(${w}t)`, [`y = \\sin(${w * w}t)`, `y = e^{${w}t}`, `y = ${w}t^{2}`, `y = \\cos(t)`]),
+          solution: [`[[edo|Verificar una solución]] es reemplazarla: si $y = \\sin(${w}t)$, $y'' = -${w * w}\\sin(${w}t)$.`, `$y'' + ${w * w}y = -${w * w}\\sin(${w}t) + ${w * w}\\sin(${w}t) = 0$ ✓.`],
+          verify: { kind: "zero", fn: () => [0.3, 1.2, 2.5].map(t => { const y = s => Math.sin(w * s), h = 1e-3; return ((y(t + h) - 2 * y(t) + y(t - h)) / (h * h) + w * w * y(t)) / (w * w); }), tol: 1e-5 } };
+      }
+      if (v === "exp") {
+        const k = r.nz(-4, 4);
+        return { prompt: `¿Cuál de estas funciones es solución de $y' = ${k}y$?`,
+          ...H.mc(r, `y = 5e^{${k}t}`, [`y = e^{${k}t} + 5`, `y = ${k}e^{t}`, `y = 5e^{${-k}t}`, `y = ${k}t + 5`]),
+          solution: [`Si $y = 5e^{${k}t}$: $y' = ${5 * k}e^{${k}t} = ${k}\\cdot 5e^{${k}t} = ${k}y$ ✓ ([[edo]]).`],
+          verify: { kind: "zero", fn: () => [0.1, 0.5, 0.9].map(t => { const y = s => 5 * Math.exp(k * s), h = 1e-5; return ((y(t + h) - y(t - h)) / (2 * h) - k * y(t)) / Math.max(1, y(t)); }), tol: 1e-6 } };
+      }
+      const a = r.nz(-3, 3), b = r.nz(-4, 4);
+      return { prompt: `¿Cuál de estas funciones es solución de $y' + y = ${polyc([a, a + b])}$?`,
+        ...H.mc(r, `y = ${polyc([a, b])}`, [`y = ${polyc([a, a + b])}`, `y = ${polyc([b, a])}`, `y = ${polyc([-a, b])}`, `y = e^{-t}`]),
+        solution: [`Si $y = ${polyc([a, b]).replace(/x/g, "t")}$: $y' + y = ${a} + (${polyc([a, b]).replace(/x/g, "t")}) =${polyc([a, a + b]).replace(/x/g, "t")}$ ✓ ([[edo]]).`],
+        verify: { kind: "zero", fn: () => [0.2, 1.4].map(t => a + (a * t + b) - (a * t + a + b)) } };
+    }
+  };
+
+  // ---------- área entre curvas ----------
+  T["area-num"] = {
+    type: "numeric", concepts: ["area-curvas"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["parab-recta", "dos-parab", "sin"]);
+      if (v === "parab-recta") {
+        const m = r.int(1, 6);
+        return { prompt: `Calculá el área encerrada entre $y = x^{2}$ e $y = ${m === 1 ? "" : m}x$.`, answer: m ** 3 / 6, answerTex: frac(m ** 3, 6),
+          solution: [`Se cortan en $x^2 = ${m === 1 ? "" : m}x$: $x = 0$ y $x = ${m}$. Arriba va la recta ([[area-curvas]]).`, `$\\int_0^{${m}}(${m === 1 ? "" : m}x - x^2)dx = \\frac{${m}\\cdot${m * m}}{2} - \\frac{${m ** 3}}{3} = ${frac(m ** 3, 6)}$.`],
+          verify: { kind: "integral", f: x => Math.abs(m * x - x * x), a: 0, b: m } };
+      }
+      if (v === "dos-parab") {
+        const a = r.int(1, 3), c = a * a * 2;
+        // y = c - x^2 e y = x^2: se cortan en x = ±a
+        return { prompt: `Calculá el área encerrada entre $y = x^{2}$ e $y = ${c} - x^{2}$.`, answer: 8 * a ** 3 / 3, answerTex: frac(8 * a ** 3, 3),
+          solution: [`Se cortan en $2x^2 = ${c}$: $x = \\pm ${a}$ ([[area-curvas]]).`, `$\\int_{-${a}}^{${a}}(${c} - 2x^2)dx = ${2 * c * a} - \\frac{4\\cdot${a ** 3}}{3} = ${frac(8 * a ** 3, 3)}$.`],
+          verify: { kind: "integral", f: x => Math.abs(c - 2 * x * x), a: -a, b: a } };
+      }
+      const k = r.int(1, 3);
+      return { prompt: `Calculá el área encerrada entre $y = \\sin x$ y el eje $x$ para $0 \\le x \\le ${k === 1 ? "" : k}\\pi$.`, answer: 2 * k,
+        solution: [`Cada arco de $\\sin x$ encierra área $\\int_0^\\pi\\sin x\\,dx = 2$; en los tramos negativos se toma el valor absoluto ([[area-curvas]]).`, `Son ${k} arcos: área $= ${2 * k}$.`],
+        verify: { kind: "integral", f: x => Math.abs(Math.sin(x)), a: 0, b: k * Math.PI } };
+    }
+  };
+  T["area-error"] = {
+    type: "error", concepts: ["area-curvas"], difficulty: 2,
+    generate(r) {
+      const m = r.int(2, 6);
+      const ok = [
+        `Intersecciones: $x^2 = ${m}x \\Rightarrow x = 0$ y $x = ${m}$.`,
+        `En $(0, ${m})$ la recta está arriba: el área es $\\int_0^{${m}}(${m}x - x^2)\\,dx$.`,
+        `$= \\left[\\frac{${m}x^2}{2} - \\frac{x^3}{3}\\right]_0^{${m}} = ${frac(m ** 3, 2)} - ${frac(m ** 3, 3)} = ${frac(m ** 3, 6)}$.`
+      ];
+      const steps = ok.slice();
+      const kind = r.pick(["orden", "inter"]);
+      let wrongIndex, fix;
+      if (kind === "orden") {
+        wrongIndex = 1;
+        steps[1] = `En $(0, ${m})$ la parábola está arriba: el área es $\\int_0^{${m}}(x^2 - ${m}x)\\,dx$.`;
+        steps[2] = `$= \\left[\\frac{x^3}{3} - \\frac{${m}x^2}{2}\\right]_0^{${m}} = -${frac(m ** 3, 6)}$.`;
+        fix = `Probá con $x = 1$: $${m}\\cdot 1 > 1^2$, así que arriba va la recta. Un área no puede dar negativa.`;
+      } else {
+        wrongIndex = 0;
+        steps[0] = `Intersecciones: $x^2 = ${m}x \\Rightarrow x = 0$ y $x = ${m * m}$.`;
+        steps[1] = `En $(0, ${m * m})$ la recta está arriba: el área es $\\int_0^{${m * m}}(${m}x - x^2)\\,dx$.`;
+        steps[2] = `$= \\left[\\frac{${m}x^2}{2} - \\frac{x^3}{3}\\right]_0^{${m * m}} = ${frac(m * m ** 4, 2)} - ${frac(m ** 6, 3)}$.`;
+        fix = `$x^2 = ${m}x \\iff x(x - ${m}) = 0$: las intersecciones son $0$ y $${m}$.`;
+      }
+      return {
+        prompt: `Alguien calculó el área entre $y = x^{2}$ e $y = ${m}x$ así. <b>Tocá el primer paso incorrecto.</b>`,
+        steps, wrongIndex, fix, solution: ok,
+        verify: { kind: "integral", f: x => Math.abs(m * x - x * x), a: 0, b: m, target: m ** 3 / 6 }
+      };
+    }
+  };
+
+  // ---------- volúmenes y longitud de arco ----------
+  T["volumen-num"] = {
+    type: "numeric", concepts: ["volumen-revolucion"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["pow", "sqrt", "cono"]);
+      if (v === "pow") {
+        const n = r.int(1, 3), b = r.int(1, 2), ans = Math.PI * b ** (2 * n + 1) / (2 * n + 1);
+        return { prompt: `La región bajo $y = ${xp(n)}$ entre $x = 0$ y $x = ${b}$ gira alrededor del eje $x$. Calculá el volumen del sólido.`, answer: ans, answerTex: `\\frac{${b ** (2 * n + 1) === 1 ? "" : b ** (2 * n + 1)}\\pi}{${2 * n + 1}}`,
+          solution: [`[[volumen-revolucion|Discos]]: $V = \\pi\\int_0^{${b}} \\big(${xp(n)}\\big)^2 dx = \\pi\\int_0^{${b}} x^{${2 * n}}dx$.`, `$= \\pi\\,\\frac{${b}^{${2 * n + 1}}}{${2 * n + 1}} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => Math.PI * x ** (2 * n), a: 0, b } };
+      }
+      if (v === "sqrt") {
+        const b = r.int(1, 6);
+        return { prompt: `La región bajo $y = \\sqrt{x}$ entre $x = 0$ y $x = ${b}$ gira alrededor del eje $x$. Calculá el volumen.`, answer: Math.PI * b * b / 2, answerTex: `\\frac{${b * b === 1 ? "" : b * b}\\pi}{2}`,
+          solution: [`[[volumen-revolucion|Discos]]: $V = \\pi\\int_0^{${b}} x\\,dx = \\frac{\\pi\\,${b * b}}{2}$ (un paraboloide).`],
+          verify: { kind: "integral", f: x => Math.PI * x, a: 0, b } };
+      }
+      const h = r.int(1, 6), R0 = r.int(1, 5);
+      return { prompt: `La recta $y = \\frac{${R0}}{${h}}x$ entre $x = 0$ y $x = ${h}$ gira alrededor del eje $x$ y genera un cono. Calculá su volumen.`, answer: Math.PI * R0 * R0 * h / 3, answerTex: `\\frac{${R0 * R0 * h === 1 ? "" : R0 * R0 * h}\\pi}{3}`,
+        solution: [`[[volumen-revolucion|Discos]]: $V = \\pi\\int_0^{${h}}\\frac{${R0 * R0}}{${h * h}}x^2dx = \\pi\\frac{${R0 * R0}}{${h * h}}\\cdot\\frac{${h ** 3}}{3}$.`, `$= \\frac{\\pi\\cdot${R0 * R0}\\cdot${h}}{3}$: la fórmula del cono, $\\frac13\\pi R^2 h$.`],
+        verify: { kind: "integral", f: x => Math.PI * (R0 / h * x) ** 2, a: 0, b: h } };
+    }
+  };
+  T["arco-num"] = {
+    type: "numeric", concepts: ["volumen-revolucion"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["pot32", "cosh", "recta"]);
+      if (v === "pot32") {
+        const b = r.pick([3, 8, 15, 24]), ans = 2 / 3 * ((1 + b) ** 1.5 - 1);
+        return { prompt: `Calculá la longitud de arco de $y = \\frac{2}{3}x^{3/2}$ entre $x = 0$ y $x = ${b}$.`, answer: ans, answerTex: frac(2 * (Math.round((1 + b) ** 1.5) - 1), 3),
+          solution: [`$y' = x^{1/2}$, así que $\\sqrt{1 + y'^2} = \\sqrt{1 + x}$ ([[volumen-revolucion|longitud de arco]]).`, `$L = \\int_0^{${b}}\\sqrt{1 + x}\\,dx = \\frac23\\left[(1 + x)^{3/2}\\right]_0^{${b}} = \\frac23(${Math.round((1 + b) ** 1.5)} - 1) = ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => Math.sqrt(1 + x), a: 0, b } };
+      }
+      if (v === "cosh") {
+        const b = r.pick([1, 2]), ans = (Math.exp(b) - Math.exp(-b)) / 2;
+        return { prompt: `Calculá la longitud de arco de $y = \\frac{e^{x} + e^{-x}}{2}$ entre $x = 0$ y $x = ${b}$ (con 3 decimales alcanza).`, answer: ans,
+          solution: [`$y' = \\frac{e^x - e^{-x}}{2}$ y $1 + y'^2 = \\left(\\frac{e^x + e^{-x}}{2}\\right)^2$ ([[volumen-revolucion|longitud de arco]]).`, `$L = \\int_0^{${b}}\\frac{e^x + e^{-x}}{2}dx = \\frac{e^{${b}} - e^{-${b}}}{2} \\approx ${num(ans, 4)}$.`],
+          verify: { kind: "integral", f: x => Math.sqrt(1 + ((Math.exp(x) - Math.exp(-x)) / 2) ** 2), a: 0, b } };
+      }
+      const m = r.int(1, 4), b = r.int(1, 5);
+      return { prompt: `Calculá con la fórmula de longitud de arco el largo de $y = ${m === 1 ? "" : m}x$ entre $x = 0$ y $x = ${b}$.`, answer: b * Math.sqrt(1 + m * m), answerTex: `${b === 1 ? "" : b}\\sqrt{${1 + m * m}}`,
+        solution: [`$L = \\int_0^{${b}}\\sqrt{1 + ${m * m}}\\,dx = ${b === 1 ? "" : b}\\sqrt{${1 + m * m}}$ ([[volumen-revolucion]]). Coincide con Pitágoras, como debe.`],
+        verify: { kind: "value", fn: () => Math.hypot(b, m * b) } };
+    }
+  };
+
+  /* --------------------------- apuntes de la unidad --------------------------- */
+  const cards = {
+    "impropias": {
+      title: "Integrales impropias", aliases: ["integral impropia", "integrales impropias", "impropia"], concepts: ["impropias"],
+      summary: "Integrales con un extremo infinito o con el integrando no acotado: se definen como límites.",
+      def: [R`**Primera especie** (intervalo infinito): $\displaystyle\int_a^\infty f(x)\,dx = \lim_{t\to\infty}\int_a^t f(x)\,dx$.`,
+        R`**Segunda especie** (integrando no acotado en $a$): $\displaystyle\int_a^b f(x)\,dx = \lim_{\varepsilon\to0^+}\int_{a+\varepsilon}^b f(x)\,dx$.`,
+        R`Si el límite existe y es finito, la integral **converge**; si no, **diverge**.`],
+      idea: [R`Un área infinitamente larga puede ser finita, si el integrando se achica lo suficientemente rápido. El caso modelo: $$\int_1^\infty\frac{dx}{x^p} \text{ converge} \iff p > 1, \qquad \int_0^1\frac{dx}{x^p} \text{ converge} \iff p < 1.$$`,
+        { graph: { fns: [x => 1 / (x * x), x => 1 / x], xr: [0, 6], yr: [-0.5, 2] }, caption: R`$\frac{1}{x^2}$ (violeta) baja lo bastante rápido; $\frac1x$ (naranja) no: $\int_1^\infty\frac{dx}{x}$ diverge.` },
+        R`Este mismo criterio es la base del [[criterios-series|criterio de la integral]] para series.`],
+      demo: [R`Para $p \neq 1$: $\displaystyle\int_1^t x^{-p}dx = \frac{t^{1-p} - 1}{1 - p}$. Si $p > 1$, $t^{1-p} \to 0$ y el resultado es $\frac{1}{p-1}$; si $p < 1$, $t^{1-p}\to\infty$.`, R`Para $p = 1$: $\int_1^t\frac{dx}{x} = \ln t \to \infty$. $\blacksquare$`],
+      examples: [{ q: R`¿Converge $\int_0^\infty x e^{-x}\,dx$?`, steps: [R`Por [[int-partes|partes]]: $\int_0^t xe^{-x}dx = 1 - (t + 1)e^{-t}$.`, R`Cuando $t\to\infty$ tiende a $1$: converge y vale $1$.`] }],
+      see: ["tfc", "criterios-series"]
+    },
+    "edo": {
+      title: "Ecuaciones diferenciales separables", aliases: ["ecuación diferencial", "ecuaciones diferenciales", "separamos variables", "separando variables", "variables separables", "ley de enfriamiento"], concepts: ["edo"],
+      summary: "Una EDO relaciona y con sus derivadas. Si es y' = g(x) h(y), se separa: ∫ dy/h(y) = ∫ g(x) dx.",
+      def: [R`Una **ecuación diferencial ordinaria** relaciona una función $y(x)$ con sus derivadas. Una **solución** es una función que, reemplazada, la cumple; una **condición inicial** $y(x_0) = y_0$ elige una solución entre una familia.`,
+        R`**Separable:** $y' = g(x)\,h(y)$. Se pasa todo lo de $y$ a un lado y todo lo de $x$ al otro: $$\int\frac{dy}{h(y)} = \int g(x)\,dx.$$`],
+      idea: [R`Son el lenguaje de la física: $N' = kN$ (crecimiento, decaimiento, ver [[modelos]]), $T' = -k(T - T_a)$ (ley de enfriamiento de Newton), $x'' = -\omega^2 x$ (oscilaciones).`,
+        R`Para **verificar** una solución no hace falta resolver nada: se deriva y se reemplaza.`],
+      examples: [{ q: R`Resolvé $y' = \frac{x}{y}$ con $y(0) = 2$.`, steps: [R`$y\,dy = x\,dx \Rightarrow \frac{y^2}{2} = \frac{x^2}{2} + C$.`, R`Con $y(0) = 2$: $C = 2$, así que $y = \sqrt{x^2 + 4}$.`] }],
+      tips: [R`Al separar dividiendo por $h(y)$ se pueden perder soluciones constantes: $y = 0$ también resuelve $y' = ky$.`],
+      see: ["modelos", "antiderivada", "exp-log-func"]
+    },
+    "area-curvas": {
+      title: "Área entre curvas", aliases: ["área entre curvas", "área encerrada"], concepts: ["area-curvas"],
+      summary: "Área = ∫ (arriba − abajo) dx, entre los puntos de corte.",
+      def: [R`Si $f \ge g$ en $[a, b]$, el área entre los dos gráficos es $$A = \int_a^b \big(f(x) - g(x)\big)\,dx.$$ Si se cruzan, se parte el intervalo en los puntos de corte (o se integra $|f - g|$).`],
+      idea: [R`**Receta:** 1) igualá las funciones para encontrar los cortes; 2) mirá cuál está arriba en cada tramo (alcanza con probar un punto); 3) integrá "arriba menos abajo". Un área nunca da negativa.`,
+        { graph: { fns: [x => 2 * x, x => x * x], xr: [-1, 3], yr: [-1, 5] }, caption: R`Entre $y = 2x$ (violeta) e $y = x^2$ (naranja): $\int_0^2(2x - x^2)dx = \frac43$.` }],
+      examples: [{ q: R`Área entre $y = \sqrt x$ e $y = x$.`, steps: [R`Se cortan en $x = 0$ y $x = 1$; en el medio, $\sqrt x > x$.`, R`$\int_0^1(\sqrt x - x)dx = \frac23 - \frac12 = \frac16$.`] }],
+      see: ["integral-definida", "tfc"]
+    },
+    "volumen-revolucion": {
+      title: "Volúmenes de revolución y longitud de arco", aliases: ["volumen de revolución", "sólido de revolución", "método de los discos", "longitud de arco"], concepts: ["volumen-revolucion"],
+      summary: "Discos: V = π ∫ f(x)² dx. Longitud de arco: L = ∫ √(1 + f'(x)²) dx.",
+      def: [R`**Volumen (discos):** si la región bajo $y = f(x)$, $a \le x \le b$, gira alrededor del eje $x$: $$V = \pi\int_a^b f(x)^2\,dx.$$`, R`**Longitud de arco** del gráfico de $f$ entre $a$ y $b$: $$L = \int_a^b\sqrt{1 + f'(x)^2}\,dx.$$`],
+      idea: [R`Ambas fórmulas salen de "cortar en pedacitos y sumar". Un disco de grosor $dx$ tiene volumen $\pi f(x)^2\,dx$. Un pedacito de curva es casi un segmento de largo $\sqrt{dx^2 + dy^2} = \sqrt{1 + (dy/dx)^2}\,dx$, por Pitágoras.`,
+        R`Chequeo: un cono de radio $R$ y altura $h$ (la recta $y = \frac Rh x$) da $V = \pi\int_0^h\frac{R^2}{h^2}x^2dx = \frac13\pi R^2 h$.`],
+      examples: [{ q: R`Volumen de una esfera de radio $R$.`, steps: [R`Gira $y = \sqrt{R^2 - x^2}$, $-R \le x \le R$.`, R`$V = \pi\int_{-R}^R(R^2 - x^2)dx = \pi\left(2R^3 - \frac{2R^3}{3}\right) = \frac43\pi R^3$.`] }],
+      see: ["integral-definida", "area-curvas"]
+    }
+  };
+
+  E.extendCourse("m101", {
+    concepts: {
+      "impropias": { name: "Integrales impropias" },
+      "edo": { name: "Ecuaciones diferenciales separables" },
+      "area-curvas": { name: "Área entre curvas" },
+      "volumen-revolucion": { name: "Volúmenes y longitud de arco" }
+    },
+    templates: T,
+    units: [{
+      id: "apl-integral", order: 4.5, program: "Unidad 4", title: "Impropias, EDO y aplicaciones de la integral", icon: "target",
+      diagnostic: ["impropia-num", "edo-sep-num", "area-num"],
+      lessons: [
+        { id: "impropias", title: "Integrales impropias", templates: ["impropia-num", "impropia-vf"], theory: ["impropias", "tfc"],
+          intro: R`$\int_a^\infty f = \lim_{t\to\infty}\int_a^t f$. $\int_1^\infty\frac{dx}{x^p}$ converge si y solo si $p > 1$.` },
+        { id: "edo", title: "Ecuaciones diferenciales separables", templates: ["edo-verif-mc", "edo-sep-num"], theory: ["edo", "modelos"],
+          intro: R`$y' = g(x)h(y) \Rightarrow \int\frac{dy}{h(y)} = \int g(x)dx$. La condición inicial fija la constante.` },
+        { id: "areas", title: "Área entre curvas", templates: ["area-num", "area-error"], theory: ["area-curvas", "integral-definida"],
+          intro: R`Área $= \int(\text{arriba} - \text{abajo})\,dx$ entre los puntos de corte.` },
+        { id: "volumenes", title: "Volúmenes y longitud de arco", templates: ["volumen-num", "arco-num"], theory: ["volumen-revolucion"],
+          intro: R`$V = \pi\int f^2\,dx$ (discos) y $L = \int\sqrt{1 + f'^2}\,dx$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 5 · SUCESIONES Y SERIES DE NÚMEROS REALES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { frac, num, poly, polyc, xp, xm, cf, kx, par, sg } = H;
+  const T = {};
+  const logFact = n => { let s = 0; for (let k = 2; k <= n; k++) s += Math.log(k); return s; };
+  // estimaciones numéricas para clasificar series en las verificaciones
+  const ratioEst = logTerm => Math.exp(logTerm(20001) - logTerm(20000));
+  const expoEst = term => Math.log(term(1e5) / term(1e6)) / Math.LN10;
+
+  // ---------- sucesiones ----------
+  T["seqlim-num"] = {
+    type: "numeric", concepts: ["sucesiones"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["rac", "rac", "e", "sqrt", "nsin"]);
+      if (v === "rac") {
+        const a = r.nz(-6, 6), b = r.int(-5, 5), c = r.int(1, 5), d = r.int(1, 7), e = r.int(-4, 4);
+        return { prompt: `Calculá $\\displaystyle\\lim_{n\\to\\infty}\\frac{${polyc([a, e, b]).replace(/x/g, "n")}}{${polyc([c, 0, d]).replace(/x/g, "n")}}$.`, answer: a / c, answerTex: frac(a, c),
+          solution: [`Dividimos arriba y abajo por $n^2$: los términos $\\frac{k}{n}$ y $\\frac{k}{n^2}$ tienden a $0$ ([[sucesiones|límite de sucesiones]]).`, `Queda $\\frac{${a}}{${c}} = ${frac(a, c)}$.`],
+          verify: { kind: "seqlim", a: n => (a * n * n + e * n + b) / (c * n * n + d) } };
+      }
+      if (v === "e") {
+        const k = r.nz(-3, 3);
+        return { prompt: `Calculá $\\displaystyle\\lim_{n\\to\\infty}\\left(1 ${k < 0 ? "-" : "+"} \\frac{${Math.abs(k)}}{n}\\right)^{n}$ (con 3 decimales alcanza).`, answer: Math.exp(k), answerTex: `e^{${k}}`,
+          solution: [`Es el límite que define al número $e$: $\\left(1 + \\frac{k}{n}\\right)^n \\to e^k$ ([[sucesiones]]).`, `Con $k = ${k}$: $e^{${k}} \\approx ${num(Math.exp(k), 4)}$.`],
+          verify: { kind: "seqlim", a: n => Math.exp(n * Math.log1p(k / n)), n: 1e7 } };
+      }
+      if (v === "sqrt") {
+        const k = r.int(1, 8);
+        return { prompt: `Calculá $\\displaystyle\\lim_{n\\to\\infty}\\left(\\sqrt{n^{2} + ${k}n} - n\\right)$.`, answer: k / 2, answerTex: frac(k, 2),
+          solution: [`$\\infty - \\infty$: multiplicamos y dividimos por el [[conjugado]]: $\\dfrac{${k}n}{\\sqrt{n^2 + ${k}n} + n}$.`, `Dividiendo por $n$: $\\dfrac{${k}}{\\sqrt{1 + ${k}/n} + 1} \\to \\dfrac{${k}}{2}$.`],
+          verify: { kind: "seqlim", a: n => k * n / (Math.sqrt(n * n + k * n) + n), n: 1e6 } };
+      }
+      const k = r.int(1, 6);
+      return { prompt: `Calculá $\\displaystyle\\lim_{n\\to\\infty} n\\sin\\left(\\frac{${k}}{n}\\right)$.`, answer: k,
+        solution: [`Con $u = \\frac{${k}}{n} \\to 0$: $n\\sin\\frac{${k}}{n} = ${k}\\cdot\\frac{\\sin u}{u} \\to ${k}$ ([[lim-trig-notable|límite notable]]).`],
+        verify: { kind: "seqlim", a: n => n * Math.sin(k / n) } };
+    }
+  };
+  T["mono-vf"] = {
+    type: "tf", concepts: ["sucesiones"], difficulty: 1,
+    generate(r) {
+      const k = r.int(1, 5);
+      const cases = [
+        { t: `a_n = \\frac{n}{n + ${k}}`, q: "es creciente", a: n => n / (n + k), check: "inc", why: `$a_n = 1 - \\frac{${k}}{n + ${k}}$ y $\\frac{${k}}{n + ${k}}$ decrece: $a_n$ crece (y está acotada por $1$).` },
+        { t: `a_n = \\frac{(-1)^{n}}{n}`, q: "es monótona", a: n => (-1) ** n / n, check: "mono", why: `Alterna de signo: $-1, \\frac12, -\\frac13, \\dots$ Sube y baja, así que no es monótona (aunque tiende a $0$).` },
+        { t: `a_n = \\frac{n^{2}}{n + ${k}}`, q: "es acotada", a: n => n * n / (n + k), check: "bound", why: `$\\frac{n^2}{n + ${k}} \\approx n$ para $n$ grande: crece sin cota.` },
+        { t: `a_n = \\frac{${2 * k}n + 1}{n + 3}`, q: "es acotada", a: n => (2 * k * n + 1) / (n + 3), check: "bound", why: `$0 < a_n < ${2 * k}$ para todo $n$: es acotada (y converge a $${2 * k}$).` },
+        { t: `a_n = \\frac{${k + 1}^{n}}{n!}`, q: `es decreciente a partir de $n = ${k + 1}$`, a: n => Math.exp(n * Math.log(k + 1) - logFact(n)), check: "decFrom", from: k + 1, why: `$\\frac{a_{n+1}}{a_n} = \\frac{${k + 1}}{n + 1} < 1$ para $n \\ge ${k + 1}$.` }
+      ];
+      const c = r.pick(cases);
+      const seq = Array.from({ length: 400 }, (_, i) => c.a(i + 1));
+      const truth = c.check === "inc" ? seq.every((v, i) => i === 0 || v > seq[i - 1])
+        : c.check === "mono" ? seq.every((v, i) => i === 0 || v >= seq[i - 1]) || seq.every((v, i) => i === 0 || v <= seq[i - 1])
+        : c.check === "bound" ? Math.abs(c.a(1e6)) < 1e3
+        : seq.slice(0, 150).every((v, i) => i < c.from || v < seq[i - 1]); // después los términos se vuelven 0 por underflow
+      return {
+        prompt: `<b>Verdadero o falso:</b> la sucesión $${c.t}$ ${c.q}.`,
+        answer: truth, explanation: c.why,
+        solution: [`Creciente: $a_{n+1} > a_n$. Acotada: $|a_n| \\le M$ para todo $n$. Toda sucesión monótona y acotada converge ([[sucesiones]]).`],
+        verify: { kind: "truth", fn: () => {
+          const vals = Array.from({ length: 2000 }, (_, i) => c.a(i + 1));
+          if (c.check === "inc") return vals.every((v, i) => i === 0 || v > vals[i - 1]);
+          if (c.check === "mono") return vals.every((v, i) => i === 0 || v >= vals[i - 1]) || vals.every((v, i) => i === 0 || v <= vals[i - 1]);
+          if (c.check === "bound") return Math.max(...vals.map(Math.abs)) < 2 * Math.abs(vals[999]) + 10 && Math.abs(c.a(1e7)) < 1e3;
+          return vals.slice(0, 150).every((v, i) => i < c.from || v < vals[i - 1]);
+        } }
+      };
+    }
+  };
+
+  // ---------- series geométricas y telescópicas ----------
+  T["geo-num"] = {
+    type: "numeric", concepts: ["series"], difficulty: 2,
+    generate(r) {
+      const q = r.int(2, 6), p = r.nz(-(q - 1), q - 1), a = r.nz(-5, 5), from = r.pick([0, 1]);
+      const rr = p / q, first = a * rr ** from, ans = (a * p ** from * q) / (q ** from * (q - p));
+      return {
+        prompt: `Calculá $\\displaystyle\\sum_{n=${from}}^{\\infty} ${a === 1 ? "" : a === -1 ? "-" : a}\\left(${frac(p, q)}\\right)^{n}$.`,
+        answer: ans, answerTex: frac(a * p ** from * q, q ** from * (q - p)),
+        solution: [
+          `Es una [[series|serie geométrica]] de razón $r = ${frac(p, q)}$, con $|r| < 1$: converge.`,
+          `Suma $= \\dfrac{\\text{primer término}}{1 - r} = \\dfrac{${num(first, 4)}}{1 - (${frac(p, q)})} = ${frac(a * p ** from * q, q ** from * (q - p))}$.`
+        ],
+        verify: { kind: "sum", from, inf: true, N: 5000, term: n => a * rr ** n }
+      };
+    }
+  };
+  T["telesc-num"] = {
+    type: "numeric", concepts: ["series"], difficulty: 3,
+    generate(r) {
+      const k = r.int(1, 4), c = r.int(1, 5);
+      let Hk = 0; for (let i = 1; i <= k; i++) Hk += 1 / i;
+      const ans = c * Hk / k;
+      return {
+        prompt: `Calculá $\\displaystyle\\sum_{n=1}^{\\infty}\\frac{${c}}{n(n + ${k})}$.`,
+        answer: ans,
+        solution: [
+          `[[fracciones-simples|Fracciones simples]]: $\\dfrac{${c}}{n(n + ${k})} = ${frac(c, k)}\\left(\\dfrac{1}{n} - \\dfrac{1}{n + ${k}}\\right)$.`,
+          `Es [[series|telescópica]]: en la suma parcial se cancela casi todo y quedan los primeros ${k} términos positivos: $${frac(c, k)}\\left(${Array.from({ length: k }, (_, i) => i === 0 ? "1" : `\\frac{1}{${i + 1}}`).join(" + ")}\\right)$.`,
+          `Suma $= ${num(ans, 4)}$.`
+        ],
+        verify: { kind: "sum", from: 1, inf: true, N: 2e6, term: n => c / (n * (n + k)), tol: 2e-5 }
+      };
+    }
+  };
+  T["geo-vf"] = {
+    type: "tf", concepts: ["series"], difficulty: 1,
+    generate(r) {
+      const opts = [[-3, 2], [-1, 1], [-1, 2], [1, 3], [1, 1], [5, 4], [9, 10], [-4, 5], [3, 2], [2, 7]];
+      const [p, q] = r.pick(opts), rr = p / q, truth = Math.abs(rr) < 1;
+      return {
+        prompt: `<b>Verdadero o falso:</b> $\\displaystyle\\sum_{n=0}^{\\infty}\\left(${frac(p, q)}\\right)^{n}$ converge.`,
+        answer: truth,
+        explanation: truth ? `Geométrica con $|r| = ${frac(Math.abs(p), q)} < 1$: converge a $\\frac{1}{1 - r}$.` : `Geométrica con $|r| = ${frac(Math.abs(p), q)} \\ge 1$: el término general no tiende a $0$, así que diverge.`,
+        solution: [`$\\sum r^n$ converge si y solo si $|r| < 1$ ([[series]]).`],
+        verify: { kind: "truth", fn: () => Math.abs(rr) ** 2000 < 1e-9 }
+      };
+    }
+  };
+
+  // ---------- criterios de convergencia ----------
+  T["pserie-vf"] = {
+    type: "tf", concepts: ["criterios-conv"], difficulty: 1,
+    generate(r) {
+      const opts = [["\\frac{1}{n}", 1], ["\\frac{1}{n^{2}}", 2], ["\\frac{1}{\\sqrt{n}}", 0.5], ["\\frac{1}{n\\sqrt{n}}", 1.5], ["\\frac{1}{n^{1{,}01}}", 1.01], ["\\frac{1}{\\sqrt[3]{n^{2}}}", 2 / 3], ["\\frac{1}{n^{3}}", 3]];
+      const [t, p] = r.pick(opts), truth = p > 1;
+      return {
+        prompt: `<b>Verdadero o falso:</b> $\\displaystyle\\sum_{n=1}^{\\infty} ${t}$ converge.`,
+        answer: truth,
+        explanation: `Es una [[criterios-series|serie $p$]] con $p = ${num(p, 3)}$: converge si y solo si $p > 1$.${p === 1 ? " Es la serie armónica, que diverge aunque su término tienda a $0$." : ""}`,
+        solution: [`$\\sum\\frac{1}{n^p}$ converge $\\iff p > 1$ (por el criterio de la integral).`],
+        verify: { kind: "truth", fn: () => expoEst(n => n ** -p) > 1 + 1e-6 }
+      };
+    }
+  };
+  T["ratio-num"] = {
+    type: "numeric", concepts: ["criterios-conv"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["poly-exp", "exp-fact", "cat", "fact-pow"]);
+      if (v === "poly-exp") {
+        const k = r.int(1, 4), c = r.int(2, 5);
+        return { prompt: `Para $a_n = \\dfrac{n^{${k}}}{${c}^{n}}$, calculá $L = \\displaystyle\\lim_{n\\to\\infty}\\left|\\frac{a_{n+1}}{a_n}\\right|$.`, answer: 1 / c, answerTex: frac(1, c),
+          solution: [`$\\dfrac{a_{n+1}}{a_n} = \\left(\\dfrac{n + 1}{n}\\right)^{${k}}\\cdot\\dfrac{1}{${c}} \\to \\dfrac{1}{${c}}$.`, `Como $L < 1$, la serie converge ([[criterios-series|criterio de la razón]]).`],
+          verify: { kind: "ratio", logTerm: n => k * Math.log(n) - n * Math.log(c) } };
+      }
+      if (v === "exp-fact") {
+        const c = r.int(2, 9);
+        return { prompt: `Para $a_n = \\dfrac{${c}^{n}}{n!}$, calculá $L = \\displaystyle\\lim_{n\\to\\infty}\\left|\\frac{a_{n+1}}{a_n}\\right|$.`, answer: 0,
+          solution: [`$\\dfrac{a_{n+1}}{a_n} = \\dfrac{${c}}{n + 1} \\to 0$.`, `$L = 0 < 1$: converge ([[criterios-series|criterio de la razón]]). El factorial le gana a cualquier exponencial.`],
+          verify: { kind: "ratio", logTerm: n => n * Math.log(c) - logFact(n), tol: 1e-3 } };
+      }
+      if (v === "cat") {
+        return { prompt: `Para $a_n = \\dfrac{(n!)^{2}}{(2n)!}$, calculá $L = \\displaystyle\\lim_{n\\to\\infty}\\left|\\frac{a_{n+1}}{a_n}\\right|$.`, answer: 0.25, answerTex: "\\frac14",
+          solution: [`$\\dfrac{a_{n+1}}{a_n} = \\dfrac{(n+1)^2}{(2n+2)(2n+1)} = \\dfrac{n + 1}{2(2n + 1)} \\to \\dfrac{1}{4}$.`, `$L < 1$: converge ([[criterios-series|criterio de la razón]]).`],
+          verify: { kind: "ratio", logTerm: n => 2 * logFact(n) - logFact(2 * n) } };
+      }
+      return { prompt: `Para $a_n = \\dfrac{n!}{n^{n}}$, calculá $L = \\displaystyle\\lim_{n\\to\\infty}\\left|\\frac{a_{n+1}}{a_n}\\right|$ (con 3 decimales alcanza).`, answer: 1 / Math.E, answerTex: "\\frac{1}{e}",
+        solution: [`$\\dfrac{a_{n+1}}{a_n} = \\dfrac{(n+1)\\,n^n}{(n+1)^{n+1}} = \\left(\\dfrac{n}{n+1}\\right)^n = \\dfrac{1}{\\left(1 + \\frac1n\\right)^n} \\to \\dfrac{1}{e}$.`, `$L < 1$: converge ([[criterios-series|criterio de la razón]]).`],
+        verify: { kind: "ratio", logTerm: n => logFact(n) - n * Math.log(n) } };
+    }
+  };
+  const CLASSES = ["Converge (criterio de la razón)", "Diverge (el término general no tiende a 0)", "Converge (serie p con p > 1)", "Diverge (serie p con p ≤ 1)"];
+  T["criterio-mc"] = {
+    type: "mc", concepts: ["criterios-conv"], difficulty: 2,
+    generate(r) {
+      const k = r.int(1, 3), c = r.int(2, 5);
+      const cases = [
+        { t: `\\frac{n^{${k}}}{${c}^{n}}`, cls: 0, term: n => n ** k / c ** n, logT: n => k * Math.log(n) - n * Math.log(c) },
+        { t: `\\frac{${k}n + 1}{${c}n + 3}`, cls: 1, term: n => (k * n + 1) / (c * n + 3), logT: n => Math.log((k * n + 1) / (c * n + 3)) },
+        { t: `\\frac{${k}}{n^{${c}}}`, cls: 2, term: n => k / n ** c, logT: n => Math.log(k) - c * Math.log(n) },
+        { t: `\\frac{${k}}{\\sqrt{n}}`, cls: 3, term: n => k / Math.sqrt(n), logT: n => Math.log(k) - 0.5 * Math.log(n) }
+      ];
+      const cs = r.pick(cases);
+      return {
+        prompt: `¿Qué pasa con $\\displaystyle\\sum_{n=1}^{\\infty} ${cs.t}$?`,
+        ...H.mc(r, CLASSES[cs.cls], CLASSES.filter((_, i) => i !== cs.cls), { text: true }),
+        solution: [
+          `Primero, siempre: ¿el término general tiende a $0$? Si no, la serie diverge ([[series|condición necesaria]]).`,
+          cs.cls === 0 ? `Tiende a $0$; con la [[criterios-series|razón]]: $\\frac{a_{n+1}}{a_n} \\to \\frac{1}{${c}} < 1$, converge.`
+            : cs.cls === 1 ? `$a_n \\to \\frac{${k}}{${c}} \\neq 0$: diverge.`
+            : cs.cls === 2 ? `Es ${k === 1 ? "una" : `${k} veces una`} [[criterios-series|serie $p$]] con $p = ${c} > 1$: converge.`
+            : `Es una [[criterios-series|serie $p$]] con $p = \\frac12 \\le 1$: diverge (aunque $a_n \\to 0$).`
+        ],
+        // verificación: se clasifica a partir de propiedades numéricas del término general
+        // (el término "no tiende a 0" si entre n = 10^5 y 10^7 casi no se achica)
+        verify: { kind: "value", target: cs.cls, fn: () => cs.term(1e7) / cs.term(1e5) > 0.9 ? 1 : ratioEst(cs.logT) < 0.99 ? 0 : expoEst(cs.term) > 1 + 1e-6 ? 2 : 3 }
+      };
+    }
+  };
+
+  // ---------- alternantes y convergencia absoluta ----------
+  T["alt-num"] = {
+    type: "numeric", concepts: ["alternantes"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["ln2", "pi4", "einv"]);
+      if (v === "ln2") return { prompt: `La serie $\\displaystyle\\sum_{n=1}^{\\infty}\\frac{(-1)^{n+1}}{n} = 1 - \\frac12 + \\frac13 - \\cdots$ converge a $\\ln a$. ¿Cuánto vale $a$?`, answer: 2,
+        solution: [`Converge por [[alternantes|Leibniz]]: $\\frac1n$ decrece y tiende a $0$.`, `Integrando término a término $\\frac{1}{1 + x} = 1 - x + x^2 - \\cdots$ entre $0$ y $1$ se obtiene $\\ln 2$.`],
+        verify: { kind: "value", tol: 1e-5, fn: () => { let s = 0; for (let n = 1; n <= 2e6; n++) s += (n % 2 ? 1 : -1) / n; return Math.exp(s + 0.5 / 2e6); } } };
+      if (v === "pi4") return { prompt: `Calculá $\\displaystyle\\sum_{n=0}^{\\infty}\\frac{(-1)^{n}}{2n + 1} = 1 - \\frac13 + \\frac15 - \\cdots$ (con 3 decimales alcanza).`, answer: Math.PI / 4, answerTex: "\\frac{\\pi}{4}",
+        solution: [`Converge por [[alternantes|Leibniz]]. Es la serie de Leibniz para $\\arctan 1 = \\frac{\\pi}{4}$: $\\arctan x = x - \\frac{x^3}{3} + \\frac{x^5}{5} - \\cdots$.`],
+        verify: { kind: "sum", from: 0, inf: true, N: 2e6, term: n => (n % 2 ? -1 : 1) / (2 * n + 1), tol: 1e-5 } };
+      const k = r.int(1, 3);
+      return { prompt: `Calculá $\\displaystyle\\sum_{n=0}^{\\infty}\\frac{(-${k})^{n}}{n!}$ (con 3 decimales alcanza).`, answer: Math.exp(-k), answerTex: `e^{-${k}}`,
+        solution: [`Es la serie de $e^x = \\sum\\frac{x^n}{n!}$ evaluada en $x = -${k}$ ([[alternantes|alternante]] y además absolutamente convergente).`, `$e^{-${k}} \\approx ${num(Math.exp(-k), 4)}$.`],
+        verify: { kind: "sum", from: 0, inf: true, N: 150, term: n => (n % 2 ? -1 : 1) * Math.exp(n * Math.log(k) - logFact(n)) } };
+    }
+  };
+  const ABS = ["Converge absolutamente", "Converge condicionalmente", "Diverge"];
+  T["abscond-mc"] = {
+    type: "mc", concepts: ["alternantes"], difficulty: 2,
+    generate(r) {
+      const opts = [["n^{2}", 2, 0], ["n", 1, 1], ["\\sqrt{n}", 0.5, 1], ["n^{3}", 3, 0], ["n\\sqrt{n}", 1.5, 0], ["\\sqrt[3]{n}", 1 / 3, 1]];
+      const [t, p, cls] = r.pick(opts);
+      const div = r.bool(0.2);
+      const shown = div ? `\\frac{(-1)^{n}\\,n}{n + 1}` : `\\frac{(-1)^{n}}{${t}}`, c = div ? 2 : cls;
+      return {
+        prompt: `¿Cómo es $\\displaystyle\\sum_{n=1}^{\\infty} ${shown}$?`,
+        ...H.mc(r, ABS[c], ABS.filter((_, i) => i !== c).concat(["No se puede saber"]), { text: true }),
+        solution: div
+          ? [`$|a_n| = \\frac{n}{n+1} \\to 1 \\neq 0$: el término general no tiende a $0$, la serie diverge.`]
+          : [`Valores absolutos: $\\sum\\frac{1}{${t}}$ es una [[criterios-series|serie $p$]] con $p = ${num(p, 3)}$.`,
+            p > 1 ? `Como $p > 1$ converge: la serie converge **absolutamente** ([[convergencia-absoluta]]).` : `Como $p \\le 1$ no converge en valor absoluto; pero por [[alternantes|Leibniz]] la alternante sí converge: **condicionalmente**.`],
+        verify: { kind: "value", target: c, fn: () => {
+          const a = div ? (n => n / (n + 1)) : (n => n ** -p);
+          if (a(1e7) / a(1e5) > 0.9) return 2; // el término no tiende a 0
+          return expoEst(a) > 1 + 1e-6 ? 0 : 1;
+        } }
+      };
+    }
+  };
+  T["leibniz-cota-num"] = {
+    type: "numeric", concepts: ["alternantes"], difficulty: 2,
+    generate(r) {
+      const p = r.pick([1, 2, 3]), N = r.pick([4, 9, 19, 99]);
+      const ans = 1 / (N + 1) ** p;
+      return {
+        prompt: `Si aproximás $\\displaystyle S = \\sum_{n=1}^{\\infty}\\frac{(-1)^{n+1}}{${xp(p, "n")}}$ con la suma de los primeros ${N} términos, ¿qué cota del error da el criterio de Leibniz?`,
+        answer: ans, answerTex: frac(1, (N + 1) ** p),
+        solution: [`En una [[alternantes|serie alternante]] que cumple Leibniz, $|S - S_N| \\le a_{N+1}$: el primer término que se descarta.`, `$a_{${N + 1}} = \\dfrac{1}{${N + 1}${p > 1 ? `^{${p}}` : ""}} = ${frac(1, (N + 1) ** p)}$.`],
+        // verificación: la cota coincide con a_{N+1} y efectivamente acota el error real
+        verify: { kind: "zero", fn: ans2 => {
+          let S = 0, SN = 0;
+          for (let n = 1; n <= 2e5; n++) { const t = (n % 2 ? 1 : -1) / n ** p; S += t; if (n === N) SN = S; }
+          return [ans2 * (N + 1) ** p - 1, Math.abs(S - SN) <= ans2 * 1.000001 ? 0 : 1];
+        } }
+      };
+    }
+  };
+
+  /* --------------------------- apuntes de la unidad --------------------------- */
+  const cards = {
+    "sucesiones": {
+      title: "Sucesiones y su límite", aliases: ["sucesión", "sucesiones", "sucesión monótona", "monótona y acotada", "límite de sucesiones"], concepts: ["sucesiones"],
+      summary: "Una sucesión es una función de ℕ en ℝ. Toda sucesión monótona y acotada converge.",
+      def: [R`Una **sucesión** es una lista infinita $a_1, a_2, a_3, \dots$ (una función de $\mathbb{N}$ en $\mathbb{R}$). Decimos que $\lim_{n\to\infty} a_n = L$ si para todo $\varepsilon > 0$ existe $N$ tal que $|a_n - L| < \varepsilon$ para todo $n > N$.`,
+        R`Es **creciente** si $a_{n+1} \ge a_n$, **decreciente** si $a_{n+1} \le a_n$, y **acotada** si existe $M$ con $|a_n| \le M$ para todo $n$.`],
+      idea: [R`Si $a_n = f(n)$ y $\lim_{x\to\infty}f(x) = L$, entonces $a_n \to L$: se pueden usar las técnicas de [[limites-al-infinito|límites al infinito]] y [[lhopital|L'Hôpital]]. También vale el [[sandwich|teorema del sándwich]].`,
+        R`**Teorema de las sucesiones monótonas:** toda sucesión monótona y acotada converge. Es la [[conjuntos-numericos|completitud de ℝ]] en acción.`,
+        R`El límite clásico: $\left(1 + \frac{1}{n}\right)^n \to e$, y en general $\left(1 + \frac{k}{n}\right)^n \to e^k$.`],
+      demo: [R`**Monótona y acotada ⇒ converge** (caso creciente). El conjunto $\{a_n\}$ está acotado, así que tiene supremo $L$ (completitud).`,
+        R`Dado $\varepsilon > 0$, $L - \varepsilon$ no es cota superior: existe $N$ con $a_N > L - \varepsilon$. Como la sucesión crece, para $n > N$ vale $L - \varepsilon < a_N \le a_n \le L$. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\lim\frac{3n^2 - n}{n^2 + 5}$.`, steps: [R`Dividimos por $n^2$: $\frac{3 - 1/n}{1 + 5/n^2} \to 3$.`] }],
+      see: ["series", "limites-al-infinito", "sandwich"]
+    },
+    "series": {
+      title: "Series: sumas parciales, geométrica y telescópica", aliases: ["serie", "series", "serie geométrica", "suma parcial", "sumas parciales", "serie armónica", "telescópica", "condición necesaria"], concepts: ["series"],
+      summary: "Σ aₙ converge si sus sumas parciales tienen límite. Σ rⁿ converge ⟺ |r| < 1, y vale 1/(1−r).",
+      def: [R`La **serie** $\sum_{n=1}^\infty a_n$ es el límite de las **sumas parciales** $S_N = a_1 + \dots + a_N$. Si $S_N \to S$ finito, la serie converge y su suma es $S$; si no, diverge.`,
+        R`**Geométrica:** $\displaystyle\sum_{n=0}^\infty r^n = \frac{1}{1 - r}$ si $|r| < 1$, y diverge si $|r| \ge 1$.`,
+        R`**Condición necesaria:** si $\sum a_n$ converge, entonces $a_n \to 0$. (Al revés no vale.)`],
+      idea: [R`**Telescópicas:** si $a_n = b_n - b_{n+1}$, en la suma parcial se cancela todo menos los extremos: $S_N = b_1 - b_{N+1}$. Con [[fracciones-simples]] muchas series se vuelven telescópicas, como $\sum\frac{1}{n(n+1)} = 1$.`,
+        R`La **serie armónica** $\sum\frac1n$ diverge aunque $\frac1n \to 0$: es el contraejemplo de la recíproca de la condición necesaria.`],
+      demo: [R`**Geométrica.** $S_N = 1 + r + \dots + r^N$ y $rS_N = r + \dots + r^{N+1}$. Restando: $S_N(1 - r) = 1 - r^{N+1}$, o sea $S_N = \frac{1 - r^{N+1}}{1 - r}$. Si $|r| < 1$, $r^{N+1} \to 0$. $\blacksquare$`,
+        R`**La armónica diverge.** Agrupando: $1 + \frac12 + \left(\frac13 + \frac14\right) + \left(\frac15 + \dots + \frac18\right) + \dots \ge 1 + \frac12 + \frac12 + \frac12 + \cdots$, que crece sin cota. $\blacksquare$`],
+      examples: [{ q: R`Escribí $0{,}\overline{36}$ como fracción usando una serie.`, steps: [R`$0{,}3636\ldots = \frac{36}{100} + \frac{36}{100^2} + \cdots$, geométrica con $r = \frac{1}{100}$.`, R`$= \frac{36/100}{1 - 1/100} = \frac{36}{99} = \frac{4}{11}$.`] }],
+      see: ["sucesiones", "criterios-series", "alternantes"]
+    },
+    "criterios-series": {
+      title: "Criterios de convergencia: integral, serie p, comparación, razón y raíz", aliases: ["criterio de la integral", "serie p", "series p", "criterio de la razón", "criterio del cociente", "criterio de la raíz", "criterio de comparación", "D'Alembert"], concepts: ["criterios-conv"],
+      summary: "Σ 1/nᵖ converge ⟺ p > 1. Razón: si |aₙ₊₁/aₙ| → L < 1 converge, si L > 1 diverge, si L = 1 no decide.",
+      def: [R`**Criterio de la integral:** si $f$ es positiva, continua y decreciente en $[1, \infty)$ y $a_n = f(n)$, entonces $\sum a_n$ y $\int_1^\infty f$ convergen o divergen juntas ([[impropias|integrales impropias]]).`,
+        R`**Serie $p$:** $\displaystyle\sum\frac{1}{n^p}$ converge si y solo si $p > 1$.`,
+        R`**Comparación:** si $0 \le a_n \le b_n$ y $\sum b_n$ converge, $\sum a_n$ converge (y si $\sum a_n$ diverge, $\sum b_n$ también).`,
+        R`**Razón (D'Alembert):** $L = \lim\left|\frac{a_{n+1}}{a_n}\right|$. **Raíz (Cauchy):** $L = \lim\sqrt[n]{|a_n|}$. En los dos: $L < 1$ converge (absolutamente), $L > 1$ diverge y $L = 1$ no decide.`],
+      idea: [R`**¿Qué criterio usar?** Si hay factoriales o exponenciales, razón. Si todo está elevado a la $n$, raíz. Si se parece a $\frac{1}{n^p}$, comparación con una serie $p$. Y siempre, primero, chequeá que $a_n \to 0$.`,
+        R`En una serie $p$ la razón da $L = 1$ para todo $p$: por eso no sirve y hace falta la integral.`],
+      demo: [R`**Integral.** Como $f$ decrece, $a_{n+1} \le \int_n^{n+1} f \le a_n$. Sumando: $S_{N+1} - a_1 \le \int_1^{N+1} f \le S_N$. Las sumas parciales son crecientes y quedan acotadas si y solo si la integral converge.`,
+        R`**Serie $p$.** Es la integral $\int_1^\infty\frac{dx}{x^p}$, que converge si y solo si $p > 1$ (ver [[impropias]]). $\blacksquare$`,
+        R`**Razón ($L < 1$).** Elegimos $L < q < 1$. Desde cierto $N$, $|a_{n+1}| \le q|a_n|$, así que $|a_{N+k}| \le |a_N|q^k$: se compara con una [[series|geométrica]] convergente.`],
+      examples: [{ q: R`¿Converge $\sum\frac{n}{2^n}$?`, steps: [R`Razón: $\frac{n+1}{2^{n+1}}\cdot\frac{2^n}{n} = \frac{n + 1}{2n} \to \frac12 < 1$.`, R`Converge (de hecho, suma $2$).`] }],
+      tips: [R`$L = 1$ en la razón **no** dice nada: $\sum\frac1n$ diverge y $\sum\frac{1}{n^2}$ converge, y las dos dan $L = 1$.`],
+      see: ["series", "impropias", "convergencia-absoluta"]
+    },
+    "alternantes": {
+      title: "Series alternantes (Leibniz)", aliases: ["serie alternante", "series alternantes", "alternante", "Leibniz", "criterio de Leibniz"], concepts: ["alternantes"],
+      summary: "Si bₙ decrece a 0, Σ (−1)ⁿ bₙ converge, y el error al cortar en N es a lo sumo bₙ₊₁.",
+      def: [R`**Criterio de Leibniz:** si $b_n > 0$ es decreciente y $b_n \to 0$, entonces $\sum(-1)^{n+1}b_n$ converge. Además, si $S$ es la suma y $S_N$ la suma parcial, $$|S - S_N| \le b_{N+1}.$$`],
+      idea: [R`Las sumas parciales saltan de un lado al otro de $S$ con saltos cada vez más chicos: suben $b_1$, bajan $b_2$, suben $b_3$… Por eso el error queda acotado por el siguiente salto.`,
+        R`Ejemplos famosos: $1 - \frac12 + \frac13 - \cdots = \ln 2$ y $1 - \frac13 + \frac15 - \cdots = \frac\pi4$.`],
+      demo: [R`Las sumas parciales pares crecen: $S_{2m+2} = S_{2m} + (b_{2m+1} - b_{2m+2}) \ge S_{2m}$, y están acotadas por $b_1$. Por el teorema de las [[sucesiones|sucesiones monótonas]] convergen a algún $S$.`,
+        R`Las impares cumplen $S_{2m+1} = S_{2m} + b_{2m+1}$, y $b_{2m+1} \to 0$, así que tienden a lo mismo. $\blacksquare$`],
+      examples: [{ q: R`¿Cuántos términos de $\sum\frac{(-1)^{n+1}}{n^2}$ hacen falta para un error menor que $0{,}01$?`, steps: [R`Alcanza con $b_{N+1} = \frac{1}{(N+1)^2} < 0{,}01$, o sea $N + 1 > 10$.`, R`Con $N = 10$ términos alcanza.`] }],
+      see: ["convergencia-absoluta", "series"]
+    },
+    "convergencia-absoluta": {
+      title: "Convergencia absoluta y condicional", aliases: ["convergencia absoluta", "converge absolutamente", "condicionalmente convergente", "converge condicionalmente"], concepts: ["alternantes"],
+      summary: "Si Σ |aₙ| converge, Σ aₙ también (absoluta). Si converge Σ aₙ pero no Σ |aₙ|, es condicional.",
+      def: [R`$\sum a_n$ **converge absolutamente** si $\sum|a_n|$ converge, y **condicionalmente** si $\sum a_n$ converge pero $\sum|a_n|$ no.`, R`**Teorema:** convergencia absoluta implica convergencia.`],
+      idea: [R`$\sum\frac{(-1)^n}{n^2}$ converge absolutamente. $\sum\frac{(-1)^n}{n}$ solo condicionalmente: los valores absolutos forman la [[series|armónica]], que diverge.`,
+        R`Dato sorprendente (Riemann): una serie condicionalmente convergente se puede **reordenar** para que sume cualquier número. Las absolutamente convergentes, en cambio, suman lo mismo en cualquier orden.`],
+      demo: [R`$0 \le a_n + |a_n| \le 2|a_n|$. Si $\sum|a_n|$ converge, por [[criterios-series|comparación]] converge $\sum(a_n + |a_n|)$, y restando $\sum|a_n|$ converge $\sum a_n$. $\blacksquare$`],
+      examples: [{ q: R`¿Cómo es $\sum\frac{(-1)^n}{\sqrt n}$?`, steps: [R`$\sum\frac{1}{\sqrt n}$ es una serie $p$ con $p = \frac12$: no converge en valor absoluto.`, R`Por Leibniz la alternante converge: es condicional.`] }],
+      see: ["alternantes", "criterios-series"]
+    }
+  };
+
+  E.extendCourse("m101", {
+    concepts: {
+      "sucesiones": { name: "Sucesiones" },
+      "series": { name: "Series geométricas y telescópicas" },
+      "criterios-conv": { name: "Criterios de convergencia" },
+      "alternantes": { name: "Series alternantes y convergencia absoluta" }
+    },
+    templates: T,
+    units: [{
+      id: "series", order: 5, program: "Unidad 5", title: "Sucesiones y series", icon: "sparkles",
+      diagnostic: ["seqlim-num", "geo-num", "criterio-mc"],
+      lessons: [
+        { id: "sucesiones", title: "Sucesiones", templates: ["seqlim-num", "mono-vf"], theory: ["sucesiones", "limites-al-infinito"],
+          intro: R`$a_n \to L$ si a partir de algún $N$ todos los términos quedan a menos de $\varepsilon$ de $L$. Monótona y acotada ⇒ converge.` },
+        { id: "series-geo", title: "Series geométricas y telescópicas", templates: ["geo-vf", "geo-num", "telesc-num"], theory: ["series"],
+          intro: R`$\sum r^n = \frac{1}{1-r}$ si $|r| < 1$. Si $a_n \not\to 0$, la serie diverge.` },
+        { id: "criterios", title: "Criterios de convergencia", templates: ["pserie-vf", "ratio-num", "criterio-mc"], theory: ["criterios-series", "impropias"],
+          intro: R`$\sum\frac{1}{n^p}$ converge $\iff p > 1$. Razón: $L < 1$ converge, $L > 1$ diverge, $L = 1$ no decide.` },
+        { id: "alternantes", title: "Alternantes y convergencia absoluta", templates: ["alt-num", "abscond-mc", "leibniz-cota-num"], theory: ["alternantes", "convergencia-absoluta"],
+          intro: R`Leibniz: si $b_n \downarrow 0$, $\sum(-1)^n b_n$ converge y $|S - S_N| \le b_{N+1}$. Absoluta ⇒ convergente.` }
+      ]
+    }],
+    cards
+  });
+})();

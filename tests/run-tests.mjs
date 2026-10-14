@@ -82,7 +82,7 @@ const simpson = (f, a, b, n = 20000) => {
   return (s * h) / 3;
 };
 const integrate = (f, a, b, inf) => (inf
-  ? simpson(t => { const x = a + t / (1 - t); return f(x) / ((1 - t) * (1 - t)); }, 0, 1 - 1e-7, 200000)
+  ? simpson(s => { const e = Math.exp(s); return f(a - 1 + e) * e; }, 0, 80, 400000) // x = a - 1 + e^s: las colas tipo potencia quedan exponenciales
   : simpson(f, a, b));
 function rk4(f, y0, t1, opts = {}) {
   const dt = opts.dt || 1e-4;
