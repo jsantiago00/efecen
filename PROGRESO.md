@@ -53,7 +53,8 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - El usuario pidió que las fórmulas tengan su deducción (por ejemplo, faltaba cos(a+b)). La ficha `identidades-trig` (M101) ahora tiene la suma y la resta de seno, coseno y tangente, el ángulo doble, sen² y cos² en función de cos 2x, y la demostración de cada una a partir de cos(a−b) (distancia entre dos puntos de la circunferencia unidad).
 - **M101:** se agregó la demostración en 22 fichas: identidades trigonométricas, radianes, teorema del factor, conjugado, límites laterales, sustitución directa, límites infinitos, recta tangente, derivación implícita, crecimiento y signo de f′, función inversa, transformaciones, funciones trigonométricas, propiedades del logaritmo, modelos exponenciales, criterio de la segunda derivada, propiedades de la integral, sustitución trigonométrica, fracciones simples, ecuaciones separables, área entre curvas, y volúmenes y longitud de arco. Las que quedan sin demostración son definiciones o recetas: función, indeterminaciones, técnicas de límites trigonométricos, asíntotas, continuidad, tipos de discontinuidad, derivadas sucesivas, composición y optimización.
 - **M104:** se agregó la demostración en las 14 fichas que no la tenían; ahora todas las de la materia tienen una.
-- **Pendiente:** el mismo repaso en F101, F102B y M102.
+- **F101:** se agregó la demostración en 18 fichas. Quedan sin ella magnitudes y unidades, cifras significativas y leyes de Newton, que son definiciones o postulados.
+- **Pendiente:** el mismo repaso en F102B y M102.
 
 ## Cuenta y sincronización (Firebase)
 

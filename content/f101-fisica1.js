@@ -162,6 +162,9 @@
       idea: [R`Si los errores son aleatorios, el **histograma** de muchas mediciones tiende a una campana de **Gauss** centrada en el valor verdadero, y alrededor del 68 % de las mediciones cae en $\bar x \pm s$.`,
         { graph: { fns: [x => 4 * Math.exp(-x * x / 2)], xr: [-4, 4], yr: [-0.5, 4.5] }, caption: R`La campana de Gauss: la mayoría de las mediciones caen cerca del promedio.` },
         R`Promediar reduce el error aleatorio como $\frac{1}{\sqrt n}$: para un error 10 veces menor hacen falta 100 veces más mediciones. Se divide por $n - 1$ porque $\bar x$ ya se calculó con los mismos datos.`],
+      demo: [R`**Por qué el error del promedio es $\frac{s}{\sqrt n}$.** Pensamos cada medición como $x_i = \mu + e_i$, con errores aleatorios independientes de promedio $0$ y dispersión $\sigma$ (o sea, el promedio de $e_i^2$ es $\sigma^2$). El promedio es $\bar x = \mu + \frac1n\sum e_i$.`,
+        R`El error del promedio al cuadrado es $\left(\frac1n\sum e_i\right)^2 = \frac{1}{n^2}\left(\sum e_i^2 + \sum_{i\neq j}e_ie_j\right)$. En promedio, los productos cruzados $e_ie_j$ dan $0$ (son independientes y cada uno es tan positivo como negativo), y cada $e_i^2$ da $\sigma^2$.`,
+        R`Queda $\frac{1}{n^2}\cdot n\sigma^2 = \frac{\sigma^2}{n}$, así que la dispersión del promedio es $\frac{\sigma}{\sqrt n}$. Como $\sigma$ no se conoce, se estima con $s$.`],
       examples: [{ q: R`Mediciones: $5{,}1;\ 5{,}3;\ 5{,}2$. Promedio y $s$.`, steps: [R`$\bar x = 5{,}2$.`, R`$s = \sqrt{\frac{0{,}01 + 0{,}01 + 0}{2}} = 0{,}1$, y el error del promedio es $\frac{0{,}1}{\sqrt3} \approx 0{,}06$.`] }],
       see: ["f1-errores"]
     }
@@ -350,6 +353,9 @@
       def: [R`Un **vector** en el plano tiene módulo y dirección. Si forma un ángulo $\theta$ con el eje $x$: $A_x = A\cos\theta$, $A_y = A\sin\theta$, y al revés $A = \sqrt{A_x^2 + A_y^2}$, $\tan\theta = \frac{A_y}{A_x}$ (ojo con el cuadrante).`,
         R`**Suma:** gráficamente, regla del paralelogramo o "punta con cola"; analíticamente, componente a componente.`],
       idea: [R`Casi todo problema de mecánica en 2D se resuelve igual: **elegir ejes, descomponer y trabajar cada eje por separado**. El teorema del coseno da el módulo de la suma sin componentes: $|\vec A + \vec B|^2 = A^2 + B^2 + 2AB\cos\varphi$, con $\varphi$ el ángulo entre ellos.`],
+      demo: [R`**Componentes.** El vector, su proyección sobre el eje $x$ y la paralela al eje $y$ forman un triángulo rectángulo de hipotenusa $A$. Por definición de seno y coseno, los catetos miden $A\cos\theta$ y $A\sin\theta$. Por Pitágoras, $A^2 = A_x^2 + A_y^2$.`,
+        R`**Módulo de la suma.** Usando el producto escalar, $$|\vec A + \vec B|^2 = (\vec A + \vec B)\cdot(\vec A + \vec B) = \vec A\cdot\vec A + 2\vec A\cdot\vec B + \vec B\cdot\vec B = A^2 + 2AB\cos\varphi + B^2.$$`,
+        R`**Sumar por componentes es sumar flechas.** Poner la cola de $\vec B$ en la punta de $\vec A$ suma los desplazamientos en $x$ y en $y$ por separado: $(A_x + B_x, A_y + B_y)$.`],
       examples: [{ q: R`Caminás 3 km al este y 4 km al norte. ¿Desplazamiento?`, steps: [R`$\vec R = (3, 4)$ km, $|\vec R| = 5$ km.`, R`Dirección: $\arctan\frac43 \approx 53^\circ$ al norte del este.`] }],
       see: ["f1-mruv", "f1-proyectiles"]
     },
@@ -390,6 +396,9 @@
       def: [R`Si $B$ se mueve respecto de $C$: $$\vec v_{A/C} = \vec v_{A/B} + \vec v_{B/C}.$$ (Vale para velocidades mucho menores que la de la luz.)`],
       idea: [R`Una lancha en un río: su velocidad respecto de la tierra es la suya respecto del agua más la de la corriente. Para cruzar en el menor tiempo se apunta perpendicular a la orilla (y la corriente la arrastra); para cruzar en línea recta hay que apuntar río arriba.`,
         R`Un **sistema inercial** es uno donde vale la primera ley de Newton. Dos sistemas que se mueven con velocidad constante uno respecto del otro son ambos inerciales.`],
+      demo: [R`Sean $\vec r_{A/C}$ la posición de $A$ medida desde $C$, $\vec r_{A/B}$ desde $B$, y $\vec r_{B/C}$ la de $B$ desde $C$. Ir de $C$ a $A$ es ir de $C$ a $B$ y después de $B$ a $A$: $$\vec r_{A/C} = \vec r_{A/B} + \vec r_{B/C}.$$`,
+        R`Derivando respecto del tiempo (que en mecánica clásica es el mismo para todos los observadores) queda $\vec v_{A/C} = \vec v_{A/B} + \vec v_{B/C}$. Derivando otra vez: $\vec a_{A/C} = \vec a_{A/B} + \vec a_{B/C}$.`,
+        R`Si $\vec v_{B/C}$ es constante, $\vec a_{B/C} = 0$ y los dos observadores miden la misma aceleración. Por eso, si uno es inercial, el otro también: los dos ven las mismas fuerzas y la misma $m\vec a$.`],
       examples: [{ q: R`Llueve vertical a 8 m/s y vas en auto a 6 m/s. ¿Cómo ves caer la lluvia?`, steps: [R`$\vec v_{\text{lluvia/auto}} = \vec v_{\text{lluvia/tierra}} - \vec v_{\text{auto/tierra}} = (-6, -8)$ m/s.`, R`Rapidez $10$ m/s, inclinada $\arctan\frac68 \approx 37^\circ$ respecto de la vertical.`] }],
       see: ["f1-vectores", "f1-newton"]
     }
@@ -606,6 +615,9 @@
         R`**Plano inclinado** a un ángulo $\theta$: el peso se descompone en $mg\sin\theta$ (a lo largo del plano) y $mg\cos\theta$ (perpendicular). Si no hay otras fuerzas perpendiculares, $N = mg\cos\theta$.`],
       idea: [R`Sin rozamiento, un bloque baja con $a = g\sin\theta$; con rozamiento dinámico, $a = g(\sin\theta - \mu_k\cos\theta)$. La masa se cancela.`,
         R`Un bloque queda quieto si $\tan\theta \le \mu_s$: midiendo el ángulo al que empieza a deslizar se mide $\mu_s$.`],
+      demo: [R`**Bajada con rozamiento.** Tomamos el eje $x$ a lo largo del plano, hacia abajo, y el $y$ perpendicular. En $y$ no hay aceleración: $N - mg\cos\theta = 0$, o sea $N = mg\cos\theta$.`,
+        R`En $x$ actúan la componente del peso hacia abajo y el rozamiento dinámico hacia arriba: $mg\sin\theta - \mu_k N = ma$. Reemplazando $N$: $$a = g(\sin\theta - \mu_k\cos\theta).$$ La masa se cancela. Con $\mu_k = 0$ queda $a = g\sin\theta$.`,
+        R`**Cuándo queda quieto.** Para que no deslice, el rozamiento estático tiene que equilibrar $mg\sin\theta$, y puede hacerlo mientras $mg\sin\theta \le \mu_s N = \mu_s mg\cos\theta$. Dividiendo por $mg\cos\theta$: $\tan\theta \le \mu_s$.`],
       examples: [{ q: R`¿Con qué aceleración baja un bloque por un plano a $30^\circ$ con $\mu_k = 0{,}2$?`, steps: [R`$a = 9{,}8(0{,}5 - 0{,}2\cdot 0{,}866) \approx 3{,}2$ m/s².`] }],
       tips: [R`El rozamiento estático **no** vale siempre $\mu_s N$: ese es solo su máximo. Un bloque quieto sobre una mesa sin otras fuerzas horizontales tiene rozamiento cero.`],
       see: ["f1-newton", "f1-dinamica-circular"]
@@ -615,6 +627,8 @@
       summary: "Un resorte estirado o comprimido x hace una fuerza F = −kx, hacia su posición natural.",
       def: [R`$$F = -kx$$ donde $x$ es el estiramiento respecto de la longitud natural y $k$ la **constante elástica** (N/m). El signo menos indica que la fuerza se opone a la deformación (es restauradora).`],
       idea: [R`Vale para deformaciones chicas: casi todo material se comporta así cerca del equilibrio, y por eso los resortes aparecen en todos lados. La fuerza restauradora lineal es lo que produce el [[f1-mas|movimiento armónico simple]], y la energía guardada en el resorte es $\frac12kx^2$ (ver [[f1-energia]]).`],
+      demo: [R`**Energía del resorte.** Para estirarlo desde $0$ hasta $x$ hay que hacer una fuerza $+kx'$ en cada posición $x'$ (opuesta a la del resorte). El trabajo es $$W = \int_0^x kx'\,dx' = \frac12kx^2,$$ que queda guardado como energía potencial elástica.`,
+        R`**Por qué es lineal cerca del equilibrio.** Si la fuerza es $F(x)$ con $F(0) = 0$, su recta tangente en $0$ es $F(x) \approx F'(0)\,x$. Llamando $k = -F'(0)$ queda $F \approx -kx$, que es buena aproximación para $x$ chico.`],
       examples: [{ q: R`Un resorte se estira 5 cm con 2 kg colgados. ¿$k$?`, steps: [R`$k = \frac{mg}{x} = \frac{2\cdot 9{,}8}{0{,}05} = 392$ N/m.`] }],
       see: ["f1-newton", "f1-mas", "f1-energia"]
     },
@@ -624,6 +638,9 @@
       def: [R`Para un cuerpo en movimiento circular, la componente radial de la segunda ley es $$\sum F_{\text{hacia el centro}} = m\frac{v^2}{R} = m\omega^2 R.$$`],
       idea: [R`Ejemplos: en una curva plana la fuerza hacia el centro es el [[f1-rozamiento|rozamiento]] ($v_{\max} = \sqrt{\mu_s g R}$); en una órbita, la [[f1-gravitacion|gravedad]]; en una piedra atada, la tensión. La "fuerza centrífuga" que sentís en un auto es la inercia vista desde un sistema no inercial.`,
         R`En un rulo vertical, arriba el peso alcanza para girar si $v^2 = gR$: es la velocidad mínima para no despegarse.`],
+      demo: [R`**La aceleración centrípeta.** En un MCU, $\vec r(t) = R(\cos\omega t, \sin\omega t)$. Derivando dos veces: $\vec v = R\omega(-\sin\omega t, \cos\omega t)$ y $\vec a = -R\omega^2(\cos\omega t, \sin\omega t) = -\omega^2\vec r$. Apunta al centro y mide $\omega^2R = \frac{v^2}{R}$, porque $v = \omega R$.`,
+        R`**Curva plana.** La única fuerza horizontal es el rozamiento estático, que hace de fuerza centrípeta: $m\frac{v^2}{R} = f_s \le \mu_s mg$. Despejando, $v \le \sqrt{\mu_s gR}$.`,
+        R`**Arriba del rulo.** El peso y la normal apuntan al centro: $mg + N = m\frac{v^2}{R}$. Como $N \ge 0$, hace falta $v^2 \ge gR$. Con $v^2 = gR$, la normal se anula y alcanza el peso solo.`],
       examples: [{ q: R`Una piedra de 0,2 kg gira en un círculo horizontal de 0,5 m a 3 m/s. ¿Tensión?`, steps: [R`$T = \frac{mv^2}{R} = \frac{0{,}2\cdot 9}{0{,}5} = 3{,}6$ N (si el círculo es horizontal y despreciamos el peso).`] }],
       see: ["f1-circular", "f1-newton", "f1-gravitacion"]
     }
@@ -765,6 +782,9 @@
         R`**Trabajo de una fuerza constante** en un desplazamiento recto: $W = \vec F\cdot\Delta\vec r = Fd\cos\theta$. **Fuerza variable** a lo largo de $x$: $$W = \int_{x_1}^{x_2} F(x)\,dx.$$ Se mide en joules: $1\ \text{J} = 1\ \text{N}\cdot\text{m}$.`],
       idea: [R`Solo trabaja la componente de la fuerza **a lo largo** del movimiento. Una fuerza perpendicular (la normal en un piso horizontal, la tensión en un péndulo, la fuerza centrípeta en un MCU) no hace trabajo. Si la fuerza se opone al movimiento, el trabajo es negativo (el rozamiento).`,
         R`Trabajo del resorte: $W = \int kx\,dx = \frac12kx^2$. Es el área bajo el gráfico $F(x)$, igual que en una [[integral-definida]].`],
+      demo: [R`**Las dos fórmulas del producto escalar coinciden.** Por el teorema del coseno, $|\vec A - \vec B|^2 = A^2 + B^2 - 2AB\cos\theta$. Por componentes, $|\vec A - \vec B|^2 = \sum(A_i - B_i)^2 = A^2 + B^2 - 2\sum A_iB_i$. Igualando: $AB\cos\theta = A_xB_x + A_yB_y + A_zB_z$.`,
+        R`**Fuerza variable.** Partimos el recorrido en tramos chicos $\Delta x$. En cada uno la fuerza es casi constante y el trabajo es casi $F(x_i)\,\Delta x$. La suma es una suma de Riemann que tiende a $\int_{x_1}^{x_2}F(x)\,dx$ ([[integral-definida]]).`,
+        R`**Resorte.** Cuando el resorte vuelve de $x$ a $0$, su fuerza $-kx'$ hace trabajo $\int_x^0(-kx')\,dx' = \frac12kx^2$.`],
       examples: [{ q: R`¿Trabajo del peso de un libro de 2 kg que cae 1,5 m?`, steps: [R`Fuerza y desplazamiento paralelos: $W = mgh = 2\cdot 9{,}8\cdot 1{,}5 = 29{,}4$ J.`] }],
       see: ["f1-energia", "f1-potencia"]
     },
@@ -786,6 +806,8 @@
       def: [R`**Potencia media:** $P_m = \frac{W}{\Delta t}$. **Instantánea:** $P = \frac{dW}{dt} = \vec F\cdot\vec v$. Unidad: $1\ \text{W} = 1\ \text{J/s}$ ($1$ HP $\approx 746$ W).`],
       idea: [R`Dos motores pueden hacer el mismo trabajo; el más potente lo hace más rápido. Un auto a velocidad constante necesita potencia para compensar el rozamiento con el aire, que crece con la velocidad: por eso consume más en ruta rápida.`,
         R`La energía también se mide en kWh: $1\ \text{kWh} = 1000\ \text{W}\cdot 3600\ \text{s} = 3{,}6\times10^6$ J.`],
+      demo: [R`En un intervalo chico $dt$, la fuerza hace trabajo $dW = \vec F\cdot d\vec r$. Dividiendo por $dt$: $$P = \frac{dW}{dt} = \vec F\cdot\frac{d\vec r}{dt} = \vec F\cdot\vec v.$$`,
+        R`**Auto a velocidad constante.** El motor compensa la resistencia: $F = f(v)$, así que necesita $P = f(v)\,v$. Si la resistencia del aire crece como $v^2$, la potencia crece como $v^3$: ir al doble de velocidad pide unas ocho veces más potencia.`],
       examples: [{ q: R`Subís una escalera de 3 m en 4 s y pesás 70 kg. ¿Potencia?`, steps: [R`$P = \frac{mgh}{t} = \frac{70\cdot 9{,}8\cdot 3}{4} \approx 515$ W.`] }],
       see: ["f1-trabajo", "f1-energia"]
     }
@@ -968,6 +990,9 @@
       def: [R`$$\vec r_{cm} = \frac{\sum m_i\vec r_i}{\sum m_i}$$ y para un cuerpo continuo $\vec r_{cm} = \frac{1}{M}\int\vec r\,dm$.`],
       idea: [R`**Teorema del centro de masa:** $M\vec a_{cm} = \sum\vec F_{\text{ext}}$. Un proyectil que explota en el aire: los pedazos vuelan para cualquier lado, pero su centro de masa sigue la misma parábola.`,
         R`Para un objeto simétrico y homogéneo, el centro de masa está en el centro de simetría. Con cuerpos compuestos se trata cada parte como una partícula ubicada en su propio centro de masa.`],
+      demo: [R`**Teorema del centro de masa.** Derivando dos veces $M\vec r_{cm} = \sum m_i\vec r_i$ queda $M\vec a_{cm} = \sum m_i\vec a_i$. Por la [[f1-newton|segunda ley]], $m_i\vec a_i$ es la fuerza total sobre la partícula $i$: las externas más las que le hacen las demás.`,
+        R`Al sumar sobre todas las partículas, las fuerzas internas vienen de a pares: la que $j$ hace sobre $i$ y la que $i$ hace sobre $j$. Por la tercera ley son opuestas y se cancelan. Queda $M\vec a_{cm} = \sum\vec F_{\text{ext}}$.`,
+        R`En el proyectil que explota, las fuerzas de la explosión son internas: la única externa sigue siendo el peso total, así que el centro de masa sigue con $\vec a_{cm} = \vec g$.`],
       examples: [{ q: R`Masas de 2 kg en $x = 0$ y 6 kg en $x = 4$ m. ¿$x_{cm}$?`, steps: [R`$x_{cm} = \frac{2\cdot 0 + 6\cdot 4}{8} = 3$ m (más cerca de la masa grande).`] }],
       see: ["f1-momento", "f1-equilibrio"]
     }
@@ -1135,6 +1160,9 @@
         R`**Capilaridad (ley de Jurin):** en un tubo de radio $r$, $$h = \frac{2\gamma\cos\theta}{\rho g r},$$ con $\theta$ el ángulo de contacto.`],
       idea: [R`Las moléculas de la superficie tienen menos vecinas que las de adentro, y el líquido "prefiere" minimizar su superficie: por eso las gotas son esféricas y algunos insectos caminan sobre el agua.`,
         R`Si el líquido moja el tubo ($\theta < 90^\circ$, como el agua en vidrio) sube; si no lo moja ($\theta > 90^\circ$, como el mercurio) baja.`],
+      demo: [R`**Ley de Jurin.** La superficie del líquido toca el tubo a lo largo de un borde de largo $2\pi r$, y tira hacia arriba con una fuerza $\gamma$ por unidad de largo, inclinada un ángulo $\theta$ respecto de la vertical. La componente vertical total es $2\pi r\gamma\cos\theta$.`,
+        R`Esa fuerza sostiene la columna de líquido, de volumen $\pi r^2h$ y peso $\rho\,\pi r^2h\,g$. Igualando: $2\pi r\gamma\cos\theta = \rho g\pi r^2h$, o sea $$h = \frac{2\gamma\cos\theta}{\rho gr}.$$ Con $\theta > 90^\circ$, $\cos\theta < 0$ y la columna baja.`,
+        R`**Fuerza o energía por área.** Si una lámina de líquido de ancho $\ell$ se estira una distancia $\Delta x$ contra la fuerza $\gamma\ell$, el trabajo es $\gamma\ell\,\Delta x = \gamma\,\Delta A$. Por eso $\gamma$ también es la energía por unidad de área.`],
       examples: [{ q: R`¿Cuánto sube el agua en un tubo de 1 mm de radio?`, steps: [R`$h = \frac{2\cdot 0{,}073}{1000\cdot 9{,}8\cdot 0{,}001} \approx 0{,}015$ m $= 1{,}5$ cm.`] }],
       see: ["f1-hidrostatica"]
     },
@@ -1287,6 +1315,8 @@
         R`**Relación con lo lineal** (punto a distancia $R$ del eje): $s = R\theta$, $v = \omega R$, $a_t = \alpha R$, $a_c = \omega^2 R$.`],
       idea: [R`Es exactamente el [[f1-mruv|MRUV]] traducido: $x \to \theta$, $v \to \omega$, $a \to \alpha$. Todos los puntos del rígido tienen la misma $\omega$, pero los más alejados del eje van más rápido.`,
         R`$\vec\omega$ se representa como un vector a lo largo del eje (regla de la mano derecha), y $\vec v = \vec\omega\times\vec r$ usa el **producto vectorial**: $|\vec A\times\vec B| = AB\sin\theta$, perpendicular a los dos.`],
+      demo: [R`**Velocidad de un punto.** Un punto a distancia $R$ del eje recorre el arco $s = R\theta$, porque el ángulo está en [[radian|radianes]]. Derivando, $v = R\,\omega$ y $a_t = R\,\alpha$. La aceleración centrípeta es la del movimiento circular: $\frac{v^2}{R} = \omega^2R$.`,
+        R`**Con $\alpha$ constante.** Integrando $\frac{d\omega}{dt} = \alpha$ queda $\omega = \omega_0 + \alpha t$. Integrando otra vez, $\theta = \theta_0 + \omega_0t + \frac12\alpha t^2$. Despejando $t$ de la primera y reemplazando en la segunda sale $\omega^2 = \omega_0^2 + 2\alpha\Delta\theta$: son las mismas cuentas que en el [[f1-mruv|MRUV]].`],
       examples: [{ q: R`Un CD gira a 500 rpm. ¿Rapidez de un punto a 6 cm del centro?`, steps: [R`$\omega = 500\cdot\frac{2\pi}{60} \approx 52{,}4$ rad/s.`, R`$v = \omega R \approx 3{,}1$ m/s.`] }],
       see: ["f1-inercia", "f1-circular", "f1-torque"]
     },
@@ -1422,6 +1452,10 @@
         R`**Segunda ley para la rotación** (eje fijo): $$\sum\tau = I\alpha.$$`],
       idea: [R`El torque es a la rotación lo que la fuerza a la traslación, y el [[f1-inercia|momento de inercia]] hace de masa. Por eso las manijas de las puertas van lejos de las bisagras: con el mismo esfuerzo se logra más torque.`,
         R`**Trabajo y potencia en rotación:** $W = \int\tau\,d\theta$ y $P = \tau\omega$.`],
+      demo: [R`**$\sum\tau = I\alpha$.** Pensamos el rígido como muchas partículas $m_i$ a distancias $r_i$ del eje. Cada una tiene aceleración tangencial $a_i = r_i\alpha$. La componente tangencial de la segunda ley es $F_{t,i} = m_i r_i\alpha$.`,
+        R`Multiplicando por $r_i$ queda el torque de esa fuerza: $\tau_i = r_iF_{t,i} = m_ir_i^2\,\alpha$. Las componentes radiales no hacen torque, porque pasan por el eje. Sumando sobre todas las partículas, los torques internos se cancelan de a pares y queda $$\sum\tau_{\text{ext}} = \left(\sum m_ir_i^2\right)\alpha = I\alpha.$$`,
+        R`**Brazo de palanca.** $|\vec r\times\vec F| = rF\sin\theta$, y $r\sin\theta$ es justo la distancia del eje a la recta de la fuerza.`,
+        R`**Potencia.** Un torque $\tau$ que gira un ángulo $d\theta$ mueve su punto de aplicación un arco $r\,d\theta$, y hace trabajo $F_t\,r\,d\theta = \tau\,d\theta$. Dividiendo por $dt$: $P = \tau\omega$.`],
       examples: [{ q: R`Un disco de $I = 0{,}5$ kg·m² recibe un torque de 2 N·m. ¿$\alpha$?`, steps: [R`$\alpha = \frac{\tau}{I} = 4$ rad/s².`] }],
       see: ["f1-inercia", "f1-rodadura", "f1-equilibrio"]
     },
@@ -1431,6 +1465,9 @@
       def: [R`**Condición de rodadura:** $v_{cm} = \omega R$ (el punto de contacto está instantáneamente quieto). La energía cinética total es $$K = \tfrac12Mv_{cm}^2 + \tfrac12I_{cm}\omega^2.$$`],
       idea: [R`Si $I = \beta MR^2$, al bajar una altura $h$: $v = \sqrt{\frac{2gh}{1 + \beta}}$. **Carrera en un plano inclinado:** gana la esfera maciza ($\beta = \frac25$), después el cilindro ($\frac12$), la esfera hueca ($\frac23$) y último el aro ($1$). No importan ni la masa ni el radio, solo la forma.`,
         R`El rozamiento estático es el que hace girar al cuerpo, pero no disipa energía porque el punto de contacto no desliza.`],
+      demo: [R`**Condición de rodadura.** Si la rueda no desliza, cuando gira un ángulo $\theta$ el centro avanza lo mismo que el arco que tocó el piso: $x_{cm} = R\theta$. Derivando, $v_{cm} = \omega R$.`,
+        R`**Energía cinética.** El movimiento es la traslación del centro de masa más la rotación alrededor de él, así que $K = \frac12Mv_{cm}^2 + \frac12I_{cm}\omega^2$.`,
+        R`**Bajada por el plano.** El rozamiento estático no hace trabajo (el punto de contacto no se mueve), así que la energía se conserva: $Mgh = \frac12Mv^2 + \frac12\beta MR^2\frac{v^2}{R^2} = \frac12(1 + \beta)Mv^2$. Despejando, $v = \sqrt{\frac{2gh}{1 + \beta}}$, sin $M$ ni $R$.`],
       examples: [{ q: R`Un cilindro baja 1 m rodando. ¿Velocidad?`, steps: [R`$v = \sqrt{\frac{2\cdot 9{,}8\cdot 1}{1{,}5}} \approx 3{,}6$ m/s (contra $4{,}4$ m/s si deslizara sin rozamiento).`] }],
       see: ["f1-torque", "f1-inercia", "f1-energia"]
     },
@@ -1441,6 +1478,9 @@
         R`$$\sum\vec\tau_{\text{ext}} = \frac{d\vec L}{dt}.$$ Si el torque externo es nulo, $\vec L$ se conserva.`],
       idea: [R`Patinadoras, clavadistas y gatos que caen de pie bajan su $I$ para girar más rápido. Una estrella que colapsa achica su radio y termina girando muchísimo más rápido (los púlsares).`,
         R`**Giróscopo y precesión:** si el torque es perpendicular a $\vec L$, cambia su dirección y no su módulo: el eje de un trompo gira lentamente alrededor de la vertical, en vez de caerse.`],
+      demo: [R`**Por qué $\sum\vec\tau = \frac{d\vec L}{dt}$.** Derivando $\vec L = \vec r\times\vec p$ con la regla del producto: $$\frac{d\vec L}{dt} = \frac{d\vec r}{dt}\times\vec p + \vec r\times\frac{d\vec p}{dt} = \vec v\times m\vec v + \vec r\times\vec F = \vec\tau,$$ porque el producto vectorial de un vector consigo mismo es $\vec 0$.`,
+        R`Para un sistema de partículas se suma sobre todas. Los torques de las fuerzas internas se cancelan de a pares cuando cada par de fuerzas está sobre la recta que une las partículas, y queda solo el torque externo. Si es nulo, $\vec L$ es constante.`,
+        R`**La patinadora.** Con $L = I\omega$ constante, si $I$ baja a la mitad, $\omega$ se duplica. Su energía cinética $\frac{L^2}{2I}$ aumenta: la pone ella con el trabajo de sus brazos.`],
       examples: [{ q: R`Un disco a 60 rpm recibe otro disco igual, quieto, encima. ¿Velocidad final?`, steps: [R`$I\omega_0 = 2I\omega_f \Rightarrow \omega_f = 30$ rpm.`] }],
       see: ["f1-torque", "f1-momento", "f1-inercia"]
     }
@@ -1562,6 +1602,8 @@
         R`**Centro de gravedad:** el punto donde se puede considerar aplicado todo el peso. En un campo gravitatorio uniforme coincide con el [[f1-cm|centro de masa]].`],
       idea: [R`**Truco:** tomá torques respecto del punto donde hay más fuerzas desconocidas: esas fuerzas no hacen torque y se eliminan de la ecuación.`,
         R`**Estabilidad:** un equilibrio es estable si, al apartar un poco el cuerpo, el peso genera un torque que lo devuelve. Un objeto apoyado es estable mientras la vertical por su centro de gravedad caiga dentro de su base.`],
+      demo: [R`**El punto no importa si $\sum\vec F = 0$.** El torque respecto de otro punto $O'$, con $\vec r_i' = \vec r_i - \vec d$, es $$\sum(\vec r_i - \vec d)\times\vec F_i = \sum\vec r_i\times\vec F_i - \vec d\times\sum\vec F_i.$$ Si la fuerza neta es $\vec 0$, el último término se anula y los dos torques totales son iguales.`,
+        R`**Centro de gravedad.** Con $\vec g$ uniforme, el torque total del peso es $\sum\vec r_i\times m_i\vec g = \left(\sum m_i\vec r_i\right)\times\vec g = \vec r_{cm}\times M\vec g$: el mismo que si todo el peso estuviera aplicado en el centro de masa.`],
       examples: [{ q: R`Una tabla de 4 m y 200 N apoyada en sus extremos. Un pintor de 600 N está a 1 m del apoyo izquierdo. ¿Reacciones?`, steps: [R`Torques respecto del izquierdo: $4R_2 = 200\cdot 2 + 600\cdot 1 \Rightarrow R_2 = 250$ N.`, R`$R_1 = 800 - 250 = 550$ N.`] }],
       see: ["f1-torque", "f1-cm", "f1-newton"]
     }
@@ -1694,6 +1736,9 @@
         R`**Energía potencial gravitatoria:** $U = -\frac{GMm}{r}$ (con $U = 0$ en el infinito). Cerca de la superficie se reduce a $\Delta U \approx mg\,\Delta h$.`],
       idea: [R`La misma ley que hace caer una manzana mantiene a la Luna en órbita: Newton comparó la aceleración de la Luna ($\approx 2{,}7\times10^{-3}$ m/s²) con $g$ y vio que la razón es $(R_T/r_{Luna})^2$.`,
         R`En una estación espacial la gravedad es casi el 90 % de la de la superficie: los astronautas "flotan" porque caen junto con la nave (están en órbita, que es una caída libre permanente).`],
+      demo: [R`**Gravedad en la superficie.** El peso de un cuerpo es la fuerza gravitatoria de la Tierra: $mg = \frac{GMm}{R^2}$, así que $g = \frac{GM}{R^2}$. A una altura $h$, la distancia al centro es $R + h$.`,
+        R`**De $U = -\frac{GMm}{r}$ a $mg\,\Delta h$.** Para $h \ll R$: $$\Delta U = -\frac{GMm}{R + h} + \frac{GMm}{R} = \frac{GMm\,h}{R(R + h)} \approx \frac{GMm}{R^2}\,h = mg\,h.$$`,
+        R`**La cuenta de Newton.** Si la fuerza baja como $\frac{1}{r^2}$, la aceleración de la Luna, que está a unos $60$ radios terrestres, tiene que ser $\frac{g}{60^2} \approx 2{,}7\times10^{-3}$ m/s². Con su órbita ($r \approx 3{,}84\times10^8$ m, $T \approx 27{,}3$ días), la aceleración centrípeta $\frac{4\pi^2r}{T^2}$ da lo mismo.`],
       examples: [{ q: R`¿Cuánto pesarías en la Luna ($g \approx 1{,}62$ m/s²) si tu masa es 70 kg?`, steps: [R`$P = mg = 70\cdot 1{,}62 \approx 113$ N (un sexto de lo que pesás en la Tierra).`] }],
       see: ["f1-orbitas", "f1-dinamica-circular", "f1-energia"]
     },
@@ -1842,6 +1887,10 @@
         R`**Péndulo de torsión** (disco colgado de un alambre que se retuerce con torque $-\kappa\theta$): $T = 2\pi\sqrt{\frac{I}{\kappa}}$.`],
       idea: [R`La aproximación $\sin\theta \approx \theta$ (ver [[lim-trig-notable]]) es lo que lo vuelve un [[f1-mas|MAS]]: vale bien hasta unos $15^\circ$. Para amplitudes grandes el período crece un poco.`,
         R`El período del péndulo simple no depende de la masa: midiendo $T$ y $L$ se mide $g$.`],
+      demo: [R`**Péndulo simple.** La masa se mueve sobre un arco $s = L\theta$. La componente del peso a lo largo del arco es $-mg\sin\theta$ (la tensión es perpendicular). Por la segunda ley, $mL\theta'' = -mg\sin\theta$, o sea $\theta'' = -\frac{g}{L}\sin\theta$.`,
+        R`Para ángulos chicos, $\sin\theta \approx \theta$ y queda $\theta'' = -\omega^2\theta$ con $\omega^2 = \frac gL$: un [[f1-mas|MAS]] de período $T = \frac{2\pi}{\omega} = 2\pi\sqrt{\frac Lg}$.`,
+        R`**Péndulo físico.** El peso, aplicado en el centro de masa a distancia $d$ del eje, hace un torque $-mgd\sin\theta$. Con $\sum\tau = I\alpha$: $I\theta'' = -mgd\sin\theta \approx -mgd\,\theta$, así que $\omega^2 = \frac{mgd}{I}$. Para una masa puntual, $I = mL^2$ y $d = L$, y vuelve el péndulo simple.`,
+        R`**Torsión.** $I\theta'' = -\kappa\theta$ es un MAS exacto, sin aproximar, con $\omega^2 = \frac{\kappa}{I}$.`],
       examples: [{ q: R`¿Qué largo tiene un péndulo que "bate segundos" ($T = 2$ s)?`, steps: [R`$L = g\left(\frac{T}{2\pi}\right)^2 = 9{,}8\cdot\frac{1}{\pi^2} \approx 0{,}99$ m.`] }],
       see: ["f1-mas", "f1-inercia"]
     },
@@ -1852,6 +1901,10 @@
         R`**Forzada** (con $F_0\cos\omega t$): después de un transitorio oscila a la frecuencia $\omega$ de la fuerza, con amplitud $$A(\omega) = \frac{F_0/m}{\sqrt{(\omega_0^2 - \omega^2)^2 + (b\omega/m)^2}}.$$`],
       idea: [R`**Resonancia:** si $\omega \approx \omega_0$ la amplitud es máxima, y cuanto menor el amortiguamiento, más alto y angosto es el pico. Columpios, copas que se rompen con una nota, puentes que oscilan con el viento o con gente marchando.`,
         { graph: { fns: [w => 1 / Math.sqrt((4 - w * w) ** 2 + (0.3 * w) ** 2), w => 1 / Math.sqrt((4 - w * w) ** 2 + (1 * w) ** 2)], xr: [0, 5], yr: [0, 4] }, caption: R`Amplitud según la frecuencia forzante ($\omega_0 = 2$): poco amortiguamiento (violeta) y más amortiguamiento (naranja).` }],
+      demo: [R`**Amortiguada.** La ecuación es $mx'' + bx' + kx = 0$. Probamos $x = e^{\lambda t}$: queda $m\lambda^2 + b\lambda + k = 0$, con raíces $\lambda = -\frac{b}{2m} \pm\sqrt{\left(\frac{b}{2m}\right)^2 - \omega_0^2}$, donde $\omega_0^2 = \frac km$.`,
+        R`Con amortiguamiento débil la raíz es imaginaria: $\lambda = -\frac{b}{2m} \pm i\omega'$. Por la fórmula de Euler, la parte real de $e^{\lambda t}$ es $e^{-\frac{b}{2m}t}\cos(\omega't)$: una oscilación cuya amplitud decae exponencialmente.`,
+        R`**Forzada.** Con fuerza $F_0\cos\omega t$, buscamos una solución $x = \operatorname{Re}\left(Ce^{i\omega t}\right)$. Reemplazando en $mx'' + bx' + kx = F_0e^{i\omega t}$: $(-m\omega^2 + ib\omega + k)\,C = F_0$, o sea $$C = \frac{F_0/m}{(\omega_0^2 - \omega^2) + i\,\frac{b\omega}{m}}.$$`,
+        R`La amplitud es el módulo de ese número complejo: $|C| = \frac{F_0/m}{\sqrt{(\omega_0^2 - \omega^2)^2 + (b\omega/m)^2}}$. El denominador es mínimo cerca de $\omega = \omega_0$: la resonancia. El transitorio (la solución de la ecuación sin fuerza) se apaga con el tiempo.`],
       examples: [{ q: R`Si $b/2m = 0{,}1$ s⁻¹, ¿en cuánto tiempo la amplitud baja a la mitad?`, steps: [R`$e^{-0{,}1t} = \frac12 \Rightarrow t = 10\ln 2 \approx 6{,}9$ s.`] }],
       see: ["f1-mas", "edo"]
     }
