@@ -1,13 +1,15 @@
 // Service worker de efecen: precachea todo para funcionar offline.
 // Al publicar cambios, subí CACHE para que los clientes descarguen la versión nueva.
-const CACHE = "efecen-v3";
+const CACHE = "efecen-v4";
 const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "Fraktur-Bold", "Fraktur-Regular",
   "Main-Bold", "Main-BoldItalic", "Main-Italic", "Main-Regular", "Math-BoldItalic", "Math-Italic",
   "SansSerif-Bold", "SansSerif-Italic", "SansSerif-Regular", "Script-Regular", "Size1-Regular", "Size2-Regular",
   "Size3-Regular", "Size4-Regular", "Typewriter-Regular"].map(f => `assets/vendor/katex/fonts/KaTeX_${f}.woff2`);
+const CONTENT = ["content/carrera.js", "content/m101-calculo1.js"];
 const PRECACHE = [
   "./", "index.html", "manifest.json",
-  "content/calculo.js", "content/calculo-teoria.js",
+  // un archivo por materia (ver content/carrera.js)
+  ...CONTENT,
   "assets/vendor/katex/katex.min.js", "assets/vendor/katex/katex.min.css", ...KATEX_FONTS,
   "assets/fonts/nunito-latin-wght.woff2",
   "assets/icons/sprite.svg", "assets/icons/icon-192.png", "assets/icons/icon-512.png", "assets/icons/icon-180.png",

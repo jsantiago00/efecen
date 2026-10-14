@@ -66,6 +66,169 @@ const numDeriv = (f, x, h = 1e-5) => (f(x + h) - f(x - h)) / (2 * h);
 const numDeriv2 = (f, x, h = 1e-4) => (f(x + h) - 2 * f(x) + f(x - h)) / (h * h);
 const close = (a, b, tol = 1e-4) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
 
+// ---------- verificación numérica independiente ----------
+// Cada plantilla trae `verify` con datos crudos (funciones, matrices, ecuaciones de movimiento);
+// acá se recalcula la respuesta por otro camino (diferencias finitas, Simpson, RK4, Gauss, sumas parciales)
+// y se compara con la que muestra la app.
+// Plantillas del MVP que no traían verify (las nuevas lo tienen obligatorio):
+const LEGACY_NO_VERIFY = new Set(["lim-grafico-mc", "lim-existe-vf", "lim-order-conj", "lim-error-factor", "lim-asintota-mc", "cont-tipo-mc",
+  "cont-param-num", "cont-tvi-vf", "lim-match-graph", "der-def-order", "der-cont-vf", "der-match-formula", "der-error-coc",
+  "der-error-cadena", "der-order-lntrig", "der-tangente-num", "der-match-graph"]);
+const simpson = (f, a, b, n = 20000) => {
+  if (n % 2) n++;
+  const h = (b - a) / n;
+  let s = f(a) + f(b);
+  for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2);
+  return (s * h) / 3;
+};
+const integrate = (f, a, b, inf) => (inf
+  ? simpson(t => { const x = a + t / (1 - t); return f(x) / ((1 - t) * (1 - t)); }, 0, 1 - 1e-7, 200000)
+  : simpson(f, a, b));
+function rk4(f, y0, t1, opts = {}) {
+  const dt = opts.dt || 1e-4;
+  let t = 0, y = y0.slice();
+  const add = (a, b, k) => a.map((v, i) => v + b[i] * k);
+  for (let n = 0; n < 5e7; n++) {
+    if (!opts.until && t >= t1 - 1e-12) break;
+    const h = opts.until ? dt : Math.min(dt, t1 - t);
+    const k1 = f(t, y), k2 = f(t + h / 2, add(y, k1, h / 2)), k3 = f(t + h / 2, add(y, k2, h / 2)), k4 = f(t + h, add(y, k3, h));
+    const yn = y.map((v, i) => v + (h / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+    if (opts.until && opts.until(t + h, yn) && !opts.until(t, y)) {
+      // evento: interpolación lineal entre los dos pasos usando la función g = until.value
+      const g0 = opts.g(t, y), g1 = opts.g(t + h, yn), s = g0 / (g0 - g1);
+      return { t: t + s * h, y: y.map((v, i) => v + s * (yn[i] - v)) };
+    }
+    t += h; y = yn;
+    if (opts.until && t > (opts.tmax || 1e4)) break;
+  }
+  return { t, y };
+}
+// álgebra lineal por eliminación de Gauss (independiente de cofactores o Cramer)
+const clone = A => A.map(r => r.slice());
+function gaussDet(A) {
+  const M = clone(A), n = M.length;
+  let det = 1;
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-12) return 0;
+    if (p !== c) { [M[p], M[c]] = [M[c], M[p]]; det = -det; }
+    det *= M[c][c];
+    for (let r = c + 1; r < n; r++) { const f = M[r][c] / M[c][c]; for (let k = c; k < n; k++) M[r][k] -= f * M[c][k]; }
+  }
+  return det;
+}
+function gaussRank(A) {
+  const M = clone(A), rows = M.length, cols = M[0].length;
+  let r = 0;
+  for (let c = 0; c < cols && r < rows; c++) {
+    let p = r;
+    for (let i = r + 1; i < rows; i++) if (Math.abs(M[i][c]) > Math.abs(M[p][c])) p = i;
+    if (Math.abs(M[p][c]) < 1e-9) continue;
+    [M[p], M[r]] = [M[r], M[p]];
+    for (let i = r + 1; i < rows; i++) { const f = M[i][c] / M[r][c]; for (let k = c; k < cols; k++) M[i][k] -= f * M[r][k]; }
+    r++;
+  }
+  return r;
+}
+const matmul = (A, B) => A.map(row => B[0].map((_, j) => row.reduce((s, a, k) => s + a * B[k][j], 0)));
+const matvec = (A, x) => A.map(row => row.reduce((s, a, k) => s + a * x[k], 0));
+const near = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
+const eye = n => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+
+function runVerify(v, answer, w) {
+  const target = v.target !== undefined ? v.target : answer;
+  const okNum = (got, msg, tol = 1e-4) => ok(Number.isFinite(got) && close(got, target, tol), w, `${msg}: ${got} vs ${target}`);
+  switch (v.kind) {
+    case "limit": {
+      const h = v.h || 1e-6;
+      const vals = v.side === "-" ? [v.f(v.a - h)] : v.side === "+" ? [v.f(v.a + h)] : [v.f(v.a - h), v.f(v.a + h)];
+      for (const y of vals) ok(close(y, target, 1e-3), w, `límite numérico ${y} vs ${target}`);
+      break;
+    }
+    case "liminf": okNum(v.f(v.x || 1e7), "límite al infinito"); break;
+    case "limsign": {
+      const y = v.f(v.a + (v.side === "+" ? 1e-7 : -1e-7));
+      ok(Math.sign(y) === v.sign && Math.abs(y) > 1e5, w, "signo del límite infinito");
+      break;
+    }
+    case "deriv": okNum(numDeriv(v.f, v.x0), `f'(${v.x0}) numérica`); break;
+    case "deriv2": okNum(numDeriv2(v.f, v.x0), `f''(${v.x0}) numérica`, 1e-3); break;
+    case "deriv-fn": case "antideriv": {
+      // deriv-fn: df es la derivada de f; antideriv: F es una primitiva de f
+      const F = v.kind === "antideriv" ? v.F : v.f, f = v.kind === "antideriv" ? v.f : v.df;
+      const [lo, hi] = v.dom || [-2, 2];
+      for (let i = 0; i < 5; i++) {
+        const x = lo + (hi - lo) * (i + 0.37) / 5;
+        ok(close(numDeriv(F, x), f(x), 1e-4), w, `derivada en x=${x}: ${numDeriv(F, x)} vs ${f(x)}`);
+      }
+      break;
+    }
+    case "implicit": {
+      ok(Math.abs(v.F(v.p, v.q)) < 1e-9, w, "el punto no está en la curva");
+      const h = 1e-6;
+      const Fx = (v.F(v.p + h, v.q) - v.F(v.p - h, v.q)) / (2 * h), Fy = (v.F(v.p, v.q + h) - v.F(v.p, v.q - h)) / (2 * h);
+      okNum(-Fx / Fy, "implícita", 1e-5);
+      break;
+    }
+    case "integral": okNum(integrate(v.f, v.a, v.b, v.inf), "integral por Simpson", v.tol || 1e-4); break;
+    case "sum": {
+      let s = 0;
+      const N = v.inf ? (v.N || 1e6) : v.to;
+      for (let n = v.from; n <= N; n++) s += v.term(n);
+      okNum(s, v.inf ? `suma parcial S_${N}` : "suma", v.tol || 1e-4);
+      break;
+    }
+    case "seqlim": {
+      const y = v.a(v.n || 1e6);
+      if (target === Infinity || target === -Infinity) ok(Math.sign(y) === Math.sign(target) && Math.abs(y) > 1e4, w, `la sucesión no diverge: ${y}`);
+      else okNum(y, `a_n para n grande`, v.tol || 1e-3);
+      break;
+    }
+    case "ratio": {
+      // límite de |a_{n+1}/a_n| a partir del logaritmo de los términos
+      const n = v.n || 2e4;
+      okNum(Math.exp(v.logTerm(n + 1) - v.logTerm(n)), "cociente |a(n+1)/a(n)| numérico", v.tol || 2e-3);
+      break;
+    }
+    case "exponent": {
+      // a_n ~ C/n^p: p ≈ log(a(N)/a(10N))/log 10
+      const N = v.N || 1e5;
+      okNum(Math.log(v.term(N) / v.term(10 * N)) / Math.LN10, "exponente efectivo", 5e-3);
+      break;
+    }
+    case "ode": {
+      const r = rk4(v.f, v.y0, v.t1, v);
+      okNum(v.out(r.t, r.y), "simulación numérica (RK4)", v.tol || 1e-3);
+      break;
+    }
+    case "value": okNum(v.fn(), "valor recalculado", v.tol || 1e-6); break;
+    case "zero": {
+      const res = [].concat(v.fn(answer));
+      for (const r of res) ok(Number.isFinite(r) && Math.abs(r) <= (v.tol || 1e-6) * Math.max(1, v.scale || 1), w, `residuo ${r} ≠ 0`);
+      break;
+    }
+    case "truth": ok(v.fn() === target, w, `el enunciado vale ${v.fn()} y la respuesta dice ${target}`); break;
+    case "det": okNum(gaussDet(v.A), "determinante por Gauss", 1e-6); break;
+    case "rank": ok(gaussRank(v.A) === target, w, `rango por Gauss ${gaussRank(v.A)} vs ${target}`); break;
+    case "solve": {
+      if (v.x) matvec(v.A, v.x).forEach((y, i) => ok(near(y, v.b[i]), w, `A·x ≠ b en la fila ${i + 1}`));
+      else ok(gaussRank(v.A) < gaussRank(v.A.map((r, i) => r.concat([v.b[i]]))), w, "el sistema sí tenía solución");
+      break;
+    }
+    case "inv": matmul(v.A, v.B).forEach((r, i) => r.forEach((x, j) => ok(near(x, i === j ? 1 : 0), w, `A·A⁻¹ no da I en (${i},${j})`))); break;
+    case "matmul": matmul(v.A, v.B).forEach((r, i) => r.forEach((x, j) => ok(near(x, v.C[i][j]), w, `producto distinto en (${i},${j})`))); break;
+    case "eig": {
+      const n = v.A.length, M = v.A.map((r, i) => r.map((x, j) => x - (i === j ? v.lambda : 0)));
+      ok(Math.abs(gaussDet(M)) < 1e-6 * Math.max(1, ...v.A.flat().map(Math.abs)) ** n, w, `det(A - λI) ≠ 0 para λ = ${v.lambda}`);
+      if (v.v) matvec(v.A, v.v).forEach((y, i) => ok(near(y, v.lambda * v.v[i]), w, "A·v ≠ λ·v"));
+      break;
+    }
+    case "all": for (const sub of v.list) runVerify(sub, answer, w); break;
+    default: fail(w, "tipo de verify desconocido: " + v.kind);
+  }
+}
+
 let totalTemplates = 0;
 for (const cid of E.courseOrder) {
   const c = E.courses[cid];
@@ -146,35 +309,8 @@ for (const cid of E.courseOrder) {
         default: fail(w, "tipo desconocido " + inst.type);
       }
       // verificación numérica independiente
-      const v = inst.verify;
-      if (v) {
-        const target = inst.answer;
-        if (v.kind === "limit") {
-          const h = v.h || 1e-6;
-          const vals = v.side === "-" ? [v.f(v.a - h)] : v.side === "+" ? [v.f(v.a + h)] : [v.f(v.a - h), v.f(v.a + h)];
-          for (const y of vals) ok(close(y, target, 1e-3), w, `límite numérico ${y} vs ${target}`);
-        } else if (v.kind === "liminf") {
-          ok(close(v.f(1e7), target, 1e-4), w, `límite al infinito ${v.f(1e7)} vs ${target}`);
-        } else if (v.kind === "limsign") {
-          const y = v.f(v.a + (v.side === "+" ? 1e-7 : -1e-7));
-          ok(Math.sign(y) === v.sign && Math.abs(y) > 1e5, w, "signo del límite infinito");
-        } else if (v.kind === "deriv") {
-          ok(close(numDeriv(v.f, v.x0), target, 1e-4), w, `f'(${v.x0}) numérica ${numDeriv(v.f, v.x0)} vs ${target}`);
-        } else if (v.kind === "deriv2") {
-          ok(close(numDeriv2(v.f, v.x0), target, 1e-3), w, `f''(${v.x0}) numérica ${numDeriv2(v.f, v.x0)} vs ${target}`);
-        } else if (v.kind === "deriv-fn") {
-          const [lo, hi] = v.dom || [-2, 2];
-          for (let i = 0; i < 5; i++) {
-            const x = lo + (hi - lo) * (i + 0.37) / 5;
-            ok(close(numDeriv(v.f, x), v.df(x), 1e-4), w, `f' en x=${x}: ${numDeriv(v.f, x)} vs ${v.df(x)}`);
-          }
-        } else if (v.kind === "implicit") {
-          ok(Math.abs(v.F(v.p, v.q)) < 1e-9, w, "el punto no está en la curva");
-          const h = 1e-6;
-          const Fx = (v.F(v.p + h, v.q) - v.F(v.p - h, v.q)) / (2 * h), Fy = (v.F(v.p, v.q + h) - v.F(v.p, v.q - h)) / (2 * h);
-          ok(close(-Fx / Fy, target, 1e-5), w, `implícita ${-Fx / Fy} vs ${target}`);
-        }
-      }
+      if (inst.verify) runVerify(inst.verify, inst.answer, w);
+      else ok(LEGACY_NO_VERIFY.has(id), w, "plantilla nueva sin verify (toda plantilla nueva necesita verificación numérica)");
     }
     // variedad: una plantilla paramétrica no debería repetir siempre lo mismo
     ok(answers.size >= (t.type === "tf" ? 2 : 5), id, `poca variedad: ${answers.size} variantes distintas en ${N}`);
@@ -194,7 +330,7 @@ const allAliases = new Map();
 for (const cid of E.courseOrder) {
   const c = E.courses[cid];
   if (!c.theory) { fail(cid, "el curso no tiene apuntes"); continue; }
-  const cards = c.theory.cards, groups = c.theory.groups.map(g => g.id);
+  const cards = c.theory.cards, groups = c.units.map(u => u.id);
   console.log(`Apuntes ${cid}: ${Object.keys(cards).length} fichas`);
   for (const [id, card] of Object.entries(cards)) {
     const w = `ficha ${id}`;
@@ -225,6 +361,34 @@ for (const cid of E.courseOrder) {
     for (const id of l.theory) ok(cards[id], `lección ${l.id}`, `ficha inexistente ${id}`);
     checkTheoryText(`intro ${l.id}`, l.intro || "");
   }
+}
+// ---------- 5. la carrera y la estructura de cada unidad ----------
+{
+  ok(!!E.career, "carrera", "no hay carrera registrada");
+  const subs = E.career.years.flatMap(y => y.semesters.flatMap(sm => sm.subjects));
+  const steps = subs.map(x => x.step);
+  ok(new Set(steps).size === steps.length, "carrera", "pasos del trayecto repetidos");
+  for (const cid of E.courseOrder) {
+    const sub = subs.find(x => x.course === cid);
+    ok(!!sub, cid, "materia sin lugar en la carrera");
+    if (sub) ok(E.courses[cid].code === sub.code, cid, `código ${E.courses[cid].code} distinto del de la carrera (${sub.code})`);
+    const c = E.courses[cid];
+    for (const u of c.units.filter(u => u.lessons.length)) {
+      const w = `${cid}/${u.id}`;
+      const tpls = u.lessons.flatMap(l => l.templates);
+      ok(tpls.length >= 4, w, `la unidad tiene ${tpls.length} plantillas (mínimo 4)`);
+      ok(new Set(tpls.map(t => c.templates[t].type)).size >= 2, w, "la unidad usa un solo tipo de ejercicio");
+      ok(Object.values(c.theory.cards).some(card => card.group === u.id), w, "la unidad no tiene apuntes");
+      const diag = E.unitDiagnostic(c, u);
+      ok(diag.length >= 2 && diag.every(t => tpls.includes(t)), w, "test de la unidad inválido: " + diag.join(","));
+      ok(typeof u.order === "number" && !!u.program, w, "falta order o program (unidad del programa oficial)");
+    }
+  }
+}
+// el service worker tiene que precachear todos los archivos de contenido (si no, no andan offline)
+{
+  const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+  for (const f of contentFiles) ok(sw.includes(`"${f}"`), "service-worker", `no precachea ${f}`);
 }
 // autolink: une términos conocidos, una vez por ficha, sin tocar LaTeX ni links existentes
 {

@@ -410,6 +410,19 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 .search input { flex: 1; min-width: 0; border: 0; background: none; font: 700 1rem "Nunito", sans-serif; color: var(--ink); padding: 12px 0; outline: none; }
 .search:focus-within { border-color: var(--primary); }
 
+/* carrera */
+.subj-code { display: inline-block; font-weight: 900; font-size: .72rem; letter-spacing: .04em; background: var(--primary-soft); color: var(--primary); padding: 2px 8px; border-radius: 8px; }
+.subj-badge { display: inline-block; margin-left: 6px; font-weight: 900; font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; background: var(--gold); color: #3A2A00; padding: 2px 8px; border-radius: 8px; }
+.subj-badge.on { background: var(--ok); color: #fff; }
+.subj-step { margin-left: 6px; font-size: .72rem; font-weight: 800; color: var(--muted); }
+.sem-label { font-size: .8rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 6px 0 -4px; }
+.year { display: flex; flex-direction: column; gap: 10px; }
+.unit-prog { margin: 0 0 2px !important; font-size: .78rem !important; font-weight: 800; opacity: .85; }
+.unit-test { margin-top: 8px; }
+.picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.picker button { border: 2px solid var(--line); background: var(--card); color: var(--muted); font-weight: 900; font-size: .8rem; padding: 6px 12px; border-radius: 999px; }
+.picker button.on { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+
 /* toast + confetti */
 #toast { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top)); transform: translate(-50%, -150%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 14px; font-weight: 800; z-index: 60; transition: transform .3s; max-width: calc(100% - 32px); }
 #toast.show { transform: translate(-50%, 0); }
@@ -646,42 +659,75 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   };
 
   // ---------- Registro de cursos ----------
+  // ---------- Registro de materias (una materia = un curso) ----------
+  // Cada archivo de materia llama una vez a E.registerCourse y después a E.extendCourse por
+  // cada unidad (conceptos, plantillas, lecciones y apuntes). Así se agrega contenido de a una unidad.
+  E.cards = {};      // id -> ficha de apuntes (ids únicos entre materias)
+  E.termIndex = [];  // [{ alias, id }] para el autolink
+  E.career = null;
+  E.registerCareer = def => { E.career = def; };
   E.registerCourse = function (c) {
-    c.tplLesson = {};
-    c.conceptUnit = {};
-    c.lessonList = [];
+    c.concepts = c.concepts || {};
+    c.templates = c.templates || {};
+    c.units = c.units || [];
+    c.theory = { cards: {}, lessons: {} };
+    E.courses[c.id] = c;
+    if (!E.courseOrder.includes(c.id)) E.courseOrder.push(c.id);
+    indexCourse(c);
+    return c;
+  };
+  E.extendCourse = function (cid, ext) {
+    const c = E.courses[cid];
+    if (!c) throw new Error("Materia no registrada: " + cid);
+    Object.assign(c.concepts, ext.concepts || {});
+    Object.assign(c.templates, ext.templates || {});
+    for (const u of ext.units || []) {
+      const i = c.units.findIndex(x => x.id === u.id);
+      if (i >= 0) c.units[i] = u; else c.units.push(u);
+    }
+    const defGroup = ext.units && ext.units.length === 1 ? ext.units[0].id : null;
+    for (const [id, card] of Object.entries(ext.cards || {})) {
+      card.id = id; card.course = cid; card.group = card.group || defGroup;
+      c.theory.cards[id] = card;
+      E.cards[id] = card;
+      for (const a of card.aliases || []) E.termIndex.push({ alias: a.toLowerCase(), id });
+    }
+    Object.assign(c.theory.lessons, ext.lessons || {});
+    E._termRe = null;
+    indexCourse(c);
+  };
+  // compatibilidad con el formato anterior de apuntes
+  E.registerTheory = (cid, th) => E.extendCourse(cid, { cards: th.cards, lessons: th.lessons });
+  function indexCourse(c) {
+    c.units.sort((a, b) => (a.order || 0) - (b.order || 0));
+    c.tplLesson = {}; c.conceptUnit = {}; c.lessonList = [];
     for (const [id, t] of Object.entries(c.templates)) t.id = id;
     c.units.forEach((u, ui) => {
       u.index = ui;
       u.lessons = u.lessons || [];
       u.lessons.forEach((l, li) => {
         l.unit = u; l.index = li;
-        l.concepts = [...new Set(l.templates.flatMap(t => c.templates[t].concepts))];
+        l.concepts = [...new Set(l.templates.flatMap(t => (c.templates[t] ? c.templates[t].concepts : [])))];
         l.templates.forEach(t => { c.tplLesson[t] = l; });
         l.concepts.forEach(k => { if (!c.conceptUnit[k]) c.conceptUnit[k] = u; });
+        l.theory = c.theory.lessons[l.id] || l.theory || [];
         c.lessonList.push(l);
       });
     });
-    E.courses[c.id] = c;
-    if (!E.courseOrder.includes(c.id)) E.courseOrder.push(c.id);
-  };
-  // ---------- Teoría (apuntes con hipervínculos) ----------
-  E.cards = {};      // id -> ficha (ids únicos entre cursos)
-  E.termIndex = [];  // [{ alias, id }] para el autolink
-  E.registerTheory = function (cid, th) {
-    const c = E.courses[cid];
-    c.theory = th;
-    for (const [id, card] of Object.entries(th.cards)) {
-      card.id = id; card.course = cid;
-      E.cards[id] = card;
-      for (const a of card.aliases || []) E.termIndex.push({ alias: a.toLowerCase(), id });
-    }
-    for (const l of c.lessonList) l.theory = (th.lessons || {})[l.id] || [];
     // concepto -> fichas, priorizando el orden en que aparecen en las lecciones
     c.conceptCards = {};
-    const order = [...new Set([...c.lessonList.flatMap(l => l.theory), ...Object.keys(th.cards)])];
-    for (const id of order) for (const k of th.cards[id].concepts || []) (c.conceptCards[k] = c.conceptCards[k] || []).push(id);
-    E._termRe = null;
+    const order = [...new Set([...c.lessonList.flatMap(l => l.theory), ...Object.keys(c.theory.cards)])];
+    for (const id of order) {
+      const card = c.theory.cards[id];
+      if (card) for (const k of card.concepts || []) (c.conceptCards[k] = c.conceptCards[k] || []).push(id);
+    }
+  }
+  // test de una unidad: las plantillas declaradas o, si no hay, una de cada lección (las más difíciles)
+  E.unitDiagnostic = function (c, u) {
+    if (u.diagnostic && u.diagnostic.length) return u.diagnostic;
+    const ls = u.lessons;
+    const pick = ls.length <= 3 ? ls : [ls[0], ls[Math.floor(ls.length / 2)], ls[ls.length - 1]];
+    return pick.map(l => l.templates.slice().sort((a, b) => c.templates[b].difficulty - c.templates[a].difficulty)[0]);
   };
   const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   E.termRegex = () => E._termRe || (E._termRe = E.termIndex.length
@@ -739,8 +785,17 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       const d = E.store.defaults();
       for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k];
       s.settings = Object.assign(d.settings, s.settings);
+      // materias renombradas al pasar a "la carrera" (calculo -> m101)
+      for (const [o, n] of Object.entries(E.store.renamed)) {
+        if (s.courses[o] && !s.courses[n]) s.courses[n] = s.courses[o];
+        delete s.courses[o];
+        for (const k of Object.keys(s.srs)) if (k.startsWith(o + "/")) { s.srs[n + k.slice(o.length)] = s.srs[k]; delete s.srs[k]; }
+        if (s.activeCourse === o) s.activeCourse = n;
+        for (const l of s.log) if (l.c === o) l.c = n;
+      }
       return s;
     },
+    renamed: { calculo: "m101" },
     valid: s => !!s && typeof s === "object" && s.app === "efecen" && typeof s.version === "number" && typeof s.srs === "object" && typeof s.courses === "object",
     load() {
       try {
@@ -756,8 +811,8 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 </script>
 
 <!-- ================= CONTENIDO (datos separados de la lógica) ================= -->
-<script src="content/calculo.js"></script>
-<script src="content/calculo-teoria.js"></script>
+<script src="content/carrera.js"></script>
+<script src="content/m101-calculo1.js"></script>
 
 <!-- ================= APP / UI ================= -->
 <script id="app-script">
@@ -772,10 +827,6 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   const save = () => E.store.save(S);
   const today = () => E.today();
 
-  const UPCOMING = [
-    { id: "fisica", title: "Física Universitaria", icon: "atom", note: "Cinemática y dinámica · Fase 2" },
-    { id: "algebra", title: "Álgebra lineal", icon: "grid-3x3", note: "Sistemas, matrices, autovalores · Fase 3" }
-  ];
 
   // ---------- utilidades de render ----------
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1060,17 +1111,23 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   let rT;
   window.addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(() => drawGraphs(), 120); });
 
-  // ---------- estado de cursos ----------
+  // ---------- estado de las materias ----------
   const course = id => E.courses[id];
-  const cState = cid => (S.courses[cid] = S.courses[cid] || { lessons: {}, diag: null });
+  const cState = cid => {
+    const st = (S.courses[cid] = S.courses[cid] || { lessons: {}, diag: null });
+    st.unitsOpen = st.unitsOpen || {};
+    return st;
+  };
   const lessonDone = (cid, l) => !!(cState(cid).lessons[l.id] || {}).done;
-  const realUnits = c => c.units.filter(u => !u.comingSoon);
+  const realUnits = c => c.units.filter(u => !u.comingSoon && u.lessons.length);
   const unitDone = (cid, u) => u.lessons.length > 0 && u.lessons.every(l => lessonDone(cid, l));
+  // una unidad se abre si la anterior está completa, si aprobaste su test o si ya avanzaste en ella
+  // (esto último cubre progreso guardado antes de que se agregaran unidades previas)
   function unitUnlocked(cid, u) {
     if (u.comingSoon) return false;
     const units = realUnits(course(cid));
     const i = units.indexOf(u);
-    return i === 0 || unitDone(cid, units[i - 1]);
+    return i === 0 || !!cState(cid).unitsOpen[u.id] || unitDone(cid, units[i - 1]) || u.lessons.some(l => lessonDone(cid, l));
   }
   function lessonUnlocked(cid, l) {
     if (!unitUnlocked(cid, l.unit)) return false;
@@ -1081,15 +1138,32 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     const ls = course(cid).lessonList;
     return ls.length ? ls.filter(l => lessonDone(cid, l)).length / ls.length : 0;
   }
-  const activeCourse = () => (S.activeCourse && E.courses[S.activeCourse]) ? S.activeCourse : E.courseOrder[0];
+  // materias de la carrera en orden sugerido (las que todavía no tienen contenido quedan marcadas)
+  function careerSubjects() {
+    const out = [];
+    if (!E.career) return E.courseOrder.map((id, i) => ({ code: course(id).code || id, title: course(id).title, course: id, step: i + 1, year: 1, sem: 1 }));
+    for (const y of E.career.years) for (const sm of y.semesters) for (const sub of sm.subjects) out.push(Object.assign({ year: y.n, sem: sm.n }, sub));
+    return out.sort((a, b) => a.step - b.step);
+  }
+  const hasContent = sub => !!(sub.course && E.courses[sub.course] && E.courses[sub.course].lessonList.length);
+  // la próxima materia sugerida: la primera del trayecto con contenido y sin terminar
+  const suggestedSubject = () => careerSubjects().find(sub => hasContent(sub) && courseProgress(sub.course) < 1) || null;
+  const activeCourse = () => {
+    if (S.activeCourse && E.courses[S.activeCourse] && E.courses[S.activeCourse].lessonList.length) return S.activeCourse;
+    const sg = suggestedSubject();
+    return sg ? sg.course : E.courseOrder[0];
+  };
   const ckey = (cid, k) => cid + "/" + k;
   function dueConcepts(cid) {
     const c = course(cid), t = today();
     return Object.keys(c.concepts)
-      .map(k => ({ k, card: S.srs[ckey(cid, k)] }))
+      .map(k => ({ k, cid, card: S.srs[ckey(cid, k)] }))
       .filter(x => x.card && x.card.due && x.card.due <= t)
       .sort((a, b) => (a.card.due < b.card.due ? -1 : a.card.due > b.card.due ? 1 : a.card.ef - b.card.ef));
   }
+  // repasos vencidos de todas las materias (los más atrasados primero)
+  const allDue = () => E.courseOrder.flatMap(dueConcepts)
+    .sort((a, b) => (a.card.due < b.card.due ? -1 : a.card.due > b.card.due ? 1 : a.card.ef - b.card.ef));
   // plantillas disponibles para repasar un concepto (solo de lecciones desbloqueadas)
   function templatesFor(cid, k) {
     const c = course(cid);
@@ -1103,6 +1177,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   }
 
   // ---------- construcción de sesiones ----------
+  // cada ítem lleva su materia (cid): la sesión del día mezcla repasos de varias materias
   function lessonItems(cid, l, n = 8) {
     const c = course(cid);
     const tpls = l.templates.slice().sort((a, b) => c.templates[a].difficulty - c.templates[b].difficulty);
@@ -1110,35 +1185,35 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     let pool = tpls.slice();
     while (items.length < n) {
       if (!pool.length) pool = E.rng(E.newSeed()).shuffle(tpls);
-      items.push({ tpl: pool.shift(), seed: E.newSeed(), src: "lesson" });
+      items.push({ cid, tpl: pool.shift(), seed: E.newSeed(), src: "lesson" });
     }
     return items;
   }
-  function reviewItems(cid, concepts, max) {
+  function reviewItems(list, max) {
     const r = E.rng(E.newSeed());
     const out = [];
-    for (const k of concepts) {
+    for (const { cid, k } of list) {
       if (out.length >= max) break;
       const ts = templatesFor(cid, k);
-      if (ts.length) out.push({ tpl: r.pick(ts), seed: E.newSeed(), src: "review", focus: k });
+      if (ts.length) out.push({ cid, tpl: r.pick(ts), seed: E.newSeed(), src: "review", focus: k });
     }
     return out;
   }
   function weakConcepts(cid) {
     return Object.keys(course(cid).concepts)
-      .map(k => ({ k, card: S.srs[ckey(cid, k)] }))
+      .map(k => ({ k, cid, card: S.srs[ckey(cid, k)] }))
       .filter(x => x.card && x.card.seen > 0)
       .sort((a, b) => (a.card.ok / a.card.seen - b.card.ok / b.card.seen) || (a.card.ef - b.card.ef));
   }
+  const firstTimeIn = cid => !cState(cid).diag && !course(cid).lessonList.some(l => lessonDone(cid, l));
   function startDaily() {
     const cid = activeCourse();
-    const c = cState(cid);
-    if (!c.diag && !course(cid).lessonList.some(l => lessonDone(cid, l))) { go("course", { id: cid }); return; }
-    const reviews = reviewItems(cid, dueConcepts(cid).map(x => x.k), 5);
+    if (firstTimeIn(cid)) { go("course", { id: cid }); return; }
+    const reviews = reviewItems(allDue(), 5);
     const l = currentLesson(cid);
     let items = reviews;
     if (l) items = items.concat(lessonItems(cid, l, 8));
-    else if (items.length < 8) items = items.concat(reviewItems(cid, weakConcepts(cid).map(x => x.k), 8 - items.length));
+    else if (items.length < 8) items = items.concat(reviewItems(weakConcepts(cid), 8 - items.length));
     if (!items.length) { toast("No hay nada pendiente. ¡Volvé mañana!"); return; }
     startSession({ kind: "daily", cid, lessonId: l && l.id, items, intro: !!l && !lessonDone(cid, l) && !(cState(cid).lessons[l.id] || {}).plays });
   }
@@ -1151,14 +1226,21 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     const ts = templatesFor(cid, k);
     if (!ts.length) return;
     const r = E.rng(E.newSeed());
-    const items = Array.from({ length: 6 }, () => ({ tpl: r.pick(ts), seed: E.newSeed(), src: "review", focus: k }));
+    const items = Array.from({ length: 6 }, () => ({ cid, tpl: r.pick(ts), seed: E.newSeed(), src: "review", focus: k }));
     startSession({ kind: "practice", cid, items, title: course(cid).concepts[k].name });
   }
+  // diagnóstico de la materia: unidad por unidad, corta en la primera que no aprobás
   function startDiagnostic(cid) {
     const u = realUnits(course(cid))[0];
-    startSession({ kind: "diag", cid, items: diagItems(u), diag: { unit: 0, passed: [] } });
+    startSession({ kind: "diag", cid, items: diagItems(cid, u), diag: { unit: 0, passed: [] } });
   }
-  const diagItems = u => (u.diagnostic || []).map(t => ({ tpl: t, seed: E.newSeed(), src: "diag", unit: u.index }));
+  // test de una sola unidad: si lo aprobás, se abre esa unidad aunque la anterior no esté completa
+  function startUnitTest(cid, unitId) {
+    const units = realUnits(course(cid)), idx = units.findIndex(u => u.id === unitId);
+    if (idx < 0) return;
+    startSession({ kind: "diag", cid, items: diagItems(cid, units[idx]), diag: { unit: idx, passed: [], single: true } });
+  }
+  const diagItems = (cid, u) => E.unitDiagnostic(course(cid), u).map(t => ({ cid, tpl: t, seed: E.newSeed(), src: "diag", unit: u.index }));
 
   function startSession(opts) {
     S.activeCourse = opts.cid;
@@ -1173,7 +1255,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 
   // ---------- navegación ----------
   function go(route, params = {}) {
-    const hash = { home: "#/", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
+    const hash = { home: "#/", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
     if (location.hash !== hash) history.pushState(null, "", hash);
     ui.route = route; ui.params = params;
     render();
@@ -1182,6 +1264,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     const h = location.hash.replace(/^#\/?/, "");
     if (h.startsWith("curso/")) { ui.route = "course"; ui.params = { id: h.slice(6) }; }
     else if (h === "stats") ui.route = "stats";
+    else if (h === "carrera") ui.route = "career";
     else if (h === "aprender") ui.route = "learn";
     else if (h === "ajustes") ui.route = "settings";
     else if (h === "creditos") ui.route = "credits";
@@ -1207,7 +1290,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   function nav(active) {
     const b = (r, ic, label, params) => `<button class="${active === r ? "on" : ""}" data-act="go" data-r="${r}" ${params ? `data-id="${params}"` : ""}>${icon(ic)}<span>${label}</span></button>`;
     return `<nav class="nav" aria-label="Principal"><div class="nav-inner">
-      ${b("home", "house", "Inicio")}${b("course", "map", "Curso", activeCourse())}${b("learn", "graduation-cap", "Aprender")}
+      ${b("home", "house", "Inicio")}${b("career", "map", "Carrera")}${b("learn", "graduation-cap", "Aprender")}
       ${b("stats", "chart-column", "Stats")}${b("settings", "settings", "Ajustes")}</div></nav>`;
   }
   function topbar() {
@@ -1224,7 +1307,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     ui.graphs.clear();
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary };
+    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1238,51 +1321,75 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       <circle class="fg" cx="32" cy="32" r="${r}" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - p)}" transform="rotate(-90 32 32)"/>
       <text x="32" y="37" text-anchor="middle">${Math.round(p * 100)}%</text></svg>`;
   }
+  function subjectCard(sub, extra = "") {
+    const ok = hasContent(sub), p = ok ? courseProgress(sub.course) : 0, c = ok && course(sub.course);
+    return `<button class="course-card subject" ${ok ? `data-act="go" data-r="course" data-id="${sub.course}"` : "disabled"}>
+      <span class="course-ico">${icon(ok ? c.icon || "book-open" : "lock")}</span>
+      <span class="grow"><span class="subj-code">${esc(sub.code)}</span>${extra}<b style="display:block;margin-top:4px">${esc(sub.title)}</b>
+      ${ok ? `<span class="bar" style="margin-top:8px"><i style="width:${p * 100}%"></i></span>
+        <span class="muted small">${Math.round(p * 100)}% · ${c.units.filter(u => u.lessons.length).length} unidades · ${c.lessonList.length} lecciones</span>`
+        : `<span class="muted small" style="display:block">Próximamente</span>`}</span>${ok ? icon("chevron-right") : ""}</button>`;
+  }
+  const badge = (txt, cls = "") => `<span class="subj-badge ${cls}">${txt}</span>`;
   function renderHome() {
     const cid = activeCourse(), c = course(cid);
-    const due = dueConcepts(cid).length, l = currentLesson(cid), xt = xpToday(), goal = S.settings.goal;
-    const firstTime = !cState(cid).diag && !c.lessonList.some(x => lessonDone(cid, x));
-    let msg;
+    const due = allDue().length, l = currentLesson(cid), xt = xpToday(), goal = S.settings.goal;
+    const firstTime = firstTimeIn(cid);
     const st = shownStreak();
-    let mood = "idle";
-    if (firstTime) msg = "¡Hola! Soy Schrödi. Hasta que no abras la caja, sabés y no sabés cálculo al mismo tiempo. Hagamos un test cortito para averiguarlo.";
+    let msg, mood = "idle";
+    if (firstTime) msg = `¡Hola! Soy Schrödi. Hasta que no abras la caja, sabés y no sabés ${c.title} al mismo tiempo. Hagamos un test cortito para averiguarlo.`;
     else if (xt >= goal) { msg = "¡Meta del día cumplida! Si querés, seguí sumando."; mood = "happy"; }
     else if (st >= 2 && S.lastActive !== today()) { msg = `Llevás ${st} días seguidos. ¡No rompas la racha!`; mood = "streak"; }
     else if (due) msg = `Tenés ${due} ${due === 1 ? "concepto" : "conceptos"} para repasar hoy.`;
-    else if (l) msg = `Seguimos con «${l.title}».`;
+    else if (l) msg = `Seguimos con «${l.title}» de ${c.title}.`;
     else msg = "Todo al día. ¡Bien ahí!";
     const parts = [];
     if (due) parts.push(`${Math.min(due, 5)} repasos`);
-    if (l) parts.push(`lección: ${l.title}`);
+    if (l) parts.push(`${c.code || ""} · ${l.title}`);
+    const subs = careerSubjects(), sg = suggestedSubject();
+    const cur = subs.find(x => x.course === cid);
     app.innerHTML = `<main class="screen">
       ${topbar()}
       <section class="hero">${mascot(mood)}<div class="bubble grow">${esc(msg)}</div></section>
       <section class="card goal">${ring(xt, goal)}<div class="grow"><b>Meta diaria</b><div class="muted small">${xt} / ${goal} XP hoy</div></div></section>
       <button class="btn big block" data-act="daily">${icon("play")}${firstTime ? "Empezar" : "Sesión del día"}</button>
       ${parts.length && !firstTime ? `<div class="daily-sub muted small">${esc(parts.join(" · "))}</div>` : ""}
-      <h2 class="section-title">Cursos</h2>
-      ${E.courseOrder.map(id => {
-        const co = course(id), p = courseProgress(id);
-        return `<button class="course-card" data-act="go" data-r="course" data-id="${id}">
-          <span class="course-ico">${icon(co.icon)}</span>
-          <span class="grow"><b>${esc(co.title)}</b><span class="bar" style="margin-top:8px"><i style="width:${p * 100}%"></i></span>
-          <span class="muted small">${Math.round(p * 100)}% · ${co.lessonList.length} lecciones</span></span>${icon("chevron-right")}</button>`;
-      }).join("")}
-      ${UPCOMING.map(u => `<button class="course-card" disabled><span class="course-ico">${icon(u.icon)}</span>
-        <span class="grow"><b>${esc(u.title)}</b><span class="muted small" style="display:block">${esc(u.note)}</span></span>${icon("lock")}</button>`).join("")}
+      <h2 class="section-title">Tu carrera</h2>
+      ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
+      ${sg && sg.course !== cid ? subjectCard(sg, badge("Sugerida")) : ""}
+      <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver toda la carrera</button>
     </main>${nav("home")}`;
   }
 
-  // ---------- MAPA DEL CURSO ----------
+  // ---------- LA CARRERA: años → semestres → materias ----------
+  function renderCareer() {
+    const cid = activeCourse(), sg = suggestedSubject();
+    const ord = n => (n === 1 ? "1.er" : n === 2 ? "2.º" : n === 3 ? "3.er" : n + ".º");
+    const years = E.career ? E.career.years : [];
+    const total = careerSubjects(), withContent = total.filter(hasContent);
+    app.innerHTML = `<main class="screen">
+      <div><h1 style="font-size:1.4rem">La carrera</h1>
+        <p class="muted small" style="margin:4px 0 0">${esc(E.career ? E.career.title + " · " + E.career.plan : "")}</p></div>
+      <section class="card diag-card">${mascot("think")}<div class="grow">
+        <b>Trayecto sugerido</b><p class="muted small" style="margin:4px 0 0">Las materias están numeradas en el orden sugerido. Podés entrar a cualquiera: cada unidad tiene su test para desbloquearla si ya la sabés. Hay contenido en ${withContent.length} de ${total.length} materias.</p></div></section>
+      ${years.map(y => `<section class="year"><h2 class="section-title">${ord(y.n)} año</h2>
+        ${y.semesters.map(sm => `<div class="sem-label">${ord(sm.n)} semestre</div>
+          ${sm.subjects.map(sub => {
+            const b = (sub.course === cid && hasContent(sub) ? badge("Cursando", "on") : "") + (sg && sg.code === sub.code && sub.course !== cid ? badge("Sugerida") : "") + `<span class="subj-step">paso ${sub.step}</span>`;
+            return subjectCard(Object.assign({}, sub), b);
+          }).join("")}`).join("")}</section>`).join("")}
+    </main>${nav("career")}`;
+  }
+
+  // ---------- MAPA DE UNA MATERIA ----------
   function renderCourse() {
     const cid = ui.params.id || activeCourse(), c = course(cid), cs = cState(cid);
     S.activeCourse = cid;
     const cur = currentLesson(cid);
-    const showDiag = !cs.diag && !c.lessonList.some(l => lessonDone(cid, l));
+    const showDiag = firstTimeIn(cid);
     const offs = [0, 46, 70, 46, 0, -46, -70, -46];
     let k = 0;
-    const units = c.units.map(u => {
-      if (u.comingSoon) return `<section class="unit soon"><div class="unit-head">${icon(u.icon || "lock")}<div><h3>${esc(u.title)}</h3><p>Próximamente</p></div></div></section>`;
+    const units = realUnits(c).map(u => {
       const unl = unitUnlocked(cid, u), done = unitDone(cid, u);
       const nDone = u.lessons.filter(l => lessonDone(cid, l)).length;
       const nodes = u.lessons.map(l => {
@@ -1293,22 +1400,32 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
         return `<div class="node-wrap ${un ? "" : "locked"} ${isCur ? "has-tip" : ""}" style="transform:translateX(${offs[k++ % offs.length]}px)">
           ${isCur ? `<span class="start-tip">EMPEZAR</span>` : ""}
           <button class="node ${cls}" data-act="lesson" data-cid="${cid}" data-id="${l.id}" ${un ? "" : "disabled"} aria-label="${esc(l.title)}">${icon(ic)}</button>
-          <span class="node-label">${esc(l.title)}${d && best != null ? `<br><span class="muted small">${(cs.lessons[l.id].tested ? "por diagnóstico" : `mejor: ${Math.round(best * 100)}%`)}</span>` : ""}</span>
+          <span class="node-label">${esc(l.title)}${d && best != null ? `<br><span class="muted small">${(cs.lessons[l.id].tested ? "por test" : `mejor: ${Math.round(best * 100)}%`)}</span>` : ""}</span>
           ${l.theory && l.theory.length ? `<button class="notes-link" data-act="learn" data-id="lesson:${l.id}">${icon("graduation-cap")}apuntes</button>` : ""}</div>`;
       }).join("");
+      const label = u.program ? `${u.program} · ` : "";
       return `<section class="unit ${done ? "done" : unl ? "" : "locked"}">
-        <div class="unit-head">${icon(done ? "trophy" : unl ? (u.icon || "book-open") : "lock")}<div class="grow"><h3>Unidad ${u.index + 1}: ${esc(u.title)}</h3><p>${nDone}/${u.lessons.length} lecciones${unl ? "" : " · completá la unidad anterior"}</p></div></div>
+        <div class="unit-head">${icon(done ? "trophy" : unl ? (u.icon || "book-open") : "lock")}<div class="grow"><p class="unit-prog">${esc(label)}${nDone}/${u.lessons.length} lecciones</p><h3>${esc(u.title)}</h3>
+          ${unl ? "" : `<button class="btn sm gold unit-test" data-act="unittest" data-cid="${cid}" data-id="${u.id}">${icon("target")}Test de la unidad</button>`}</div></div>
         ${nodes}</section>`;
     }).join("");
     app.innerHTML = `<main class="screen">
-      <div class="map-head"><button class="iconbtn" data-act="go" data-r="home" aria-label="Volver">${icon("chevron-left")}</button>
-        <div class="grow"><h1 style="font-size:1.3rem">${esc(c.title)}</h1><div class="bar" style="margin-top:6px"><i style="width:${courseProgress(cid) * 100}%"></i></div></div></div>
+      <div class="map-head"><button class="iconbtn" data-act="go" data-r="career" aria-label="Volver a la carrera">${icon("chevron-left")}</button>
+        <div class="grow"><span class="subj-code">${esc(c.code || "")}</span><h1 style="font-size:1.3rem;margin-top:2px">${esc(c.title)}</h1><div class="bar" style="margin-top:6px"><i style="width:${courseProgress(cid) * 100}%"></i></div></div></div>
       ${showDiag ? `<section class="card diag-card">${mascot("think")}<div class="grow"><b>¿Ya viste estos temas?</b>
-        <p class="muted small" style="margin:4px 0 10px">Hacé el test diagnóstico (unos 5 min) y desbloqueá directo las unidades que dominás. Igual vuelven como repaso.</p>
+        <p class="muted small" style="margin:4px 0 10px">Hacé el test diagnóstico (3 ejercicios por unidad) y desbloqueá directo las unidades que dominás. Igual vuelven como repaso. También podés tomar el test de cualquier unidad suelta.</p>
         <div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="diag" data-cid="${cid}">Hacer el test</button>
         <button class="btn sm ghost" data-act="skipdiag" data-cid="${cid}">Empezar de cero</button></div></div></section>` : ""}
-      ${units}
-    </main>${nav("course")}`;
+      ${units || `<p class="muted">Esta materia todavía no tiene unidades.</p>`}
+    </main>${nav("career")}`;
+  }
+
+  // selector de materia para Aprender y Stats
+  function subjectPicker() {
+    const subs = careerSubjects().filter(hasContent);
+    if (subs.length < 2) return "";
+    const cid = activeCourse();
+    return `<div class="picker">${subs.map(sub => `<button class="${sub.course === cid ? "on" : ""}" data-act="pick-subject" data-id="${sub.course}">${esc(sub.code)}</button>`).join("")}</div>`;
   }
 
   // ---------- SESIÓN: intro de lección ----------
@@ -1325,7 +1442,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   // ---------- SESIÓN: ejercicio ----------
   const TYPE_LABEL = { mc: "Elegí la opción correcta", numeric: "Respuesta numérica", tf: "Verdadero o falso", order: "Ordená los pasos", match: "Uní los pares", error: "Encontrá el error" };
   function renderExercise() {
-    const s = ui.session, item = s.items[s.i], c = course(s.cid);
+    const s = ui.session, item = s.items[s.i], c = course(item.cid || s.cid);
     if (!item.inst) item.inst = E.instantiate(c, item.tpl, item.seed);
     const inst = s.inst = item.inst;
     s.phase = "answer"; s.ans = initAns(inst); s.tStart = Date.now();
@@ -1459,7 +1576,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   function check() {
     const s = ui.session;
     if (!s || s.phase !== "answer" || !ready(s.inst, s.ans)) return;
-    const item = s.items[s.i], c = course(s.cid), t = c.templates[item.tpl];
+    const item = s.items[s.i], icid = item.cid || s.cid, c = course(icid), t = c.templates[item.tpl];
     const ok = isCorrect(s.inst, s.ans);
     const ms = Date.now() - s.tStart;
     s.phase = "feedback"; s.lastOk = ok;
@@ -1469,13 +1586,13 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       s.firstN++; if (ok) s.firstOk++;
       if (item.src === "lesson") { s.lessonN++; if (ok) s.lessonOk++; }
       const q = E.srs.grade(ok, ms, t.difficulty);
-      for (const k of t.concepts) (s.grades[k] = s.grades[k] || []).push(q);
+      for (const k of t.concepts) (s.grades[ckey(icid, k)] = s.grades[ckey(icid, k)] || []).push(q);
       S.answered++; if (ok) S.answeredOk++;
       gain = ok ? (item.src === "diag" ? 5 : 10) : 0;
     } else if (ok) gain = 5;
     s.xp += gain;
     // si falló, vuelve al final de la cola con valores nuevos (salvo en el diagnóstico)
-    if (!ok && first && item.src !== "diag") s.items.push({ tpl: item.tpl, seed: E.newSeed(), src: item.src, focus: item.focus, retry: true });
+    if (!ok && first && item.src !== "diag") s.items.push({ cid: icid, tpl: item.tpl, seed: E.newSeed(), src: item.src, focus: item.focus, retry: true });
     if (item.src === "diag") diagProgress(item, ok);
     Snd.play(ok ? "correct" : "wrong");
     if (!ok && navigator.vibrate) navigator.vibrate(40);
@@ -1493,7 +1610,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
         ${s.inst.explanation ? `<div>${texL(s.inst.explanation)}</div>` : ""}
         ${sol.length ? `<button class="linkbtn" data-act="sol">${icon("book-open")} ${ok ? "Ver resolución" : "Ocultar resolución"}</button>
         <div class="solution" id="sol" ${ok ? "hidden" : ""}><ol>${sol.map(x => `<li>${texL(x)}</li>`).join("")}</ol></div>` : ""}
-        ${theoryChips(s.cid, course(s.cid).templates[s.items[s.i].tpl].concepts, ok ? "Teoría:" : "Repasá la teoría:")}
+        ${theoryChips(icid, t.concepts, ok ? "Teoría:" : "Repasá la teoría:")}
       </div>
       <button class="btn block ${ok ? "ok" : "bad"}" data-act="next">Continuar</button></div>`;
     $(".ses-foot").style.visibility = "hidden";
@@ -1513,13 +1630,13 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     d.ok = (d.ok || 0) + (ok ? 1 : 0);
     d.n = (d.n || 0) + 1;
     const u = realUnits(course(s.cid))[d.unit];
-    if (d.n < (u.diagnostic || []).length) return;
+    if (d.n < E.unitDiagnostic(course(s.cid), u).length) return;
     const pass = d.ok >= Math.ceil(d.n * 2 / 3);
     d.ok = 0; d.n = 0;
     if (pass) {
       d.passed.push(u.index);
-      const nextU = realUnits(course(s.cid))[d.unit + 1];
-      if (nextU && nextU.lessons.length) { d.unit++; s.items.push(...diagItems(nextU)); }
+      const nextU = !d.single && realUnits(course(s.cid))[d.unit + 1];
+      if (nextU) { d.unit++; s.items.push(...diagItems(s.cid, nextU)); }
     }
   }
   function applyDiagnostic(s) {
@@ -1527,6 +1644,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     const r = E.rng(E.newSeed());
     for (const ui2 of s.diag.passed) {
       const u = c.units[ui2];
+      cs.unitsOpen[u.id] = true;
       for (const l of u.lessons) {
         cs.lessons[l.id] = Object.assign(cs.lessons[l.id] || {}, { done: true, tested: true, best: 1 });
         for (const k of l.concepts) {
@@ -1537,14 +1655,13 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
         }
       }
     }
-    cs.diag = "done";
+    if (!s.diag.single) cs.diag = "done";
   }
 
   function finish() {
     const s = ui.session, cid = s.cid, cs = cState(cid), t = today();
     // 1) repetición espaciada: una actualización por concepto y por día
-    for (const [k, qs] of Object.entries(s.grades)) {
-      const key = ckey(cid, k);
+    for (const [key, qs] of Object.entries(s.grades)) {
       const card = S.srs[key] || E.srs.newCard();
       card.seen += qs.length;
       card.ok += qs.filter(q => q >= 3).length;
@@ -1595,8 +1712,10 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     let title = "¡Sesión terminada!", sub = "";
     if (s.kind === "diag") {
       const units = s.diag.passed.map(i => course(s.cid).units[i].title);
-      title = units.length ? "¡Diagnóstico listo!" : "Arrancamos desde el principio";
-      sub = units.length ? `Desbloqueaste: ${units.join(", ")}. Esos temas van a volver como repaso.` : "No pasa nada: así repasás todo con calma, desde la primera lección.";
+      title = units.length ? (s.diag.single ? "¡Unidad desbloqueada!" : "¡Diagnóstico listo!") : s.diag.single ? "Todavía no" : "Arrancamos desde el principio";
+      sub = units.length ? `Desbloqueaste: ${units.join(", ")}. Esos temas van a volver como repaso.`
+        : s.diag.single ? "Para abrir la unidad necesitás 2 de 3. Pegale una leída a los apuntes y probá de nuevo cuando quieras."
+        : "No pasa nada: así repasás todo con calma, desde la primera lección.";
     } else if (z.lessonDoneNow) { title = "¡Lección completada!"; sub = "Se desbloqueó lo que sigue en el mapa."; }
     else if (z.lessonAcc != null && z.lessonAcc < 0.75) { title = "¡Casi!"; sub = `Para completar la lección necesitás 75% de aciertos al primer intento (sacaste ${Math.round(z.lessonAcc * 100)}%). Repetila cuando quieras.`; }
     // Schrödi: festeja si terminaste la lección, se prende fuego con la racha
@@ -1653,6 +1772,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     const tileS = (ic, color, v, l) => `<div class="stat-tile"><span style="color:${color}">${icon(ic)}</span><div><b>${v}</b><span>${l}</span></div></div>`;
     app.innerHTML = `<main class="screen">
       <h1 style="font-size:1.4rem">Estadísticas</h1>
+      ${subjectPicker()}
       <section class="stat-tiles">
         ${tileS("flame", "var(--fire)", shownStreak(), `racha (mejor: ${S.bestStreak})`)}
         ${tileS("star", "var(--gold-d)", S.xp, "XP total")}
@@ -1787,7 +1907,8 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     ? `<details class="lsec" ${open ? "open" : ""}><summary>${icon(ic)}<span class="grow">${title}</span>${icon("chevron-right", "chev")}</summary><div class="lsec-body">${inner}</div></details>` : "";
   function cardHtml(card) {
     const c = course(card.course);
-    const group = (c.theory.groups.find(g => g.id === card.group) || {}).title || "";
+    const gu = c.units.find(u => u.id === card.group);
+    const group = gu ? gu.title : "";
     const blocks = arr => (arr && arr.length ? arr.map(block).join("") : "");
     const examples = (card.examples || []).map((ex, i) => `<div class="ex"><div class="ex-q"><b>Ejemplo ${i + 1}.</b> ${tex(ex.q)}</div>
       <details class="ex-sol"><summary>Ver resolución</summary><ol>${ex.steps.map(st => `<li>${tex(st)}</li>`).join("")}</ol></details></div>`).join("");
@@ -1836,13 +1957,14 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     const ids = Object.keys(th.cards), read = ids.filter(id => S.read[id]).length;
     app.innerHTML = `<main class="screen">
       <h1 style="font-size:1.4rem">Aprender</h1>
+      ${subjectPicker()}
       <section class="hero">${mascot("think")}<div class="bubble grow">Tocá cualquier <span class="term">término subrayado</span> en un ejercicio o en los apuntes y te llevo a su explicación, con demostración y ejemplos.</div></section>
       ${cur && cur.theory.length ? `<button class="course-card" data-act="learn" data-id="lesson:${cur.id}"><span class="course-ico">${icon("graduation-cap")}</span>
         <span class="grow"><span class="muted small" style="display:block">Apuntes de tu lección actual</span><b>${esc(cur.title)}</b></span>${icon("chevron-right")}</button>` : ""}
       <label class="search">${icon("search")}<input id="learnSearch" type="search" placeholder="Buscar un tema o término…" autocomplete="off" aria-label="Buscar en los apuntes"></label>
       <p class="muted small" style="margin:-6px 0 0">${read} de ${ids.length} apuntes leídos · ${esc(c.title)}</p>
-      ${th.groups.map(g => `<section class="learn-group"><h2 class="section-title">${esc(g.title)}</h2>
-        <div class="learn-list">${ids.filter(id => th.cards[id].group === g.id).map(id => noteRow(id)).join("")}</div></section>`).join("")}
+      ${realUnits(c).map(u => ({ id: u.id, title: (u.program ? u.program + " · " : "") + u.title })).concat([{ id: null, title: "Otros" }]).filter(g => ids.some(id => (th.cards[id].group || null) === g.id || (g.id === null && !c.units.some(u => u.id === th.cards[id].group)))).map(g => `<section class="learn-group"><h2 class="section-title">${esc(g.title)}</h2>
+        <div class="learn-list">${ids.filter(id => g.id === null ? !c.units.some(u => u.id === th.cards[id].group) : th.cards[id].group === g.id).map(id => noteRow(id)).join("")}</div></section>`).join("")}
     </main>${nav("learn")}`;
   }
 
@@ -1878,6 +2000,8 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     switch (act) {
       case "go": go(el.dataset.r, { id: el.dataset.id }); break;
       case "learn": openLearn(el.dataset.id); break;
+      case "unittest": startUnitTest(el.dataset.cid, el.dataset.id); break;
+      case "pick-subject": S.activeCourse = el.dataset.id; save(); render(); break;
       case "learn-back": history.back(); break;
       case "learn-close": closeLearn(); break;
       case "learn-practice": { const { cid, k } = el.dataset; closeLearn(() => startPractice(cid, k)); break; }
