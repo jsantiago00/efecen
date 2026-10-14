@@ -1242,6 +1242,8 @@
       summary: "La medida natural de los ángulos: el largo del arco en la circunferencia de radio 1.",
       def: [R`Un ángulo mide $x$ **radianes** si, en una circunferencia de radio $1$, el arco que abarca mide $x$. Una vuelta entera es $2\pi$, así que $180^\circ = \pi$ y $1^\circ = \frac{\pi}{180}$.`],
       idea: [R`Los límites y las derivadas de funciones trigonométricas **solo dan "lindo" en radianes**. El [[lim-trig-notable|límite notable]] $\frac{\sin x}{x} \to 1$ sale de comparar el arco (que mide $x$) con el seno, y eso funciona porque el arco mide exactamente $x$. En grados daría $\frac{\pi}{180}$ y todas las [[derivadas-trig|derivadas trigonométricas]] arrastrarían ese factor.`],
+      demo: [R`Una circunferencia de radio $r$ mide $2\pi r$; con $r = 1$, una vuelta entera mide $2\pi$. El arco es proporcional al ángulo, así que $360^\circ$ corresponden a $2\pi$: $180^\circ = \pi$ y $x^\circ = \frac{\pi x}{180}$ radianes. En una circunferencia de radio $r$, un ángulo de $x$ radianes abarca un arco $s = r\,x$.`,
+        R`**Por qué en grados las derivadas quedan feas.** Si $x$ está en grados, $\sin(x^\circ) = \sin\left(\frac{\pi x}{180}\right)$, y por la [[regla-cadena|regla de la cadena]] $$\frac{d}{dx}\sin\left(\frac{\pi x}{180}\right) = \frac{\pi}{180}\cos\left(\frac{\pi x}{180}\right).$$ En radianes ese factor vale $1$ y desaparece.`],
       examples: [{ q: R`Pasá $135^\circ$ a radianes.`, steps: [R`Multiplicamos por $\frac{\pi}{180^\circ}$: $135\cdot\frac{\pi}{180} = \frac{3\pi}{4}$.`] }],
       see: ["lim-trig-notable", "identidades-trig"]
     },
@@ -1279,6 +1281,9 @@
       def: [R`**Teorema del factor:** si $p(r) = 0$, entonces $p(x) = (x - r)\,q(x)$ para algún polinomio $q$ de un grado menos. El cociente $q$ sale dividiendo, por ejemplo con la regla de **Ruffini**.`,
         R`Para una cuadrática con raíces $r_1, r_2$: $\;x^2 + bx + c = (x - r_1)(x - r_2)$, con $r_1 + r_2 = -b$ y $r_1 r_2 = c$.`],
       idea: [R`Es la herramienta clave para la [[indeterminacion|indeterminación]] $\frac{0}{0}$ en cocientes de polinomios: si al sustituir $x=a$ arriba y abajo da $0$, entonces $a$ es raíz de los dos, así que **los dos tienen el factor $(x-a)$**, que se cancela.`],
+      demo: [R`**Teorema del factor.** Dividimos $p(x)$ por $(x - r)$. Como el divisor tiene grado $1$, el resto es un número $R$: $$p(x) = (x - r)\,q(x) + R.$$`,
+        R`Evaluamos en $x = r$: $p(r) = 0\cdot q(r) + R = R$. O sea, el resto **es** $p(r)$ (teorema del resto). Si $p(r) = 0$, el resto es $0$ y queda $p(x) = (x - r)\,q(x)$.`,
+        R`**Suma y producto de raíces.** Desarrollamos $(x - r_1)(x - r_2) = x^2 - (r_1 + r_2)\,x + r_1 r_2$. Si eso es igual a $x^2 + bx + c$, comparando coeficientes: $r_1 + r_2 = -b$ y $r_1 r_2 = c$.`],
       examples: [{ q: R`Factorizá $x^2 - x - 6$.`, steps: [R`Buscamos dos números que sumen $1$ (porque $-b = 1$) y multipliquen $-6$: son $3$ y $-2$.`, R`$x^2 - x - 6 = (x-3)(x+2)$.`, R`Chequeo: $(x-3)(x+2) = x^2 + 2x - 3x - 6$ ✓.`] }],
       tips: [R`Error típico con los signos: si las raíces son $3$ y $-2$, los factores son $(x-3)$ y $(x+2)$. **La raíz va con el signo cambiado.**`],
       see: ["indeterminacion", "conjugado"]
@@ -1289,6 +1294,8 @@
       def: [R`El **conjugado** de $A - B$ es $A + B$. Su producto es una diferencia de cuadrados: $$(A-B)(A+B) = A^2 - B^2.$$`],
       idea: [R`Si $A = \sqrt{\text{algo}}$, al elevar al cuadrado la raíz desaparece. Por eso, en un límite $\frac{\sqrt{g(x)} - c}{x - a}$ que da [[indeterminacion|indeterminación]] $\frac{0}{0}$, multiplicamos **arriba y abajo** por $\sqrt{g(x)} + c$ (eso es multiplicar por $1$, no cambia nada). El numerador queda $g(x) - c^2$ y aparece el factor $(x-a)$ para cancelar.`,
         R`Mismo truco con $1 - \cos x$: su conjugado es $1 + \cos x$ y el producto da $1 - \cos^2 x = \sin^2 x$ (ver [[lim-1-cos]]).`],
+      demo: [R`Aplicamos la distributiva: $$(A - B)(A + B) = A^2 + AB - BA - B^2 = A^2 - B^2.$$ Los términos cruzados se cancelan; por eso el conjugado hace desaparecer la raíz.`,
+        R`En el límite: $$\frac{\sqrt{g(x)} - c}{x - a}\cdot\frac{\sqrt{g(x)} + c}{\sqrt{g(x)} + c} = \frac{g(x) - c^2}{(x - a)\left(\sqrt{g(x)} + c\right)}.$$ Si $g(a) = c^2$, el numerador se anula en $a$; si además $g$ es un polinomio, tiene el factor $(x - a)$ por el [[factorizar|teorema del factor]], y se cancela.`],
       examples: [{ q: R`Calculá $\displaystyle\lim_{x\to 4}\frac{\sqrt{x}-2}{x-4}$.`, steps: [R`Sustituyendo queda $\frac{0}{0}$.`, R`Multiplicamos por $\frac{\sqrt{x}+2}{\sqrt{x}+2}$: el numerador es $(\sqrt x)^2 - 2^2 = x - 4$.`, R`Queda $\dfrac{x-4}{(x-4)(\sqrt{x}+2)} = \dfrac{1}{\sqrt{x}+2}$ para $x\neq 4$.`, R`Sustituimos: $\dfrac{1}{2+2} = \dfrac14$.`] }],
       see: ["indeterminacion", "lim-1-cos"]
     },
@@ -1315,6 +1322,9 @@
         R`**Teorema:** $\displaystyle\lim_{x\to a} f(x) = L$ si y solo si los dos laterales existen y valen $L$.`],
       idea: [R`Son clave en funciones **a trozos**, donde de cada lado vale una fórmula distinta. Si los laterales no coinciden hay un salto y el límite no existe.`,
         { graph: { pieces: [{ f: x => x + 1, to: 1 }, { f: x => x - 2, from: 1 }], points: [{ x: 1, y: 2, open: true }, { x: 1, y: -1 }], xr: [-3, 5], yr: [-4, 4] }, caption: R`Por izquierda tiende a $2$, por derecha a $-1$: el límite en $x=1$ no existe.` }],
+      demo: [R`**($\Rightarrow$)** Si $|f(x) - L| < \varepsilon$ para todo $x$ con $0 < |x - a| < \delta$, en particular vale para los $x$ con $a - \delta < x < a$ y para los $x$ con $a < x < a + \delta$. Entonces los dos laterales existen y valen $L$.`,
+        R`**($\Leftarrow$)** Dado $\varepsilon > 0$, el lateral izquierdo da un $\delta_1$ tal que $a - \delta_1 < x < a \Rightarrow |f(x) - L| < \varepsilon$, y el derecho da un $\delta_2$ tal que $a < x < a + \delta_2 \Rightarrow |f(x) - L| < \varepsilon$.`,
+        R`Tomamos $\delta = \min(\delta_1, \delta_2)$. Todo $x$ con $0 < |x - a| < \delta$ está de un lado o del otro de $a$, y en los dos casos $|f(x) - L| < \varepsilon$. Eso es $\lim_{x\to a} f(x) = L$.`],
       examples: [{ q: R`Si $f(x)=\begin{cases} 2x+1 & x<1\\ x^2+2 & x\ge 1\end{cases}$, ¿existe $\lim_{x\to1}f(x)$?`, steps: [R`Por izquierda vale $2x+1$, que tiende a $3$.`, R`Por derecha vale $x^2+2$, que tiende a $3$.`, R`Coinciden: el límite existe y vale $3$.`] }],
       see: ["limite", "discontinuidades"]
     },
@@ -1336,6 +1346,9 @@
         R`Son continuas en todo su dominio: polinomios, cocientes de polinomios (donde el denominador no se anula), raíces, $\sin$, $\cos$, $e^x$, $\ln x$, y sumas, productos, cocientes y composiciones de ellas.`],
       idea: [R`**Siempre probá sustituir primero.** Puede pasar una de tres cosas:`,
         R`1. Da un número: ese es el límite.<br>2. Da $\frac{k}{0}$ con $k \ne 0$: es un [[limites-infinitos|límite infinito]] (mirá los signos).<br>3. Da $\frac{0}{0}$, $\frac{\infty}{\infty}$, etc.: es una [[indeterminacion|indeterminación]] y hay que transformar la expresión.`],
+      demo: [R`**Por qué los polinomios son continuos.** Los límites $\lim_{x\to a} k = k$ y $\lim_{x\to a} x = a$ salen directo de la definición de [[limite]] (en el segundo alcanza con $\delta = \varepsilon$).`,
+        R`Por el [[algebra-limites|álgebra de límites]], el límite de un producto es el producto de los límites: $\lim_{x\to a} x^n = a^n$ y $\lim_{x\to a} c\,x^n = c\,a^n$. El de una suma es la suma, así que $\lim_{x\to a} p(x) = p(a)$ para todo polinomio $p$.`,
+        R`Para un cociente $\frac{p}{q}$ con $q(a) \neq 0$, el límite es el cociente de los límites: $\frac{p(a)}{q(a)}$. Las raíces, $\sin$, $\cos$, $e^x$ y $\ln$ necesitan pruebas propias, pero el resultado es el mismo: son continuas en su dominio. Y la composición de continuas es continua.`],
       examples: [{ q: R`Calculá $\displaystyle\lim_{x\to 2}\frac{x^2+1}{x+3}$.`, steps: [R`En $x=2$ el denominador vale $5 \neq 0$: la función es continua ahí.`, R`Sustituimos: $\dfrac{4+1}{5} = 1$.`] }],
       see: ["algebra-limites", "indeterminacion", "continuidad"]
     },
@@ -1412,6 +1425,9 @@
       idea: [R`Si al [[sustitucion|sustituir]] queda $\frac{k}{0}$ con $k \ne 0$, el cociente "explota". El **signo** sale de mirar el signo de $k$ y el de lo que tiende a $0$ de cada lado:`,
         R`$x - a \to 0^+$ si $x \to a^+$, y $x - a \to 0^-$ si $x\to a^-$. En cambio $(x-a)^2 \to 0^+$ siempre.`,
         { graph: { fns: [x => 1 / (x - 1)], asym: { x: [1] }, xr: [-4, 6], yr: [-5, 5] }, caption: R`$\frac{1}{x-1}$ tiende a $-\infty$ por izquierda y a $+\infty$ por derecha.` }],
+      demo: [R`**Un ejemplo con la definición:** $\lim_{x\to 0}\frac{1}{x^2} = +\infty$. Dado $M > 0$, queremos $\frac{1}{x^2} > M$, o sea $x^2 < \frac1M$, o sea $|x| < \frac{1}{\sqrt M}$.`,
+        R`Elegimos $\delta = \frac{1}{\sqrt M}$. Si $0 < |x| < \delta$, entonces $x^2 < \frac1M$ y $\frac{1}{x^2} > M$. Como $M$ era cualquiera, el límite es $+\infty$.`,
+        R`**La regla $\frac{k}{0}$.** Supongamos $g(x) \to k > 0$ y $h(x) \to 0^+$. Cerca de $a$ vale $g(x) > \frac k2$ y, dado $M > 0$, también $0 < h(x) < \frac{k}{2M}$. Entonces $$\frac{g(x)}{h(x)} > \frac{k/2}{k/(2M)} = M.$$ Con otros signos se razona igual, y por eso el signo del límite sale de los signos de $k$ y de $h$.`],
       examples: [{ q: R`Calculá $\displaystyle\lim_{x\to 2^-}\frac{3}{x-2}$.`, steps: [R`Si $x \to 2^-$, entonces $x < 2$ y $x - 2 \to 0^-$.`, R`Positivo sobre negativo muy chico: $-\infty$.`] }],
       tips: [R`Decir que el límite "es $+\infty$" es una forma de decir que **no existe** como número, pero describe cómo no existe.`],
       see: ["asintotas", "limites-laterales"]
@@ -1567,6 +1583,9 @@
       def: [R`La recta tangente al gráfico de $f$ en $(a, f(a))$ es $$y = f(a) + f'(a)\,(x - a).$$`],
       idea: [R`Es la recta que pasa por el punto y tiene pendiente $f'(a)$, la [[derivada]]. Cerca de $a$, $f(x) \approx f(a) + f'(a)(x-a)$: es la **mejor aproximación lineal** de $f$.`,
         { graph: { fns: [x => x * x / 2, x => 2 * x - 2], points: [{ x: 2, y: 2 }], xr: [-2, 5], yr: [-3, 6] }, caption: R`En violeta $y=\frac{x^2}{2}$; en naranja su tangente en $x=2$, $\;y = 2x - 2$.` }],
+      demo: [R`Una recta de pendiente $m$ que pasa por $(x_0, y_0)$ es $y - y_0 = m\,(x - x_0)$: para cualquier otro punto $(x, y)$ de la recta, el cociente $\frac{y - y_0}{x - x_0}$ es la pendiente.`,
+        R`La tangente es el límite de las rectas secantes que pasan por $(a, f(a))$ y $(a + h, f(a + h))$. Sus pendientes son $\frac{f(a+h) - f(a)}{h}$, y cuando $h \to 0$ tienden a $f'(a)$, que es la definición de [[derivada]].`,
+        R`Con $x_0 = a$, $y_0 = f(a)$ y $m = f'(a)$ queda $y = f(a) + f'(a)\,(x - a)$.`],
       examples: [{ q: R`Encontrá la tangente a $f(x) = x^2/2$ en $x = 2$.`, steps: [R`$f(2) = 2$ y $f'(x) = x$, así que $f'(2) = 2$.`, R`$y = 2 + 2(x - 2) = 2x - 2$.`] }],
       see: ["derivada", "implicita"]
     },
@@ -1575,6 +1594,9 @@
       summary: "Derivar ambos lados respecto de x tratando a y como y(x), y despejar y'.",
       def: [R`Si una curva está dada por una ecuación $F(x, y) = 0$ sin despejar $y$, derivamos **ambos lados respecto de $x$** pensando $y = y(x)$. Cada vez que derivamos algo con $y$ aparece un factor $y'$, por la [[regla-cadena|regla de la cadena]]. Después despejamos $y'$.`],
       idea: [R`¿Por qué aparece $y'$? Porque $\frac{d}{dx}\left(y^2\right) = 2y\cdot y'$, igual que $\frac{d}{dx}\left(g(x)^2\right) = 2g(x)\,g'(x)$.`],
+      demo: [R`Supongamos que, cerca de un punto, la curva es el gráfico de una función derivable $y = y(x)$. Entonces $F(x, y(x)) = 0$ **para todo $x$** de ese tramo. Es una igualdad entre funciones de $x$, y dos funciones iguales tienen la misma derivada.`,
+        R`Cada término se deriva con las reglas de siempre. $y^3$ es la composición de $u^3$ con $u = y(x)$, así que por la [[regla-cadena|regla de la cadena]] su derivada es $3y^2\,y'$. Un producto como $xy$ da $y + x\,y'$ por la [[regla-producto|regla del producto]]. Lo que queda es una ecuación de primer grado en $y'$, que se despeja.`,
+        R`Ejemplo: en $x^2 + y^2 = 25$, derivando queda $2x + 2y\,y' = 0$, así que $y' = -\frac{x}{y}$ (donde $y \neq 0$).`],
       examples: [
         { q: R`Calculá la pendiente de $x^2 + y^2 = 25$ en $(3, 4)$.`, steps: [R`Derivamos: $2x + 2y\,y' = 0$.`, R`Despejamos: $y' = -\dfrac{x}{y}$.`, R`En $(3,4)$: $y' = -\dfrac34$.`] },
         { q: R`Calculá $y'$ en $xy + y^2 = 6$.`, steps: [R`[[regla-producto|Regla del producto]] en $xy$: $y + x\,y' + 2y\,y' = 0$.`, R`$y'(x + 2y) = -y \Rightarrow y' = -\dfrac{y}{x + 2y}$.`] }
@@ -1596,6 +1618,9 @@
       def: [R`Si $f' > 0$ en un intervalo, $f$ **crece** ahí; si $f' < 0$, **decrece**. En un máximo o mínimo local con tangente, $f' = 0$.`],
       idea: [R`Para dibujar $f'$ a partir de $f$, recorré el gráfico de $f$ de izquierda a derecha y preguntate **qué tan empinado está** en cada punto: esa pendiente es la altura de $f'$.`,
         { graph: { fns: [x => x ** 3 / 3 - 2 * x, x => x * x - 2], xr: [-4, 4], yr: [-4, 4] }, caption: R`En violeta $f = \frac{x^3}{3} - 2x$; en naranja $f' = x^2 - 2$, que se anula justo donde $f$ tiene su máximo y su mínimo.` }],
+      demo: [R`**Si $f' > 0$ en un intervalo, $f$ crece ahí.** Tomemos $x_1 < x_2$ en el intervalo. Por el [[valor-medio|teorema del valor medio]], existe $c$ entre ellos con $$f(x_2) - f(x_1) = f'(c)\,(x_2 - x_1).$$ Como $f'(c) > 0$ y $x_2 - x_1 > 0$, el producto es positivo: $f(x_2) > f(x_1)$. Con $f' < 0$, el mismo argumento da que $f$ decrece.`,
+        R`**En un extremo local con tangente, $f' = 0$.** Si en $c$ hay un máximo local, cerca de $c$ vale $f(c + h) \le f(c)$. Para $h > 0$, el cociente $\frac{f(c+h) - f(c)}{h}$ es $\le 0$; para $h < 0$ es $\ge 0$.`,
+        R`Los dos cocientes tienden a $f'(c)$, que entonces es a la vez $\le 0$ y $\ge 0$: $f'(c) = 0$. Para un mínimo, igual con las desigualdades al revés.`],
       examples: [{ q: R`Si $f$ es una parábola con mínimo en $x = 1$, ¿cómo es $f'$?`, steps: [R`A la izquierda de $1$, $f$ decrece: $f' < 0$. A la derecha crece: $f' > 0$.`, R`$f'(1) = 0$. De hecho, $f'$ es una recta creciente que corta el eje en $x = 1$.`] }],
       see: ["derivada", "derivadas-sucesivas", "funcion"]
     }
@@ -2070,6 +2095,9 @@
       idea: [R`Para calcularla: se despeja $x$ de $y = f(x)$ y se cambian los nombres. El gráfico de $f^{-1}$ es el de $f$ **reflejado sobre la recta $y = x$**, porque se intercambian las coordenadas.`,
         { graph: { fns: [x => Math.exp(x), x => Math.log(x), x => x], xr: [-4, 4], yr: [-4, 4] }, caption: R`En violeta $e^x$, en naranja su inversa $\ln x$, en verde la recta $y = x$.` },
         R`Pares clásicos: $e^x$ y $\ln x$; $x^2$ (con $x\ge0$) y $\sqrt x$; $\sin x$ (en $[-\frac\pi2,\frac\pi2]$) y $\arcsin x$.`],
+      demo: [R`**Reflejo sobre $y = x$.** El punto $(a, b)$ está en el gráfico de $f$ si y solo si $f(a) = b$, o sea $f^{-1}(b) = a$, o sea $(b, a)$ está en el gráfico de $f^{-1}$.`,
+        R`Y $(b, a)$ es el simétrico de $(a, b)$ respecto de la recta $y = x$: su punto medio $\left(\frac{a+b}{2}, \frac{a+b}{2}\right)$ está en la recta, y el segmento que los une tiene pendiente $\frac{a - b}{b - a} = -1$, perpendicular a la recta (que tiene pendiente $1$).`,
+        R`**Por qué hace falta que sea inyectiva.** Si $f(x_1) = f(x_2) = y$ con $x_1 \neq x_2$, la inversa tendría que mandar $y$ a dos valores distintos, y eso no es una función.`],
       examples: [{ q: R`Inversa de $f(x) = \dfrac{2x + 1}{x - 3}$.`, steps: [R`$y(x - 3) = 2x + 1 \Rightarrow x(y - 2) = 3y + 1$.`, R`$x = \dfrac{3y + 1}{y - 2}$, o sea $f^{-1}(x) = \dfrac{3x + 1}{x - 2}$.`] }],
       see: ["composicion", "exp-log-func"]
     },
@@ -2079,6 +2107,9 @@
       def: [R`A partir de $y = f(x)$:<br>• $f(x - h)$: desplaza $h$ a la derecha (a la izquierda si $h<0$).<br>• $f(x) + k$: desplaza $k$ hacia arriba.<br>• $a\,f(x)$: estira verticalmente (y refleja si $a < 0$).<br>• $f(bx)$: comprime horizontalmente por $b$ (y refleja si $b < 0$).`],
       idea: [R`Lo que se hace **afuera** de $f$ afecta los valores ($y$) y va "en el sentido esperado". Lo que se hace **adentro** afecta a $x$ y va "al revés": $f(x - 2)$ corre a la **derecha**, porque el valor que antes tenía $f$ en $0$ ahora aparece en $x = 2$.`,
         { graph: { fns: [x => x * x, x => (x - 2) ** 2 + 1], xr: [-4, 5], yr: [-2, 6] }, caption: R`En violeta $x^2$; en naranja $(x - 2)^2 + 1$.` }],
+      demo: [R`**Corrimiento horizontal.** Sea $g(x) = f(x - h)$. Si $(x_0, y_0)$ está en el gráfico de $f$, entonces $g(x_0 + h) = f(x_0) = y_0$: el punto $(x_0 + h, y_0)$ está en el gráfico de $g$. Cada punto se movió $h$ a la derecha.`,
+        R`**Compresión horizontal.** Con $g(x) = f(bx)$: $g\left(\frac{x_0}{b}\right) = f(x_0) = y_0$, así que $(x_0, y_0)$ pasa a $\left(\frac{x_0}{b}, y_0\right)$. Con $b > 1$ se acerca al eje $y$ (se comprime); con $b < 0$, además cambia de lado (se refleja).`,
+        R`**Lo de afuera.** Con $f(x) + k$, el punto $(x_0, y_0)$ pasa a $(x_0, y_0 + k)$; con $a\,f(x)$, pasa a $(x_0, a\,y_0)$.`],
       examples: [{ q: R`¿Qué le hace $y = 3 - f(x + 1)$ al gráfico de $f$?`, steps: [R`$f(x + 1)$: corre $1$ a la izquierda.`, R`$-f(\cdot)$: refleja respecto del eje $x$.`, R`$+3$: sube $3$.`] }],
       see: ["funcion", "cuadratica", "funciones-trig"]
     },
@@ -2088,6 +2119,9 @@
       def: [R`$\sin$ y $\cos$ son periódicas de período $2\pi$ y toman valores en $[-1, 1]$. Para $$f(x) = A\sin(Bx + C) + D:$$ la **amplitud** es $|A|$, el **período** es $\frac{2\pi}{|B|}$, el desfase es $-\frac{C}{B}$ y la función oscila entre $D - |A|$ y $D + |A|$.`],
       idea: [R`Es el seno de siempre [[transformaciones|transformado]]: $B$ comprime en horizontal (más oscilaciones), $A$ estira en vertical, $C$ corre y $D$ sube. En física es el modelo de cualquier oscilación: $x(t) = A\cos(\omega t + \varphi)$ con $\omega = \frac{2\pi}{T}$.`,
         { graph: { fns: [x => Math.sin(x), x => 2 * Math.sin(2 * x) + 1], xr: [-6, 6], yr: [-3, 4] }, caption: R`En violeta $\sin x$; en naranja $2\sin(2x) + 1$ (amplitud $2$, período $\pi$).` }],
+      demo: [R`**Período.** $\sin(Bx + C)$ se repite cuando el argumento avanza $2\pi$: $B(x + T) + C = Bx + C + 2\pi$ da $T = \frac{2\pi}{B}$ (con $|B|$ si $B < 0$). Ningún $T$ más chico sirve, porque $2\pi$ es el período de $\sin$.`,
+        R`**Desfase.** El arranque del seno, donde el argumento vale $0$, pasa de $x = 0$ a $Bx + C = 0$, o sea $x = -\frac{C}{B}$.`,
+        R`**Valores.** Como $-1 \le \sin(Bx + C) \le 1$, multiplicando por $A$ y sumando $D$ queda $D - |A| \le A\sin(Bx + C) + D \le D + |A|$.`],
       examples: [{ q: R`Período y máximo de $3\cos(4x) - 1$.`, steps: [R`Período: $\frac{2\pi}{4} = \frac{\pi}{2}$.`, R`Máximo: $-1 + 3 = 2$.`] }],
       see: ["radian", "identidades-trig", "transformaciones"]
     },
@@ -2098,6 +2132,9 @@
         R`**Propiedades:** $\log_a(xy) = \log_a x + \log_a y$, $\;\log_a\frac{x}{y} = \log_a x - \log_a y$, $\;\log_a(x^k) = k\log_a x$, $\;\log_a x = \frac{\ln x}{\ln a}$.`],
       idea: [R`El logaritmo convierte productos en sumas porque la exponencial convierte sumas en productos: $a^{u+v} = a^u a^v$. Para despejar una incógnita del exponente, se aplica el logaritmo a ambos lados.`,
         { graph: { fns: [x => 2 ** x, x => Math.log2(x)], xr: [-4, 6], yr: [-4, 6] }, caption: R`En violeta $2^x$; en naranja $\log_2 x$, su [[funcion-inversa|inversa]].` }],
+      demo: [R`**Producto.** Sean $u = \log_a x$ y $v = \log_a y$, o sea $a^u = x$ y $a^v = y$. Entonces $xy = a^u a^v = a^{u+v}$, y por definición de logaritmo $\log_a(xy) = u + v = \log_a x + \log_a y$.`,
+        R`**Cociente y potencia.** Igual: $\frac{x}{y} = \frac{a^u}{a^v} = a^{u-v}$ y $x^k = (a^u)^k = a^{ku}$. Así que $\log_a\frac{x}{y} = u - v$ y $\log_a(x^k) = k\,u = k\log_a x$.`,
+        R`**Cambio de base.** De $a^u = x$, tomando $\ln$ en los dos lados: $u\ln a = \ln x$, o sea $\log_a x = u = \frac{\ln x}{\ln a}$.`],
       examples: [{ q: R`Resolvé $3\cdot 2^{x} = 48$.`, steps: [R`$2^x = 16 = 2^4$.`, R`$x = 4$.`] }],
       tips: [R`$\ln(a + b) \neq \ln a + \ln b$. Y siempre chequeá el dominio: el argumento del logaritmo tiene que ser positivo.`],
       see: ["funcion-inversa", "modelos", "exp-log"]
@@ -2108,6 +2145,9 @@
       def: [R`**Modelo lineal:** $y(t) = y_0 + m\,t$, con razón de cambio constante $m$.`, R`**Modelo exponencial:** $N(t) = N_0 e^{kt}$, que crece ($k>0$) o decae ($k<0$) a un ritmo **proporcional a la cantidad**: $N'(t) = kN(t)$.`],
       idea: [R`En el decaimiento radiactivo la **vida media** $T_{1/2}$ es el tiempo en que queda la mitad, $e^{-kT_{1/2}} = \frac12$, así que $k = \frac{\ln 2}{T_{1/2}}$ y $N(t) = N_0\,2^{-t/T_{1/2}}$.`,
         R`El modelo exponencial es la solución de la ecuación diferencial $N' = kN$, que aparece en la unidad de integrales.`],
+      demo: [R`**Por qué $N' = kN$.** Si $N(t) = N_0 e^{kt}$, por la [[regla-cadena|regla de la cadena]] $N'(t) = N_0\,k\,e^{kt} = k\,N(t)$. Y $N(0) = N_0 e^0 = N_0$: $N_0$ es la cantidad inicial.`,
+        R`**Vida media.** Escribimos el decaimiento como $N_0 e^{-kt}$ con $k > 0$. Queda la mitad cuando $N_0 e^{-kT_{1/2}} = \frac12 N_0$. Simplificando y tomando $\ln$: $-kT_{1/2} = \ln\frac12 = -\ln 2$, así que $k = \frac{\ln 2}{T_{1/2}}$.`,
+        R`Reemplazando: $$e^{-kt} = e^{-\ln 2\cdot t/T_{1/2}} = \left(e^{\ln 2}\right)^{-t/T_{1/2}} = 2^{-t/T_{1/2}}.$$`],
       examples: [{ q: R`Una población se duplica cada 3 horas. Si arranca con 500, ¿cuántos hay a las 7 horas?`, steps: [R`$N(t) = 500\cdot 2^{t/3}$.`, R`$N(7) = 500\cdot 2^{7/3} \approx 2520$.`] }],
       see: ["exp-log-func"]
     }
@@ -2570,6 +2610,9 @@
       idea: [R`Cóncava hacia arriba: el gráfico queda **por encima** de sus rectas tangentes y "retiene agua" ($\cup$). Hacia abajo: por debajo de las tangentes ($\cap$).`,
         R`**Criterio de la segunda derivada:** si $f'(c) = 0$ y $f''(c) > 0$, hay mínimo local; si $f''(c) < 0$, máximo local. Si $f''(c) = 0$, el criterio no decide.`,
         { graph: { fns: [x => x ** 3 / 3 - x, x => 2 * x], points: [{ x: 0, y: 0 }], xr: [-3, 3], yr: [-3, 3] }, caption: R`En violeta $\frac{x^3}{3} - x$; en naranja $f'' = 2x$. Inflexión en $x = 0$.` }],
+      demo: [R`**Criterio de la segunda derivada.** Supongamos $f'(c) = 0$ y $f''(c) > 0$. Por definición, $$f''(c) = \lim_{h\to 0}\frac{f'(c+h) - f'(c)}{h} = \lim_{h\to 0}\frac{f'(c+h)}{h} > 0.$$`,
+        R`Entonces, para $h$ chico, $\frac{f'(c+h)}{h} > 0$: si $h > 0$, $f'(c+h) > 0$, y si $h < 0$, $f'(c+h) < 0$. O sea, $f'$ pasa de negativa a positiva en $c$: $f$ decrece y después crece (ver [[grafico-derivada]]), y en $c$ hay un mínimo local. Con $f''(c) < 0$ los signos se invierten y hay un máximo.`,
+        R`**Por qué con $f''(c) = 0$ no se puede decidir.** $x^4$, $-x^4$ y $x^3$ cumplen $f'(0) = f''(0) = 0$, y en $0$ tienen, respectivamente, un mínimo, un máximo y ningún extremo.`],
       examples: [{ q: R`Concavidad de $x^4 - 6x^2$.`, steps: [R`$f''(x) = 12x^2 - 12 = 12(x^2 - 1)$.`, R`Hacia arriba en $(-\infty, -1)\cup(1, +\infty)$; hacia abajo en $(-1, 1)$; inflexiones en $x = \pm 1$.`] }],
       tips: [R`$f''(c) = 0$ no basta para inflexión: $x^4$ tiene $f''(0) = 0$ y es cóncava hacia arriba en todos lados.`],
       see: ["extremos", "derivadas-sucesivas"]
@@ -3107,6 +3150,10 @@
       idea: [R`Cada sumando es el área (con signo) de un rectángulo; al afinar la partición, la suma tiende al **área con signo**: lo que está arriba del eje cuenta positivo y lo de abajo, negativo.`,
         { graph: { fns: [x => x * x / 2], xr: [-1, 4], yr: [-1, 5] }, caption: R`El área bajo $\frac{x^2}{2}$ entre $0$ y $3$ es el límite de las sumas de rectángulos.` },
         R`**Propiedades:** linealidad $\int(\alpha f + \beta g) = \alpha\int f + \beta\int g$; $\int_a^b = \int_a^c + \int_c^b$; $\int_b^a f = -\int_a^b f$; si $f \le g$ entonces $\int f \le \int g$. Si $f$ es impar, $\int_{-a}^a f = 0$; si es par, $\int_{-a}^a f = 2\int_0^a f$.`],
+      demo: [R`**Linealidad.** Sale de las sumas de Riemann: $$\sum_{i=1}^n\big(\alpha f(x_i^*) + \beta g(x_i^*)\big)\Delta x = \alpha\sum_{i=1}^n f(x_i^*)\,\Delta x + \beta\sum_{i=1}^n g(x_i^*)\,\Delta x,$$ y el límite de una suma es la suma de los límites.`,
+        R`**Monotonía.** Si $f \le g$, cada suma de Riemann de $f$ es menor o igual que la de $g$ (con la misma partición y los mismos puntos), y la desigualdad se mantiene en el límite.`,
+        R`**Funciones pares e impares.** Partimos $\int_{-a}^a f = \int_{-a}^0 f + \int_0^a f$. En la primera, con la [[int-sustitucion|sustitución]] $x = -u$, $dx = -du$: $$\int_{-a}^0 f(x)\,dx = \int_a^0 f(-u)\,(-du) = \int_0^a f(-u)\,du.$$`,
+        R`Si $f$ es impar, $f(-u) = -f(u)$ y esa integral vale $-\int_0^a f$: la suma da $0$. Si $f$ es par, $f(-u) = f(u)$ y vale $\int_0^a f$: la suma da $2\int_0^a f$.`],
       examples: [{ q: R`Calculá $\int_0^1 x\,dx$ como límite de sumas de Riemann (extremo derecho).`, steps: [R`$\Delta x = \frac1n$, $x_i = \frac in$: $\sum_{i=1}^n \frac{i}{n}\cdot\frac1n = \frac{1}{n^2}\cdot\frac{n(n+1)}{2}$.`, R`Tiende a $\frac12$: el área del triángulo.`] }],
       see: ["tfc", "antiderivada", "area-curvas"]
     },
@@ -3148,6 +3195,10 @@
       def: [R`**Potencias de $\sin$ y $\cos$:** si alguna potencia es impar, se separa un factor y se usa $\sin^2 + \cos^2 = 1$ con $u = \cos x$ o $u = \sin x$. Si las dos son pares, ángulo doble: $\sin^2 x = \frac{1 - \cos 2x}{2}$ y $\cos^2 x = \frac{1 + \cos 2x}{2}$.`,
         R`**Sustitución trigonométrica:**<br>• $\sqrt{a^2 - x^2}$: $x = a\sin\theta$ (queda $a\cos\theta$).<br>• $\sqrt{a^2 + x^2}$: $x = a\tan\theta$ (queda $a\sec\theta$).<br>• $\sqrt{x^2 - a^2}$: $x = a\sec\theta$ (queda $a\tan\theta$).`],
       idea: [R`Todo sale de la [[identidades-trig|identidad pitagórica]]: la sustitución convierte la raíz en un cuadrado perfecto. $\int_0^a\sqrt{a^2 - x^2}\,dx = \frac{\pi a^2}{4}$ es el área de un cuarto de círculo.`],
+      demo: [R`**Por qué la sustitución saca la raíz.** Con $x = a\sin\theta$ y $\theta \in \left[-\frac\pi2, \frac\pi2\right]$: $$\sqrt{a^2 - a^2\sin^2\theta} = a\sqrt{1 - \sin^2\theta} = a\sqrt{\cos^2\theta} = a\cos\theta,$$ porque $\cos\theta \ge 0$ en ese intervalo.`,
+        R`Con $x = a\tan\theta$ se usa $1 + \tan^2\theta = \sec^2\theta$, que sale de dividir la identidad pitagórica por $\cos^2\theta$. Con $x = a\sec\theta$ se usa la misma, despejada: $\sec^2\theta - 1 = \tan^2\theta$.`,
+        R`**El cuarto de círculo.** Con $x = a\sin\theta$, $dx = a\cos\theta\,d\theta$, y $x$ va de $0$ a $a$ cuando $\theta$ va de $0$ a $\frac\pi2$: $$\int_0^a\sqrt{a^2 - x^2}\,dx = \int_0^{\pi/2} a^2\cos^2\theta\,d\theta = a^2\int_0^{\pi/2}\frac{1 + \cos 2\theta}{2}\,d\theta$$ $$= a^2\left[\frac{\theta}{2} + \frac{\sin 2\theta}{4}\right]_0^{\pi/2} = \frac{\pi a^2}{4}.$$`,
+        R`**Potencia impar.** En $\int\sin^3 x\,dx$ separamos $\sin^3 x = (1 - \cos^2 x)\sin x$. Con $u = \cos x$, $du = -\sin x\,dx$, queda $-\int(1 - u^2)\,du = -u + \frac{u^3}{3} + C = -\cos x + \frac{\cos^3 x}{3} + C$.`],
       examples: [{ q: R`Calculá $\int\cos^3 x\,dx$.`, steps: [R`$\cos^3 x = (1 - \sin^2 x)\cos x$, con $u = \sin x$.`, R`$\int(1 - u^2)du = \sin x - \frac{\sin^3 x}{3} + C$.`] }],
       see: ["identidades-trig", "int-sustitucion"]
     },
@@ -3156,6 +3207,9 @@
       summary: "Un cociente de polinomios se parte en sumandos A/(x − r), que se integran como logaritmos.",
       def: [R`Si el grado del numerador es menor que el del denominador y el denominador se [[factorizar|factoriza]] en factores lineales distintos: $$\frac{p(x)}{(x - r_1)\cdots(x - r_k)} = \frac{A_1}{x - r_1} + \dots + \frac{A_k}{x - r_k}.$$ Con factores repetidos aparecen términos $\frac{B}{(x - r)^2}$, y con cuadráticos irreducibles, $\frac{Cx + D}{x^2 + bx + c}$.`],
       idea: [R`Para hallar $A$: multiplicá por el denominador y evaluá en $x = r_1$; todos los otros términos se anulan. Después cada sumando se integra: $\int\frac{A}{x - r}dx = A\ln|x - r|$. Si el grado de arriba no es menor, primero se divide.`],
+      demo: [R`**Por qué funciona multiplicar y evaluar.** Con dos factores, partimos de $$\frac{p(x)}{(x - r_1)(x - r_2)} = \frac{A_1}{x - r_1} + \frac{A_2}{x - r_2}.$$ Multiplicando por $(x - r_1)(x - r_2)$ queda $p(x) = A_1(x - r_2) + A_2(x - r_1)$, una igualdad de polinomios que vale para todo $x$.`,
+        R`En $x = r_1$ el segundo término se anula: $p(r_1) = A_1(r_1 - r_2)$, o sea $A_1 = \frac{p(r_1)}{r_1 - r_2}$. Igual en $x = r_2$. Con más factores pasa lo mismo: en $x = r_i$ sobrevive solo el término de $A_i$.`,
+        R`**Por qué existen esos $A_i$.** Con los valores de arriba, $A_1(x - r_2) + A_2(x - r_1)$ es un polinomio de grado $\le 1$ que coincide con $p$ en dos puntos distintos, $r_1$ y $r_2$. Si $p$ también tiene grado $\le 1$, la diferencia es un polinomio de grado $\le 1$ con dos raíces, así que es $0$. Por eso hace falta que el grado de arriba sea menor.`],
       examples: [{ q: R`Calculá $\int\frac{dx}{x^2 - 1}$.`, steps: [R`$\frac{1}{(x-1)(x+1)} = \frac{1/2}{x - 1} - \frac{1/2}{x + 1}$.`, R`$\frac12\ln|x - 1| - \frac12\ln|x + 1| + C = \frac12\ln\left|\frac{x-1}{x+1}\right| + C$.`] }],
       see: ["factorizar", "antiderivada"]
     }
@@ -3437,6 +3491,9 @@
         R`**Separable:** $y' = g(x)\,h(y)$. Se pasa todo lo de $y$ a un lado y todo lo de $x$ al otro: $$\int\frac{dy}{h(y)} = \int g(x)\,dx.$$`],
       idea: [R`Son el lenguaje de la física: $N' = kN$ (crecimiento, decaimiento, ver [[modelos]]), $T' = -k(T - T_a)$ (ley de enfriamiento de Newton), $x'' = -\omega^2 x$ (oscilaciones).`,
         R`Para **verificar** una solución no hace falta resolver nada: se deriva y se reemplaza.`],
+      demo: [R`**Por qué se puede separar.** Si $y(x)$ es solución de $y' = g(x)\,h(y)$ con $h(y) \neq 0$, dividimos: $\frac{y'(x)}{h(y(x))} = g(x)$. Sea $H$ una primitiva de $\frac1h$. Por la [[regla-cadena|regla de la cadena]], $\frac{d}{dx}H(y(x)) = \frac{y'(x)}{h(y(x))}$.`,
+        R`Entonces $\frac{d}{dx}H(y(x)) = g(x)$, e integrando respecto de $x$ queda $H(y) = G(x) + C$, con $G$ una primitiva de $g$. Eso es exactamente $\int\frac{dy}{h(y)} = \int g(x)\,dx$: «pasar el $dx$ multiplicando» es una forma abreviada de este cálculo.`,
+        R`Ejemplo: en $y' = ky$, $\int\frac{dy}{y} = \int k\,dx$ da $\ln|y| = kx + C$, o sea $y = A\,e^{kx}$ con $A = \pm e^C$ (y $y = 0$ también es solución).`],
       examples: [{ q: R`Resolvé $y' = \frac{x}{y}$ con $y(0) = 2$.`, steps: [R`$y\,dy = x\,dx \Rightarrow \frac{y^2}{2} = \frac{x^2}{2} + C$.`, R`Con $y(0) = 2$: $C = 2$, así que $y = \sqrt{x^2 + 4}$.`] }],
       tips: [R`Al separar dividiendo por $h(y)$ se pueden perder soluciones constantes: $y = 0$ también resuelve $y' = ky$.`],
       see: ["modelos", "antiderivada", "exp-log-func"]
@@ -3447,6 +3504,9 @@
       def: [R`Si $f \ge g$ en $[a, b]$, el área entre los dos gráficos es $$A = \int_a^b \big(f(x) - g(x)\big)\,dx.$$ Si se cruzan, se parte el intervalo en los puntos de corte (o se integra $|f - g|$).`],
       idea: [R`**Receta:** 1) igualá las funciones para encontrar los cortes; 2) mirá cuál está arriba en cada tramo (alcanza con probar un punto); 3) integrá "arriba menos abajo". Un área nunca da negativa.`,
         { graph: { fns: [x => 2 * x, x => x * x], xr: [-1, 3], yr: [-1, 5] }, caption: R`Entre $y = 2x$ (violeta) e $y = x^2$ (naranja): $\int_0^2(2x - x^2)dx = \frac43$.` }],
+      demo: [R`Partimos $[a, b]$ en tiras de ancho $\Delta x$. En cada tira, la región entre las curvas es casi un rectángulo de alto $f(x_i^*) - g(x_i^*)$: arriba menos abajo, que es $\ge 0$ porque $f \ge g$.`,
+        R`Sumando, $\sum\big(f(x_i^*) - g(x_i^*)\big)\,\Delta x$ es una suma de Riemann de $f - g$, que tiende a $\int_a^b (f - g)\,dx$ (ver [[integral-definida]]).`,
+        R`Otra forma: si $f \ge g \ge 0$, el área entre las curvas es el área bajo $f$ menos el área bajo $g$, y por linealidad $\int_a^b f - \int_a^b g = \int_a^b (f - g)$. Si $g$ es negativa en algún tramo, subimos las dos curvas una constante $c$: el área no cambia y $(f + c) - (g + c) = f - g$.`],
       examples: [{ q: R`Área entre $y = \sqrt x$ e $y = x$.`, steps: [R`Se cortan en $x = 0$ y $x = 1$; en el medio, $\sqrt x > x$.`, R`$\int_0^1(\sqrt x - x)dx = \frac23 - \frac12 = \frac16$.`] }],
       see: ["integral-definida", "tfc"]
     },
@@ -3456,6 +3516,9 @@
       def: [R`**Volumen (discos):** si la región bajo $y = f(x)$, $a \le x \le b$, gira alrededor del eje $x$: $$V = \pi\int_a^b f(x)^2\,dx.$$`, R`**Longitud de arco** del gráfico de $f$ entre $a$ y $b$: $$L = \int_a^b\sqrt{1 + f'(x)^2}\,dx.$$`],
       idea: [R`Ambas fórmulas salen de "cortar en pedacitos y sumar". Un disco de grosor $dx$ tiene volumen $\pi f(x)^2\,dx$. Un pedacito de curva es casi un segmento de largo $\sqrt{dx^2 + dy^2} = \sqrt{1 + (dy/dx)^2}\,dx$, por Pitágoras.`,
         R`Chequeo: un cono de radio $R$ y altura $h$ (la recta $y = \frac Rh x$) da $V = \pi\int_0^h\frac{R^2}{h^2}x^2dx = \frac13\pi R^2 h$.`],
+      demo: [R`**Volumen.** Cortamos $[a, b]$ en tajadas de ancho $\Delta x$. La tajada en $x_i^*$, al girar, es casi un cilindro de radio $f(x_i^*)$ y altura $\Delta x$, de volumen $\pi f(x_i^*)^2\,\Delta x$. La suma $\sum\pi f(x_i^*)^2\,\Delta x$ es una suma de Riemann de $\pi f^2$, y en el límite da $\pi\int_a^b f(x)^2\,dx$.`,
+        R`**Longitud de arco.** Aproximamos la curva por una poligonal con vértices $(x_i, f(x_i))$. Por Pitágoras, el tramo $i$ mide $$\sqrt{\Delta x^2 + \Delta y_i^2} = \sqrt{1 + \left(\frac{\Delta y_i}{\Delta x}\right)^2}\,\Delta x.$$`,
+        R`Por el [[valor-medio|teorema del valor medio]], $\frac{\Delta y_i}{\Delta x} = f'(c_i)$ para algún $c_i$ en ese tramo. Así, el largo de la poligonal es $\sum\sqrt{1 + f'(c_i)^2}\,\Delta x$, una suma de Riemann que tiende a $\int_a^b\sqrt{1 + f'(x)^2}\,dx$.`],
       examples: [{ q: R`Volumen de una esfera de radio $R$.`, steps: [R`Gira $y = \sqrt{R^2 - x^2}$, $-R \le x \le R$.`, R`$V = \pi\int_{-R}^R(R^2 - x^2)dx = \pi\left(2R^3 - \frac{2R^3}{3}\right) = \frac43\pi R^3$.`] }],
       see: ["integral-definida", "area-curvas"]
     }
