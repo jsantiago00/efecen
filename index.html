@@ -805,7 +805,41 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
         return E.store.valid(s) ? E.store.migrate(s) : E.store.defaults();
       } catch (e) { return E.store.defaults(); }
     },
-    save(s) { try { localStorage.setItem(E.store.key, JSON.stringify(s)); return true; } catch (e) { return false; } }
+    save(s) { try { localStorage.setItem(E.store.key, JSON.stringify(s)); return true; } catch (e) { return false; } },
+    // combina el progreso de dos dispositivos sin perder nada: todo lo acumulable se queda con el máximo
+    // o la unión, y lo "de estado" (ajustes, materia activa, racha) se toma del más reciente.
+    // Es idempotente y conmutativo en lo acumulable, así que sincronizar dos veces no cambia nada.
+    merge(a, b) {
+      a = E.store.migrate(JSON.parse(JSON.stringify(a))); b = E.store.migrate(JSON.parse(JSON.stringify(b)));
+      const newer = (b.lastActive || "") > (a.lastActive || "") ? b : a, older = newer === a ? b : a;
+      const out = JSON.parse(JSON.stringify(newer));
+      const max = (x, y) => Math.max(x || 0, y || 0);
+      out.xp = max(a.xp, b.xp); out.answered = max(a.answered, b.answered); out.answeredOk = max(a.answeredOk, b.answeredOk);
+      out.bestStreak = max(a.bestStreak, b.bestStreak);
+      if (a.lastActive === b.lastActive) out.streak = max(a.streak, b.streak);
+      out.activeCourse = newer.activeCourse || older.activeCourse;
+      for (const [d, x] of Object.entries(older.xpByDay)) out.xpByDay[d] = max(out.xpByDay[d], x);
+      for (const id of Object.keys(older.read)) out.read[id] = true;
+      // tarjetas de repaso: la que más se practicó (a igualdad, la de repaso más reciente)
+      for (const [k, c] of Object.entries(older.srs)) {
+        const o = out.srs[k];
+        if (!o || c.seen > o.seen || (c.seen === o.seen && (c.last || "") > (o.last || ""))) out.srs[k] = c;
+      }
+      for (const [cid, oc] of Object.entries(older.courses)) {
+        const st = out.courses[cid] = out.courses[cid] || { lessons: {}, diag: null };
+        st.lessons = st.lessons || {}; st.unitsOpen = Object.assign({}, oc.unitsOpen || {}, st.unitsOpen || {});
+        st.diag = st.diag || oc.diag || null;
+        for (const [lid, ol] of Object.entries(oc.lessons || {})) {
+          const l = st.lessons[lid] = st.lessons[lid] || {};
+          l.done = !!(l.done || ol.done); l.plays = max(l.plays, ol.plays); l.best = max(l.best, ol.best);
+        }
+      }
+      for (const st of Object.values(out.courses)) { st.lessons = st.lessons || {}; st.unitsOpen = st.unitsOpen || {}; if (st.diag === undefined) st.diag = null; }
+      const seen = new Set();
+      out.log = a.log.concat(b.log).filter(l => { const k = JSON.stringify(l); return seen.has(k) ? false : seen.add(k); })
+        .sort((x, y) => (y.d > x.d ? 1 : y.d < x.d ? -1 : 0)).slice(0, 60);
+      return out;
+    }
   };
 })(typeof window !== "undefined" ? window : globalThis);
 </script>
@@ -828,8 +862,14 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   const app = $("#app");
   let S = E.store.load();
   const ui = { route: "home", params: {}, session: null, summary: null, graphs: new Map() };
-  const save = () => E.store.save(S);
+  const save = () => { const okSave = E.store.save(S); if (E.sync) E.sync.changed(); return okSave; };
   const today = () => E.today();
+  // ganchos para la sincronización con la nube (sync.js): leer el estado, reemplazarlo tras combinar y refrescar
+  E.syncHooks = {
+    get: () => S,
+    set(s) { S = s; E.store.save(S); if (!ui.session) render(); },
+    status() { if (ui.route === "settings" && !ui.session) render(); }
+  };
 
 
   // ---------- utilidades de render ----------
@@ -1820,8 +1860,9 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
         <div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tema</div>
           ${seg("theme", [["auto", "Auto"], ["light", "Claro"], ["dark", "Oscuro"]], st.theme)}</div>
       </section>
+      ${accountCard()}
       <section class="card">
-        <div class="set-row"><div><div class="lbl">Backup</div><div class="desc">Tu progreso vive en este navegador. Exportalo para no perderlo.</div></div></div>
+        <div class="set-row"><div><div class="lbl">Backup</div><div class="desc">${E.sync && E.sync.user ? "Además de la nube, podés guardar una copia en un archivo." : "Tu progreso vive en este navegador. Exportalo para no perderlo."}</div></div></div>
         <div class="row" style="flex-wrap:wrap"><button class="btn sm ghost" data-act="export">${icon("download")}Exportar</button>
           <button class="btn sm ghost" data-act="import">${icon("upload")}Importar</button>
           <input type="file" id="importFile" accept="application/json,.json" hidden></div>
@@ -1835,6 +1876,21 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       <button class="course-card" data-act="go" data-r="credits"><span class="course-ico">${icon("info")}</span><span class="grow"><b>Créditos</b><span class="muted small" style="display:block">Assets, fuentes y licencias</span></span>${icon("chevron-right")}</button>
       <p class="muted small" style="text-align:center">efecen v${E.version} · hecho para volver a la FCEN</p>
     </main>${nav("settings")}`;
+  }
+  // tarjeta de cuenta: login con Google y estado de la sincronización
+  function accountCard() {
+    const sy = E.sync;
+    if (!sy) return `<section class="card"><div class="set-row"><div><div class="lbl">Cuenta</div><div class="desc">Cargando la sincronización… (hace falta conexión la primera vez)</div></div></div></section>`;
+    if (!sy.user) return `<section class="card"><div class="set-row"><div><div class="lbl">Cuenta</div><div class="desc">Entrá con Google para sincronizar tu progreso entre el celu y la compu.</div></div>
+      <button class="btn sm" data-act="login" ${sy.busy ? "disabled" : ""}>${sy.busy ? "Entrando…" : "Entrar"}</button></div>
+      ${sy.error ? `<p class="muted small" style="margin:6px 0 0">${esc(sy.error)}</p>` : ""}</section>`;
+    const u = sy.user, when = sy.lastSync ? new Date(sy.lastSync).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : null;
+    const st = sy.error ? esc(sy.error) : sy.pending ? "Guardando cambios…" : when ? `Sincronizado a las ${when}` : "Sincronizando…";
+    return `<section class="card"><div class="set-row"><div class="row" style="gap:10px;align-items:center;min-width:0">
+        ${u.photoURL ? `<img src="${esc(u.photoURL)}" alt="" width="36" height="36" style="border-radius:50%;flex:none" referrerpolicy="no-referrer">` : ""}
+        <div style="min-width:0"><div class="lbl">${esc(u.displayName || "Tu cuenta")}</div><div class="desc" style="overflow:hidden;text-overflow:ellipsis">${esc(u.email || "")}</div></div></div>
+        <button class="btn sm ghost" data-act="logout">Salir</button></div>
+      <p class="muted small" style="margin:6px 0 0">${st}</p></section>`;
   }
   function renderCredits() {
     app.innerHTML = `<main class="screen">
@@ -2041,6 +2097,8 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       case "theme": S.settings.theme = el.dataset.v; save(); render(); break;
       case "sound": S.settings.sound = !S.settings.sound; save(); render(); if (S.settings.sound) Snd.play("correct"); break;
       case "export": exportData(); break;
+      case "login": if (E.sync) E.sync.signIn(); break;
+      case "logout": if (E.sync && confirm("¿Cerrar sesión? Tu progreso queda guardado en este dispositivo y en la nube.")) E.sync.signOut(); break;
       case "import": $("#importFile").click(); break;
       case "reset":
         if (confirm("¿Borrar TODO el progreso?") && confirm("¿Seguro? Esta acción no se puede deshacer.")) { const st = S.settings; S = E.store.defaults(); S.settings = st; save(); toast("Progreso borrado"); go("home"); }
@@ -2118,5 +2176,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   };
 })();
 </script>
+<!-- sincronización con la nube (login con Google + Firestore); si no carga, la app sigue funcionando local -->
+<script type="module" src="sync.js"></script>
 </body>
 </html>

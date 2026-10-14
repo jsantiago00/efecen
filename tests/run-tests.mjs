@@ -420,5 +420,37 @@ for (const cid of E.courseOrder) {
   ok(!E.linkText("la cadena", { auto: false }).includes("<a"), "linkText", "autolink sin pedirlo");
 }
 
+// sincronización: combinar el progreso de dos dispositivos no pierde nada y no depende del orden
+{
+  const D = E.store.defaults;
+  const a = Object.assign(D(), { xp: 120, answered: 30, answeredOk: 20, bestStreak: 3, streak: 2, lastActive: "2026-10-10",
+    xpByDay: { "2026-10-09": 50, "2026-10-10": 70 }, read: { derivada: true }, activeCourse: "m101",
+    srs: { "m101/limite": { ef: 2.5, int: 4, reps: 2, due: "2026-10-14", last: "2026-10-10", seen: 6, ok: 5 } },
+    courses: { m101: { lessons: { l1: { done: true, plays: 2, best: 0.8 } }, diag: null, unitsOpen: { u1: true } } },
+    log: [{ d: "2026-10-10", kind: "lesson", title: "A", n: 5, ok: 4, xp: 40, c: "m101" }] });
+  const b = Object.assign(D(), { xp: 90, answered: 25, answeredOk: 22, bestStreak: 5, streak: 1, lastActive: "2026-10-12",
+    xpByDay: { "2026-10-10": 30, "2026-10-12": 60 }, read: { tfc: true }, activeCourse: "f101", settings: { goal: 100, sound: false, theme: "dark" },
+    srs: { "m101/limite": { ef: 2.6, int: 6, reps: 3, due: "2026-10-18", last: "2026-10-12", seen: 9, ok: 8 }, "f101/f1-mruv": { ef: 2.5, int: 1, reps: 1, due: "2026-10-13", last: "2026-10-12", seen: 3, ok: 3 } },
+    courses: { m101: { lessons: { l1: { done: false, plays: 1, best: 0.9 }, l2: { done: true, plays: 1, best: 1 } }, diag: null }, f101: { lessons: {}, diag: null } },
+    log: [{ d: "2026-10-12", kind: "lesson", title: "B", n: 5, ok: 5, xp: 50, c: "f101" }] });
+  const m = E.store.merge(a, b), w = "store.merge";
+  // comparación con las claves ordenadas (el orden de las claves no importa)
+  const canon = x => JSON.stringify(x, (k, v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([p], [q]) => (p < q ? -1 : 1))) : v));
+  ok(E.store.valid(m), w, "el resultado no es un estado válido");
+  ok(m.xp === 120 && m.answered === 30 && m.answeredOk === 22 && m.bestStreak === 5, w, "acumulables: debe quedarse con el máximo");
+  ok(m.lastActive === "2026-10-12" && m.streak === 1 && m.activeCourse === "f101" && m.settings.goal === 100, w, "estado: debe tomarse del dispositivo más reciente");
+  ok(m.xpByDay["2026-10-09"] === 50 && m.xpByDay["2026-10-10"] === 70 && m.xpByDay["2026-10-12"] === 60, w, "XP por día: máximo por día");
+  ok(m.read.derivada && m.read.tfc, w, "fichas leídas: unión");
+  ok(m.srs["m101/limite"].seen === 9 && m.srs["f101/f1-mruv"], w, "tarjetas de repaso: la más practicada y todas las que haya");
+  const l1 = m.courses.m101.lessons.l1;
+  ok(l1.done && l1.plays === 2 && l1.best === 0.9 && m.courses.m101.lessons.l2.done && m.courses.f101 && m.courses.m101.unitsOpen.u1, w, "lecciones: hechas si lo están en alguno, con el mejor resultado");
+  ok(m.log.length === 2 && m.log[0].title === "B", w, "historial: unión ordenada, la más nueva primero");
+  ok(canon(E.store.merge(m, m)) === canon(m), w, "no es idempotente");
+  ok(canon(E.store.merge(m, a)) === canon(m) && canon(E.store.merge(b, m)) === canon(m), w, "volver a combinar con un estado viejo cambia el resultado");
+  const ba = E.store.merge(b, a);
+  ok(ba.xp === m.xp && ba.srs["m101/limite"].seen === 9 && ba.lastActive === m.lastActive && ba.log.length === 2, w, "el orden de los argumentos cambia el resultado");
+  ok(a.xp === 120 && b.courses.m101.lessons.l1.done === false, w, "modificó sus argumentos");
+}
+
 console.log(`\n${checks} chequeos, ${failures} fallas`);
 process.exit(failures ? 1 : 0);

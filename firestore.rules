@@ -1,0 +1,16 @@
+rules_version = '2';
+// Cada usuario solo puede leer y escribir su propio progreso (users/{uid}).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(["data", "updatedAt", "app"])
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 900000;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

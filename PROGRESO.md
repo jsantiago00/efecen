@@ -36,6 +36,14 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Corridas rápidas:** con menos de 10 instancias por plantilla se saltea el chequeo de variedad (antes daba fallas falsas).
 - **Óptica y ondas:** las lentes se verifican trazando rayos con matrices ABCD; las ondas estacionarias, simulando la cuerda con diferencias finitas; la doble rendija, con la diferencia de caminos exacta (sin aproximar ángulos chicos).
 
+## Cuenta y sincronización (Firebase)
+
+- Proyecto Firebase `efecen-46bfd`, con login de Google. La app web se llama `efecen-web` y Firestore está en `southamerica-east1`.
+- `sync.js` (módulo aparte) maneja el login y guarda el progreso en `users/{uid}`, como texto JSON en el campo `data`. Si no carga, por ejemplo sin conexión, la app sigue funcionando en modo local.
+- Al entrar y al volver a la app se baja el progreso remoto y se combina con el local con `E.store.merge`. Lo acumulable queda con el máximo o la unión; los ajustes, la racha y la materia activa se toman del dispositivo usado más recientemente. Los tests verifican que combinar sea idempotente y que no pierda nada.
+- Las reglas están en `firestore.rules` y cada usuario solo accede a su documento. Para desplegarlas: `firebase deploy --only firestore:rules`.
+- Dominios autorizados en Auth: localhost, 127.0.0.1, santiagososa.com.ar, www.santiagososa.com.ar y los de Firebase.
+
 ## Decisiones tomadas
 
 - **Temarios.**
