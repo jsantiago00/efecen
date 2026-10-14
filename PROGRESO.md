@@ -73,7 +73,13 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Estado:** `S.exams["m101/p1"] = { best, attempts: [{ d, t, score }] }`. `E.store.merge` hace la unión de los intentos y se queda con la mejor nota (tiene tests).
 - **Tests:** cada examen suma 100 y sus plantillas existen. Los ejercicios de desarrollo se generan con 40 semillas: la rúbrica tiene que repartir exacto los puntos, el LaTeX tiene que ser válido y no puede haber «undefined».
 - **M101:** 1.er, 2.º y 3.er parcial, y el final práctico, armados según `docs/parciales/m101.md`.
-- **Pendiente:** el mismo trabajo para M104, F101, F102B y M102, en ese orden de prioridad según lo que pida el usuario. También plantillas de nivel parcial más exigentes (ver el final de `docs/parciales/m101.md`).
+- **M104 y F101:** las dos tienen sus evaluaciones (`content/m104-examenes.js` y `content/f101-examenes.js`), y su análisis está en `docs/parciales/m104.md` y `docs/parciales/f101.md`.
+  - **M104:** 1.er y 2.º parcial, y la parte escrita del final regular.
+  - **F101:** dos parciales promocionales y el final libre.
+- **Verificación en desarrollo:** los ejercicios de desarrollo con cuentas llevan `verify`, como las plantillas, y la suite lo corre. Se recalcula por otro camino: simulación del movimiento, integración numérica de fuerzas, Gauss, A·A⁻¹ = I y residuos de A·x = b.
+- **Pendiente:**
+  - las evaluaciones de F102B y M102;
+  - las plantillas de nivel parcial que faltan (ver el final de cada `docs/parciales/*.md`).
 
 ## Cuenta y sincronización (Firebase)
 

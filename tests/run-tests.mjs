@@ -507,6 +507,8 @@ for (const [cid, ex] of Object.entries(E.exams || {})) {
         ok(Math.abs(pts.reduce((t, v) => t + v, 0) - p.pts) < 1e-9 && pts.every(v => v >= 0), ws, "la rúbrica no reparte bien los puntos: " + pts.join(","));
         for (const str of [o.prompt, ...o.solution, ...o.rubric.map(q => q.text)]) checkTex(ws, str);
         ok(!/undefined|NaN/.test(o.prompt + o.solution.join("") + o.rubric.map(q => q.text).join("")), ws, "texto con undefined o NaN");
+        // los ejercicios de desarrollo con cuentas también se verifican por otro camino
+        if (o.verify) runVerify(o.verify, undefined, ws);
       }
     }
   }

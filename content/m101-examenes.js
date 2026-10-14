@@ -16,6 +16,7 @@
       const f = H.poly([[1, "x^{2}"], [b, "x"], [c, ""]]), M = 1 + Math.abs(2 * a + b);
       const other = H.xm(-(a + b)), d05 = Math.min(1, 0.5 / M);
       return {
+        verify: { kind: "zero", fn: () => [0.5, 0.1, 0.01, 2].flatMap(eps => { const dl = Math.min(1, eps / M); return [-0.999, -0.5, 0.3, 0.999].map(t => { const x = a + t * dl; return Math.max(0, Math.abs(x * x + b * x + c - L) - eps); }); }) },
         prompt: `Demostrá por definición que $$\\lim_{x\\to ${a}} \\left(${f}\\right) = ${L}.$$ Después interpretá gráficamente tu demostración para $\\varepsilon = 0{,}5$: ¿qué $\\delta$ obtenés?`,
         rubric: [
           { text: R`Escribe bien la definición: para todo $\varepsilon > 0$ existe $\delta > 0$ tal que $0 < |x - a| < \delta \Rightarrow |f(x) - L| < \varepsilon$.`, w: 3 },
@@ -43,6 +44,7 @@
       const p = r.int(-4, -1), s = r.int(1, 4), m = r.int(2, 5);
       const num = H.poly([[1, "x^{2}"], [-(p + s), "x"], [p * s, ""]]);
       return {
+        verify: { kind: "zero", tol: 1e-5, fn: () => { const f1 = x => (x * x - (p + s) * x + p * s) / (x - p); return [f1(p + 1e-7) - (p - s), f1(p - 1e-7) - (p - s), f1(-1e-9) + s, 1 / (m - 1e-12) - 1 / m]; } },
         prompt: `Sea $$f(x) = \\begin{cases} \\dfrac{${num}}{${H.xm(p)}} & \\text{si } -5 \\le x < 0 \\\\[6pt] \\dfrac{1}{${m} - x} & \\text{si } 0 \\le x \\le 6 \\end{cases}$$ a) Escribí las tres condiciones para que una función sea continua en $x = a$. b) Encontrá los puntos de discontinuidad de $f$ en $[-5, 6]$, justificá con los límites que correspondan y clasificalos. c) Si alguna es evitable, redefiní $f$ para que sea continua ahí.`,
         rubric: [
           { text: R`a) Las tres condiciones: $f(a)$ existe, $\lim_{x\to a} f(x)$ existe y son iguales.`, w: 3 },
@@ -73,6 +75,7 @@
       const q = r.int(lo + 1, hi - 1);
       const f = H.poly([[1, "x^{3}"], [p, "x"], [q, ""]]), fk = k ** 3 + p * k + q, fk1 = (k + 1) ** 3 + p * (k + 1) + q;
       return {
+        verify: { kind: "truth", target: true, fn: () => { const F = x => x ** 3 + p * x + q; let n = 0; for (let i = 0; i < 2000; i++) { const x0 = k + i / 2000, x1 = k + (i + 1) / 2000; if (F(x0) * F(x1) < 0) n++; } return F(k) < 0 && F(k + 1) > 0 && n === 1; } },
         prompt: `Demostrá que $f(x) = ${f}$ tiene **una y solo una** raíz en el intervalo $[${k}, ${k + 1}]$. Para cada teorema que uses, enunciá sus hipótesis y su tesis y explicá cómo se cumplen.`,
         rubric: [
           { text: R`Justifica que $f$ es continua en el intervalo (y derivable, si usa Rolle).`, w: 2 },
@@ -103,6 +106,7 @@
       const mx = Math.max(...vals.map(v => v[1])), mn = Math.min(...vals.map(v => v[1]));
       const at = y => vals.filter(v => v[1] === y).map(v => `x = ${v[0]}`).join(" y ");
       return {
+        verify: { kind: "zero", tol: 1e-4, scale: 100, fn: () => { const h = 1e-4, D = x => (F(x + h) - F(x - h)) / (2 * h), D2 = x => (F(x + h) - 2 * F(x) + F(x - h)) / (h * h); let hi = -Infinity, lo = Infinity; for (let i = 0; i <= 4000; i++) { const y = F(-1 + (b + 1) * i / 4000); hi = Math.max(hi, y); lo = Math.min(lo, y); } return [D(0), D(2 * m), D2(m) / 100, hi - mx, lo - mn]; } },
         prompt: `Dada $f(x) = ${f}$, determiná: a) dominio y puntos críticos; b) intervalos de crecimiento y de decrecimiento; c) extremos relativos, y extremos absolutos en $[-1, ${b}]$; d) intervalos de concavidad y puntos de inflexión; e) con esa información, bosquejá a mano los gráficos de $f$ y de $f'$, marcando los puntos importantes.`,
         rubric: [
           { text: `a) Dominio $\\mathbb{R}$; $f'(x) = 3x^2 - ${6 * m}x$; puntos críticos $x = 0$ y $x = ${2 * m}$.`, w: 2 },
