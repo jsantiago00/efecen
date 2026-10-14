@@ -218,7 +218,7 @@
     live.addEventListener("pointercancel", onUp);
     live.addEventListener("pointerleave", e => { if (e.pointerType !== "touch" && !cur) clearLive(); });
     live.addEventListener("wheel", onWheel, { passive: false });
-    live.addEventListener("contextmenu", e => e.preventDefault());
+    live.addEventListener("contextmenu", onContextMenu);
     new ResizeObserver(resize).observe(el.querySelector(".board-stage"));
   }
   function syncBar() {
@@ -333,8 +333,34 @@
     return [view.x + (e.clientX - r.left) / sc, view.y + (e.clientY - r.top) / sc];
   }
   const pressureOf = e => (e.pointerType === "pen" ? Math.max(0.05, Math.min(1, e.pressure || 0.5)) : 0.5);
+  // botón del S Pen: Chrome lo informa como botón 2 (barril) y la punta de borrar como 32.
+  // - Apretarlo y soltarlo sin tocar la pantalla alterna entre el borrador y la herramienta anterior.
+  // - Mantenerlo apretado mientras se escribe borra solo mientras dura el trazo.
+  let btn = null, btnReleased = 0;
+  const btnPressed = e => e.pointerType === "pen" && (e.buttons & 34) !== 0;
+  function trackButton(e) {
+    if (e.pointerType !== "pen") return;
+    const pressed = btnPressed(e);
+    if (pressed && !btn) btn = { touched: e.type === "pointerdown" || (e.buttons & 1) !== 0 || !!cur };
+    else if (pressed && (e.type === "pointerdown" || cur)) btn.touched = true;
+    else if (!pressed && btn) { const b = btn; btn = null; btnReleased = performance.now(); if (!b.touched) toggleEraser(); }
+  }
+  function toggleEraser() {
+    if (prefs.tool === "eraser") prefs.tool = prefs.prevTool && prefs.prevTool !== "eraser" ? prefs.prevTool : "pen";
+    else { prefs.prevTool = prefs.tool; prefs.tool = "eraser"; }
+    savePrefs(); syncBar(); clearLive();
+    hint(prefs.tool === "eraser" ? "Borrador" : prefs.tool === "hl" ? "Resaltador" : "Lápiz");
+  }
+  // algunos Android no mandan el estado del botón al pasar el lápiz por encima, pero sí un "clic derecho"
+  function onContextMenu(e) {
+    e.preventDefault();
+    if (btn || performance.now() - btnReleased < 600 || performance.now() - lastPen > 1500) return;
+    toggleEraser();
+  }
   function onDown(e) {
+    trackButton(e);
     if (e.pointerType === "pen") {
+      e.preventDefault();
       lastPen = performance.now();
       if (!prefs.pen) { prefs.pen = true; savePrefs(); syncBar(); }
     }
@@ -370,7 +396,14 @@
     drawLive();
   }
   function onMove(e) {
-    if (e.pointerType === "pen") lastPen = performance.now();
+    if (e.pointerType === "pen") { lastPen = performance.now(); trackButton(e); }
+    // se apretó el botón en medio de un trazo: lo escrito queda y sigue borrando
+    if (cur && !cur.erase && e.pointerId === cur.id && btnPressed(e)) {
+      const c = cur;
+      if (c.s.p.length > 3) commitStroke(c);
+      cur = { id: c.id, type: c.type, erase: true, acts: [] };
+      clearLive();
+    }
     if (touches.has(e.pointerId)) { touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); moveGesture(); return; }
     if (!cur || e.pointerId !== cur.id) {
       if (!cur && e.pointerType !== "touch" && prefs.tool === "eraser") drawEraserCursor(...toPage(e));
@@ -422,6 +455,7 @@
     lctx.lineWidth = 1.5 / scale(); lctx.strokeStyle = COLORS.ink[theme()]; lctx.globalAlpha = 0.5; lctx.stroke(); lctx.globalAlpha = 1;
   }
   function onUp(e) {
+    trackButton(e);
     if (touches.has(e.pointerId)) { touches.delete(e.pointerId); startGesture(); return; }
     if (!cur || e.pointerId !== cur.id) return;
     if (e.pointerType === "pen") lastPen = performance.now();
@@ -435,11 +469,14 @@
       return;
     }
     if (e.type === "pointercancel" && c.type === "touch") { redraw(); return; }
+    commitStroke(c);
+    syncBar();
+  }
+  function commitStroke(c) {
     c.s._path = c.path; c.s._bb = bbox(c.s);
     doAct(page, { a: "add", s: c.s });
     fillStroke(bctx, c.s, theme());   // ya está la transformación de la hoja en bctx
     persist(page);
-    syncBar();
   }
   function cancelStroke() { cur = null; predicted = []; clearLive(); }
 
