@@ -6,9 +6,9 @@ Objetivo: reconstruir la **Licenciatura en Ciencias Básicas con orientación en
 
 | Paso | Materia | Estado |
 |---|---|---|
-| 1 | M101 Cálculo I | en curso |
+| 1 | M101 Cálculo I | **completa**: 5 unidades del programa (7 en la app), 105 plantillas, 64 fichas |
 | 2 | M104 Introducción al Álgebra Lineal | pendiente |
-| 3 | F101 Física General I | pendiente |
+| 3 | F101 Física General I | en curso: unidad transversal, 1 Cinemática y 2 Dinámica |
 | 4+ | 2.º año en adelante | pendiente (en la carrera como "Próximamente") |
 
 ## Hecho
@@ -19,6 +19,10 @@ Objetivo: reconstruir la **Licenciatura en Ciencias Básicas con orientación en
 - **Sesión del día**: mezcla los repasos vencidos de todas las materias con la lección actual de la materia activa.
 - **Migración**: el progreso guardado bajo `calculo` pasa automáticamente a `m101`.
 - **Tests**: toda plantilla nueva necesita `verify`, una verificación numérica independiente. La suite recalcula la respuesta por otro camino: diferencias finitas, Simpson, RK4, eliminación de Gauss, sumas parciales o residuos de las ecuaciones. También chequea la estructura de la carrera y de cada unidad (≥ 4 plantillas, ≥ 2 tipos, apuntes, test de unidad válido) y que el service worker precachee cada archivo de contenido.
+
+## Pendientes técnicos
+
+- Al escribir las unidades de energía, MAS, gravitación y rotación de F101, volver a enlazar: en `f1-hooke`, «movimiento armónico simple» → `[[f1-mas|…]]` y «energía» → `[[f1-energia]]`; en `f1-dinamica-circular`, «gravedad» → `[[f1-gravitacion|…]]`; y los «ver también» de `f1-hooke`, `f1-dinamica-circular` y `f1-circular`. Se sacaron porque esas fichas todavía no existían y los tests no admiten links rotos.
 
 ## Decisiones tomadas
 
