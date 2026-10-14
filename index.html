@@ -426,6 +426,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 /* toast + confetti */
 #toast { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top)); transform: translate(-50%, -150%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 14px; font-weight: 800; z-index: 60; transition: transform .3s; max-width: calc(100% - 32px); }
 #toast.show { transform: translate(-50%, 0); }
+#toast:not(.show) { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top))); }
 .confetti { position: fixed; top: -12px; width: 10px; height: 14px; z-index: 70; pointer-events: none; animation: fall linear forwards; border-radius: 2px; }
 @keyframes fall { to { transform: translate3d(var(--dx), 105vh, 0) rotate(720deg); } }
 .shake { animation: shake .4s ease; }
@@ -440,6 +441,42 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+/* ---------- pizarra (board.js) ---------- */
+.board { --board-paper: #FFFFFF; --board-rule: #DCE3F0; --board-margin: #F3B3B6;
+  position: fixed; inset: 0; z-index: 40; background: var(--bg); display: none; flex-direction: column; }
+:root[data-theme="dark"] .board { --board-paper: #1A1836; --board-rule: #2E2B57; --board-margin: #6B3446; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .board { --board-paper: #1A1836; --board-rule: #2E2B57; --board-margin: #6B3446; } }
+.board.show { display: flex; }
+.board.docked { left: auto; width: 50vw; border-left: 2px solid var(--line); }
+body.board-docked #app { max-width: min(640px, 50vw); margin-left: max(0px, calc(25vw - 320px)); margin-right: auto; }
+body.board-docked .nav, body.board-docked .ses-foot, body.board-docked .sheet { right: 50vw; }
+body.board-full { overflow: hidden; }
+.board-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: calc(6px + env(safe-area-inset-top)) 8px 6px; background: var(--card); border-bottom: 2px solid var(--line); }
+.bgrp { display: flex; align-items: center; gap: 2px; }
+.board-bar button { background: none; border: 0; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--muted); padding: 0; }
+.board-bar button .ic { width: 22px; height: 22px; }
+.board-bar button.on { background: var(--primary-soft); color: var(--primary); }
+.board-bar button:disabled { opacity: .35; cursor: default; }
+.board-bar .bcolor { width: 32px; }
+.bcolor i { width: 20px; height: 20px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.bcolor.on { background: none !important; }
+.bcolor.on i { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--primary); }
+.board-bar .bsize { width: 32px; }
+.bsize i { width: var(--d); height: var(--d); border-radius: 50%; background: currentColor; display: block; }
+.bpage-n { min-width: 40px; text-align: center; font-weight: 800; font-size: .85rem; color: var(--muted); }
+.bclose { margin-left: auto; }
+.board-prompt { background: var(--card); border-bottom: 2px solid var(--line); }
+.bprompt-h { border: 0; background: none; color: var(--ink); display: flex; width: 100%; justify-content: flex-start; align-items: center; gap: 6px; padding: 8px 12px; font-weight: 800; font-size: .85rem; }
+.bprompt-h .ic:last-child { width: 18px; height: 18px; transition: transform .15s; }
+.board-prompt.open .bprompt-h .ic:last-child { transform: rotate(90deg); }
+.bprompt-body { display: none; max-height: 28dvh; overflow-y: auto; padding: 0 14px 10px; }
+.board-prompt.open .bprompt-body { display: block; }
+.board-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.board-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bc-live { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.board-hint { position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: .85rem; pointer-events: none; }
+.board-btn { color: var(--primary); }
+.board-btn.on { background: var(--primary-soft); }
 </style>
 </head>
 <body>
@@ -851,6 +888,8 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 <script src="content/f101-fisica1.js"></script>
 <script src="content/f102b-fisica2b.js"></script>
 <script src="content/m102-calculo2.js"></script>
+<!-- pizarra para escribir con lápiz (tablets); va antes de la app para atajar el botón "atrás" -->
+<script src="board.js"></script>
 
 <!-- ================= APP / UI ================= -->
 <script id="app-script">
@@ -1342,13 +1381,24 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
     return `<header class="topbar">
       <div class="logo">${mascot("idle")}efecen</div>
       <div class="chips">
+        ${boardBtn()}
         <span class="chip fire ${st ? "" : "off"}" title="Racha de días">${icon("flame")}${st}</span>
         <span class="chip xp" title="XP total">${icon("star")}${S.xp}</span>
       </div></header>`;
   }
 
+  // pizarra (board.js): solo aparece en tablets o si ya se usó un lápiz
+  const boardBtn = (cls = "") => E.board && E.board.available() ? `<button class="iconbtn board-btn ${cls} ${E.board.isOpen ? "on" : ""}" data-act="board" aria-label="Pizarra" title="Pizarra">${icon("pen-line")}</button>` : "";
+  function boardContext(info) { if (E.board) E.board.context(info); }
+  let boardAvail = E.board && E.board.available();
+  if (E.board) E.board.onChange(() => {
+    for (const b of $$(".board-btn")) b.classList.toggle("on", E.board.isOpen);
+    // al detectar un lápiz por primera vez aparece el botón
+    if (E.board.available() !== boardAvail) { boardAvail = !boardAvail; if (!ui.session && !ui.learn) render(); }
+  });
   function render() {
     ui.graphs.clear();
+    if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
     const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary };
@@ -1495,7 +1545,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       : item.src === "diag" ? `<span class="ses-tag">${icon("target")}Diagnóstico · Unidad ${item.unit + 1}</span>`
       : `<span class="ses-tag">${icon("sparkles")}${TYPE_LABEL[inst.type]}</span>`;
     app.innerHTML = `<div class="session">
-      <div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="bar"><i style="width:${prog * 100}%"></i></div></div>
+      <div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="bar"><i style="width:${prog * 100}%"></i></div>${boardBtn()}</div>
       <div class="ses-body">${tag}
         <div class="prompt">${texL(inst.prompt)}</div>
         ${inst.graph ? graphHtml(inst.graph) : ""}
@@ -1505,6 +1555,10 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       <div class="sheet" id="sheet"></div></div>`;
     drawGraphs();
     updateCheck();
+    // cada ejercicio tiene su hoja en la pizarra; el enunciado va sin links (la pizarra tapa los apuntes)
+    if (!item.boardKey) item.boardKey = s.t0 + "-" + s.i;
+    boardContext({ key: item.boardKey, label: c.code + " · " + (c.concepts[c.templates[item.tpl].concepts[0]] || {}).name,
+      prompt: tex(inst.prompt).replace(/<a class="term"[^>]*>([\s\S]*?)<\/a>/g, "$1") });
     const ni = $(".numin");
     if (ni && matchMedia("(pointer: fine)").matches) ni.focus();
   }
@@ -1861,6 +1915,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
           ${seg("theme", [["auto", "Auto"], ["light", "Claro"], ["dark", "Oscuro"]], st.theme)}</div>
       </section>
       ${accountCard()}
+      ${boardCard()}
       <section class="card">
         <div class="set-row"><div><div class="lbl">Backup</div><div class="desc">${E.sync && E.sync.user ? "Además de la nube, podés guardar una copia en un archivo." : "Tu progreso vive en este navegador. Exportalo para no perderlo."}</div></div></div>
         <div class="row" style="flex-wrap:wrap"><button class="btn sm ghost" data-act="export">${icon("download")}Exportar</button>
@@ -1876,6 +1931,18 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       <button class="course-card" data-act="go" data-r="credits"><span class="course-ico">${icon("info")}</span><span class="grow"><b>Créditos</b><span class="muted small" style="display:block">Assets, fuentes y licencias</span></span>${icon("chevron-right")}</button>
       <p class="muted small" style="text-align:center">efecen v${E.version} · hecho para volver a la FCEN</p>
     </main>${nav("settings")}`;
+  }
+  // pizarra: ajustes de este dispositivo (no se sincronizan, porque cada uno tiene o no lápiz)
+  function boardCard() {
+    if (!E.board) return "";
+    const b = E.board, p = b.prefs;
+    const seg = (act, opts, val) => `<div class="seg">${opts.map(([v, l]) => `<button class="${v === val ? "on" : ""}" data-act="${act}" data-v="${v}">${l}</button>`).join("")}</div>`;
+    return `<section class="card">
+      <div class="set-row" style="flex-direction:column;align-items:stretch"><div><div class="lbl">Pizarra</div><div class="desc">Una hoja para hacer cuentas con el lápiz. En automático aparece solo en tablets o si usaste un lápiz en este dispositivo${b.available() ? " (acá está activa: botón del lápiz arriba)" : ""}.</div></div>
+        ${seg("board-show", [["auto", "Auto"], ["on", "Siempre"], ["off", "Nunca"]], p.show)}</div>
+      ${b.available() ? `<div class="set-row"><div><div class="lbl">Dibujar con el dedo</div><div class="desc">Apagado, el dedo mueve la hoja y la palma no raya mientras escribís con el lápiz.</div></div>
+        <button class="switch ${b.fingerDraws() ? "on" : ""}" data-act="board-finger" role="switch" aria-checked="${b.fingerDraws()}" aria-label="Dibujar con el dedo"></button></div>` : ""}
+    </section>`;
   }
   // tarjeta de cuenta: login con Google y estado de la sincronización
   function accountCard() {
@@ -2095,6 +2162,9 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
       }
       case "goal": S.settings.goal = +el.dataset.v; save(); render(); break;
       case "theme": S.settings.theme = el.dataset.v; save(); render(); break;
+      case "board": if (E.board) E.board.toggle(); break;
+      case "board-show": E.board.setPref("show", el.dataset.v); boardAvail = E.board.available(); if (!E.board.available()) E.board.close(); render(); break;
+      case "board-finger": E.board.setPref("finger", !E.board.fingerDraws()); render(); break;
       case "sound": S.settings.sound = !S.settings.sound; save(); render(); if (S.settings.sound) Snd.play("correct"); break;
       case "export": exportData(); break;
       case "login": if (E.sync) E.sync.signIn(); break;

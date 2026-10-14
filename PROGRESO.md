@@ -36,6 +36,18 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Corridas rápidas:** con menos de 10 instancias por plantilla se saltea el chequeo de variedad (antes daba fallas falsas).
 - **Óptica y ondas:** las lentes se verifican trazando rayos con matrices ABCD; las ondas estacionarias, simulando la cuerda con diferencias finitas; la doble rendija, con la diferencia de caminos exacta (sin aproximar ángulos chicos).
 
+## Pizarra (tablets con lápiz)
+
+- **`board.js`** (archivo aparte, se carga antes del script de la app): una hoja para hacer cuentas con el lápiz, estilo Samsung Notes.
+  - **Herramientas:** lápiz con presión, resaltador y borrador por trazo, con 6 colores (se adaptan al tema oscuro) y 3 grosores.
+  - **Edición:** deshacer y rehacer, y borrar la hoja (también se puede deshacer).
+  - **Hoja:** cuadriculada, rayada o lisa, de alto infinito, con zoom (pellizco con dos dedos o Ctrl + rueda).
+  - **Lápiz y dedo:** el lápiz dibuja y el dedo mueve la hoja. Mientras se usa el lápiz se ignoran los toques, así la palma no raya. El botón del S Pen (o la punta de borrar) borra mientras se mantiene apretado. Si nunca se usó un lápiz, el dedo dibuja. Hay un interruptor para eso.
+  - **Hojas:** cada ejercicio de una sesión tiene la suya, y se puede volver a las anteriores con ‹ ›. Fuera de una sesión se abre la última. Se guardan hasta 80 hojas.
+  - **Disposición:** con la tablet acostada (≥ 900 px de ancho), la pizarra ocupa la mitad derecha y el ejercicio queda a la izquierda. Parada, ocupa toda la pantalla y muestra el enunciado arriba, plegable. El «atrás» del sistema la cierra.
+- **Dónde aparece:** un botón con un lápiz en la barra de inicio y en la de cada ejercicio. Solo se muestra en tablets (puntero táctil y pantalla de al menos 600 px de lado) o si ya se usó un lápiz en ese dispositivo. En Ajustes se puede elegir Auto, Siempre o Nunca.
+- **Tests:** la suite prueba la parte sin DOM: alcance del borrador, deshacer y rehacer, y guardado compacto. El dibujo con lápiz, el borrado, el arrastre con el dedo, el zoom y la persistencia se probaron en Chromium emulando una tablet de 1280 × 800 y de 800 × 1280.
+
 ## Cuenta y sincronización (Firebase)
 
 - Proyecto Firebase `efecen-46bfd`, con login de Google. La app web se llama `efecen-web` y Firestore está en `southamerica-east1`.
@@ -58,10 +70,12 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Convención g = 9,8 m/s²**, aclarada en cada enunciado de física.
 - **Alias compartidos.** «producto vectorial» pasó de Física a Álgebra Lineal, y en Física «valor medio» se cambió por «promedio», porque choca con el teorema del valor medio. En Física II B no se usa «segunda ley» (es de Newton en F101); el alias es «segunda ley de la termodinámica».
 - **Push a `main` después de cada bloque**, como se pidió durante la noche.
+- **Pizarra local.** Los trazos se guardan en IndexedDB y no se sincronizan con la nube: pesan mucho más que el progreso y son borradores. Sus ajustes (mostrarla y dibujar con el dedo) también son de cada dispositivo, porque cada uno tiene lápiz o no.
+- **Orientación libre.** En `manifest.json`, `orientation` pasó de `portrait` a `any`, para poder usar la tablet acostada con la pizarra al costado. En la app instalada, Chrome toma el cambio cuando actualiza el ícono instalado, y eso puede tardar.
 
 ## Pendiente (en el orden del trayecto)
 
-**En pausa (pedido del usuario, 14/10/2026):** no se crean materias nuevas hasta el domingo; antes vienen otras funciones (por ejemplo, login con Firebase para sincronizar el progreso).
+**En pausa (pedido del usuario, 14/10/2026):** no se crean materias nuevas hasta el domingo; antes vienen otras funciones: el login con Firebase y la pizarra ya están hechos.
 
 1. **M106 Geometría Analítica** (programa 2026, id `1zJG9qufZgWfBU6f1gS-BFlFjg1Yy7PVN`).
 2. **M105 Probabilidad y Estadística:** no encontré el programa; habría que usar un temario estándar.

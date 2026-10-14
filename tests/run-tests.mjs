@@ -452,5 +452,29 @@ for (const cid of E.courseOrder) {
   ok(a.xp === 120 && b.courses.m101.lessons.l1.done === false, w, "modificó sus argumentos");
 }
 
+// pizarra (board.js): borrador, deshacer/rehacer y guardado, sin DOM
+{
+  vm.runInContext(fs.readFileSync(path.join(root, "board.js"), "utf8"), ctx, { filename: "board.js" });
+  const B = E.board.T, w = "pizarra";
+  const mk = (pts, wd = 4) => ({ c: "ink", w: wd, h: 0, p: pts.flatMap(([x, y]) => [x, y, 0.5]) });
+  const pg = { s: [] };
+  const a = mk([[0, 0], [100, 0]]), b = mk([[0, 50], [100, 50]]), c = mk([[200, 200]]);
+  for (const s of [a, b, c]) B.doAct(pg, { a: "add", s });
+  ok(B.hits(a, 50, 3, 2) && !B.hits(a, 50, 10, 2), w, "el borrador toca el trazo solo cerca de la línea");
+  ok(B.hits(c, 203, 0 + 200, 2) && !B.hits(c, 210, 200, 2), w, "trazo de un solo punto");
+  const act = B.eraseAt(pg, 50, 49, 3);
+  ok(act && pg.s.length === 2 && pg.s[0] === a && pg.s[1] === c, w, "borró el trazo equivocado");
+  pg._undo.push({ a: "seq", acts: [act] }); pg._redo = [];
+  ok(B.undoAny(pg) && pg.s[1] === b && pg.s.length === 3, w, "deshacer el borrado no repone el trazo en su lugar");
+  ok(B.redoAny(pg) && pg.s.length === 2 && !pg.s.includes(b), w, "rehacer el borrado");
+  B.doAct(pg, { a: "clear", list: [...pg.s] });
+  ok(pg.s.length === 0 && B.undoAny(pg) && pg.s.length === 2, w, "borrar la hoja y deshacer");
+  ok(B.undoAny(pg) && pg.s.length === 3 && B.undoAny(pg) && pg.s.length === 2 && pg.s[1] === b && pg._redo.length === 3, w, "deshacer en cadena");
+  const packed = B.packPage({ id: "x", t: 1, s: [Object.assign(mk([[1.234, 5.678]]), { _bb: {}, _path: {} })] });
+  ok(JSON.stringify(packed.s[0]) === '{"c":"ink","w":4,"h":0,"p":[1.2,5.7,0.5]}', w, "guardado compacto: " + JSON.stringify(packed.s[0]));
+  const bb = B.bbox(mk([[10, 20], [30, 5]], 4));
+  ok(Math.abs(bb.x0 - (10 - 1.75)) < 1e-9 && Math.abs(bb.y1 - (20 + 1.75)) < 0.01, w, "caja del trazo con el grosor");
+}
+
 console.log(`\n${checks} chequeos, ${failures} fallas`);
 process.exit(failures ? 1 : 0);
