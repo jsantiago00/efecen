@@ -2587,7 +2587,7 @@
     "optimizacion": {
       title: "Problemas de optimización", aliases: ["optimización", "optimizar", "maximizar", "minimizar"], concepts: ["optimizacion"],
       summary: "Escribí la cantidad a optimizar como función de una variable, buscá sus puntos críticos y chequeá que sea el extremo pedido.",
-      def: [R`**Receta:**<br>1. Dibujá y nombrá las variables.<br>2. Escribí la cantidad a optimizar.<br>3. Usá las restricciones para dejarla en función de **una sola** variable, con su dominio.<br>4. Buscá los [[extremos|puntos críticos]] ($f' = 0$).<br>5. Verificá que sea máximo o mínimo (signo de $f'$, [[concavidad|$f''$]] o comparando con los bordes).`],
+      def: [R`**Receta:**<br>1. Dibujá y nombrá las variables.<br>2. Escribí la cantidad a optimizar.<br>3. Usá las restricciones para dejarla en función de **una sola** variable, con su dominio.<br>4. Buscá los [[extremos|puntos críticos]] ($f' = 0$).<br>5. Verificá que sea máximo o mínimo (signo de $f'$, signo de $f''$ ([[concavidad|criterio de la segunda derivada]]) o comparando con los bordes).`],
       idea: [R`Casi todo el trabajo está en el paso 3: traducir el enunciado a una función. Por ejemplo, en una lata de volumen fijo $V$, la altura se despeja de $V = \pi r^2 h$ y la superficie queda solo en función de $r$.`],
       examples: [{ q: R`Dos números positivos suman $20$. ¿Cuál es el máximo de su producto?`, steps: [R`$P(x) = x(20 - x)$ con $0 < x < 20$.`, R`$P'(x) = 20 - 2x = 0 \Rightarrow x = 10$, y $P''= -2 < 0$: es máximo.`, R`Producto máximo: $100$.`] }],
       see: ["extremos", "concavidad"]
@@ -3600,7 +3600,7 @@
       return {
         prompt: `<b>Verdadero o falso:</b> $\\displaystyle\\sum_{n=1}^{\\infty} ${t}$ converge.`,
         answer: truth,
-        explanation: `Es una [[criterios-series|serie $p$]] con $p = ${num(p, 3)}$: converge si y solo si $p > 1$.${p === 1 ? " Es la serie armónica, que diverge aunque su término tienda a $0$." : ""}`,
+        explanation: `Es una [[criterios-series|serie p]] con $p = ${num(p, 3)}$: converge si y solo si $p > 1$.${p === 1 ? " Es la serie armónica, que diverge aunque su término tienda a $0$." : ""}`,
         solution: [`$\\sum\\frac{1}{n^p}$ converge $\\iff p > 1$ (por el criterio de la integral).`],
         verify: { kind: "truth", fn: () => expoEst(n => n ** -p) > 1 + 1e-6 }
       };
@@ -3651,8 +3651,8 @@
           `Primero, siempre: ¿el término general tiende a $0$? Si no, la serie diverge ([[series|condición necesaria]]).`,
           cs.cls === 0 ? `Tiende a $0$; con la [[criterios-series|razón]]: $\\frac{a_{n+1}}{a_n} \\to \\frac{1}{${c}} < 1$, converge.`
             : cs.cls === 1 ? `$a_n \\to \\frac{${k}}{${c}} \\neq 0$: diverge.`
-            : cs.cls === 2 ? `Es ${k === 1 ? "una" : `${k} veces una`} [[criterios-series|serie $p$]] con $p = ${c} > 1$: converge.`
-            : `Es una [[criterios-series|serie $p$]] con $p = \\frac12 \\le 1$: diverge (aunque $a_n \\to 0$).`
+            : cs.cls === 2 ? `Es ${k === 1 ? "una" : `${k} veces una`} [[criterios-series|serie p]] con $p = ${c} > 1$: converge.`
+            : `Es una [[criterios-series|serie p]] con $p = \\frac12 \\le 1$: diverge (aunque $a_n \\to 0$).`
         ],
         // verificación: se clasifica a partir de propiedades numéricas del término general
         // (el término "no tiende a 0" si entre n = 10^5 y 10^7 casi no se achica)
@@ -3691,7 +3691,7 @@
         ...H.mc(r, ABS[c], ABS.filter((_, i) => i !== c).concat(["No se puede saber"]), { text: true }),
         solution: div
           ? [`$|a_n| = \\frac{n}{n+1} \\to 1 \\neq 0$: el término general no tiende a $0$, la serie diverge.`]
-          : [`Valores absolutos: $\\sum\\frac{1}{${t}}$ es una [[criterios-series|serie $p$]] con $p = ${num(p, 3)}$.`,
+          : [`Valores absolutos: $\\sum\\frac{1}{${t}}$ es una [[criterios-series|serie p]] con $p = ${num(p, 3)}$.`,
             p > 1 ? `Como $p > 1$ converge: la serie converge **absolutamente** ([[convergencia-absoluta]]).` : `Como $p \\le 1$ no converge en valor absoluto; pero por [[alternantes|Leibniz]] la alternante sí converge: **condicionalmente**.`],
         verify: { kind: "value", target: c, fn: () => {
           const a = div ? (n => n / (n + 1)) : (n => n ** -p);

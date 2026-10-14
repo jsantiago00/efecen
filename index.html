@@ -2109,7 +2109,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   }
   // ayuda para desarrollo: efecenDebug.preview("der-cadena-mc", 42) abre esa plantilla
   window.efecenDebug = {
-    get state() { return S; }, ui, mascot,
+    get state() { return S; }, ui, mascot, learn: id => openLearn(id),
     preview(tpl, seed = E.newSeed(), cid = activeCourse()) { startSession({ kind: "practice", cid, title: "Vista previa", items: [{ tpl, seed, src: "lesson" }] }); }
   };
 })();

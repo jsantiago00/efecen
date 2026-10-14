@@ -57,6 +57,8 @@ function checkTex(where, s) {
     try { katex.renderToString(m, { throwOnError: true, strict: "error", displayMode: false }); }
     catch (e) { fail(where, `LaTeX inválido: ${m}  (${e.message.slice(0, 90)})`); }
   }
+  // el texto de un link no puede tener LaTeX (se rompería al separar las fórmulas)
+  if (/\[\[[a-z0-9-]+\|[^\]]*\$/.test(String(s))) fail(where, "link con LaTeX en el texto: " + String(s).match(/\[\[[^\]]*\]\]/)[0]);
   // los links [[id]] de ejercicios y apuntes tienen que apuntar a fichas existentes
   for (const m of String(s).matchAll(/\[\[([a-z0-9-]+)(?:\|[^\]]+)?\]\]/g)) { checks++; if (!E.cards[m[1]]) fail(where, `link roto [[${m[1]}]]`); }
   // signos dobles o restos de JS en el texto
