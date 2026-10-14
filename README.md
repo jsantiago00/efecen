@@ -54,6 +54,16 @@ Todas llevan `prompt` y `solution` (pasos en LaTeX, con `$…$` o `$$…$$`). Op
 
 Para ver una plantilla puntual, en la consola del navegador: `efecenDebug.preview("der-cadena-mc", 42)`.
 
+## Apuntes (teoría con hipervínculos)
+
+`content/<curso>-teoria.js` define fichas con definición, idea, demostración, ejemplos resueltos y errores comunes (ver el comentario al principio de `content/calculo-teoria.js`). Hay tres formas de llegar a una ficha:
+
+- **Links explícitos** en cualquier texto (apuntes, enunciados o resoluciones): `[[regla-cadena]]` o `[[regla-cadena|texto visible]]`.
+- **Autolink:** los `aliases` de cada ficha («regla de la cadena», «Bolzano», «por izquierda»…) se convierten solos en links dentro de enunciados, resoluciones e intros de lección, una vez por ficha y por bloque, y nunca adentro del LaTeX.
+- **Desde la app:** la pestaña *Aprender* (índice con buscador), el botón «apuntes» de cada lección en el mapa, el botón «¿No te acordás? Aprendelo de cero» en la intro de la lección y los chips «Repasá la teoría» del feedback.
+
+El panel de apuntes se abre encima de lo que estés haciendo, también en medio de un ejercicio, y tiene su propio historial: «atrás» vuelve a la ficha anterior.
+
 ## Tests
 
 ```sh

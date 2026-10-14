@@ -90,8 +90,8 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 
 /* bottom nav */
 .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--card); border-top: 2px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
-.nav-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); }
-.nav button { background: none; border: 0; padding: 10px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .75rem; font-weight: 800; color: var(--muted); }
+.nav-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.nav button { background: none; border: 0; padding: 10px 2px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .75rem; font-weight: 800; color: var(--muted); }
 .nav button .ic { width: 26px; height: 26px; }
 .nav button.on { color: var(--primary); }
 
@@ -365,6 +365,51 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .credits li { margin-bottom: 10px; }
 .credits a { color: var(--primary); font-weight: 700; }
 
+/* apuntes (teoría con hipervínculos) */
+.term { color: var(--primary); font-weight: 800; text-decoration: underline dotted 2px; text-underline-offset: 3px; cursor: pointer; border-radius: 4px; }
+.term:hover, .term:focus-visible { background: var(--primary-soft); outline: none; }
+.learn { position: fixed; inset: 0; z-index: 45; background: var(--bg); overflow-y: auto; overscroll-behavior: contain; animation: learnIn .22s ease-out; }
+@keyframes learnIn { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+body.learn-open { overflow: hidden; }
+.learn-inner { max-width: 640px; margin: 0 auto; padding: 0 16px calc(40px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; }
+.learn-head { position: sticky; top: 0; z-index: 2; background: var(--bg); display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 0 8px; border-bottom: 2px solid var(--line); }
+.learn-crumb { flex: 1; min-width: 0; text-align: center; font-weight: 800; font-size: .85rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.learn-hero { display: flex; gap: 12px; align-items: center; }
+.learn-hero .schrodi { width: 76px; height: 76px; flex: none; }
+.learn-hero h1 { font-size: 1.35rem; }
+.learn-hero p { margin: 4px 0 0; }
+.lsec { background: var(--card); border: 2px solid var(--line); border-radius: 16px; }
+.lsec > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px 14px; font-weight: 900; cursor: pointer; }
+.lsec > summary::-webkit-details-marker { display: none; }
+.lsec > summary .ic { color: var(--primary); }
+.lsec > summary .chev { color: var(--muted); transition: transform .2s; }
+.lsec[open] > summary .chev { transform: rotate(90deg); }
+.lsec-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.para { line-height: 1.6; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.para::-webkit-scrollbar { display: none; }
+figure { margin: 4px 0; }
+figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-top: 6px; }
+.fig { display: block; width: 100%; max-width: 320px; margin: 0 auto; color: var(--ink); }
+.graph.fig-graph { height: 200px; }
+.ex { border-top: 2px solid var(--line); padding-top: 10px; }
+.ex:first-child { border-top: 0; padding-top: 0; }
+.ex-sol > summary { cursor: pointer; color: var(--primary); font-weight: 800; margin-top: 6px; }
+.ex-sol ol { margin: 8px 0 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
+.learn-see { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.learn-see > div { width: 100%; }
+.chip-link { border: 2px solid var(--line); background: var(--card); color: var(--primary); font-weight: 800; font-size: .85rem; padding: 6px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; text-align: left; }
+.learn-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.theory-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.learn-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.note-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: 0 2px 0 var(--line); }
+.note-row[hidden], .learn-group[hidden] { display: none; }
+.note-n { width: 30px; height: 30px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; font-weight: 900; flex: none; font-size: .85rem; }
+.note-n.read { background: var(--ok); color: #fff; }
+.notes-link { background: none; border: 0; color: var(--primary); font-weight: 800; font-size: .8rem; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; }
+.search { display: flex; align-items: center; gap: 8px; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 0 12px; color: var(--muted); }
+.search input { flex: 1; min-width: 0; border: 0; background: none; font: 700 1rem "Nunito", sans-serif; color: var(--ink); padding: 12px 0; outline: none; }
+.search:focus-within { border-color: var(--primary); }
+
 /* toast + confetti */
 #toast { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top)); transform: translate(-50%, -150%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 14px; font-weight: 800; z-index: 60; transition: transform .3s; max-width: calc(100% - 32px); }
 #toast.show { transform: translate(-50%, 0); }
@@ -620,6 +665,56 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     E.courses[c.id] = c;
     if (!E.courseOrder.includes(c.id)) E.courseOrder.push(c.id);
   };
+  // ---------- Teoría (apuntes con hipervínculos) ----------
+  E.cards = {};      // id -> ficha (ids únicos entre cursos)
+  E.termIndex = [];  // [{ alias, id }] para el autolink
+  E.registerTheory = function (cid, th) {
+    const c = E.courses[cid];
+    c.theory = th;
+    for (const [id, card] of Object.entries(th.cards)) {
+      card.id = id; card.course = cid;
+      E.cards[id] = card;
+      for (const a of card.aliases || []) E.termIndex.push({ alias: a.toLowerCase(), id });
+    }
+    for (const l of c.lessonList) l.theory = (th.lessons || {})[l.id] || [];
+    // concepto -> fichas, priorizando el orden en que aparecen en las lecciones
+    c.conceptCards = {};
+    const order = [...new Set([...c.lessonList.flatMap(l => l.theory), ...Object.keys(th.cards)])];
+    for (const id of order) for (const k of th.cards[id].concepts || []) (c.conceptCards[k] = c.conceptCards[k] || []).push(id);
+    E._termRe = null;
+  };
+  const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  E.termRegex = () => E._termRe || (E._termRe = E.termIndex.length
+    ? new RegExp(`(?<![\\p{L}\\p{N}])(${E.termIndex.map(t => t.alias).sort((a, b) => b.length - a.length).map(escRe).join("|")})(?![\\p{L}\\p{N}])`, "giu")
+    : null);
+  // Convierte un trozo de texto (sin LaTeX) en HTML: [[id|texto]] -> link, **negrita**,
+  // y si ctx.auto, los términos conocidos -> link (una vez por ficha y por bloque).
+  E.linkText = function (text, ctx = {}) {
+    const seen = ctx.seen || new Set();
+    const link = (id, label) => `<a class="term" role="link" tabindex="0" data-act="learn" data-id="${id}">${label}</a>`;
+    let out = String(text)
+      .replace(/\[\[([a-z0-9-]+)(?:\|([^\]]+))?\]\]/g, (m, id, label) => {
+        const card = E.cards[id];
+        if (!card) return label || id;
+        seen.add(id);
+        return link(id, label || card.title);
+      })
+      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+    const re = ctx.auto && E.termRegex();
+    if (!re) return out;
+    let inA = false;
+    return out.split(/(<[^>]+>)/).map(piece => {
+      if (piece.startsWith("<")) { if (/^<a\b/.test(piece)) inA = true; else if (/^<\/a>/.test(piece)) inA = false; return piece; }
+      if (inA) return piece;
+      return piece.replace(re, m => {
+        const t = E.termIndex.find(x => x.alias === m.toLowerCase());
+        if (!t || seen.has(t.id) || t.id === ctx.exclude) return m;
+        seen.add(t.id);
+        return link(t.id, m);
+      });
+    }).join("");
+  };
+
   // genera una instancia reproducible de una plantilla
   E.instantiate = function (course, tplId, seed) {
     const t = course.templates[tplId];
@@ -638,7 +733,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
       settings: { goal: 50, sound: true, theme: "auto" },
       xp: 0, streak: 0, bestStreak: 0, lastActive: null,
       xpByDay: {}, activeCourse: null,
-      courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0
+      courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0, read: {}
     }),
     migrate(s) {
       const d = E.store.defaults();
@@ -662,6 +757,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 
 <!-- ================= CONTENIDO (datos separados de la lógica) ================= -->
 <script src="content/calculo.js"></script>
+<script src="content/calculo-teoria.js"></script>
 
 <!-- ================= APP / UI ================= -->
 <script id="app-script">
@@ -696,14 +792,19 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     return kcache.get(key);
   }
   // texto con $...$ (inline) y $$...$$ (display). El contenido es propio y confiable.
-  function tex(s) {
+  // Fuera del LaTeX: [[id|texto]] es un link a los apuntes y **negrita**; con { auto: true }
+  // además se linkean solos los términos conocidos (ver E.linkText).
+  function tex(s, opts) {
     if (s == null) return "";
-    return String(s).split(/(\$\$[^$]+\$\$|\$[^$]+\$)/g).map(p => {
+    const ctx = Object.assign({ seen: new Set() }, opts);
+    // la negrita puede envolver fórmulas, así que se resuelve antes de separar el LaTeX
+    return String(s).replace(/\*\*([\s\S]+?)\*\*/g, "<b>$1</b>").split(/(\$\$[^$]+\$\$|\$[^$]+\$)/g).map(p => {
       if (p.startsWith("$$") && p.length > 4) return K(p.slice(2, -2), true);
       if (p.startsWith("$") && p.length > 2) return K(p.slice(1, -1), false);
-      return p;
+      return E.linkText(p, ctx);
     }).join("");
   }
+  const texL = s => tex(s, { auto: true });
 
   // ---------- mascota: Schrödi, el gato de Schrödinger (diseño original, CC0) ----------
   // Estados: idle (asomado a medias, en superposición), think, wow, happy (acierto),
@@ -917,9 +1018,11 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     if (!mini) {
       ctx.fillStyle = col("--muted"); ctx.font = "700 11px Nunito, sans-serif";
       ctx.textAlign = "center"; ctx.textBaseline = "top";
-      for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) if (x !== 0 && x % 2 === 0) ctx.fillText(x, X(x), Math.min(h - 13, Y(0) + 3));
+      const every = n => (n <= 8 ? 1 : 2);
+      const ex = every((x1 - x0) / step), ey = every((y1 - y0) / step);
+      for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) if (x !== 0 && x > x0 && x < x1 && x % (step * ex) === 0) ctx.fillText(x, X(x), Math.min(h - 13, Math.max(2, Y(0) + 3)));
       ctx.textAlign = "right"; ctx.textBaseline = "middle";
-      for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) if (y !== 0 && y % 2 === 0) ctx.fillText(y, Math.max(16, X(0) - 4), Y(y));
+      for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) if (y !== 0 && y > y0 && y < y1 && y % (step * ey) === 0) ctx.fillText(y, Math.min(w - 4, Math.max(16, X(0) - 4)), Y(y));
     }
     // asíntotas
     ctx.setLineDash([5, 5]); ctx.strokeStyle = col("--bad"); ctx.lineWidth = 1.5;
@@ -927,11 +1030,12 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     for (const ay of (g.asym && g.asym.y) || []) { ctx.beginPath(); ctx.moveTo(0, Y(ay)); ctx.lineTo(w, Y(ay)); ctx.stroke(); }
     ctx.setLineDash([]);
     // curvas
-    const pieces = g.pieces || (g.fns || []).map(f => ({ f }));
+    const pieces = g.pieces || (g.fns || []).map((f, ci) => ({ f, ci }));
+    const palette = [col("--primary"), col("--fire"), col("--ok")];
     ctx.lineWidth = mini ? 2.5 : 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.strokeStyle = col("--primary");
     const span = y1 - y0;
     for (const p of pieces) {
+      ctx.strokeStyle = palette[(p.ci || 0) % palette.length];
       // los tramos con extremo propio se muestrean apenas adentro, para no unir saltos
       const eps = (x1 - x0) * 1e-6;
       const a = p.from != null ? p.from + eps : x0, b = p.to != null ? p.to - eps : x1, N = 400;
@@ -1069,7 +1173,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 
   // ---------- navegación ----------
   function go(route, params = {}) {
-    const hash = { home: "#/", course: "#/curso/" + params.id, stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
+    const hash = { home: "#/", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
     if (location.hash !== hash) history.pushState(null, "", hash);
     ui.route = route; ui.params = params;
     render();
@@ -1078,12 +1182,21 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     const h = location.hash.replace(/^#\/?/, "");
     if (h.startsWith("curso/")) { ui.route = "course"; ui.params = { id: h.slice(6) }; }
     else if (h === "stats") ui.route = "stats";
+    else if (h === "aprender") ui.route = "learn";
     else if (h === "ajustes") ui.route = "settings";
     else if (h === "creditos") ui.route = "credits";
     else ui.route = "home";
     if (ui.route === "course" && !E.courses[ui.params.id]) ui.route = "home";
   }
   window.addEventListener("popstate", () => {
+    if (ui.learn) {
+      const after = ui.learn.after;
+      if (ui.learn.closing) ui.learn = null;
+      else { ui.learn.stack.pop(); if (!ui.learn.stack.length) ui.learn = null; }
+      renderLearn();
+      if (!ui.learn && after) after();
+      return;
+    }
     if (ui.session) {
       if (!confirm("¿Salir de la sesión? Se pierde el progreso de esta sesión.")) { history.pushState(null, "", "#/sesion"); return; }
       ui.session = null;
@@ -1094,7 +1207,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
   function nav(active) {
     const b = (r, ic, label, params) => `<button class="${active === r ? "on" : ""}" data-act="go" data-r="${r}" ${params ? `data-id="${params}"` : ""}>${icon(ic)}<span>${label}</span></button>`;
     return `<nav class="nav" aria-label="Principal"><div class="nav-inner">
-      ${b("home", "house", "Inicio")}${b("course", "book-open", "Curso", activeCourse())}
+      ${b("home", "house", "Inicio")}${b("course", "map", "Curso", activeCourse())}${b("learn", "graduation-cap", "Aprender")}
       ${b("stats", "chart-column", "Stats")}${b("settings", "settings", "Ajustes")}</div></nav>`;
   }
   function topbar() {
@@ -1111,7 +1224,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     ui.graphs.clear();
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, course: renderCourse, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary };
+    const screens = { home: renderHome, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1180,7 +1293,8 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
         return `<div class="node-wrap ${un ? "" : "locked"} ${isCur ? "has-tip" : ""}" style="transform:translateX(${offs[k++ % offs.length]}px)">
           ${isCur ? `<span class="start-tip">EMPEZAR</span>` : ""}
           <button class="node ${cls}" data-act="lesson" data-cid="${cid}" data-id="${l.id}" ${un ? "" : "disabled"} aria-label="${esc(l.title)}">${icon(ic)}</button>
-          <span class="node-label">${esc(l.title)}${d && best != null ? `<br><span class="muted small">${(cs.lessons[l.id].tested ? "por diagnóstico" : `mejor: ${Math.round(best * 100)}%`)}</span>` : ""}</span></div>`;
+          <span class="node-label">${esc(l.title)}${d && best != null ? `<br><span class="muted small">${(cs.lessons[l.id].tested ? "por diagnóstico" : `mejor: ${Math.round(best * 100)}%`)}</span>` : ""}</span>
+          ${l.theory && l.theory.length ? `<button class="notes-link" data-act="learn" data-id="lesson:${l.id}">${icon("graduation-cap")}apuntes</button>` : ""}</div>`;
       }).join("");
       return `<section class="unit ${done ? "done" : unl ? "" : "locked"}">
         <div class="unit-head">${icon(done ? "trophy" : unl ? (u.icon || "book-open") : "lock")}<div class="grow"><h3>Unidad ${u.index + 1}: ${esc(u.title)}</h3><p>${nDone}/${u.lessons.length} lecciones${unl ? "" : " · completá la unidad anterior"}</p></div></div>
@@ -1202,7 +1316,8 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     const s = ui.session, l = course(s.cid).lessonList.find(x => x.id === s.lessonId);
     app.innerHTML = `<div class="session"><div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="bar"><i style="width:0"></i></div></div>
       <div class="center-col">${mascot("wow")}
-        <div class="card intro-card"><div class="ses-tag">${icon("lightbulb")}Repaso rápido</div><h3>${esc(l.title)}</h3><div>${tex(l.intro || "")}</div></div>
+        <div class="card intro-card"><div class="ses-tag">${icon("lightbulb")}Repaso rápido</div><h3>${esc(l.title)}</h3><div>${texL(l.intro || "")}</div>
+          ${l.theory && l.theory.length ? `<button class="btn sm ghost block" style="margin-top:12px" data-act="learn" data-id="lesson:${l.id}">${icon("graduation-cap")}¿No te acordás? Aprendelo de cero</button>` : ""}</div>
       </div>
       <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="begin">¡Vamos!</button></div></div></div>`;
   }
@@ -1221,7 +1336,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     app.innerHTML = `<div class="session">
       <div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="bar"><i style="width:${prog * 100}%"></i></div></div>
       <div class="ses-body">${tag}
-        <div class="prompt">${tex(inst.prompt)}</div>
+        <div class="prompt">${texL(inst.prompt)}</div>
         ${inst.graph ? graphHtml(inst.graph) : ""}
         <div id="answer">${answerHtml(inst, s.ans)}</div>
       </div>
@@ -1336,7 +1451,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
       case "numeric": return `Respuesta: ${tex("$" + (inst.answerTex || H.num(inst.answer, 4)) + "$")}${inst.answerTex && !Number.isInteger(inst.answer) ? ` ≈ ${H.num(inst.answer, 4)}` : ""}`;
       case "order": return "Mirá el orden correcto en la resolución.";
       case "match": return "Los pares correctos quedaron en verde.";
-      case "error": return `El error estaba en el paso ${inst.wrongIndex + 1}. ${tex(inst.fix || "")}`;
+      case "error": return `El error estaba en el paso ${inst.wrongIndex + 1}. ${texL(inst.fix || "")}`;
     }
     return "";
   }
@@ -1375,9 +1490,10 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
         <div class="fb-quip">${esc(quip(ok ? "ok" : "bad"))}${gain ? ` <span class="xp-pop pop">+${gain} XP</span>` : ""}</div></div></div>
       <div class="fb-scroll">
         ${ok && s.inst.type !== "tf" && s.inst.type !== "error" ? "" : `<div class="fb-answer">${correctText(s.inst)}</div>`}
-        ${s.inst.explanation ? `<div>${tex(s.inst.explanation)}</div>` : ""}
+        ${s.inst.explanation ? `<div>${texL(s.inst.explanation)}</div>` : ""}
         ${sol.length ? `<button class="linkbtn" data-act="sol">${icon("book-open")} ${ok ? "Ver resolución" : "Ocultar resolución"}</button>
-        <div class="solution" id="sol" ${ok ? "hidden" : ""}><ol>${sol.map(x => `<li>${tex(x)}</li>`).join("")}</ol></div>` : ""}
+        <div class="solution" id="sol" ${ok ? "hidden" : ""}><ol>${sol.map(x => `<li>${texL(x)}</li>`).join("")}</ol></div>` : ""}
+        ${theoryChips(s.cid, course(s.cid).templates[s.items[s.i].tpl].concepts, ok ? "Teoría:" : "Repasá la teoría:")}
       </div>
       <button class="btn block ${ok ? "ok" : "bad"}" data-act="next">Continuar</button></div>`;
     $(".ses-foot").style.visibility = "hidden";
@@ -1610,6 +1726,126 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     </main>${nav("settings")}`;
   }
 
+  // ---------- APUNTES: fichas de teoría con hipervínculos ----------
+  // El panel se abre encima de cualquier pantalla (también en medio de un ejercicio) y tiene
+  // su propio historial: cada link apila una ficha y "atrás" (o el botón del celu) vuelve.
+  const norm = s => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const cardOf = id => E.cards[id];
+  function theoryChips(cid, concepts, label) {
+    const c = course(cid);
+    if (!c.conceptCards) return "";
+    const ids = [...new Set(concepts.flatMap(k => c.conceptCards[k] || []))].slice(0, 3);
+    if (!ids.length) return "";
+    return `<div class="theory-chips"><span class="muted small">${icon("graduation-cap")} ${label}</span>${ids.map(id => `<button class="chip-link" data-act="learn" data-id="${id}">${esc(cardOf(id).title)}</button>`).join("")}</div>`;
+  }
+  function openLearn(id) {
+    if (!id || (!id.startsWith("lesson:") && !cardOf(id))) return;
+    if (!ui.learn) ui.learn = { stack: [] };
+    if (ui.learn.stack[ui.learn.stack.length - 1] === id) return;
+    ui.learn.stack.push(id);
+    history.pushState({ learn: ui.learn.stack.length }, "", location.hash || "#/");
+    renderLearn();
+  }
+  function closeLearn(after) {
+    if (!ui.learn) { if (after) after(); return; }
+    ui.learn.closing = true;
+    ui.learn.after = after;
+    history.go(-ui.learn.stack.length);
+  }
+  function renderLearn() {
+    let el = $("#learn");
+    if (!ui.learn) {
+      if (el) el.remove();
+      document.body.classList.remove("learn-open");
+      if (ui.route === "learn" && !ui.session) render(); // refresca las fichas leídas
+      return;
+    }
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "learn"; el.className = "learn";
+      el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true");
+      document.body.appendChild(el);
+    }
+    const id = ui.learn.stack[ui.learn.stack.length - 1];
+    el.innerHTML = id.startsWith("lesson:") ? lessonNotesHtml(id.slice(7)) : cardHtml(cardOf(id));
+    document.body.classList.add("learn-open");
+    el.scrollTop = 0;
+    drawGraphs(el);
+    if (!S.read[id]) { S.read[id] = true; save(); }
+  }
+  function learnHead(crumb) {
+    const deep = ui.learn.stack.length > 1;
+    return `<header class="learn-head">
+      ${deep ? `<button class="iconbtn" data-act="learn-back" aria-label="Atrás">${icon("arrow-left")}</button>` : `<span class="iconbtn" aria-hidden="true" style="visibility:hidden">${icon("arrow-left")}</span>`}
+      <span class="learn-crumb">${icon("graduation-cap")} ${esc(crumb)}</span>
+      <button class="iconbtn" data-act="learn-close" aria-label="Cerrar apuntes">${icon("x")}</button></header>`;
+  }
+  const block = b => typeof b === "string" ? `<div class="para">${tex(b)}</div>`
+    : b.graph ? `<figure>${graphHtml(b.graph, "fig-graph")}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>`
+    : b.svg ? `<figure>${b.svg}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>` : "";
+  const lsec = (title, ic, inner, open) => inner
+    ? `<details class="lsec" ${open ? "open" : ""}><summary>${icon(ic)}<span class="grow">${title}</span>${icon("chevron-right", "chev")}</summary><div class="lsec-body">${inner}</div></details>` : "";
+  function cardHtml(card) {
+    const c = course(card.course);
+    const group = (c.theory.groups.find(g => g.id === card.group) || {}).title || "";
+    const blocks = arr => (arr && arr.length ? arr.map(block).join("") : "");
+    const examples = (card.examples || []).map((ex, i) => `<div class="ex"><div class="ex-q"><b>Ejemplo ${i + 1}.</b> ${tex(ex.q)}</div>
+      <details class="ex-sol"><summary>Ver resolución</summary><ol>${ex.steps.map(st => `<li>${tex(st)}</li>`).join("")}</ol></details></div>`).join("");
+    const lessons = c.lessonList.filter(l => (l.theory || []).includes(card.id));
+    const inSession = !!ui.session;
+    const practice = inSession ? "" : (card.concepts || []).filter(k => c.concepts[k] && templatesFor(card.course, k).length).slice(0, 2)
+      .map(k => `<button class="btn sm" data-act="learn-practice" data-cid="${card.course}" data-k="${k}">${icon("play")}Practicar: ${esc(c.concepts[k].name)}</button>`).join("");
+    const lockedNote = !inSession && !practice && lessons.length ? `<p class="muted small" style="margin:0">Lo vas a practicar en la lección «${esc(lessons[0].title)}» cuando la desbloquees.</p>` : "";
+    return `<div class="learn-inner">${learnHead("Apuntes · " + group)}
+      <div class="learn-hero">${mascot("wow")}<div class="grow"><h1>${esc(card.title)}</h1><p class="muted">${tex(card.summary)}</p></div></div>
+      ${lsec("Definición", "book-open", blocks(card.def), true)}
+      ${lsec("La idea", "lightbulb", blocks(card.idea), true)}
+      ${lsec("Demostración", "sigma", blocks(card.demo), false)}
+      ${lsec((card.examples || []).length > 1 ? "Ejemplos resueltos" : "Ejemplo resuelto", "check", examples, true)}
+      ${lsec("Errores comunes", "info", blocks(card.tips), false)}
+      ${card.see && card.see.length ? `<div class="learn-see"><div class="muted small" style="font-weight:800">Ver también</div>${card.see.map(id => `<button class="chip-link" data-act="learn" data-id="${id}">${esc(cardOf(id).title)}</button>`).join("")}</div>` : ""}
+      ${lessons.length ? `<div class="learn-see"><div class="muted small" style="font-weight:800">Aparece en</div>${lessons.map(l => `<button class="chip-link" data-act="learn" data-id="lesson:${l.id}">${icon("map")} ${esc(l.title)}</button>`).join("")}</div>` : ""}
+      ${practice || lockedNote ? `<div class="learn-actions">${practice}${lockedNote}</div>` : ""}
+    </div>`;
+  }
+  function lessonNotesHtml(lessonId) {
+    let l, cid;
+    for (const id of E.courseOrder) { const x = course(id).lessonList.find(y => y.id === lessonId); if (x) { l = x; cid = id; break; } }
+    if (!l) return "";
+    const canStart = !ui.session && lessonUnlocked(cid, l);
+    return `<div class="learn-inner">${learnHead("Apuntes de la lección")}
+      <div class="learn-hero">${mascot("think")}<div class="grow"><div class="ses-tag">Unidad ${l.unit.index + 1} · ${esc(l.unit.title)}</div><h1>${esc(l.title)}</h1></div></div>
+      <div class="card"><div class="ses-tag">${icon("lightbulb")}En dos líneas</div><div class="para">${texL(l.intro || "")}</div></div>
+      <h2 class="section-title">Leelos en este orden</h2>
+      <div class="learn-list">${l.theory.map((id, i) => noteRow(id, i + 1)).join("")}</div>
+      ${canStart ? `<div class="learn-actions"><button class="btn block" data-act="learn-lesson" data-cid="${cid}" data-id="${l.id}">${icon("play")}${lessonDone(cid, l) ? "Practicar la lección" : "Empezar la lección"}</button></div>` : ""}
+    </div>`;
+  }
+  function noteRow(id, n) {
+    const card = cardOf(id), read = !!S.read[id];
+    return `<button class="note-row" data-act="learn" data-id="${id}" data-q="${esc(norm(card.title + " " + (card.aliases || []).join(" ") + " " + card.summary))}">
+      <span class="note-n ${read ? "read" : ""}">${read ? icon("check") : n != null ? n : icon("book-open")}</span>
+      <span class="grow"><b>${esc(card.title)}</b><span class="muted small" style="display:block">${tex(card.summary)}</span></span>${icon("chevron-right")}</button>`;
+  }
+
+  // ---------- APRENDER (índice de apuntes) ----------
+  function renderLearnIndex() {
+    const cid = activeCourse(), c = course(cid), th = c.theory;
+    if (!th) { app.innerHTML = `<main class="screen"><h1>Aprender</h1><p class="muted">Este curso todavía no tiene apuntes.</p></main>${nav("learn")}`; return; }
+    const cur = currentLesson(cid);
+    const ids = Object.keys(th.cards), read = ids.filter(id => S.read[id]).length;
+    app.innerHTML = `<main class="screen">
+      <h1 style="font-size:1.4rem">Aprender</h1>
+      <section class="hero">${mascot("think")}<div class="bubble grow">Tocá cualquier <span class="term">término subrayado</span> en un ejercicio o en los apuntes y te llevo a su explicación, con demostración y ejemplos.</div></section>
+      ${cur && cur.theory.length ? `<button class="course-card" data-act="learn" data-id="lesson:${cur.id}"><span class="course-ico">${icon("graduation-cap")}</span>
+        <span class="grow"><span class="muted small" style="display:block">Apuntes de tu lección actual</span><b>${esc(cur.title)}</b></span>${icon("chevron-right")}</button>` : ""}
+      <label class="search">${icon("search")}<input id="learnSearch" type="search" placeholder="Buscar un tema o término…" autocomplete="off" aria-label="Buscar en los apuntes"></label>
+      <p class="muted small" style="margin:-6px 0 0">${read} de ${ids.length} apuntes leídos · ${esc(c.title)}</p>
+      ${th.groups.map(g => `<section class="learn-group"><h2 class="section-title">${esc(g.title)}</h2>
+        <div class="learn-list">${ids.filter(id => th.cards[id].group === g.id).map(id => noteRow(id)).join("")}</div></section>`).join("")}
+    </main>${nav("learn")}`;
+  }
+
   // ---------- backup ----------
   function exportData() {
     const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
@@ -1641,6 +1877,11 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
     Snd.init();
     switch (act) {
       case "go": go(el.dataset.r, { id: el.dataset.id }); break;
+      case "learn": openLearn(el.dataset.id); break;
+      case "learn-back": history.back(); break;
+      case "learn-close": closeLearn(); break;
+      case "learn-practice": { const { cid, k } = el.dataset; closeLearn(() => startPractice(cid, k)); break; }
+      case "learn-lesson": { const { cid, id } = el.dataset; closeLearn(() => startLesson(cid, id)); break; }
       case "daily": startDaily(); break;
       case "lesson": startLesson(el.dataset.cid, el.dataset.id); break;
       case "diag": if (el.closest(".screen") && ui.route === "settings" && !confirm("¿Rehacer el diagnóstico? Lo que ya tengas desbloqueado se mantiene.")) break; startDiagnostic(el.dataset.cid); break;
@@ -1694,8 +1935,20 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
       updateCheck();
     }
   });
+  document.addEventListener("input", e => {
+    if (e.target.id !== "learnSearch") return;
+    const q = norm(e.target.value.trim());
+    for (const row of $$("[data-q]")) row.hidden = !!q && !row.dataset.q.includes(q);
+    for (const g of $$(".learn-group")) g.hidden = !$$("[data-q]", g).some(r => !r.hidden);
+  });
   document.addEventListener("change", e => { if (e.target.id === "importFile" && e.target.files[0]) importData(e.target.files[0]); });
   document.addEventListener("keydown", e => {
+    if (ui.learn) {
+      if (e.key === "Escape") history.back();
+      else if (e.key === "Enter" && e.target.classList.contains("term")) e.target.click();
+      return;
+    }
+    if (e.key === "Enter" && e.target.classList && e.target.classList.contains("term")) { e.target.click(); return; }
     const s = ui.session;
     if (!s || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === "Enter") {

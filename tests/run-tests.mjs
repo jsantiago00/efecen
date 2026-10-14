@@ -57,6 +57,8 @@ function checkTex(where, s) {
     try { katex.renderToString(m, { throwOnError: true, strict: "error", displayMode: false }); }
     catch (e) { fail(where, `LaTeX inválido: ${m}  (${e.message.slice(0, 90)})`); }
   }
+  // los links [[id]] de ejercicios y apuntes tienen que apuntar a fichas existentes
+  for (const m of String(s).matchAll(/\[\[([a-z0-9-]+)(?:\|[^\]]+)?\]\]/g)) { checks++; if (!E.cards[m[1]]) fail(where, `link roto [[${m[1]}]]`); }
   // signos dobles o restos de JS en el texto
   if (/\+ -|- -|undefined|NaN|\[object/.test(s)) fail(where, `texto sospechoso: ${s.slice(0, 140)}`);
 }
@@ -179,6 +181,61 @@ for (const cid of E.courseOrder) {
   }
 }
 ok(totalTemplates >= 30, "contenido", `solo ${totalTemplates} plantillas (meta: 30)`);
+
+// ---------- 4. apuntes (teoría con hipervínculos) ----------
+const linkIds = s => [...String(s).matchAll(/\[\[([a-z0-9-]+)(?:\|[^\]]+)?\]\]/g)].map(m => m[1]);
+function checkTheoryText(where, s) {
+  checkTex(where, s);
+  for (const id of linkIds(s)) ok(E.cards[id], where, `link a ficha inexistente: [[${id}]]`);
+  // un link no puede quedar adentro del LaTeX
+  for (const m of texOf(s)) ok(!m.includes("[["), where, `link dentro de LaTeX: ${m.slice(0, 60)}`);
+}
+const allAliases = new Map();
+for (const cid of E.courseOrder) {
+  const c = E.courses[cid];
+  if (!c.theory) { fail(cid, "el curso no tiene apuntes"); continue; }
+  const cards = c.theory.cards, groups = c.theory.groups.map(g => g.id);
+  console.log(`Apuntes ${cid}: ${Object.keys(cards).length} fichas`);
+  for (const [id, card] of Object.entries(cards)) {
+    const w = `ficha ${id}`;
+    ok(groups.includes(card.group), w, `grupo desconocido ${card.group}`);
+    ok(card.title && card.summary && card.def && card.def.length, w, "falta título, resumen o definición");
+    for (const k of card.concepts || []) ok(c.concepts[k], w, `concepto inexistente ${k}`);
+    for (const a of card.aliases || []) {
+      const key = a.toLowerCase();
+      ok(!allAliases.has(key), w, `alias "${a}" repetido (también en ${allAliases.get(key)})`);
+      allAliases.set(key, id);
+    }
+    for (const sid of card.see || []) ok(E.cards[sid] && sid !== id, w, `"ver también" inválido: ${sid}`);
+    checkTheoryText(w, card.summary);
+    for (const sec of ["def", "idea", "demo", "tips"]) for (const b of card[sec] || []) {
+      if (typeof b === "string") checkTheoryText(`${w} ${sec}`, b);
+      else {
+        if (b.caption) checkTheoryText(`${w} ${sec} caption`, b.caption);
+        if (b.graph) for (const f of [...(b.graph.fns || []), ...(b.graph.pieces || []).map(p => p.f)]) ok(typeof f(0.5) === "number", w, "gráfico no evaluable");
+        ok(b.graph || b.svg, w, "bloque sin contenido");
+      }
+    }
+    for (const ex of card.examples || []) { checkTheoryText(`${w} ejemplo`, ex.q); ex.steps.forEach(st => checkTheoryText(`${w} ejemplo`, st)); }
+  }
+  // cobertura: cada concepto tiene al menos una ficha, y cada lección su lista de apuntes
+  for (const k of Object.keys(c.concepts)) ok((c.conceptCards[k] || []).length > 0, `concepto ${k}`, "sin ficha de teoría");
+  for (const l of c.lessonList) {
+    ok(l.theory.length > 0, `lección ${l.id}`, "sin apuntes");
+    for (const id of l.theory) ok(cards[id], `lección ${l.id}`, `ficha inexistente ${id}`);
+    checkTheoryText(`intro ${l.id}`, l.intro || "");
+  }
+}
+// autolink: une términos conocidos, una vez por ficha, sin tocar LaTeX ni links existentes
+{
+  const html = E.linkText("Usamos la regla de la cadena y otra vez la Regla de la Cadena, por izquierda.", { auto: true });
+  ok((html.match(/data-id="regla-cadena"/g) || []).length === 1, "linkText", "debe linkear la regla de la cadena una sola vez: " + html);
+  ok(html.includes('data-id="limites-laterales"'), "linkText", "no linkeó 'por izquierda'");
+  const ex = E.linkText("ver [[conjugado|el conjugado]] y el conjugado", { auto: true });
+  ok((ex.match(/<a /g) || []).length === 1, "linkText", "link explícito + alias de la misma ficha duplicado: " + ex);
+  ok(!E.linkText("encadenado", { auto: true }).includes("<a"), "linkText", "linkeó una palabra que solo contiene el alias");
+  ok(!E.linkText("la cadena", { auto: false }).includes("<a"), "linkText", "autolink sin pedirlo");
+}
 
 console.log(`\n${checks} chequeos, ${failures} fallas`);
 process.exit(failures ? 1 : 0);

@@ -265,8 +265,8 @@
         prompt: `Calculá $$\\lim_{x\\to 0} \\frac{1 - \\cos(${kx(a)})}{${H.term(b, "x^{2}", true)}}$$`,
         answer: (a * a) / (2 * b), answerTex: frac(a * a, 2 * b),
         solution: [
-          `Multiplicamos y dividimos por $1 + \\cos(${kx(a)})$: el numerador queda $1 - \\cos^2(${kx(a)}) = \\sin^2(${kx(a)})$.`,
-          `Reescribimos: $\\left(\\dfrac{\\sin(${kx(a)})}{${kx(a)}}\\right)^2 \\cdot \\dfrac{${a * a}}{${b}\\,(1+\\cos(${kx(a)}))}$.`,
+          `Como en el [[lim-1-cos|límite notable de 1 − cos]], multiplicamos y dividimos por $1 + \\cos(${kx(a)})$: el numerador queda $1 - \\cos^2(${kx(a)}) = \\sin^2(${kx(a)})$.`,
+          `Reescribimos: $\\left(\\dfrac{\\sin(${kx(a)})}{${kx(a)}}\\right)^2 \\cdot \\dfrac{${a * a}}{${b === 1 ? "" : b + "\\,"}(1+\\cos(${kx(a)}))}$.`,
           `El primer factor tiende a $1$ y $1 + \\cos(${kx(a)}) \\to 2$.`,
           `Resultado: $\\dfrac{${a * a}}{${2 * b}} = ${frac(a * a, 2 * b)}$.`
         ],
@@ -647,7 +647,7 @@
           prompt: `Si $f(x) = (${polyc([a, b])})\\,e^{${kx(k)}}$, calculá $f'(${x0})$.`,
           answer: ans, answerTex: x0 === 0 ? String(co) : `${cf(co)}e^{${k}}`,
           solution: [
-            `Producto: $(uv)' = u'v + uv'$ con $u = ${polyc([a, b])}$ y $v = e^{${kx(k)}}$.`,
+            `[[regla-producto|Regla del producto]]: $(uv)' = u'v + uv'$ con $u = ${polyc([a, b])}$ y $v = e^{${kx(k)}}$.`,
             `$u' = ${a}$, $\\;v' = ${k}e^{${kx(k)}}$.`,
             `$f'(x) = ${a}e^{${kx(k)}} + ${par(k)}(${polyc([a, b])})e^{${kx(k)}} = (${polyc([k * a, a + k * b])})e^{${kx(k)}}$.`,
             `$f'(${x0}) = ${x0 === 0 ? co : cf(co)}${x0 === 0 ? "" : `\\,e^{${k}}`}${x0 === 0 ? "" : ` \\approx ${num(ans, 3)}`}$.`
@@ -695,7 +695,7 @@
         prompt: `Si $f(x) = \\dfrac{${polyc([a, b])}}{${polyc([c, d])}}$, calculá $f'(${x0})$.`,
         answer: D / (v * v), answerTex: frac(D, v * v),
         solution: [
-          `Cociente: $\\left(\\frac{u}{v}\\right)' = \\dfrac{u'v - uv'}{v^2}$, con $u' = ${a}$ y $v' = ${c}$.`,
+          `[[regla-cociente|Regla del cociente]]: $\\left(\\frac{u}{v}\\right)' = \\dfrac{u'v - uv'}{v^2}$, con $u' = ${a}$ y $v' = ${c}$.`,
           `$f'(x) = \\dfrac{${cf(a)}(${polyc([c, d])}) - ${par(c)}(${polyc([a, b])})}{(${polyc([c, d])})^2} = \\dfrac{${D}}{(${polyc([c, d])})^2}$`,
           `En $x = ${x0}$: el denominador es $(${v})^2 = ${v * v}$, así que $f'(${x0}) = ${frac(D, v * v)}$.`
         ],
@@ -760,7 +760,7 @@
           prompt: `Si $f(x) = ${poly([[a, S], [c, C]])}$, ¿cuál es $f'(x)$?`,
           ...H.mc(r, poly([[a * b, C], [-c * b, S]]), [poly([[a * b, C], [c * b, S]]), poly([[a, C], [-c, S]]), poly([[a * b, S], [-c * b, C]]), poly([[-a * b, C], [c * b, S]])]),
           solution: [
-            `$(\\sin u)' = \\cos u \\cdot u'$ y $(\\cos u)' = -\\sin u \\cdot u'$, con $u = ${b}x$, $u' = ${b}$.`,
+            `[[derivadas-trig|Derivadas trigonométricas]] con cadena: $(\\sin u)' = \\cos u \\cdot u'$ y $(\\cos u)' = -\\sin u \\cdot u'$, con $u = ${b}x$, $u' = ${b}$.`,
             `$f'(x) = ${poly([[a * b, C], [-c * b, S]])}$`
           ],
           verify: { kind: "deriv-fn", f: x => a * Math.sin(b * x) + c * Math.cos(b * x), df: x => a * b * Math.cos(b * x) - c * b * Math.sin(b * x) }
@@ -772,7 +772,7 @@
         return {
           prompt: `Si $f(x) = ${H.term(a, `\\tan(${b}x)`, true)}$, ¿cuál es $f'(x)$?`,
           ...H.mc(r, H.term(a * b, s2, true), [H.term(a, s2, true), H.term(a * b, `\\sec(${b}x)\\tan(${b}x)`, true), H.term(-a * b, s2, true), H.term(a * b, `\\tan^{2}(${b}x)`, true)]),
-          solution: [`$(\\tan u)' = \\sec^2 u \\cdot u'$ con $u = ${b}x$.`, `$f'(x) = ${H.term(a * b, s2, true)}$`],
+          solution: [`[[derivadas-trig|Derivadas trigonométricas]]: $(\\tan u)' = \\sec^2 u \\cdot u'$ con $u = ${b}x$.`, `$f'(x) = ${H.term(a * b, s2, true)}$`],
           verify: { kind: "deriv-fn", f: x => a * Math.tan(b * x), df: x => a * b / Math.cos(b * x) ** 2, dom: [-0.2, 0.2] }
         };
       }
@@ -780,7 +780,7 @@
       return {
         prompt: `Si $f(x) = ${H.term(a, "\\sec x", true)}$, ¿cuál es $f'(x)$?`,
         ...H.mc(r, H.term(a, "\\sec x\\tan x", true), [H.term(a, "\\tan^{2} x", true), H.term(a, "\\sec^{2} x", true), H.term(-a, "\\sec x\\tan x", true), H.term(a, "\\csc x", true)]),
-        solution: [`$\\sec x = \\frac{1}{\\cos x}$; por cociente: $\\left(\\frac{1}{\\cos x}\\right)' = \\frac{\\sin x}{\\cos^2 x} = \\sec x\\tan x$.`, `$f'(x) = ${H.term(a, "\\sec x\\tan x", true)}$`],
+        solution: [`$\\sec x = \\frac{1}{\\cos x}$; por [[regla-cociente|cociente]] ([[derivadas-trig|ver derivadas trigonométricas]]): $\\left(\\frac{1}{\\cos x}\\right)' = \\frac{\\sin x}{\\cos^2 x} = \\sec x\\tan x$.`, `$f'(x) = ${H.term(a, "\\sec x\\tan x", true)}$`],
         verify: { kind: "deriv-fn", f: x => a / Math.cos(x), df: x => a * Math.tan(x) / Math.cos(x), dom: [-1, 1] }
       };
     }
@@ -796,7 +796,7 @@
         prompt: `Si $f(x) = ${poly([[a, "e^{x}"], [b, "\\ln x"], [c, xp(n)]])}$, calculá $f'(${x0})$.`,
         answer: ans,
         solution: [
-          `$(e^x)' = e^x$, $\\;(\\ln x)' = \\frac{1}{x}$, $\\;(x^{${n}})' = ${n}${xp(n - 1)}$.`,
+          `[[exp-log|Derivadas de exp y ln]]: $(e^x)' = e^x$, $\\;(\\ln x)' = \\frac{1}{x}$, $\\;(x^{${n}})' = ${n}${xp(n - 1)}$.`,
           `$f'(x) = ${poly([[a, "e^{x}"], [b, "\\frac{1}{x}"], [c * n, xp(n - 1)]])}$`.replace(/(\d)\\frac\{1\}\{x\}/, "\\frac{$1}{x}"),
           `$f'(${x0}) = ${H.term(a, `e^{${x0}}`, true)}${sg(b / x0)}${sg(c * n * x0 ** (n - 1))} \\approx ${num(ans, 3)}$`
         ],
@@ -819,7 +819,7 @@
         prompt: `Si $f(x) = ${a}x^{${n}}\\sin(${bx})$, calculá $f'\\left(${X.t}\\right)$ (con 2 decimales alcanza).`,
         answer: ans,
         solution: [
-          `Producto: $u = ${a}x^{${n}}$, $u' = ${a * n}${xp(n - 1)}$; $\\;v = \\sin(${bx})$, $v' = ${b === 1 ? "" : b}\\cos(${bx})$.`,
+          `[[regla-producto|Regla del producto]]: $u = ${a}x^{${n}}$, $u' = ${a * n}${xp(n - 1)}$; $\\;v = \\sin(${bx})$, $v' = ${b === 1 ? "" : b}\\cos(${bx})$.`,
           `$f'(x) = ${a * n}${xp(n - 1)}\\sin(${bx}) + ${a * b}x^{${n}}\\cos(${bx})$`,
           `En $x = ${X.t}$: primer término $\\approx ${num(t1, 3)}$, segundo $\\approx ${num(t2, 3)}$.`,
           `$f'\\left(${X.t}\\right) \\approx ${num(ans, 3)}$`
@@ -1056,7 +1056,7 @@
         return {
           prompt: `Si $f(x) = ${polyc(C)}$, calculá $f''(${x0})$.`,
           answer: ans,
-          solution: [`$f'(x) = ${polyc([4 * C[0], 3 * C[1], 2 * C[2], C[3]])}$`, `$f''(x) = ${polyc(d2)}$`, `$f''(${x0}) = ${ans}$`],
+          solution: [`Derivamos dos veces ([[derivadas-sucesivas|derivadas sucesivas]]): $f'(x) = ${polyc([4 * C[0], 3 * C[1], 2 * C[2], C[3]])}$`, `$f''(x) = ${polyc(d2)}$`, `$f''(${x0}) = ${ans}$`],
           verify: { kind: "deriv2", f: x => H.peval(C, x), x0 }
         };
       }
@@ -1096,7 +1096,7 @@
       return {
         prompt: `Uní el gráfico de cada función $f$ (izquierda) con el de su derivada $f'$ (derecha).`,
         pairs: ps.map(p => [{ graph: g(p.f) }, { graph: p.holes ? { pieces: [{ f: p.d, to: 0 }, { f: p.d, from: 0 }], points: [{ x: 0, y: -1, open: true }, { x: 0, y: 1, open: true }], xr: [-4, 4], yr: [-4, 4] } : g(p.d) }]),
-        solution: [`Donde $f$ crece, $f' > 0$; donde decrece, $f' < 0$; en máximos y mínimos, $f' = 0$.`, ...ps.map(p => p.why)]
+        solution: [`[[grafico-derivada|Leer f' en el gráfico de f]]: donde $f$ crece, $f' > 0$; donde decrece, $f' < 0$; en máximos y mínimos, $f' = 0$.`, ...ps.map(p => p.why)]
       };
     }
   };
