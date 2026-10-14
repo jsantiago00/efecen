@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const N = +process.argv[2] || 300;
+const ONLY = process.argv[3] || null; // opcional: probar las plantillas de una sola materia (p. ej. m104)
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const engine = /<script id="engine">([\s\S]*?)<\/script>/.exec(html)[1];
 const contentFiles = [...html.matchAll(/<script src="(content\/[^"]+)"><\/script>/g)].map(m => m[1]);
@@ -140,6 +141,8 @@ const eye = n => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (
 
 function runVerify(v, answer, w) {
   const target = v.target !== undefined ? v.target : answer;
+  // en álgebra lineal la matriz puede depender de la respuesta (por ejemplo, el k que anula un determinante)
+  if (typeof v.A === "function") v = Object.assign({}, v, { A: v.A(answer) });
   const okNum = (got, msg, tol = 1e-4) => ok(Number.isFinite(got) && close(got, target, tol), w, `${msg}: ${got} vs ${target}`);
   switch (v.kind) {
     case "limit": {
@@ -226,6 +229,14 @@ function runVerify(v, answer, w) {
       if (v.v) matvec(v.A, v.v).forEach((y, i) => ok(near(y, v.lambda * v.v[i]), w, "A·v ≠ λ·v"));
       break;
     }
+    case "rouche": {
+      // 0: compatible determinado, 1: compatible indeterminado, 2: incompatible
+      const rA = gaussRank(v.A), rAb = gaussRank(v.A.map((r, i) => r.concat([v.b[i]]))), n = v.A[0].length;
+      const cls = rA < rAb ? 2 : rA === n ? 0 : 1;
+      ok(cls === target, w, `Rouché-Frobenius por Gauss da ${cls} y la respuesta dice ${target}`);
+      break;
+    }
+    case "nullity": ok(v.A[0].length - gaussRank(v.A) === target, w, `nulidad por Gauss ${v.A[0].length - gaussRank(v.A)} vs ${target}`); break;
     case "all": for (const sub of v.list) runVerify(sub, answer, w); break;
     default: fail(w, "tipo de verify desconocido: " + v.kind);
   }
@@ -248,10 +259,13 @@ for (const cid of E.courseOrder) {
   for (const l of c.lessonList) checkTex(`intro ${l.id}`, l.intro || "");
 
   for (const [id, t] of Object.entries(c.templates)) {
+    if (ONLY && cid !== ONLY) continue;
     for (const k of t.concepts) ok(c.concepts[k], id, `concepto no definido: ${k}`);
     ok([1, 2, 3].includes(t.difficulty), id, "difficulty debe ser 1-3");
     const answers = new Set();
-    for (let s = 1; s <= N; s++) {
+    // las plantillas con simulaciones caras pueden pedir menos instancias (testN)
+    const Nt = Math.min(N, t.testN || N), t0 = Date.now();
+    for (let s = 1; s <= Nt; s++) {
       const w = `${id}#${s}`;
       let inst;
       try { inst = E.instantiate(c, id, s * 2654435761 >>> 0); }
@@ -278,7 +292,7 @@ for (const cid of E.courseOrder) {
             if (m) ok(close((m[1] ? -1 : 1) * m[2] / m[3], inst.answer, 1e-9), w, `answerTex ${inst.answerTex} != ${inst.answer}`);
             if (/^-?\d+$/.test(inst.answerTex)) ok(+inst.answerTex === inst.answer, w, `answerTex ${inst.answerTex} != ${inst.answer}`);
           }
-          answers.add(inst.answer);
+          answers.add(inst.prompt + "|" + inst.answer);
           break;
         case "tf":
           ok(typeof inst.answer === "boolean", w, "answer debe ser booleano");
@@ -314,6 +328,8 @@ for (const cid of E.courseOrder) {
       if (inst.verify) runVerify(inst.verify, inst.answer, w);
       else ok(LEGACY_NO_VERIFY.has(id), w, "plantilla nueva sin verify (toda plantilla nueva necesita verificación numérica)");
     }
+    const ms = Date.now() - t0;
+    if (ms > 8000) console.log(`  (lenta: ${id} tardó ${(ms / 1000).toFixed(1)} s con ${Nt} instancias; considerá testN)`);
     // variedad: una plantilla paramétrica no debería repetir siempre lo mismo
     ok(answers.size >= (t.type === "tf" ? 2 : 5), id, `poca variedad: ${answers.size} variantes distintas en ${N}`);
   }

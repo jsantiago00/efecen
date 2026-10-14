@@ -382,7 +382,7 @@
       idea: [R`La velocidad es un vector: aunque su módulo no cambie, cambia su dirección, y eso es aceleración. Si además la rapidez cambia, se suma una aceleración **tangencial** $a_t = \frac{dv}{dt}$. Lo que **produce** la aceleración centrípeta es alguna fuerza real: ver [[f1-dinamica-circular]].`],
       demo: [R`Con $\vec r(t) = R(\cos\omega t, \sin\omega t)$: $\vec v = R\omega(-\sin\omega t, \cos\omega t)$ y $\vec a = -R\omega^2(\cos\omega t, \sin\omega t) = -\omega^2\vec r$.`, R`Apunta al centro y su módulo es $\omega^2 R = \frac{v^2}{R}$. $\blacksquare$`],
       examples: [{ q: R`La Luna tarda 27,3 días en orbitar a $3{,}84\times10^8$ m. ¿Aceleración centrípeta?`, steps: [R`$\omega = \frac{2\pi}{27{,}3\cdot 86400} \approx 2{,}66\times10^{-6}$ rad/s.`, R`$a = \omega^2 R \approx 2{,}7\times10^{-3}$ m/s² (es la gravedad terrestre a esa distancia).`] }],
-      see: ["f1-dinamica-circular"]
+      see: ["f1-dinamica-circular", "f1-rot-cinematica"]
     },
     "f1-relativo": {
       title: "Movimiento relativo", aliases: ["movimiento relativo", "velocidad relativa", "sistema de referencia", "sistemas de referencia"], concepts: ["f1-relativo"],
@@ -562,6 +562,7 @@
     }
   };
   T["f1-tercera-vf"] = {
+    testN: 80, // simulación cara: menos instancias en los tests
     type: "tf", concepts: ["f1-newton"], difficulty: 1,
     generate(r) {
       const M = r.int(3, 20) * 1000, m = r.int(6, 15) * 100, q = r.pick(["fuerza", "acel"]);
@@ -613,18 +614,18 @@
       title: "Fuerza elástica: ley de Hooke", aliases: ["ley de Hooke", "fuerza elástica", "constante elástica", "constante del resorte"], concepts: ["f1-hooke"],
       summary: "Un resorte estirado o comprimido x hace una fuerza F = −kx, hacia su posición natural.",
       def: [R`$$F = -kx$$ donde $x$ es el estiramiento respecto de la longitud natural y $k$ la **constante elástica** (N/m). El signo menos indica que la fuerza se opone a la deformación (es restauradora).`],
-      idea: [R`Vale para deformaciones chicas: casi todo material se comporta así cerca del equilibrio, y por eso los resortes aparecen en todos lados. La fuerza restauradora lineal es lo que produce el movimiento armónico simple, y la energía guardada en el resorte es $\frac12kx^2$ (ver [[f1-energia]]).`],
+      idea: [R`Vale para deformaciones chicas: casi todo material se comporta así cerca del equilibrio, y por eso los resortes aparecen en todos lados. La fuerza restauradora lineal es lo que produce el [[f1-mas|movimiento armónico simple]], y la energía guardada en el resorte es $\frac12kx^2$ (ver [[f1-energia]]).`],
       examples: [{ q: R`Un resorte se estira 5 cm con 2 kg colgados. ¿$k$?`, steps: [R`$k = \frac{mg}{x} = \frac{2\cdot 9{,}8}{0{,}05} = 392$ N/m.`] }],
-      see: ["f1-newton", "f1-energia"]
+      see: ["f1-newton", "f1-mas", "f1-energia"]
     },
     "f1-dinamica-circular": {
       title: "Dinámica del movimiento circular", aliases: ["fuerza centrípeta", "dinámica circular", "curva peraltada", "rulo"], concepts: ["f1-dinamica-circular"],
       summary: "La suma de fuerzas hacia el centro es m v²/R. La 'fuerza centrípeta' no es una fuerza nueva: la hace la tensión, la normal, el rozamiento o la gravedad.",
       def: [R`Para un cuerpo en movimiento circular, la componente radial de la segunda ley es $$\sum F_{\text{hacia el centro}} = m\frac{v^2}{R} = m\omega^2 R.$$`],
-      idea: [R`Ejemplos: en una curva plana la fuerza hacia el centro es el [[f1-rozamiento|rozamiento]] ($v_{\max} = \sqrt{\mu_s g R}$); en una órbita, la gravedad; en una piedra atada, la tensión. La "fuerza centrífuga" que sentís en un auto es la inercia vista desde un sistema no inercial.`,
+      idea: [R`Ejemplos: en una curva plana la fuerza hacia el centro es el [[f1-rozamiento|rozamiento]] ($v_{\max} = \sqrt{\mu_s g R}$); en una órbita, la [[f1-gravitacion|gravedad]]; en una piedra atada, la tensión. La "fuerza centrífuga" que sentís en un auto es la inercia vista desde un sistema no inercial.`,
         R`En un rulo vertical, arriba el peso alcanza para girar si $v^2 = gR$: es la velocidad mínima para no despegarse.`],
       examples: [{ q: R`Una piedra de 0,2 kg gira en un círculo horizontal de 0,5 m a 3 m/s. ¿Tensión?`, steps: [R`$T = \frac{mv^2}{R} = \frac{0{,}2\cdot 9}{0{,}5} = 3{,}6$ N (si el círculo es horizontal y despreciamos el peso).`] }],
-      see: ["f1-circular", "f1-newton"]
+      see: ["f1-circular", "f1-newton", "f1-gravitacion"]
     }
   };
 
@@ -968,7 +969,7 @@
       idea: [R`**Teorema del centro de masa:** $M\vec a_{cm} = \sum\vec F_{\text{ext}}$. Un proyectil que explota en el aire: los pedazos vuelan para cualquier lado, pero su centro de masa sigue la misma parábola.`,
         R`Para un objeto simétrico y homogéneo, el centro de masa está en el centro de simetría. Con cuerpos compuestos se trata cada parte como una partícula ubicada en su propio centro de masa.`],
       examples: [{ q: R`Masas de 2 kg en $x = 0$ y 6 kg en $x = 4$ m. ¿$x_{cm}$?`, steps: [R`$x_{cm} = \frac{2\cdot 0 + 6\cdot 4}{8} = 3$ m (más cerca de la masa grande).`] }],
-      see: ["f1-momento"]
+      see: ["f1-momento", "f1-equilibrio"]
     }
   };
 
@@ -1169,6 +1170,706 @@
           intro: R`Empuje $= \rho_\ell g V_{sum}$. Flota si $\rho < \rho_\ell$, con fracción sumergida $\frac{\rho}{\rho_\ell}$.` },
         { id: "f1-bernoulli", title: "Continuidad y Bernoulli", templates: ["f1-continuidad-num", "f1-bernoulli-num"], theory: ["f1-hidrodinamica"],
           intro: R`$A_1v_1 = A_2v_2$ y $p + \frac12\rho v^2 + \rho gh = $ constante. Donde va más rápido, la presión es menor.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 6 · CINEMÁTICA DEL MOVIMIENTO ROTACIONAL
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dec = x => String(x).replace(".", "{,}");
+
+  T["f1-rotcin-num"] = {
+    type: "numeric", concepts: ["f1-rot-cinematica"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["vueltas", "omega", "frenado"]);
+      if (v === "frenado") {
+        const rpm = r.int(2, 30) * 100, tf = r.int(3, 30), w0 = rpm * 2 * Math.PI / 60, al = w0 / tf, rev = w0 * tf / 2 / (2 * Math.PI);
+        return { prompt: `Un disco gira a $${rpm}$ rpm y frena uniformemente hasta detenerse en $${tf}$ s. ¿Cuántas vueltas da mientras frena?`, answer: rev,
+          solution: [`$\\omega_0 = ${rpm}\\cdot\\frac{2\\pi}{60} \\approx ${num(w0, 4)}$ rad/s; [[f1-rot-cinematica|aceleración angular constante]] $\\alpha = -\\frac{\\omega_0}{t} \\approx ${num(-al, 4)}$ rad/s².`, `$\\Delta\\theta = \\frac{\\omega_0 t}{2} \\approx ${num(w0 * tf / 2, 4)}$ rad, o sea $\\approx ${num(rev, 4)}$ vueltas.`],
+          verify: { kind: "ode", f: (_, y) => [y[1], -al], y0: [0, w0], t1: tf, dt: 1e-3, out: (_, y) => y[0] / (2 * Math.PI) } };
+      }
+      const w0 = r.int(0, 10), al = r.int(1, 6) / 2, t = r.int(2, 10);
+      return { prompt: `Una rueda parte con $\\omega_0 = ${w0}$ rad/s y acelera a $\\alpha = ${dec(al)}$ rad/s². ¿${v === "vueltas" ? "Cuántos radianes gira" : "Qué velocidad angular (rad/s) tiene"} a los $${t}$ s?`, answer: v === "vueltas" ? w0 * t + al * t * t / 2 : w0 + al * t,
+        solution: [`Mismas ecuaciones que el MRUV con $\\theta$, $\\omega$, $\\alpha$ ([[f1-rot-cinematica]]).`, v === "vueltas" ? `$\\Delta\\theta = \\omega_0 t + \\frac12\\alpha t^2 = ${num(w0 * t + al * t * t / 2, 4)}$ rad.` : `$\\omega = \\omega_0 + \\alpha t = ${num(w0 + al * t, 4)}$ rad/s.`],
+        verify: { kind: "ode", f: (_, y) => [y[1], al], y0: [0, w0], t1: t, dt: 1e-3, out: (_, y) => (v === "vueltas" ? y[0] : y[1]) } };
+    }
+  };
+  T["f1-linang-num"] = {
+    type: "numeric", concepts: ["f1-rot-cinematica"], difficulty: 1,
+    generate(r) {
+      const Rr = r.int(5, 50) / 100, w = r.int(2, 30), al = r.int(1, 10), ask = r.pick(["v", "at", "ac"]);
+      const ans = ask === "v" ? w * Rr : ask === "at" ? al * Rr : w * w * Rr;
+      return {
+        prompt: `Un punto está a $${dec(num(Rr))}$ m del eje de una rueda que, en cierto instante, gira con $\\omega = ${w}$ rad/s y $\\alpha = ${al}$ rad/s². Calculá ${ask === "v" ? "su rapidez (m/s)" : ask === "at" ? "su aceleración tangencial (m/s²)" : "su aceleración centrípeta (m/s²)"}.`,
+        answer: ans,
+        solution: [`[[f1-rot-cinematica|Relación lineal-angular]]: $v = \\omega R$, $a_t = \\alpha R$, $a_c = \\omega^2R$.`, `Respuesta: $${num(ans, 4)}$.`],
+        // verificación: posición del punto r(t) = R(cos θ, sin θ) con θ = ωt + αt²/2 y derivadas numéricas
+        verify: { kind: "value", tol: 1e-4, fn: () => {
+          const P = t => { const th = w * t + al * t * t / 2; return [Rr * Math.cos(th), Rr * Math.sin(th)]; }, h = 1e-4;
+          const [a, b, c] = [P(-h), P(0), P(h)], vx = (c[0] - a[0]) / (2 * h), vy = (c[1] - a[1]) / (2 * h);
+          const ax = (a[0] - 2 * b[0] + c[0]) / (h * h), ay = (a[1] - 2 * b[1] + c[1]) / (h * h);
+          if (ask === "v") return Math.hypot(vx, vy);
+          const ux = -Math.sin(0), uy = Math.cos(0); // dirección tangencial en θ = 0
+          return ask === "at" ? ax * ux + ay * uy : -(ax * Math.cos(0) + ay * Math.sin(0));
+        } }
+      };
+    }
+  };
+  T["f1-inercia-num"] = {
+    type: "numeric", concepts: ["f1-inercia"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["varilla-ext", "varilla-cen", "disco", "steiner", "puntual"]);
+      const M = r.int(1, 10), L = r.int(5, 30) / 10;
+      if (v === "varilla-ext") return { prompt: `¿Cuál es el momento de inercia (kg·m²) de una varilla delgada uniforme de $${M}$ kg y $${dec(L)}$ m respecto de un eje perpendicular que pasa por **un extremo**?`, answer: M * L * L / 3,
+        solution: [`[[f1-inercia|Momento de inercia]]: $I = \\int x^2\\,dm = \\int_0^L x^2\\frac{M}{L}dx = \\frac{ML^2}{3}$.`, `$I = \\frac{${M}\\cdot${dec(L)}^2}{3} \\approx ${num(M * L * L / 3, 4)}$ kg·m².`],
+        verify: { kind: "integral", f: x => (M / L) * x * x, a: 0, b: L } };
+      if (v === "varilla-cen") return { prompt: `¿Cuál es el momento de inercia (kg·m²) de una varilla delgada uniforme de $${M}$ kg y $${dec(L)}$ m respecto de un eje perpendicular que pasa por su **centro**?`, answer: M * L * L / 12,
+        solution: [`$I = \\int_{-L/2}^{L/2} x^2\\frac{M}{L}dx = \\frac{ML^2}{12}$ ([[f1-inercia]]).`, `$I \\approx ${num(M * L * L / 12, 4)}$ kg·m².`],
+        verify: { kind: "integral", f: x => (M / L) * x * x, a: -L / 2, b: L / 2 } };
+      if (v === "disco") { const Rr = L / 2; return { prompt: `¿Cuál es el momento de inercia (kg·m²) de un disco uniforme de $${M}$ kg y radio $${dec(num(Rr))}$ m respecto de su eje?`, answer: M * Rr * Rr / 2,
+        solution: [`Sumando anillos de radio $r$: $I = \\int_0^R r^2\\,\\sigma\\,2\\pi r\\,dr = \\frac{MR^2}{2}$ ([[f1-inercia]]).`, `$I \\approx ${num(M * Rr * Rr / 2, 4)}$ kg·m².`],
+        verify: { kind: "integral", f: rr => (M / (Math.PI * Rr * Rr)) * 2 * Math.PI * rr * rr * rr, a: 0, b: Rr } }; }
+      if (v === "steiner") { const d = r.int(1, 10) / 10, Rr = L / 2; return { prompt: `Un disco uniforme de $${M}$ kg y radio $${dec(num(Rr))}$ m gira alrededor de un eje paralelo a su eje de simetría, a $${dec(d)}$ m del centro. ¿Momento de inercia (kg·m²)?`, answer: M * Rr * Rr / 2 + M * d * d,
+        solution: [`[[f1-inercia|Teorema de Steiner]]: $I = I_{cm} + Md^2$.`, `$I = \\frac{${M}\\cdot${dec(num(Rr))}^2}{2} + ${M}\\cdot${dec(d)}^2 \\approx ${num(M * Rr * Rr / 2 + M * d * d, 4)}$ kg·m².`],
+        // verificación: integramos r² dm sobre el disco corrido (en polares respecto de su centro)
+        verify: { kind: "value", tol: 1e-4, fn: () => { let s = 0; const nr = 400, nt = 400, sig = M / (Math.PI * Rr * Rr); for (let i = 0; i < nr; i++) for (let j = 0; j < nt; j++) { const rr = (i + 0.5) * Rr / nr, t = (j + 0.5) * 2 * Math.PI / nt, x = rr * Math.cos(t) + d, y = rr * Math.sin(t); s += (x * x + y * y) * sig * rr * (Rr / nr) * (2 * Math.PI / nt); } return s; } } }; }
+      const ms = [r.int(1, 5), r.int(1, 5), r.int(1, 5)], rs = [r.int(1, 10) / 10, r.int(1, 10) / 10, r.int(1, 10) / 10];
+      const I = ms.reduce((s, m, i) => s + m * rs[i] ** 2, 0);
+      return { prompt: `Tres masas puntuales de $${ms.join("$, $")}$ kg están a $${rs.map(x => dec(x)).join("$, $")}$ m de un eje, respectivamente. ¿Momento de inercia del sistema (kg·m²)?`, answer: I,
+        solution: [`Para masas puntuales: $I = \\sum m_i r_i^2$ ([[f1-inercia]]).`, `$I = ${ms.map((m, i) => `${m}\\cdot${dec(rs[i])}^2`).join(" + ")} \\approx ${num(I, 4)}$ kg·m².`],
+        verify: { kind: "value", fn: () => ms.map((m, i) => m * rs[i] * rs[i]).reduce((a, b) => a + b, 0) } };
+    }
+  };
+  T["f1-erot-num"] = {
+    type: "numeric", concepts: ["f1-inercia"], difficulty: 2,
+    generate(r) {
+      const M = r.int(2, 50), Rr = r.int(10, 60) / 100, rpm = r.int(3, 60) * 100, w = rpm * 2 * Math.PI / 60, K = 0.25 * M * Rr * Rr * w * w;
+      return {
+        prompt: `Un volante (disco uniforme) de $${M}$ kg y $${dec(num(Rr))}$ m de radio gira a $${rpm}$ rpm. ¿Cuánta energía cinética (kJ) almacena?`,
+        answer: K / 1000,
+        solution: [`[[f1-inercia|Energía rotacional]]: $K = \\frac12I\\omega^2$ con $I = \\frac12MR^2$.`, `$\\omega \\approx ${num(w, 4)}$ rad/s; $K = \\frac14MR^2\\omega^2 \\approx ${num(K, 5)}$ J.`],
+        // verificación: suma de ½ dm v² sobre anillos
+        verify: { kind: "integral", f: rr => 0.5 * (M / (Math.PI * Rr * Rr)) * 2 * Math.PI * rr * (w * rr) ** 2 / 1000, a: 0, b: Rr }
+      };
+    }
+  };
+  T["f1-rot-vf"] = {
+    type: "tf", concepts: ["f1-inercia"], difficulty: 1,
+    generate(r) {
+      const M = r.int(1, 10), Rr = r.int(1, 5) / 10, q = r.pick(["aro-mas", "igual", "disco-mas"]);
+      return {
+        prompt: `Un aro y un disco tienen la misma masa ($${M}$ kg) y el mismo radio ($${dec(Rr)}$ m) y giran con la misma $\\omega$ alrededor de su eje. <b>Verdadero o falso:</b> ${q === "aro-mas" ? "el aro tiene más energía cinética" : q === "igual" ? "tienen la misma energía cinética" : "el disco tiene más energía cinética"}.`,
+        answer: q === "aro-mas",
+        explanation: `$I_{aro} = MR^2$ y $I_{disco} = \\frac12MR^2$: en el aro toda la masa está lejos del eje. Con la misma $\\omega$, el aro tiene el doble de energía ([[f1-inercia]]).`,
+        solution: [`$K = \\frac12I\\omega^2$: importa cómo está distribuida la masa, no solo cuánta hay.`],
+        verify: { kind: "truth", fn: () => {
+          let Idisk = 0; const n = 1000; for (let i = 0; i < n; i++) { const rr = (i + 0.5) * Rr / n; Idisk += (M / (Math.PI * Rr * Rr)) * 2 * Math.PI * rr * (Rr / n) * rr * rr; }
+          const Iaro = M * Rr * Rr;
+          return q === "aro-mas" ? Iaro > Idisk * 1.01 : q === "igual" ? Math.abs(Iaro - Idisk) < 1e-6 : Idisk > Iaro * 1.01;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-rot-cinematica": {
+      title: "Cinemática de la rotación", aliases: ["aceleración angular", "desplazamiento angular", "relación lineal-angular", "aceleración tangencial"], concepts: ["f1-rot-cinematica"],
+      summary: "θ, ω = dθ/dt, α = dω/dt. Con α constante valen las ecuaciones del MRUV. v = ωR, a_t = αR, a_c = ω²R.",
+      def: [R`Un cuerpo rígido que gira alrededor de un eje fijo queda descripto por el ángulo $\theta$ (en [[radian|radianes]]): $\omega = \frac{d\theta}{dt}$ y $\alpha = \frac{d\omega}{dt}$.`,
+        R`**Con $\alpha$ constante:** $\omega = \omega_0 + \alpha t$, $\;\theta = \theta_0 + \omega_0 t + \frac12\alpha t^2$, $\;\omega^2 = \omega_0^2 + 2\alpha\Delta\theta$.`,
+        R`**Relación con lo lineal** (punto a distancia $R$ del eje): $s = R\theta$, $v = \omega R$, $a_t = \alpha R$, $a_c = \omega^2 R$.`],
+      idea: [R`Es exactamente el [[f1-mruv|MRUV]] traducido: $x \to \theta$, $v \to \omega$, $a \to \alpha$. Todos los puntos del rígido tienen la misma $\omega$, pero los más alejados del eje van más rápido.`,
+        R`$\vec\omega$ se representa como un vector a lo largo del eje (regla de la mano derecha), y $\vec v = \vec\omega\times\vec r$ usa el **producto vectorial**: $|\vec A\times\vec B| = AB\sin\theta$, perpendicular a los dos.`],
+      examples: [{ q: R`Un CD gira a 500 rpm. ¿Rapidez de un punto a 6 cm del centro?`, steps: [R`$\omega = 500\cdot\frac{2\pi}{60} \approx 52{,}4$ rad/s.`, R`$v = \omega R \approx 3{,}1$ m/s.`] }],
+      see: ["f1-inercia", "f1-circular", "f1-torque"]
+    },
+    "f1-inercia": {
+      title: "Momento de inercia y energía rotacional", aliases: ["momento de inercia", "teorema de Steiner", "teorema de los ejes paralelos", "energía rotacional", "energía cinética de rotación"], concepts: ["f1-inercia"],
+      summary: "I = Σ m r² = ∫ r² dm mide la inercia a girar. K = ½ I ω². Steiner: I = I_cm + M d².",
+      def: [R`**Momento de inercia** respecto de un eje: $I = \sum m_ir_i^2$, o $I = \int r^2\,dm$ para un cuerpo continuo. **Energía cinética de rotación:** $K = \frac12I\omega^2$.`,
+        R`**Teorema de Steiner (ejes paralelos):** $I = I_{cm} + Md^2$, con $d$ la distancia entre el eje y uno paralelo que pasa por el centro de masa.`,
+        R`**Valores típicos:** varilla por el centro $\frac{ML^2}{12}$, por un extremo $\frac{ML^2}{3}$; aro $MR^2$; disco o cilindro $\frac12MR^2$; esfera maciza $\frac25MR^2$.`],
+      idea: [R`$I$ juega el papel de la masa en la rotación, pero depende de **cómo** está distribuida la masa: la masa lejos del eje pesa mucho más ($r^2$). Por eso un patinador gira más rápido con los brazos cerrados (ver [[f1-momento-angular]]).`],
+      demo: [R`**Varilla por un extremo.** Con densidad lineal $\lambda = \frac ML$: $I = \int_0^L x^2\lambda\,dx = \frac{\lambda L^3}{3} = \frac{ML^2}{3}$.`, R`Chequeo con Steiner: $\frac{ML^2}{12} + M\left(\frac L2\right)^2 = \frac{ML^2}{3}$ ✓.`],
+      examples: [{ q: R`Dos masas de 1 kg en los extremos de una varilla sin masa de 2 m. ¿$I$ respecto del centro?`, steps: [R`$I = 1\cdot 1^2 + 1\cdot 1^2 = 2$ kg·m².`] }],
+      see: ["f1-rot-cinematica", "f1-torque", "integral-definida"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-rot-cinematica": { name: "Cinemática rotacional" }, "f1-inercia": { name: "Momento de inercia" } },
+    templates: T,
+    units: [{
+      id: "f1-rot-cin", order: 6, program: "Unidad 6", title: "Cinemática del movimiento rotacional", icon: "rotate-ccw",
+      diagnostic: ["f1-rotcin-num", "f1-inercia-num", "f1-erot-num"],
+      lessons: [
+        { id: "f1-rotcin", title: "Velocidad y aceleración angulares", templates: ["f1-rotcin-num", "f1-linang-num"], theory: ["f1-rot-cinematica"],
+          intro: R`$\omega = \frac{d\theta}{dt}$, $\alpha = \frac{d\omega}{dt}$. Con $\alpha$ constante, como el MRUV. $v = \omega R$, $a_c = \omega^2 R$.` },
+        { id: "f1-inercia", title: "Momento de inercia y energía", templates: ["f1-rot-vf", "f1-inercia-num", "f1-erot-num"], theory: ["f1-inercia"],
+          intro: R`$I = \int r^2dm$; $K = \frac12I\omega^2$; Steiner: $I = I_{cm} + Md^2$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 7 · DINÁMICA DEL MOVIMIENTO ROTACIONAL
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dec = x => String(x).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180;
+
+  T["f1-torque-num"] = {
+    type: "numeric", concepts: ["f1-torque"], difficulty: 1,
+    generate(r) {
+      const F = r.int(5, 100), d = r.int(10, 80) / 100, th = r.pick([30, 45, 60, 90, 120, 150]);
+      const tau = d * F * Math.sin(rad(th));
+      return {
+        prompt: `Se aplica una fuerza de $${F}$ N en el extremo de una llave de $${dec(num(d))}$ m, formando $${th}^\\circ$ con la llave. ¿Cuál es el módulo del torque (N·m) respecto del bulón?`,
+        answer: tau,
+        solution: [`[[f1-torque|Torque]]: $\\tau = rF\\sin\\theta$ (solo cuenta la componente perpendicular a la llave).`, `$\\tau = ${dec(num(d))}\\cdot${F}\\sin ${th}^\\circ \\approx ${num(tau, 4)}$ N·m.`],
+        // verificación: producto vectorial en componentes, r × F
+        verify: { kind: "value", fn: () => { const rv = [d, 0], Fv = [F * Math.cos(rad(th)), F * Math.sin(rad(th))]; return Math.abs(rv[0] * Fv[1] - rv[1] * Fv[0]); } }
+      };
+    }
+  };
+  T["f1-polea-num"] = {
+    type: "numeric", concepts: ["f1-torque"], difficulty: 3,
+    generate(r) {
+      const m = r.int(1, 10), M = r.int(1, 10) * 2, Rr = r.int(5, 30) / 100, ask = r.pick(["a", "T"]);
+      const a = m * g / (m + M / 2), Tn = m * (g - a);
+      return {
+        prompt: `Una masa de $${m}$ kg cuelga de una soga enrollada en una polea (disco uniforme) de $${M}$ kg y radio $${dec(num(Rr))}$ m que gira sin rozamiento. ¿${ask === "a" ? "Con qué aceleración baja la masa" : "Cuál es la tensión de la soga"}? ($g = 9{,}8$ m/s²)`,
+        answer: ask === "a" ? a : Tn,
+        solution: [
+          `Masa: $mg - T = ma$. Polea: $TR = I\\alpha$ con $I = \\frac12MR^2$ y $\\alpha = \\frac aR$ ([[f1-torque|segunda ley para la rotación]]).`,
+          `De la polea: $T = \\frac12Ma$. Reemplazando: $a = \\frac{mg}{m + M/2} \\approx ${num(a, 4)}$ m/s².`,
+          `$T = m(g - a) \\approx ${num(Tn, 4)}$ N.`
+        ],
+        // verificación: soga como resorte rígido entre la masa y el borde de la polea
+        verify: ask === "a"
+          ? { kind: "ode", f: (_, y) => { const I = M * Rr * Rr / 2, k = 2e5, c = 2 * Math.sqrt(k * m), e = y[0] - Rr * y[2], ed = y[1] - Rr * y[3], Tt = Math.max(0, k * e + c * ed); return [y[1], g - Tt / m, y[3], Tt * Rr / I]; },
+              y0: [Tn / 2e5, 0, 0, 0], t1: 1, dt: 2e-5, out: (_, y) => 2 * y[0] }
+          : { kind: "zero", fn: Tt => [(m * g - Tt - m * a) / (m * g), (Tt * Rr - (M * Rr * Rr / 2) * (a / Rr)) / (m * g * Rr)] }
+      };
+    }
+  };
+  const SHAPES = [{ n: "una esfera maciza", b: 0.4, t: "\\frac25" }, { n: "un cilindro macizo", b: 0.5, t: "\\frac12" }, { n: "un aro", b: 1, t: "1" }, { n: "una esfera hueca", b: 2 / 3, t: "\\frac23" }];
+  T["f1-rodadura-num"] = {
+    type: "numeric", concepts: ["f1-rodadura"], difficulty: 3,
+    generate(r) {
+      const S = r.pick(SHAPES), h = r.int(1, 20) / 2, v = Math.sqrt(2 * g * h / (1 + S.b));
+      return {
+        prompt: `${S.n[0].toUpperCase() + S.n.slice(1)} parte del reposo y **rueda sin deslizar** bajando una altura de $${dec(h)}$ m. ¿Qué velocidad tiene su centro abajo? ($g = 9{,}8$ m/s², $I = ${S.t}MR^2$)`,
+        answer: v,
+        solution: [
+          `[[f1-rodadura|Rodadura]]: $v = \\omega R$, y el rozamiento estático no hace trabajo, así que se conserva la energía: $Mgh = \\frac12Mv^2 + \\frac12I\\omega^2$.`,
+          `$Mgh = \\frac12Mv^2\\left(1 + ${S.t}\\right) \\Rightarrow v = \\sqrt{\\dfrac{2gh}{1 + ${S.t}}} \\approx ${num(v, 4)}$ m/s.`,
+          `Es menos que $\\sqrt{2gh}$: parte de la energía se va en hacerlo girar.`
+        ],
+        // verificación: simulamos la bajada por un plano de 30° con la ecuación de traslación + rotación acopladas por v = ωR
+        verify: { kind: "ode", f: (_, y) => { const th = rad(30), s = y[1], fr = S.b * g * Math.sin(th) / (1 + S.b); return [s, g * Math.sin(th) - fr]; },
+          y0: [0, 0], t1: 0, until: (_, y) => y[0] * Math.sin(rad(30)) >= h, g: (_, y) => y[0] * Math.sin(rad(30)) - h, dt: 1e-4, out: (_, y) => y[1] }
+      };
+    }
+  };
+  T["f1-patinadora-num"] = {
+    type: "numeric", concepts: ["f1-momento-angular"], difficulty: 2,
+    generate(r) {
+      if (r.bool()) {
+        const I1 = r.int(30, 60) / 10, I2 = r.int(8, 25) / 10, w1 = r.int(1, 5);
+        return { prompt: `Una patinadora gira a $${w1}$ rev/s con los brazos abiertos ($I = ${dec(I1)}$ kg·m²). Al cerrarlos, su momento de inercia baja a $${dec(I2)}$ kg·m². ¿A cuántas rev/s gira ahora?`, answer: I1 * w1 / I2,
+          solution: [`No hay torque externo: se [[f1-momento-angular|conserva el momento angular]], $I_1\\omega_1 = I_2\\omega_2$.`, `$\\omega_2 = \\frac{${dec(I1)}\\cdot${w1}}{${dec(I2)}} \\approx ${num(I1 * w1 / I2, 4)}$ rev/s.`],
+          verify: { kind: "zero", fn: w2 => [(I1 * w1 - I2 * w2) / (I1 * w1)] } };
+      }
+      const M1 = r.int(1, 10), M2 = r.int(1, 10), Rr = r.int(10, 40) / 100, rpm = r.int(1, 10) * 30;
+      const w2 = M1 * rpm / (M1 + M2);
+      return { prompt: `Un disco de $${M1}$ kg gira a $${rpm}$ rpm. Sobre él se deja caer, centrado, otro disco de $${M2}$ kg del mismo radio, inicialmente quieto, y terminan girando juntos. ¿A cuántas rpm?`, answer: w2,
+        solution: [`Choque rotacional: se [[f1-momento-angular|conserva el momento angular]] ($I \\propto M$ porque tienen el mismo radio).`, `$\\omega_f = \\frac{M_1}{M_1 + M_2}\\omega_0 = \\frac{${M1}}{${M1 + M2}}\\cdot${rpm} \\approx ${num(w2, 4)}$ rpm.`],
+        verify: { kind: "zero", fn: wf => [(0.5 * M1 * Rr * Rr * rpm - 0.5 * (M1 + M2) * Rr * Rr * wf) / (0.5 * M1 * Rr * Rr * rpm)] } };
+    }
+  };
+  T["f1-momang-vf"] = {
+    type: "tf", concepts: ["f1-momento-angular"], difficulty: 2,
+    generate(r) {
+      const I1 = r.int(30, 60) / 10, I2 = r.int(8, 25) / 10, w1 = r.int(1, 5), q = r.pick(["L", "K", "Kmas"]);
+      return {
+        prompt: `Una patinadora pasa de $I = ${dec(I1)}$ kg·m² a $I = ${dec(I2)}$ kg·m² cerrando los brazos, sin torques externos. <b>Verdadero o falso:</b> ${q === "L" ? "su momento angular se conserva" : q === "K" ? "su energía cinética de rotación se conserva" : "su energía cinética de rotación aumenta"}.`,
+        answer: q !== "K",
+        explanation: `$L = I\\omega$ se conserva (no hay torque externo). Pero $K = \\frac{L^2}{2I}$ **aumenta** al bajar $I$: la energía extra sale del trabajo de sus músculos al tirar de los brazos hacia adentro ([[f1-momento-angular]]).`,
+        solution: [`Que se conserve $L$ no implica que se conserve la energía.`],
+        verify: { kind: "truth", fn: () => { const w2 = I1 * w1 / I2, K1 = 0.5 * I1 * w1 * w1, K2 = 0.5 * I2 * w2 * w2; return q === "L" ? Math.abs(I1 * w1 - I2 * w2) < 1e-9 : q === "K" ? Math.abs(K1 - K2) < 1e-9 : K2 > K1; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-torque": {
+      title: "Torque y segunda ley para la rotación", aliases: ["torque", "momento de torsión", "momento de una fuerza", "segunda ley para la rotación"], concepts: ["f1-torque"],
+      summary: "τ = r × F (módulo r F sen θ). Para un rígido con eje fijo: Σ τ = I α.",
+      def: [R`**Torque** de una fuerza respecto de un punto: $\vec\tau = \vec r\times\vec F$, con módulo $\tau = rF\sin\theta = F\,d$, donde $d$ es el **brazo de palanca** (la distancia perpendicular del eje a la línea de acción de la fuerza).`,
+        R`**Segunda ley para la rotación** (eje fijo): $$\sum\tau = I\alpha.$$`],
+      idea: [R`El torque es a la rotación lo que la fuerza a la traslación, y el [[f1-inercia|momento de inercia]] hace de masa. Por eso las manijas de las puertas van lejos de las bisagras: con el mismo esfuerzo se logra más torque.`,
+        R`**Trabajo y potencia en rotación:** $W = \int\tau\,d\theta$ y $P = \tau\omega$.`],
+      examples: [{ q: R`Un disco de $I = 0{,}5$ kg·m² recibe un torque de 2 N·m. ¿$\alpha$?`, steps: [R`$\alpha = \frac{\tau}{I} = 4$ rad/s².`] }],
+      see: ["f1-inercia", "f1-rodadura", "f1-equilibrio"]
+    },
+    "f1-rodadura": {
+      title: "Rodadura sin deslizamiento", aliases: ["rodadura", "rueda sin deslizar", "rodar sin deslizar", "condición de rodadura"], concepts: ["f1-rodadura"],
+      summary: "Rodar sin deslizar: v_cm = ωR. La energía cinética es ½Mv² + ½Iω², y el rozamiento estático no hace trabajo.",
+      def: [R`**Condición de rodadura:** $v_{cm} = \omega R$ (el punto de contacto está instantáneamente quieto). La energía cinética total es $$K = \tfrac12Mv_{cm}^2 + \tfrac12I_{cm}\omega^2.$$`],
+      idea: [R`Si $I = \beta MR^2$, al bajar una altura $h$: $v = \sqrt{\frac{2gh}{1 + \beta}}$. **Carrera en un plano inclinado:** gana la esfera maciza ($\beta = \frac25$), después el cilindro ($\frac12$), la esfera hueca ($\frac23$) y último el aro ($1$). No importan ni la masa ni el radio, solo la forma.`,
+        R`El rozamiento estático es el que hace girar al cuerpo, pero no disipa energía porque el punto de contacto no desliza.`],
+      examples: [{ q: R`Un cilindro baja 1 m rodando. ¿Velocidad?`, steps: [R`$v = \sqrt{\frac{2\cdot 9{,}8\cdot 1}{1{,}5}} \approx 3{,}6$ m/s (contra $4{,}4$ m/s si deslizara sin rozamiento).`] }],
+      see: ["f1-torque", "f1-inercia", "f1-energia"]
+    },
+    "f1-momento-angular": {
+      title: "Momento angular y su conservación", aliases: ["momento angular", "cantidad de movimiento angular", "conservación del momento angular", "conserva el momento angular", "giróscopo", "precesión"], concepts: ["f1-momento-angular"],
+      summary: "L = I ω (eje fijo). Σ τ_ext = dL/dt: sin torque externo, L se conserva.",
+      def: [R`**Momento angular** de una partícula: $\vec L = \vec r\times\vec p$. Para un rígido que gira alrededor de un eje de simetría: $\vec L = I\vec\omega$.`,
+        R`$$\sum\vec\tau_{\text{ext}} = \frac{d\vec L}{dt}.$$ Si el torque externo es nulo, $\vec L$ se conserva.`],
+      idea: [R`Patinadoras, clavadistas y gatos que caen de pie bajan su $I$ para girar más rápido. Una estrella que colapsa achica su radio y termina girando muchísimo más rápido (los púlsares).`,
+        R`**Giróscopo y precesión:** si el torque es perpendicular a $\vec L$, cambia su dirección y no su módulo: el eje de un trompo gira lentamente alrededor de la vertical, en vez de caerse.`],
+      examples: [{ q: R`Un disco a 60 rpm recibe otro disco igual, quieto, encima. ¿Velocidad final?`, steps: [R`$I\omega_0 = 2I\omega_f \Rightarrow \omega_f = 30$ rpm.`] }],
+      see: ["f1-torque", "f1-momento", "f1-inercia"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-torque": { name: "Torque y τ = Iα" }, "f1-rodadura": { name: "Rodadura" }, "f1-momento-angular": { name: "Momento angular" } },
+    templates: T,
+    units: [{
+      id: "f1-rot-din", order: 7, program: "Unidad 7", title: "Dinámica del movimiento rotacional", icon: "rotate-ccw",
+      diagnostic: ["f1-torque-num", "f1-polea-num", "f1-patinadora-num"],
+      lessons: [
+        { id: "f1-torque", title: "Torque y τ = Iα", templates: ["f1-torque-num", "f1-polea-num"], theory: ["f1-torque", "f1-inercia"],
+          intro: R`$\tau = rF\sin\theta$ y $\sum\tau = I\alpha$. En una polea con masa, la soga de cada lado tiene distinta tensión.` },
+        { id: "f1-rodadura", title: "Rodadura y momento angular", templates: ["f1-momang-vf", "f1-rodadura-num", "f1-patinadora-num"], theory: ["f1-rodadura", "f1-momento-angular"],
+          intro: R`Rodadura: $v = \omega R$ y $K = \frac12Mv^2 + \frac12I\omega^2$. Sin torque externo, $L = I\omega$ se conserva.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 8 · EQUILIBRIO DE CUERPOS RÍGIDOS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dec = x => String(x).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180;
+
+  T["f1-palanca-num"] = {
+    type: "numeric", concepts: ["f1-equilibrio"], difficulty: 1,
+    generate(r) {
+      const m1 = r.int(15, 50), m2 = r.int(15, 50), d1 = r.int(5, 20) / 10, d2 = m1 * d1 / m2;
+      if (m1 === m2) return null;
+      return {
+        prompt: `En un subibaja (sin masa propia, apoyado en el centro) se sienta un chico de $${m1}$ kg a $${dec(d1)}$ m del apoyo. ¿A qué distancia (m) del otro lado tiene que sentarse uno de $${m2}$ kg para equilibrarlo?`,
+        answer: d2,
+        solution: [`[[f1-equilibrio|Equilibrio]] de torques respecto del apoyo: $m_1g\\,d_1 = m_2g\\,d_2$.`, `$d_2 = \\frac{${m1}\\cdot${dec(d1)}}{${m2}} \\approx ${num(d2, 4)}$ m.`],
+        verify: { kind: "zero", fn: d => [(m1 * g * d1 - m2 * g * d) / (m1 * g * d1)] }
+      };
+    }
+  };
+  T["f1-viga-num"] = {
+    type: "numeric", concepts: ["f1-equilibrio"], difficulty: 2,
+    generate(r) {
+      const L = r.int(2, 10), W = r.int(1, 10) * 100, P = r.int(1, 20) * 100, x = r.int(1, L * 2 - 1) / 2, ask = r.pick(["R1", "R2"]);
+      const R1 = W / 2 + P * (L - x) / L, R2 = W + P - R1;
+      return {
+        prompt: `Una viga uniforme de $${L}$ m y $${W}$ N de peso está apoyada en sus dos extremos. Una carga de $${P}$ N está a $${dec(x)}$ m del extremo izquierdo. ¿Cuánto vale la reacción del apoyo ${ask === "R1" ? "izquierdo" : "derecho"} (N)?`,
+        answer: ask === "R1" ? R1 : R2,
+        solution: [
+          `[[f1-equilibrio|Condiciones de equilibrio]]: $R_1 + R_2 = W + P$ y suma de torques nula.`,
+          `Torques respecto del extremo izquierdo: $R_2L = W\\frac L2 + Px \\Rightarrow R_2 = ${num(R2, 4)}$ N.`,
+          `$R_1 = W + P - R_2 = ${num(R1, 4)}$ N.`
+        ],
+        verify: { kind: "zero", fn: Rv => { const r1 = ask === "R1" ? Rv : W + P - Rv, r2 = W + P - r1; return [(r1 + r2 - W - P) / (W + P), (r2 * L - W * L / 2 - P * x) / ((W + P) * L), (-r1 * L + W * L / 2 + P * (L - x)) / ((W + P) * L)]; } }
+      };
+    }
+  };
+  T["f1-escalera-num"] = {
+    type: "numeric", concepts: ["f1-equilibrio"], difficulty: 3,
+    generate(r) {
+      const th = r.pick([45, 50, 53, 60, 65, 70, 75]), mu = 1 / (2 * Math.tan(rad(th)));
+      return {
+        prompt: `Una escalera uniforme está apoyada en una pared **sin rozamiento**, formando $${th}^\\circ$ con el piso. ¿Cuál es el mínimo coeficiente de rozamiento estático con el piso para que no resbale?`,
+        answer: mu,
+        solution: [
+          `Fuerzas: peso $W$ en el medio, normal del piso $N$, rozamiento $f$ y normal de la pared $N_p$ ([[f1-equilibrio]]).`,
+          `Equilibrio: $N = W$, $f = N_p$. Torques respecto del pie: $N_p L\\sin\\theta = W\\frac L2\\cos\\theta \\Rightarrow f = \\frac{W}{2\\tan\\theta}$.`,
+          `$\\mu_{\\min} = \\frac{f}{N} = \\frac{1}{2\\tan ${th}^\\circ} \\approx ${num(mu, 4)}$.`
+        ],
+        // verificación: con μ = respuesta, las tres ecuaciones de equilibrio se cumplen con el rozamiento al máximo
+        verify: { kind: "zero", fn: m => { const W = 1, L = 1, N = W, f = m * N, Np = f; return [Np * L * Math.sin(rad(th)) - W * (L / 2) * Math.cos(rad(th))]; } }
+      };
+    }
+  };
+  T["f1-estab-vf"] = {
+    type: "tf", concepts: ["f1-equilibrio"], difficulty: 2,
+    generate(r) {
+      const w = r.int(2, 8) * 10, h = r.int(3, 12) * 10, al = r.int(5, 60);
+      const crit = Math.atan(w / h) * 180 / Math.PI;
+      if (Math.abs(al - crit) < 1) return null;
+      const vuelca = al > crit;
+      return {
+        prompt: `Una caja uniforme de $${w}$ cm de ancho y $${h}$ cm de alto se inclina $${al}^\\circ$ apoyada sobre una arista y se suelta. <b>Verdadero o falso:</b> vuelve a su posición (no vuelca).`,
+        answer: !vuelca,
+        explanation: `Vuelca si la vertical por el centro de gravedad pasa del otro lado de la arista de apoyo, o sea si el ángulo supera $\\arctan\\frac{${w}}{${h}} \\approx ${num(crit, 3)}^\\circ$ ([[f1-equilibrio|estabilidad]]).`,
+        solution: [`Mientras el peso haga torque hacia la base, la caja vuelve: es un equilibrio estable para inclinaciones chicas.`],
+        // verificación: posición horizontal del centro de gravedad respecto de la arista después de rotar la caja
+        verify: { kind: "truth", fn: () => { const t = al * Math.PI / 180, cx = (w / 2) * Math.cos(t) - (h / 2) * Math.sin(t); return cx > 0; } }
+      };
+    }
+  };
+  T["f1-cg-num"] = {
+    type: "numeric", concepts: ["f1-equilibrio"], difficulty: 2,
+    generate(r) {
+      // placa en L: rectángulo A (a x b) en el origen + rectángulo B (c x d) apoyado a la derecha
+      const a = r.int(1, 4), b = r.int(3, 8), c = r.int(2, 6), d = r.int(1, 3);
+      const A1 = a * b, A2 = c * d, xc = (A1 * a / 2 + A2 * (a + c / 2)) / (A1 + A2);
+      return {
+        prompt: `Una placa uniforme en forma de L está formada por un rectángulo de $${a}\\times${b}$ (ancho $\\times$ alto) con la esquina inferior izquierda en el origen y, pegado a su derecha sobre el piso, otro de $${c}\\times${d}$. ¿Cuál es la coordenada $x$ de su centro de gravedad?`,
+        answer: xc, answerTex: H.frac(A1 * a + A2 * (2 * a + c), 2 * (A1 + A2)),
+        solution: [`Cada rectángulo se reemplaza por su área en su centro ([[f1-equilibrio|centro de gravedad]]): $(${num(a / 2)}, \\cdot)$ con área $${A1}$ y $(${num(a + c / 2)}, \\cdot)$ con área $${A2}$.`, `$x_{cg} = \\frac{${A1}\\cdot${num(a / 2)} + ${A2}\\cdot${num(a + c / 2)}}{${A1 + A2}} \\approx ${num(xc, 4)}$.`],
+        // verificación: integración en una grilla sobre la forma
+        // (grilla de 40 celdas por unidad: los bordes de la placa caen justo entre celdas)
+        verify: { kind: "value", tol: 1e-9, fn: () => { let sx = 0, s = 0; const X = a + c, Y = Math.max(b, d), nx = 40 * X, ny = 40 * Y; for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const x = (i + 0.5) / 40, y = (j + 0.5) / 40; if ((x < a && y < b) || (x >= a && y < d)) { sx += x; s++; } } return sx / s; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-equilibrio": {
+      title: "Equilibrio de cuerpos rígidos y centro de gravedad", aliases: ["equilibrio estático", "condiciones de equilibrio", "centro de gravedad", "brazo de palanca", "palanca", "estabilidad"], concepts: ["f1-equilibrio"],
+      summary: "Un rígido está en equilibrio si Σ F = 0 y Σ τ = 0 respecto de cualquier punto.",
+      def: [R`**Condiciones de equilibrio** de un cuerpo rígido: $$\sum\vec F = 0 \qquad\text{y}\qquad \sum\vec\tau = 0$$ (la segunda, respecto de **cualquier** punto si se cumple la primera).`,
+        R`**Centro de gravedad:** el punto donde se puede considerar aplicado todo el peso. En un campo gravitatorio uniforme coincide con el [[f1-cm|centro de masa]].`],
+      idea: [R`**Truco:** tomá torques respecto del punto donde hay más fuerzas desconocidas: esas fuerzas no hacen torque y se eliminan de la ecuación.`,
+        R`**Estabilidad:** un equilibrio es estable si, al apartar un poco el cuerpo, el peso genera un torque que lo devuelve. Un objeto apoyado es estable mientras la vertical por su centro de gravedad caiga dentro de su base.`],
+      examples: [{ q: R`Una tabla de 4 m y 200 N apoyada en sus extremos. Un pintor de 600 N está a 1 m del apoyo izquierdo. ¿Reacciones?`, steps: [R`Torques respecto del izquierdo: $4R_2 = 200\cdot 2 + 600\cdot 1 \Rightarrow R_2 = 250$ N.`, R`$R_1 = 800 - 250 = 550$ N.`] }],
+      see: ["f1-torque", "f1-cm", "f1-newton"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-equilibrio": { name: "Equilibrio del rígido" } },
+    templates: T,
+    units: [{
+      id: "f1-equilibrio-u", order: 8, program: "Unidad 8", title: "Equilibrio de cuerpos rígidos", icon: "target",
+      diagnostic: ["f1-palanca-num", "f1-viga-num", "f1-escalera-num"],
+      lessons: [
+        { id: "f1-equilibrio", title: "Condiciones de equilibrio", templates: ["f1-palanca-num", "f1-viga-num", "f1-escalera-num"], theory: ["f1-equilibrio", "f1-torque"],
+          intro: R`$\sum\vec F = 0$ y $\sum\vec\tau = 0$. Tomá torques respecto del punto con más incógnitas.` },
+        { id: "f1-cg", title: "Centro de gravedad", templates: ["f1-estab-vf", "f1-cg-num"], theory: ["f1-equilibrio", "f1-cm"],
+          intro: R`En un campo uniforme, el centro de gravedad es el centro de masa: $x_{cg} = \frac{\sum m_ix_i}{\sum m_i}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 9 · GRAVITACIÓN
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const G = 6.674e-11, MT = 5.97e24, RT = 6.371e6;
+  const sci = x => { const e = Math.floor(Math.log10(Math.abs(x))), m = x / 10 ** e; return `${num(m, 3).replace(".", "{,}")}\\times10^{${e}}`; };
+  const BODIES = [{ n: "la Tierra", M: MT, R: RT }, { n: "la Luna", M: 7.35e22, R: 1.737e6 }, { n: "Marte", M: 6.42e23, R: 3.39e6 },
+    { n: "Venus", M: 4.87e24, R: 6.052e6 }, { n: "Mercurio", M: 3.30e23, R: 2.44e6 }, { n: "Júpiter", M: 1.898e27, R: 6.99e7 }];
+  // órbita en el plano: estado [x, y, vx, vy]
+  const orbitF = GM => (_, s) => { const r3 = Math.hypot(s[0], s[1]) ** 3; return [s[2], s[3], -GM * s[0] / r3, -GM * s[1] / r3]; };
+
+  T["f1-grav-num"] = {
+    type: "numeric", concepts: ["f1-gravitacion"], difficulty: 1,
+    generate(r) {
+      const v = r.pick(["altura", "planeta", "fuerza"]);
+      if (v === "altura") {
+        const h = r.pick([400, 1000, 2000, 6371, 20000, 36000]) * 1000, gh = G * MT / (RT + h) ** 2;
+        return { prompt: `¿Cuánto vale la aceleración de la gravedad (m/s²) a $${num(h / 1000)}$ km de altura sobre la Tierra? ($G = 6{,}674\\times10^{-11}$, $M_T = 5{,}97\\times10^{24}$ kg, $R_T = 6371$ km)`, answer: gh,
+          solution: [`[[f1-gravitacion|Ley de gravitación]]: $g(h) = \\frac{GM_T}{(R_T + h)^2}$.`, `$g \\approx ${num(gh, 4)}$ m/s².${h === 400000 ? " ¡En la estación espacial la gravedad es casi el 90 % de la de la superficie! Los astronautas flotan porque están en caída libre." : ""}`],
+          verify: { kind: "value", fn: () => (G * MT / (RT * RT)) * (RT / (RT + h)) ** 2 } };
+      }
+      if (v === "planeta") {
+        const fm = r.pick([0.1, 0.5, 2, 3, 5]), fr = r.pick([0.5, 0.8, 1.5, 2]), gp = 9.8 * fm / (fr * fr);
+        return { prompt: `Un planeta tiene $${String(fm).replace(".", "{,}")}$ veces la masa de la Tierra y $${String(fr).replace(".", "{,}")}$ veces su radio. ¿Cuánto vale $g$ en su superficie? ($g_T = 9{,}8$ m/s²)`, answer: gp,
+          solution: [`$g = \\frac{GM}{R^2}$ ([[f1-gravitacion]]), así que $\\frac{g_p}{g_T} = \\frac{M_p/M_T}{(R_p/R_T)^2}$.`, `$g_p = 9{,}8\\cdot\\frac{${String(fm).replace(".", "{,}")}}{${String(fr * fr).replace(".", "{,}")}} \\approx ${num(gp, 4)}$ m/s².`],
+          verify: { kind: "value", fn: () => { const g0 = G * MT / RT ** 2; return 9.8 * (G * fm * MT / (fr * RT) ** 2) / g0; } } };
+      }
+      const m1 = r.int(1, 9) * 100, m2 = r.int(1, 9) * 100, d = r.int(1, 10) / 2, F = G * m1 * m2 / (d * d);
+      return { prompt: `¿Con qué fuerza (en N) se atraen dos esferas de $${m1}$ kg y $${m2}$ kg cuyos centros están a $${String(d).replace(".", "{,}")}$ m? ($G = 6{,}674\\times10^{-11}$ N·m²/kg²)`, answer: F,
+        solution: [`$F = \\frac{Gm_1m_2}{d^2}$ ([[f1-gravitacion]]).`, `$F \\approx ${sci(F)}$ N: diminuta. La gravedad es la más débil de las interacciones.`],
+        verify: { kind: "value", fn: () => Math.exp(Math.log(G) + Math.log(m1) + Math.log(m2) - 2 * Math.log(d)) } };
+    }
+  };
+  T["f1-orbita-num"] = {
+    type: "numeric", concepts: ["f1-orbitas"], difficulty: 3,
+    generate(r) {
+      const h = r.pick([300, 400, 800, 2000, 10000, 20200, 35786]) * 1000, rr = RT + h, GM = G * MT, ask = r.pick(["v", "T"]);
+      const v = Math.sqrt(GM / rr), Tp = 2 * Math.PI * Math.sqrt(rr ** 3 / GM);
+      return {
+        prompt: `Un satélite está en órbita circular a $${num(h / 1000)}$ km de altura. ¿${ask === "v" ? "Qué velocidad orbital (km/s) tiene" : "Cuál es su período (en horas)"}? ($GM_T = 3{,}986\\times10^{14}$ m³/s², $R_T = 6371$ km)`,
+        answer: ask === "v" ? v / 1000 : Tp / 3600,
+        solution: [
+          `La gravedad hace de [[f1-dinamica-circular|fuerza centrípeta]]: $\\frac{GMm}{r^2} = \\frac{mv^2}{r} \\Rightarrow v = \\sqrt{\\frac{GM}{r}}$ ([[f1-orbitas]]).`,
+          `$r = R_T + h = ${num(rr / 1000)}$ km: $v \\approx ${num(v / 1000, 4)}$ km/s.`,
+          `$T = \\frac{2\\pi r}{v} \\approx ${num(Tp / 3600, 4)}$ h.${h === 35786000 ? " ¡Es un día: la órbita geoestacionaria!" : ""}`
+        ],
+        // verificación: integramos la órbita en 2D y medimos cuánto tarda en volver a cruzar el eje x hacia arriba
+        verify: ask === "T"
+          ? { kind: "ode", f: orbitF(GM), y0: [rr, 0, 0, v], t1: 0, until: (t, s) => t > 0.75 * Tp && s[1] >= 0, g: (_, s) => s[1], dt: Tp / 20000, tmax: 2 * Tp, out: t => t / 3600, tol: 1e-4 }
+          : { kind: "zero", fn: vk => [(vk * 1000) ** 2 / rr / (GM / rr ** 2) - 1] }
+      };
+    }
+  };
+  T["f1-escape-num"] = {
+    type: "numeric", concepts: ["f1-orbitas"], difficulty: 2,
+    generate(r) {
+      const B = r.pick(BODIES), ve = Math.sqrt(2 * G * B.M / B.R);
+      return {
+        prompt: `¿Cuál es la velocidad de escape (km/s) desde la superficie de ${B.n}? ($M = ${sci(B.M)}$ kg, $R = ${num(B.R / 1000)}$ km, $G = 6{,}674\\times10^{-11}$)`,
+        answer: ve / 1000,
+        solution: [`Para escapar, la energía total tiene que ser $\\ge 0$: $\\frac12mv^2 - \\frac{GMm}{R} = 0$ ([[f1-orbitas|velocidad de escape]]).`, `$v_e = \\sqrt{\\frac{2GM}{R}} \\approx ${num(ve / 1000, 4)}$ km/s.`],
+        // verificación: lanzamiento radial con 0,999·v_e no escapa y con 1,001·v_e sí (simulación radial)
+        verify: { kind: "zero", fn: vk => {
+          const fly = v0 => { let rr = B.R, v = v0; const GM = G * B.M; for (let i = 0; i < 2e6; i++) { const dt = 1e-3 * rr / Math.max(Math.abs(v), 1); v += -GM / (rr * rr) * dt; rr += v * dt; if (v < 0) return false; if (rr > 1e3 * B.R) return true; } return true; };
+          return [fly(vk * 1000 * 0.98) ? 1 : 0, fly(vk * 1000 * 1.02) ? 0 : 1];
+        } }
+      };
+    }
+  };
+  T["f1-kepler-num"] = {
+    type: "numeric", concepts: ["f1-orbitas"], difficulty: 2,
+    generate(r) {
+      const pl = r.pick([["Marte", 1.524], ["Júpiter", 5.203], ["Saturno", 9.537], ["Venus", 0.723], ["Mercurio", 0.387], ["un asteroide", 2.8]]);
+      const Tp = pl[1] ** 1.5;
+      return {
+        prompt: `La Tierra orbita al Sol a $1$ UA en $1$ año. Si ${pl[0]} está a $${String(pl[1]).replace(".", "{,}")}$ UA, ¿cuántos años dura su órbita?`,
+        answer: Tp,
+        solution: [`[[f1-orbitas|Tercera ley de Kepler]]: $T^2 \\propto a^3$, así que $\\frac{T}{T_T} = \\left(\\frac{a}{a_T}\\right)^{3/2}$.`, `$T = ${String(pl[1]).replace(".", "{,}")}^{3/2} \\approx ${num(Tp, 4)}$ años.`],
+        // verificación: período de órbitas circulares simuladas con GM del Sol en UA y años (GM = 4π²)
+        verify: { kind: "ode", f: orbitF(4 * Math.PI * Math.PI), y0: [pl[1], 0, 0, 2 * Math.PI / Math.sqrt(pl[1])], t1: 0, until: (t, s) => t > 0.75 * Tp && s[1] >= 0, g: (_, s) => s[1], dt: Tp / 20000, tmax: 2 * Tp, out: t => t, tol: 1e-4 }
+      };
+    }
+  };
+  T["f1-grav-vf"] = {
+    type: "tf", concepts: ["f1-gravitacion"], difficulty: 1,
+    generate(r) {
+      const h = r.pick([400, 1000, 3000]), q = r.pick(["casi-nula", "mayor-70"]);
+      const ratio = (RT / (RT + h * 1000)) ** 2;
+      return {
+        prompt: `<b>Verdadero o falso:</b> a $${h}$ km de altura, ${q === "casi-nula" ? "la gravedad terrestre es casi nula (menos del 10 % de la de la superficie)" : "la gravedad terrestre es todavía más del 50 % de la de la superficie"}.`,
+        answer: q === "mayor-70" ? ratio > 0.5 : ratio < 0.1,
+        explanation: `$\\frac{g(h)}{g_0} = \\left(\\frac{R_T}{R_T + h}\\right)^2 \\approx ${num(100 * ratio, 3)}\\%$. Los astronautas flotan porque están en **caída libre** junto con la nave, no porque no haya gravedad ([[f1-gravitacion]]).`,
+        solution: [`La gravedad decae como $\\frac{1}{r^2}$ desde el centro de la Tierra, no desde la superficie.`],
+        verify: { kind: "truth", fn: () => { const g0 = G * MT / RT ** 2, gh = G * MT / (RT + h * 1000) ** 2; return q === "mayor-70" ? gh / g0 > 0.5 : gh / g0 < 0.1; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-gravitacion": {
+      title: "Ley de gravitación universal", aliases: ["ley de gravitación", "gravitación universal", "constante de gravitación", "energía potencial gravitatoria"], concepts: ["f1-gravitacion"],
+      summary: "F = G m₁m₂/r². En la superficie, g = GM/R². La energía potencial es U = −GMm/r.",
+      def: [R`$$F = \frac{Gm_1m_2}{r^2}, \qquad G = 6{,}674\times10^{-11}\ \text{N m}^2/\text{kg}^2$$ atractiva, a lo largo de la recta que une los cuerpos. Una esfera homogénea atrae desde afuera como si toda su masa estuviera en el centro.`,
+        R`**Gravedad en la superficie:** $g = \frac{GM}{R^2}$; a una altura $h$, $g(h) = \frac{GM}{(R + h)^2}$.`,
+        R`**Energía potencial gravitatoria:** $U = -\frac{GMm}{r}$ (con $U = 0$ en el infinito). Cerca de la superficie se reduce a $\Delta U \approx mg\,\Delta h$.`],
+      idea: [R`La misma ley que hace caer una manzana mantiene a la Luna en órbita: Newton comparó la aceleración de la Luna ($\approx 2{,}7\times10^{-3}$ m/s²) con $g$ y vio que la razón es $(R_T/r_{Luna})^2$.`,
+        R`En una estación espacial la gravedad es casi el 90 % de la de la superficie: los astronautas "flotan" porque caen junto con la nave (están en órbita, que es una caída libre permanente).`],
+      examples: [{ q: R`¿Cuánto pesarías en la Luna ($g \approx 1{,}62$ m/s²) si tu masa es 70 kg?`, steps: [R`$P = mg = 70\cdot 1{,}62 \approx 113$ N (un sexto de lo que pesás en la Tierra).`] }],
+      see: ["f1-orbitas", "f1-dinamica-circular", "f1-energia"]
+    },
+    "f1-orbitas": {
+      title: "Satélites, leyes de Kepler y velocidad de escape", aliases: ["leyes de Kepler", "tercera ley de Kepler", "velocidad de escape", "órbita", "órbitas", "satélite", "satélites", "órbita geoestacionaria", "colapso gravitacional"], concepts: ["f1-orbitas"],
+      summary: "Órbita circular: v = √(GM/r), T² = 4π² r³/(GM). Escape: v = √(2GM/R).",
+      def: [R`**Órbita circular:** la gravedad es la fuerza centrípeta, $\frac{GMm}{r^2} = \frac{mv^2}{r}$, así que $v = \sqrt{\frac{GM}{r}}$ y $T = 2\pi\sqrt{\frac{r^3}{GM}}$.`,
+        R`**Leyes de Kepler:** 1) las órbitas son elipses con el Sol en un foco; 2) el radio vector barre áreas iguales en tiempos iguales (conservación del [[f1-momento-angular|momento angular]]); 3) $T^2 \propto a^3$.`,
+        R`**Velocidad de escape:** la mínima para no volver nunca, con energía total cero: $v_e = \sqrt{\frac{2GM}{R}}$ (Tierra: $11{,}2$ km/s).`],
+      idea: [R`La órbita geoestacionaria ($\approx 36\,000$ km de altura) tiene período de un día: el satélite queda siempre sobre el mismo punto del ecuador.`,
+        R`**Colapso gravitacional:** si una nube de gas es suficientemente masiva, su propia gravedad le gana a la presión y se contrae. Así se forman las estrellas, y si la contracción no se detiene, estrellas de neutrones o agujeros negros (donde $v_e$ supera la velocidad de la luz).`],
+      demo: [R`**Tercera ley para órbitas circulares.** De $v = \sqrt{\frac{GM}{r}}$ y $T = \frac{2\pi r}{v}$: $T^2 = \frac{4\pi^2r^2}{GM/r} = \frac{4\pi^2}{GM}r^3$. $\blacksquare$`,
+        R`**Escape.** $E = \frac12mv^2 - \frac{GMm}{r}$ se conserva. Para llegar a $r \to \infty$ con $v \ge 0$ hace falta $E \ge 0$, o sea $v \ge \sqrt{\frac{2GM}{R}}$.`],
+      examples: [{ q: R`¿Velocidad de la estación espacial a 400 km?`, steps: [R`$v = \sqrt{\frac{3{,}986\times10^{14}}{6{,}771\times10^6}} \approx 7{,}67$ km/s: da una vuelta cada 92 minutos.`] }],
+      see: ["f1-gravitacion", "f1-dinamica-circular", "f1-momento-angular"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-gravitacion": { name: "Gravitación universal" }, "f1-orbitas": { name: "Órbitas, Kepler y escape" } },
+    templates: T,
+    units: [{
+      id: "f1-gravitacion-u", order: 9, program: "Unidad 9", title: "Gravitación", icon: "sparkles",
+      diagnostic: ["f1-grav-num", "f1-orbita-num", "f1-kepler-num"],
+      lessons: [
+        { id: "f1-gravitacion", title: "Ley de gravitación", templates: ["f1-grav-vf", "f1-grav-num"], theory: ["f1-gravitacion"],
+          intro: R`$F = \frac{Gm_1m_2}{r^2}$ y $g = \frac{GM}{R^2}$, que decae como $\frac{1}{r^2}$ desde el centro.` },
+        { id: "f1-orbitas", title: "Satélites y Kepler", templates: ["f1-orbita-num", "f1-kepler-num", "f1-escape-num"], theory: ["f1-orbitas", "f1-gravitacion"],
+          intro: R`Órbita circular: $v = \sqrt{GM/r}$, $T^2 = \frac{4\pi^2}{GM}r^3$. Escape: $v_e = \sqrt{2GM/R}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 10 · MOVIMIENTO PERIÓDICO
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dec = x => String(x).replace(".", "{,}");
+  // período medido en una simulación: tiempo entre dos cruces sucesivos de x = 0 hacia arriba
+  const periodOf = (f, y0, Test) => ({ kind: "ode", f, y0, t1: 0, until: (t, y) => t > 0.75 * Test && y[0] >= 0 && y[1] > 0, g: (_, y) => y[0], dt: Test / 20000, out: t => t, tol: 1e-4 });
+
+  T["f1-mas-num"] = {
+    type: "numeric", concepts: ["f1-mas"], difficulty: 1,
+    generate(r) {
+      const m = r.int(1, 20) / 4, k = r.int(5, 100) * 10, A = r.int(2, 20) / 100, ask = r.pick(["T", "f", "vmax", "amax"]);
+      const w = Math.sqrt(k / m), Tp = 2 * Math.PI / w;
+      const ans = { T: Tp, f: 1 / Tp, vmax: A * w, amax: A * w * w }[ask];
+      return {
+        prompt: `Una masa de $${dec(m)}$ kg oscila sin rozamiento unida a un resorte de $k = ${k}$ N/m con amplitud $${dec(num(A))}$ m. Calculá ${{ T: "el período (s)", f: "la frecuencia (Hz)", vmax: "la velocidad máxima (m/s)", amax: "la aceleración máxima (m/s²)" }[ask]}.`,
+        answer: ans,
+        solution: [`[[f1-mas|MAS]]: $\\omega = \\sqrt{\\frac km} \\approx ${num(w, 4)}$ rad/s, $T = \\frac{2\\pi}{\\omega}$, $v_{\\max} = A\\omega$, $a_{\\max} = A\\omega^2$.`, `Respuesta: $\\approx ${num(ans, 4)}$.`],
+        verify: ask === "T" || ask === "f"
+          ? Object.assign(periodOf((_, y) => [y[1], -(k / m) * y[0]], [0, A * w], Tp), ask === "f" ? { out: t => 1 / t } : {})
+          : { kind: "value", tol: 1e-4, fn: () => { let x = A, v = 0, vm = 0, am = 0; const dt = Tp / 40000; for (let i = 0; i < 40000; i++) { const a = -(k / m) * x; am = Math.max(am, Math.abs(a)); v += a * dt; x += v * dt; vm = Math.max(vm, Math.abs(v)); } return ask === "vmax" ? vm : am; } }
+      };
+    }
+  };
+  T["f1-pendulo-num"] = {
+    type: "numeric", concepts: ["f1-pendulos"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["simple", "simple", "fisico", "luna"]);
+      if (v === "fisico") {
+        const L = r.int(5, 20) / 10, Tp = 2 * Math.PI * Math.sqrt(2 * L / (3 * g));
+        return { prompt: `Una varilla uniforme de $${dec(L)}$ m oscila (con amplitud chica) colgada de un extremo. ¿Cuál es su período? ($g = 9{,}8$ m/s²)`, answer: Tp,
+          solution: [`[[f1-pendulos|Péndulo físico]]: $T = 2\\pi\\sqrt{\\frac{I}{mgd}}$ con $I = \\frac{mL^2}{3}$ y $d = \\frac L2$.`, `$T = 2\\pi\\sqrt{\\frac{2L}{3g}} \\approx ${num(Tp, 4)}$ s (más corto que un péndulo simple de largo $L$).`],
+          verify: periodOf((_, y) => [y[1], -(g * (L / 2) / (L * L / 3)) * Math.sin(y[0])], [0, 0.002], Tp) };
+      }
+      const L = r.int(2, 30) / 10, gg = v === "luna" ? 1.62 : g, Tp = 2 * Math.PI * Math.sqrt(L / gg);
+      return { prompt: `¿Cuál es el período de un péndulo simple de $${dec(L)}$ m ${v === "luna" ? "en la Luna ($g = 1{,}62$ m/s²)" : "($g = 9{,}8$ m/s²)"} para amplitudes chicas?`, answer: Tp,
+        solution: [`[[f1-pendulos|Péndulo simple]], ángulos chicos: $T = 2\\pi\\sqrt{\\frac{L}{g}}$ (no depende de la masa ni de la amplitud).`, `$T \\approx ${num(Tp, 4)}$ s.`],
+        verify: periodOf((_, y) => [y[1], -(gg / L) * Math.sin(y[0])], [0, 0.002], Tp) };
+    }
+  };
+  T["f1-mas-energia-num"] = {
+    type: "numeric", concepts: ["f1-mas"], difficulty: 2,
+    generate(r) {
+      const m = r.int(1, 10) / 2, k = r.int(5, 60) * 10, A = r.int(5, 30) / 100, x = Math.round(A * r.pick([0.2, 0.4, 0.5, 0.6, 0.8]) * 1000) / 1000;
+      const w = Math.sqrt(k / m), vx = w * Math.sqrt(A * A - x * x);
+      return {
+        prompt: `Un oscilador masa-resorte ($m = ${dec(m)}$ kg, $k = ${k}$ N/m) tiene amplitud $${dec(num(A))}$ m. ¿Qué rapidez (m/s) tiene cuando pasa por $x = ${dec(num(x))}$ m?`,
+        answer: vx,
+        solution: [`[[f1-mas|Energía en el MAS]]: $\\frac12kA^2 = \\frac12mv^2 + \\frac12kx^2$.`, `$v = \\omega\\sqrt{A^2 - x^2} = ${num(w, 4)}\\sqrt{${num(A * A, 5)} - ${num(x * x, 5)}} \\approx ${num(vx, 4)}$ m/s.`],
+        verify: { kind: "ode", f: (_, y) => [y[1], -(k / m) * y[0]], y0: [A, 0], t1: 0, until: (_, y) => y[0] <= x, g: (_, y) => y[0] - x, dt: 2 * Math.PI / w / 40000, out: (_, y) => Math.abs(y[1]) }
+      };
+    }
+  };
+  T["f1-amort-num"] = {
+    type: "numeric", concepts: ["f1-amortiguadas"], difficulty: 3,
+    generate(r) {
+      const m = r.int(1, 10) / 2, k = r.int(10, 100) * 10, b = r.int(1, 10) / 10, A0 = r.int(5, 20) / 100, t = r.int(2, 20);
+      const At = A0 * Math.exp(-b * t / (2 * m));
+      return {
+        prompt: `Un oscilador ($m = ${dec(m)}$ kg, $k = ${k}$ N/m) tiene rozamiento viscoso $F = -bv$ con $b = ${dec(b)}$ kg/s y arranca con amplitud $${dec(num(A0))}$ m. ¿Cuál es la amplitud de la envolvente (cm) a los $${t}$ s?`,
+        answer: 100 * At,
+        solution: [`[[f1-amortiguadas|Oscilaciones amortiguadas]] (amortiguamiento débil): $x(t) = A_0e^{-\\frac{b}{2m}t}\\cos(\\omega' t)$.`, `$A(${t}) = ${dec(num(A0))}\\,e^{-${num(b / (2 * m), 4)}\\cdot${t}} \\approx ${num(At, 4)}$ m $= ${num(100 * At, 3)}$ cm.`],
+        // verificación: simulamos el oscilador y reconstruimos la envolvente exacta a partir de x y v en el instante t
+        verify: { kind: "ode", f: (_, y) => [y[1], -(k / m) * y[0] - (b / m) * y[1]], y0: [A0, -b / (2 * m) * A0], t1: t, dt: 1e-4,
+          out: (_, y) => { const gam = b / (2 * m), wp = Math.sqrt(k / m - gam * gam); return 100 * Math.hypot(y[0], (y[1] + gam * y[0]) / wp); }, tol: 1e-4 }
+      };
+    }
+  };
+  T["f1-resonancia-vf"] = {
+    testN: 25, // simulación cara: menos instancias en los tests
+    type: "tf", concepts: ["f1-amortiguadas"], difficulty: 2,
+    generate(r) {
+      const m = 1, k = r.int(4, 25) ** 2, b = r.pick([0.2, 0.5, 1]), w0 = Math.sqrt(k / m), fac = r.pick([0.5, 2, 3]), q = r.pick(["mayor", "menor"]);
+      return {
+        prompt: `Un oscilador ($\\omega_0 = ${num(w0, 3)}$ rad/s, poco amortiguado) se fuerza con una fuerza periódica de amplitud fija. <b>Verdadero o falso:</b> la amplitud estacionaria es ${q} forzándolo a $\\omega = \\omega_0$ que forzándolo a $\\omega = ${num(fac, 2)}\\,\\omega_0$.`,
+        answer: q === "mayor",
+        explanation: `Es la [[f1-amortiguadas|resonancia]]: la amplitud es máxima cuando la frecuencia de la fuerza coincide (aproximadamente) con la natural del oscilador.`,
+        solution: [`$A(\\omega) = \\frac{F_0/m}{\\sqrt{(\\omega_0^2 - \\omega^2)^2 + (b\\omega/m)^2}}$: en $\\omega = \\omega_0$ solo queda el término de amortiguamiento.`],
+        // verificación: simulamos el oscilador forzado hasta el régimen estacionario y medimos la amplitud
+        verify: { kind: "truth", fn: () => {
+          const amp = w => { let x = 0, v = 0; const dt = 0.002 / w0, tEnd = 40 * m / b + 20 * 2 * Math.PI / w; let t = 0, mx = 0;
+            while (t < tEnd) { const a = (Math.cos(w * t) - b * v - k * x) / m; v += a * dt; x += v * dt; t += dt; if (t > tEnd - 4 * 2 * Math.PI / w) mx = Math.max(mx, Math.abs(x)); } return mx; };
+          const A1 = amp(w0), A2 = amp(fac * w0);
+          return q === "mayor" ? A1 > A2 : A1 < A2;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-mas": {
+      title: "Movimiento armónico simple", aliases: ["movimiento armónico simple", "MAS", "oscilador armónico", "sistema masa-resorte", "frecuencia angular"], concepts: ["f1-mas"],
+      summary: "Con fuerza restauradora F = −kx: x(t) = A cos(ωt + φ), ω = √(k/m), T = 2π√(m/k).",
+      def: [R`Si la fuerza es $F = -kx$ ([[f1-hooke|ley de Hooke]]), la segunda ley da $x'' = -\omega^2x$ con $\omega = \sqrt{k/m}$, cuya solución es $$x(t) = A\cos(\omega t + \varphi).$$ Período $T = \frac{2\pi}{\omega} = 2\pi\sqrt{\frac mk}$, frecuencia $f = \frac1T$.`,
+        R`**Energía:** $E = \frac12kA^2 = \frac12mv^2 + \frac12kx^2$, así que $v = \omega\sqrt{A^2 - x^2}$, con $v_{\max} = A\omega$ y $a_{\max} = A\omega^2$.`],
+      idea: [R`El período **no depende de la amplitud**: un resorte que oscila mucho tarda lo mismo que uno que oscila poco, porque va más rápido. Es la base de los relojes.`,
+        R`El MAS es la [[f1-circular|proyección de un movimiento circular uniforme]] sobre un diámetro, y la solución de una [[edo|ecuación diferencial]] de segundo orden.`,
+        { graph: { fns: [t => 2 * Math.cos(t), t => -2 * Math.sin(t)], xr: [0, 13], yr: [-3, 3] }, caption: R`Posición (violeta) y velocidad (naranja): la velocidad es máxima donde $x = 0$.` }],
+      demo: [R`Probamos $x = A\cos(\omega t + \varphi)$: $x' = -A\omega\sin(\omega t + \varphi)$ y $x'' = -A\omega^2\cos(\omega t + \varphi) = -\omega^2x$.`, R`Cumple $mx'' = -kx$ si $\omega^2 = \frac km$. $\blacksquare$`],
+      examples: [{ q: R`Una masa de 0,5 kg con un resorte de 200 N/m. ¿Período?`, steps: [R`$\omega = \sqrt{400} = 20$ rad/s, $T = \frac{2\pi}{20} \approx 0{,}31$ s.`] }],
+      see: ["f1-hooke", "f1-pendulos", "f1-amortiguadas"]
+    },
+    "f1-pendulos": {
+      title: "Péndulos: simple, físico y de torsión", aliases: ["péndulo simple", "péndulo físico", "péndulo de torsión", "péndulo"], concepts: ["f1-pendulos"],
+      summary: "Para ángulos chicos: simple T = 2π√(L/g), físico T = 2π√(I/(mgd)), torsión T = 2π√(I/κ).",
+      def: [R`**Péndulo simple** (masa puntual en una cuerda de largo $L$): $\theta'' = -\frac gL\sin\theta \approx -\frac gL\theta$, así que $T = 2\pi\sqrt{\frac Lg}$.`,
+        R`**Péndulo físico** (rígido que cuelga de un punto a distancia $d$ de su centro de masa): $T = 2\pi\sqrt{\frac{I}{mgd}}$, con $I$ respecto del eje de giro.`,
+        R`**Péndulo de torsión** (disco colgado de un alambre que se retuerce con torque $-\kappa\theta$): $T = 2\pi\sqrt{\frac{I}{\kappa}}$.`],
+      idea: [R`La aproximación $\sin\theta \approx \theta$ (ver [[lim-trig-notable]]) es lo que lo vuelve un [[f1-mas|MAS]]: vale bien hasta unos $15^\circ$. Para amplitudes grandes el período crece un poco.`,
+        R`El período del péndulo simple no depende de la masa: midiendo $T$ y $L$ se mide $g$.`],
+      examples: [{ q: R`¿Qué largo tiene un péndulo que "bate segundos" ($T = 2$ s)?`, steps: [R`$L = g\left(\frac{T}{2\pi}\right)^2 = 9{,}8\cdot\frac{1}{\pi^2} \approx 0{,}99$ m.`] }],
+      see: ["f1-mas", "f1-inercia"]
+    },
+    "f1-amortiguadas": {
+      title: "Oscilaciones amortiguadas, forzadas y resonancia", aliases: ["oscilaciones amortiguadas", "amortiguamiento", "oscilaciones forzadas", "resonancia"], concepts: ["f1-amortiguadas"],
+      summary: "Con rozamiento viscoso la amplitud decae como e^(−bt/2m). Forzando cerca de ω₀, la amplitud se dispara: resonancia.",
+      def: [R`**Amortiguada** ($F = -kx - bv$, amortiguamiento débil): $x(t) = Ae^{-\frac{b}{2m}t}\cos(\omega't + \varphi)$, con $\omega' = \sqrt{\omega_0^2 - \left(\frac{b}{2m}\right)^2}$.`,
+        R`**Forzada** (con $F_0\cos\omega t$): después de un transitorio oscila a la frecuencia $\omega$ de la fuerza, con amplitud $$A(\omega) = \frac{F_0/m}{\sqrt{(\omega_0^2 - \omega^2)^2 + (b\omega/m)^2}}.$$`],
+      idea: [R`**Resonancia:** si $\omega \approx \omega_0$ la amplitud es máxima, y cuanto menor el amortiguamiento, más alto y angosto es el pico. Columpios, copas que se rompen con una nota, puentes que oscilan con el viento o con gente marchando.`,
+        { graph: { fns: [w => 1 / Math.sqrt((4 - w * w) ** 2 + (0.3 * w) ** 2), w => 1 / Math.sqrt((4 - w * w) ** 2 + (1 * w) ** 2)], xr: [0, 5], yr: [0, 4] }, caption: R`Amplitud según la frecuencia forzante ($\omega_0 = 2$): poco amortiguamiento (violeta) y más amortiguamiento (naranja).` }],
+      examples: [{ q: R`Si $b/2m = 0{,}1$ s⁻¹, ¿en cuánto tiempo la amplitud baja a la mitad?`, steps: [R`$e^{-0{,}1t} = \frac12 \Rightarrow t = 10\ln 2 \approx 6{,}9$ s.`] }],
+      see: ["f1-mas", "edo"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-mas": { name: "Movimiento armónico simple" }, "f1-pendulos": { name: "Péndulos" }, "f1-amortiguadas": { name: "Amortiguadas, forzadas y resonancia" } },
+    templates: T,
+    units: [{
+      id: "f1-periodico", order: 10, program: "Unidad 10", title: "Movimiento periódico", icon: "rotate-ccw",
+      diagnostic: ["f1-mas-num", "f1-pendulo-num", "f1-mas-energia-num"],
+      lessons: [
+        { id: "f1-mas", title: "Movimiento armónico simple", templates: ["f1-mas-num", "f1-mas-energia-num"], theory: ["f1-mas", "f1-hooke"],
+          intro: R`$x = A\cos(\omega t + \varphi)$, $\omega = \sqrt{k/m}$. Energía: $\frac12kA^2 = \frac12mv^2 + \frac12kx^2$.` },
+        { id: "f1-pendulos", title: "Péndulos", templates: ["f1-pendulo-num"], theory: ["f1-pendulos"],
+          intro: R`Simple: $T = 2\pi\sqrt{L/g}$. Físico: $T = 2\pi\sqrt{I/(mgd)}$. Con ángulos chicos, son MAS.` },
+        { id: "f1-amortiguadas", title: "Amortiguadas y resonancia", templates: ["f1-amort-num", "f1-resonancia-vf"], theory: ["f1-amortiguadas"],
+          intro: R`La amplitud decae como $e^{-bt/2m}$. Forzando cerca de $\omega_0$ hay resonancia.` }
       ]
     }],
     cards

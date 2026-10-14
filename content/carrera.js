@@ -24,7 +24,7 @@
       ] },
       { n: 2, semesters: [
         { n: 1, subjects: [
-          { code: "F102B", title: "Física General II B", step: 4 },
+          { code: "F102B", title: "Física General II B", course: "f102b", step: 4 },
           { code: "M102", title: "Cálculo II", step: 5 },
           { code: "M106", title: "Geometría Analítica", step: 6 }
         ] },

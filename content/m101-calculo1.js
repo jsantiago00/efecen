@@ -1901,6 +1901,7 @@
     }
   };
   T["trig-param-num"] = {
+    testN: 120, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["trig-func"], difficulty: 2,
     generate(r) {
       const A = r.int(1, 5) * r.sign(), B = r.pick([1, 2, 3, 4, 0.5]), D = r.int(-3, 3), C = r.pick([0, 1, -1]);
@@ -3510,6 +3511,7 @@
     }
   };
   T["mono-vf"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "tf", concepts: ["sucesiones"], difficulty: 1,
     generate(r) {
       const k = r.int(1, 5);

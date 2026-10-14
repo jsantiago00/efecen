@@ -1,41 +1,65 @@
-# Progreso: efecen como "la carrera" (rama `carrera-fcen`)
+# Progreso: efecen como "la carrera"
 
-Objetivo: reconstruir la **Licenciatura en Ciencias Básicas con orientación en Física** (FCEN, UNCuyo, Plan Ord. 77/15 C.S.) para repasarla materia por materia. Este archivo se actualiza a medida que avanza el trabajo.
+Objetivo: reconstruir la **Licenciatura en Ciencias Básicas con orientación en Física** (FCEN, UNCuyo, Plan Ord. 77/15 C.S.) para repasarla materia por materia.
+
+Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque terminado (con los tests en verde) se pushea también a `main`, para poder probarlo en el celu.
 
 ## Estado
 
-| Paso | Materia | Estado |
-|---|---|---|
-| 1 | M101 Cálculo I | **completa**: 5 unidades del programa (7 en la app), 105 plantillas, 64 fichas |
-| 2 | M104 Introducción al Álgebra Lineal | pendiente |
-| 3 | F101 Física General I | en curso: transversal y unidades 1-5 (cinemática, dinámica, energía, cantidad de movimiento, fluidos) |
-| 4+ | 2.º año en adelante | pendiente (en la carrera como "Próximamente") |
+| Paso | Materia | Estado | Plantillas | Fichas |
+|---|---|---|---|---|
+| 1 | M101 Cálculo I | **completa**: las 5 unidades del programa (7 unidades en la app) | 105 | 64 |
+| 2 | M104 Introducción al Álgebra Lineal | **completa**: las 6 unidades del programa | 29 | 18 |
+| 3 | F101 Física General I | **completa**: unidad transversal y 10 unidades | 62 | 34 |
+| 4 | F102B Física General II B | en curso: unidades 1–4 (termodinámica) | 18 | 9 |
+| 5+ | M102, M106, M105, F102A, … | pendiente: aparecen en la carrera como "Próximamente" | — | — |
+
+Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
 ## Hecho
 
-- **Estructura de "la carrera"** (`content/carrera.js`): años → semestres → materias con código y paso del trayecto sugerido. Nueva pestaña *Carrera*; cada materia abre su mapa de unidades.
-- **Una materia = un curso en su archivo** (`content/m101-calculo1.js`, …). El archivo registra la materia con `E.registerCourse` y después agrega unidades con `E.extendCourse` (conceptos, plantillas, lecciones y apuntes).
-- **Test por unidad**: cada unidad bloqueada tiene un botón «Test de la unidad» (3 ejercicios, se aprueba con 2). Sigue existiendo el diagnóstico de toda la materia, unidad por unidad.
-- **Sesión del día**: mezcla los repasos vencidos de todas las materias con la lección actual de la materia activa.
-- **Migración**: el progreso guardado bajo `calculo` pasa automáticamente a `m101`.
-- **Tests**: toda plantilla nueva necesita `verify`, una verificación numérica independiente. La suite recalcula la respuesta por otro camino: diferencias finitas, Simpson, RK4, eliminación de Gauss, sumas parciales o residuos de las ecuaciones. También chequea la estructura de la carrera y de cada unidad (≥ 4 plantillas, ≥ 2 tipos, apuntes, test de unidad válido) y que el service worker precachee cada archivo de contenido.
+- **La carrera** (`content/carrera.js`): años → semestres → materias, con código y paso del trayecto sugerido. Hay una pestaña *Carrera*, y cada materia abre su mapa de unidades, numeradas según el programa oficial.
+- **Una materia = un curso en su archivo:** `content/m101-calculo1.js`, `content/m104-algebra-lineal.js`, `content/f101-fisica1.js`. Cada archivo registra la materia con `E.registerCourse` y agrega cada unidad con `E.extendCourse` (conceptos, plantillas, lecciones y apuntes).
+- **Test por unidad:** cada unidad bloqueada tiene «Test de la unidad» (3 ejercicios, se aprueba con 2). Se mantiene el diagnóstico de la materia completa, que va unidad por unidad.
+- **Sesión del día:** mezcla los repasos vencidos de todas las materias con la lección actual de la materia activa.
+- **Apuntes y estadísticas por materia:** la pestaña *Aprender* y la de *Stats* tienen un selector de materia. Los links entre materias funcionan; por ejemplo, desde Física se llega a la ficha de derivada de Cálculo.
+- **Migración:** el progreso guardado bajo `calculo` pasa automáticamente a `m101`.
 
-## Pendientes técnicos
+### Tests (`node tests/run-tests.mjs [instancias] [materia]`)
 
-- Al escribir las unidades de energía, MAS, gravitación y rotación de F101, volver a enlazar: en `f1-hooke`, «movimiento armónico simple» → `[[f1-mas|…]]` (el de energía ya se restauró); en `f1-dinamica-circular`, «gravedad» → `[[f1-gravitacion|…]]`; y los «ver también» de `f1-hooke`, `f1-dinamica-circular`, `f1-circular` y `f1-cm` (→ `f1-equilibrio`). Se sacaron porque esas fichas todavía no existían y los tests no admiten links rotos.
+- **Verificación independiente obligatoria:** toda plantilla nueva tiene `verify`, y la suite recalcula la respuesta por otro camino. Usa diferencias finitas, Simpson (también en intervalos infinitos) y RK4 para simular las ecuaciones de movimiento (incluidos eventos como "llega al piso" u "órbita completa"). También eliminación de Gauss (determinante, rango, sistemas, inversa, Rouché-Frobenius, nulidad), sumas parciales, estimaciones numéricas de cociente y exponente en series, y residuos de las condiciones de equilibrio y de las leyes de conservación.
+- **Chequeos estructurales:** posición en la carrera, unidades (≥ 4 plantillas, ≥ 2 tipos, apuntes, test de unidad válido), links de los apuntes, alias únicos y precache del service worker.
+- **Plantillas lentas:** las de simulación cara declaran `testN` para limitar instancias, y la suite avisa cuáles tardan más de 8 s.
+- **Resultado:** la última corrida completa (antes de sumar M104) dio 625.203 chequeos sin fallas. M104 pasa sus tests por separado.
 
 ## Decisiones tomadas
 
-- **Unidades del programa partidas en dos.** Las unidades 3 y 4 de Cálculo I son muy largas, así que en la app cada una se divide en dos unidades: Derivadas / Aplicaciones de la derivada, e Integrales / Aplicaciones de la integral. Así el test de cada unidad es más fino. El campo `program` de cada unidad indica a qué unidad del programa oficial corresponde.
-- **IDs sin cambios.** Se mantienen los ids de lecciones y conceptos del MVP para no perder progreso. Solo cambia el id de la materia (`calculo` → `m101`).
-- **Plantillas del MVP sin `verify`.** 17 plantillas conceptuales del MVP (V/F, ordenar, unir, error) no traían `verify` y quedan en una lista explícita en los tests. Toda plantilla nueva lo tiene obligatorio.
-- **Push a `main` después de cada bloque**, para poder probar en el celu (pedido durante la noche). La rama `carrera-fcen` queda igual que `main`.
-- **Unidades con progreso quedan abiertas.** Una unidad queda abierta si ya completaste alguna lección suya, aunque falte la anterior. Esto evita que el progreso viejo quede bloqueado al agregarse unidades antes.
+- **Temarios.**
+  - Cálculo I usa el programa 2026.
+  - Física General I y Álgebra Lineal no figuran en las carpetas 2026 de la facultad, así que usé las versiones publicadas más recientes (2021 y 2020).
+  - Física General I sigue el orden del programa: después de energía y cantidad de movimiento vienen fluidos, y la rotación queda para las unidades 6 a 8.
+- **Unidades largas partidas.** Las unidades 3 y 4 de Cálculo I se dividen en dos unidades de la app cada una, para que el test de unidad sea más fino. El campo `program` indica la unidad del programa oficial.
+- **IDs sin cambios.** Se mantienen los ids de lecciones y conceptos del MVP; solo cambia el id de la materia (`calculo` → `m101`). Los nuevos llevan prefijo por materia (`f1-`, `al-`).
+- **Unidades con progreso quedan abiertas**, aunque falte la anterior. Así el progreso viejo no quedó bloqueado cuando se agregó la Unidad 1 de Cálculo antes de Límites.
+- **Plantillas del MVP sin `verify`.** Las 17 plantillas conceptuales del MVP (V/F, ordenar, unir, error) no traían `verify` y quedan en una lista explícita de los tests. Toda plantilla nueva lo tiene obligatorio.
+- **Convención g = 9,8 m/s²**, aclarada en cada enunciado de física.
+- **Alias compartidos.** «producto vectorial» pasó de Física a Álgebra Lineal, y en Física «valor medio» se cambió por «promedio», porque choca con el teorema del valor medio.
+- **Push a `main` después de cada bloque**, como se pidió durante la noche.
+
+## Pendiente (en el orden del trayecto)
+
+1. **F102B Física General II B** y **F102A Física General II A**. Programas 2026 en Drive: II A (Ruben Santos, 2.º semestre, id `1BxA2eBt5T1-dD9DsLp7OTR9daGUVkvwi`) y II B (id `16hZ72EbvPHfhWjXEY54p2Vi6ThuxTNvt`).
+2. **M102 Cálculo II** (programa 2026, id `1fk1ekCbqvSeZW7QsuRLCluEq4qAS84jW`) y **M106 Geometría Analítica** (programa 2026, id `1zJG9qufZgWfBU6f1gS-BFlFjg1Yy7PVN`).
+3. **M105 Probabilidad y Estadística:** no encontré el programa; habría que usar un temario estándar.
+4. **3.º y 4.º año.**
+
+Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 
 ## Fuentes de los temarios
 
-- **M101 Cálculo I**: programa oficial 2026 (FCEN UNCuyo, prof. Romina Calvo), carpeta «Programas 2026, 2.º semestre» de la página [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias). Tiene 5 unidades: conjuntos numéricos y funciones; límite y continuidad; derivadas y aplicaciones; integrales; sucesiones y series.
-- **F101 Física General I**: no aparece en las carpetas 2026. Se usa el [programa 2021](https://fcen.uncuyo.edu.ar/upload/fisica-general-i-2021.pdf): unidad transversal de mediciones e incertezas, más 10 unidades (cinemática, dinámica, trabajo y energía, cantidad de movimiento, fluidos, cinemática y dinámica rotacional, equilibrio, gravitación, movimiento periódico).
-- **M104 Introducción al Álgebra Lineal**: no aparece en las carpetas 2026. Se usa el [programa 2020](https://fcen.uncuyo.edu.ar/upload/programa-ial-2020-def.pdf): vectores geométricos; matrices y determinantes; sistemas lineales; espacios vectoriales; transformaciones lineales; autovalores y autovectores.
+- **M101 Cálculo I:** programa oficial 2026 (prof. Romina Calvo), en la carpeta «Programas 2026, 2.º semestre» de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias).
+- **M104 Introducción al Álgebra Lineal:** [programa 2020](https://fcen.uncuyo.edu.ar/upload/programa-ial-2020-def.pdf).
+- **F101 Física General I:** [programa 2021](https://fcen.uncuyo.edu.ar/upload/fisica-general-i-2021.pdf).
+- **Plan de estudios y trayecto sugerido:** el que indicó el usuario, consistente con la [distribución curricular](https://fcen.uncuyo.edu.ar/distribucion-curricular) de la facultad.
 
-Todo el texto y todos los ejercicios son originales: de los programas solo se toma la lista de temas.
+De los programas solo se tomó la lista de temas. Todo el texto y todos los ejercicios son originales.
