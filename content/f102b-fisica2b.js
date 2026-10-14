@@ -536,3 +536,490 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 5 · ONDAS MECÁNICAS Y ELECTROMAGNÉTICAS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dec = x => String(x).replace(".", "{,}");
+  const c = 3e8;
+  // cuerda fija en los extremos simulada por diferencias finitas: período del modo n medido en un antinodo
+  function stringPeriod(L, v, n) {
+    const N = 60, h = L / N, dt = 0.5 * h / v, r2 = (v * dt / h) ** 2;
+    let prev = Array.from({ length: N + 1 }, (_, i) => Math.sin(n * Math.PI * i / N)), cur = prev.slice();
+    // primer paso con velocidad inicial nula
+    for (let i = 1; i < N; i++) cur[i] = prev[i] + 0.5 * r2 * (prev[i + 1] - 2 * prev[i] + prev[i - 1]);
+    const j = Math.round(N / (2 * n)); let t = dt, crossings = [];
+    let last = cur[j];
+    for (let step = 0; step < 20000 && crossings.length < 3; step++) {
+      const next = cur.map((u, i) => (i === 0 || i === N ? 0 : 2 * u - prev[i] + r2 * (cur[i + 1] - 2 * u + cur[i - 1])));
+      prev = cur; cur = next; t += dt;
+      if (Math.sign(cur[j]) !== Math.sign(last) && cur[j] !== 0) { const s = last / (last - cur[j]); crossings.push(t - dt + s * dt); }
+      last = cur[j];
+    }
+    return crossings[2] - crossings[0];
+  }
+
+  T["f2b-onda-num"] = {
+    type: "numeric", concepts: ["f2b-ondas"], difficulty: 2,
+    generate(r) {
+      const A = r.int(1, 10) / 100, k = r.int(1, 20) / 2, w = r.int(2, 60), ask = r.pick(["lambda", "f", "v", "T"]);
+      const ans = { lambda: 2 * Math.PI / k, f: w / (2 * Math.PI), v: w / k, T: 2 * Math.PI / w }[ask];
+      return {
+        prompt: `Una onda en una cuerda es $y(x, t) = ${dec(A)}\\sin(${dec(k)}x - ${w}t)$ (SI). Calculá ${{ lambda: "la longitud de onda (m)", f: "la frecuencia (Hz)", v: "la rapidez de propagación (m/s)", T: "el período (s)" }[ask]}.`,
+        answer: ans,
+        solution: [`[[f2b-ondas|Onda armónica]] $y = A\\sin(kx - \\omega t)$: $\\lambda = \\frac{2\\pi}{k}$, $f = \\frac{\\omega}{2\\pi}$, $v = \\frac{\\omega}{k} = \\lambda f$.`, `Respuesta: $\\approx ${num(ans, 4)}$.`],
+        // verificación: se sigue una cresta en el tiempo (o se miden distancias entre crestas) resolviendo la fase numéricamente
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const crest = t => { let lo = (Math.PI / 2 + w * t) / k - 1e-3, hi = lo + 2e-3; for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (k * mid - w * t < Math.PI / 2) lo = mid; else hi = mid; } return lo; };
+          if (ask === "v") return (crest(0.01) - crest(0)) / 0.01;
+          if (ask === "lambda") { const x0 = crest(0); return ((5 * Math.PI / 2) / k) - x0; }
+          const Tp = 2 * Math.PI / w; // período: tiempo para que la cresta avance una longitud de onda
+          return ask === "T" ? (2 * Math.PI / k) / ((crest(0.01) - crest(0)) / 0.01) : 1 / ((2 * Math.PI / k) / ((crest(0.01) - crest(0)) / 0.01)) + 0 * Tp;
+        } }
+      };
+    }
+  };
+  T["f2b-cuerda-num"] = {
+    type: "numeric", concepts: ["f2b-ondas"], difficulty: 3,
+    testN: 60,
+    generate(r) {
+      const L = r.int(3, 15) / 10, m = r.int(1, 20) / 1000, F = r.int(20, 200), n = r.int(1, 3);
+      const mu = m / L, v = Math.sqrt(F / mu), fn = n * v / (2 * L);
+      return {
+        prompt: `Una cuerda de $${dec(L)}$ m y $${num(m * 1000)}$ g, fija en los dos extremos, está tensa con $${F}$ N. ¿Cuál es la frecuencia (Hz) de su ${n === 1 ? "modo fundamental" : n === 2 ? "segundo armónico" : "tercer armónico"}?`,
+        answer: fn,
+        solution: [`[[f2b-ondas|Rapidez en una cuerda]]: $v = \\sqrt{\\frac{F}{\\mu}}$ con $\\mu = \\frac mL = ${num(mu, 4)}$ kg/m: $v \\approx ${num(v, 4)}$ m/s.`, `[[f2b-ondas|Ondas estacionarias]] con extremos fijos: $\\lambda_n = \\frac{2L}{n}$, así que $f_n = \\frac{nv}{2L} \\approx ${num(fn, 4)}$ Hz.`],
+        verify: { kind: "value", tol: 3e-3, fn: () => 1 / stringPeriod(L, v, n) }
+      };
+    }
+  };
+  T["f2b-sonido-num"] = {
+    type: "numeric", concepts: ["f2b-sonido"], difficulty: 2,
+    generate(r) {
+      if (r.bool()) {
+        const Tc = r.int(-20, 40), v = 331.3 * Math.sqrt((Tc + 273.15) / 273.15);
+        return { prompt: `¿Cuál es la rapidez del sonido en el aire a $${Tc}\\,^\\circ$C? (A $0\\,^\\circ$C vale $331{,}3$ m/s.)`, answer: v,
+          solution: [`En un gas, $v = \\sqrt{\\frac{\\gamma RT}{M}}$: crece como $\\sqrt T$ ([[f2b-sonido|sonido]]).`, `$v = 331{,}3\\sqrt{\\frac{${num(Tc + 273.15, 5)}}{273{,}15}} \\approx ${num(v, 4)}$ m/s.`],
+          verify: { kind: "value", tol: 2e-3, fn: () => Math.sqrt(1.4 * 8.314 * (Tc + 273.15) / 0.02897) } };
+      }
+      const P = r.int(1, 100) / 10, rr = r.int(1, 50), I = P / (4 * Math.PI * rr * rr), beta = 10 * Math.log10(I / 1e-12);
+      return { prompt: `Un parlante emite $${dec(P)}$ W en todas direcciones. ¿Cuál es el nivel de intensidad (dB) a $${rr}$ m? ($I_0 = 10^{-12}$ W/m²)`, answer: beta,
+        solution: [`La potencia se reparte en una esfera: $I = \\frac{P}{4\\pi r^2} \\approx ${num(I, 4)}$ W/m².`, `[[f2b-sonido|Nivel de intensidad]]: $\\beta = 10\\log_{10}\\frac{I}{I_0} \\approx ${num(beta, 4)}$ dB.`],
+        verify: { kind: "value", tol: 1e-6, fn: () => 10 * (Math.log(P) - Math.log(4 * Math.PI) - 2 * Math.log(rr) + 12 * Math.LN10) / Math.LN10 } };
+    }
+  };
+  T["f2b-em-num"] = {
+    type: "numeric", concepts: ["f2b-em"], difficulty: 1,
+    generate(r) {
+      const v = r.pick(["fm", "luz", "E0"]);
+      if (v === "fm") { const f = r.int(88, 108) * 1e6 + r.int(0, 9) * 1e5; return { prompt: `¿Cuál es la longitud de onda (m) de una radio FM que transmite en $${num(f / 1e6, 4).replace(".", "{,}")}$ MHz?`, answer: c / f,
+        solution: [`[[f2b-em|Ondas electromagnéticas]]: $c = \\lambda f$ con $c = 3\\times10^8$ m/s.`, `$\\lambda = \\frac{3\\times10^8}{${num(f / 1e6, 4).replace(".", "{,}")}\\times10^6} \\approx ${num(c / f, 4)}$ m.`],
+        verify: { kind: "value", fn: () => 1 / (f / c) } }; }
+      if (v === "luz") { const lam = r.int(400, 700); return { prompt: `¿Cuál es la frecuencia (en $10^{14}$ Hz) de una luz de $${lam}$ nm?`, answer: c / (lam * 1e-9) / 1e14,
+        solution: [`$f = \\frac c\\lambda$ ([[f2b-em]]).`, `$f = \\frac{3\\times10^8}{${lam}\\times10^{-9}} \\approx ${num(c / (lam * 1e-9) / 1e14, 4)}\\times10^{14}$ Hz.`],
+        verify: { kind: "value", fn: () => 3e17 / lam / 1e14 } }; }
+      const I = r.int(1, 100) * 10, eps0 = 8.854e-12, E0 = Math.sqrt(2 * I / (c * eps0));
+      return { prompt: `Una onda electromagnética plana tiene intensidad $${I}$ W/m². ¿Cuál es la amplitud de su campo eléctrico (V/m)? ($\\varepsilon_0 = 8{,}854\\times10^{-12}$)`, answer: E0,
+        solution: [`[[f2b-em|Intensidad]] de una onda EM: $I = \\frac12c\\varepsilon_0E_0^2$.`, `$E_0 = \\sqrt{\\frac{2I}{c\\varepsilon_0}} \\approx ${num(E0, 4)}$ V/m.`],
+        verify: { kind: "zero", fn: e => [(0.5 * c * eps0 * e * e - I) / I] } };
+    }
+  };
+  T["f2b-ondas-vf"] = {
+    type: "tf", concepts: ["f2b-ondas", "f2b-sonido"], difficulty: 1,
+    generate(r) {
+      const v = r.pick(["temp", "tension", "frecuencia"]);
+      if (v === "temp") {
+        const [t1, t2] = r.distinct(2, -20, 40).sort((a, b) => a - b);
+        return { prompt: `<b>Verdadero o falso:</b> el sonido viaja más rápido en el aire a $${t2}\\,^\\circ$C que a $${t1}\\,^\\circ$C.`, answer: true,
+          explanation: `En un gas $v = \\sqrt{\\gamma RT/M}$: a mayor temperatura absoluta, mayor rapidez ([[f2b-sonido]]).`, solution: [`$v \\propto \\sqrt T$.`],
+          verify: { kind: "truth", fn: () => Math.sqrt(t2 + 273.15) > Math.sqrt(t1 + 273.15) } };
+      }
+      if (v === "tension") {
+        const k = r.pick([2, 3, 4]);
+        return { prompt: `<b>Verdadero o falso:</b> si se multiplica por $${k}$ la tensión de una cuerda, la rapidez de las ondas en ella también se multiplica por $${k}$.`, answer: false,
+          explanation: `$v = \\sqrt{F/\\mu}$: la rapidez se multiplica por $\\sqrt{${k}} \\approx ${num(Math.sqrt(k), 3)}$ ([[f2b-ondas]]).`, solution: [`Para duplicar la rapidez hay que cuadruplicar la tensión.`],
+          verify: { kind: "truth", fn: () => Math.abs(Math.sqrt(k * 100 / 0.01) / Math.sqrt(100 / 0.01) - k) < 1e-9 } };
+      }
+      const n1 = 1, n2 = r.pick([1.33, 1.5, 2.4]);
+      return { prompt: `<b>Verdadero o falso:</b> cuando la luz pasa del aire a un medio con $n = ${dec(n2)}$, su frecuencia cambia.`, answer: false,
+        explanation: `La frecuencia la impone la fuente y no cambia; lo que cambian son la rapidez ($v = c/n$) y la longitud de onda ($\\lambda/n$) ([[f2b-em]]).`, solution: [`$v = \\lambda f$: si $v$ baja con $f$ fija, baja $\\lambda$.`],
+        verify: { kind: "truth", fn: () => { const f = 5e14, v2 = 3e8 / n2, lam2 = (3e8 / f) / n2; return Math.abs(v2 / lam2 - f) > 1; } } };
+    }
+  };
+
+  const cards = {
+    "f2b-ondas": {
+      title: "Ondas mecánicas", aliases: ["onda", "ondas", "longitud de onda", "número de onda", "ondas transversales", "ondas longitudinales", "rapidez de una onda", "ondas estacionarias", "armónicos", "modo fundamental", "onda armónica"], concepts: ["f2b-ondas"],
+      summary: "Una onda transporta energía sin transportar materia. y = A sen(kx − ωt), con v = ω/k = λf. En una cuerda, v = √(F/μ).",
+      def: [R`Una **onda mecánica** es una perturbación que se propaga en un medio. **Transversal:** el medio oscila perpendicular a la propagación (cuerda). **Longitudinal:** oscila a lo largo (sonido).`,
+        R`**Onda armónica:** $y(x, t) = A\sin(kx - \omega t)$, con $k = \frac{2\pi}{\lambda}$ (número de onda), $\omega = 2\pi f$, y rapidez $v = \frac{\omega}{k} = \lambda f$. Cumple la **ecuación de onda** $\frac{\partial^2y}{\partial t^2} = v^2\frac{\partial^2y}{\partial x^2}$.`,
+        R`**Rapidez en una cuerda:** $v = \sqrt{F/\mu}$ ($F$: tensión, $\mu$: masa por unidad de longitud).`],
+      idea: [R`Lo que viaja es la **forma**, no la materia: cada punto de la cuerda solo sube y baja (un [[f1-mas|MAS]]). La rapidez depende del medio, no de la amplitud ni de la frecuencia.`,
+        R`**Ondas estacionarias** en una cuerda con extremos fijos: solo entran longitudes de onda $\lambda_n = \frac{2L}{n}$, y las frecuencias permitidas son $f_n = \frac{nv}{2L}$ (los **armónicos**). Así funcionan las guitarras.`,
+        { graph: { fns: [x => Math.sin(x), x => Math.sin(x - 1)], xr: [0, 13], yr: [-2, 2] }, caption: R`Una onda en $t = 0$ (violeta) y un rato después (naranja): la forma se corrió hacia la derecha.` }],
+      examples: [{ q: R`Cuerda de guitarra: $L = 0{,}65$ m, $v = 286$ m/s. ¿Fundamental?`, steps: [R`$f_1 = \frac{v}{2L} = \frac{286}{1{,}3} = 220$ Hz (un La).`] }],
+      see: ["f2b-sonido", "f2b-em", "f1-mas"]
+    },
+    "f2b-sonido": {
+      title: "Sonido: rapidez, intensidad y decibeles", aliases: ["sonido", "ondas sonoras", "nivel de intensidad", "decibeles", "decibel", "intensidad sonora", "rapidez del sonido"], concepts: ["f2b-sonido"],
+      summary: "El sonido es una onda longitudinal de presión. En un gas v = √(γRT/M). Nivel: β = 10 log(I/I₀) dB.",
+      def: [R`El **sonido** es una onda longitudinal de presión. En un gas: $v = \sqrt{\frac{\gamma RT}{M}}$ (aire a $20\,^\circ$C: $\approx 343$ m/s).`,
+        R`**Intensidad:** potencia por unidad de área; para una fuente puntual, $I = \frac{P}{4\pi r^2}$. **Nivel de intensidad:** $\beta = 10\log_{10}\frac{I}{I_0}$ dB, con $I_0 = 10^{-12}$ W/m² (umbral de audición).`],
+      idea: [R`El oído responde de forma logarítmica: cada $10$ dB más es $10$ veces más intensidad. Duplicar la distancia a una fuente puntual baja la intensidad a la cuarta parte, unos $6$ dB.`],
+      examples: [{ q: R`¿Cuántos dB más hay si la intensidad se multiplica por 100?`, steps: [R`$10\log_{10}100 = 20$ dB.`] }],
+      see: ["f2b-ondas", "exp-log-func"]
+    },
+    "f2b-em": {
+      title: "Ondas electromagnéticas", aliases: ["ondas electromagnéticas", "onda electromagnética", "espectro electromagnético", "ecuaciones de Maxwell", "velocidad de la luz", "rapidez de la luz"], concepts: ["f2b-em"],
+      summary: "Campos E y B que oscilan perpendiculares entre sí y a la propagación, a c = 1/√(μ₀ε₀) ≈ 3×10⁸ m/s en el vacío.",
+      def: [R`Las **ecuaciones de Maxwell** predicen ondas de campos $\vec E$ y $\vec B$ perpendiculares entre sí y a la dirección de propagación, que viajan en el vacío a $c = \frac{1}{\sqrt{\mu_0\varepsilon_0}} \approx 3\times10^8$ m/s, con $E = cB$ y $c = \lambda f$.`,
+        R`**Intensidad** de una onda senoidal: $I = \frac12c\varepsilon_0E_0^2$. No necesitan un medio para propagarse.`],
+      idea: [R`El **espectro electromagnético** va de las ondas de radio (metros o más) a los rayos gamma, pasando por microondas, infrarrojo, visible ($400$–$700$ nm), ultravioleta y rayos X: es todo lo mismo, cambia solo la frecuencia.`,
+        R`Que la luz sea una onda electromagnética fue una de las grandes unificaciones de la física: óptica y electromagnetismo son la misma teoría.`],
+      examples: [{ q: R`¿Longitud de onda de un microondas de 2,45 GHz?`, steps: [R`$\lambda = \frac{3\times10^8}{2{,}45\times10^9} \approx 12$ cm.`] }],
+      see: ["f2b-ondas", "f2b-optica"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-ondas": { name: "Ondas mecánicas" }, "f2b-sonido": { name: "Sonido" }, "f2b-em": { name: "Ondas electromagnéticas" } },
+    templates: T,
+    units: [{
+      id: "f2b-ondas-u", order: 5, program: "Unidad 5", title: "Ondas mecánicas y electromagnéticas", icon: "volume-2",
+      diagnostic: ["f2b-onda-num", "f2b-sonido-num", "f2b-em-num"],
+      lessons: [
+        { id: "f2b-ondas", title: "Ondas en cuerdas", templates: ["f2b-onda-num", "f2b-cuerda-num", "f2b-ondas-vf"], theory: ["f2b-ondas"],
+          intro: R`$y = A\sin(kx - \omega t)$, $v = \lambda f$. En una cuerda, $v = \sqrt{F/\mu}$ y $f_n = \frac{nv}{2L}$.` },
+        { id: "f2b-sonido-em", title: "Sonido y ondas electromagnéticas", templates: ["f2b-sonido-num", "f2b-em-num"], theory: ["f2b-sonido", "f2b-em"],
+          intro: R`Sonido: $\beta = 10\log\frac{I}{I_0}$. Luz: $c = \lambda f$ e $I = \frac12c\varepsilon_0E_0^2$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 6 · ÓPTICA GEOMÉTRICA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dec = x => String(x).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180, deg = x => x * 180 / Math.PI;
+  // matrices ABCD (óptica paraxial): espacio libre y lente delgada; la imagen está donde B = 0
+  const mul = (P, Q) => [[P[0][0] * Q[0][0] + P[0][1] * Q[1][0], P[0][0] * Q[0][1] + P[0][1] * Q[1][1]], [P[1][0] * Q[0][0] + P[1][1] * Q[1][0], P[1][0] * Q[0][1] + P[1][1] * Q[1][1]]];
+  const S = d => [[1, d], [0, 1]], L = f => [[1, 0], [-1 / f, 1]];
+  const MEDIOS = [{ n: "agua", v: 1.33 }, { n: "vidrio", v: 1.5 }, { n: "diamante", v: 2.42 }, { n: "acrílico", v: 1.49 }];
+
+  T["f2b-snell-num"] = {
+    type: "numeric", concepts: ["f2b-optica"], difficulty: 1,
+    generate(r) {
+      const m = r.pick(MEDIOS), th1 = r.int(10, 80), ans = deg(Math.asin(Math.sin(rad(th1)) / m.v));
+      return {
+        prompt: `Un rayo de luz pasa del aire ($n = 1$) al ${m.n} ($n = ${dec(m.v)}$) con un ángulo de incidencia de $${th1}^\\circ$. ¿Cuál es el ángulo de refracción (en grados)?`,
+        answer: ans,
+        solution: [`[[f2b-optica|Ley de Snell]]: $n_1\\sin\\theta_1 = n_2\\sin\\theta_2$.`, `$\\sin\\theta_2 = \\frac{\\sin ${th1}^\\circ}{${dec(m.v)}} \\Rightarrow \\theta_2 \\approx ${num(ans, 4)}^\\circ$ (se acerca a la normal).`],
+        verify: { kind: "zero", fn: a => [Math.sin(rad(th1)) - m.v * Math.sin(rad(a))] }
+      };
+    }
+  };
+  T["f2b-critico-num"] = {
+    type: "numeric", concepts: ["f2b-optica"], difficulty: 2,
+    generate(r) {
+      const m = r.pick(MEDIOS), out = r.pick([{ n: "aire", v: 1 }, { n: "agua", v: 1.33 }]);
+      if (out.v >= m.v) return null;
+      const ans = deg(Math.asin(out.v / m.v));
+      return {
+        prompt: `¿Cuál es el ángulo crítico (en grados) para la reflexión total interna de la luz que va del ${m.n} ($n = ${dec(m.v)}$) al ${out.n} ($n = ${dec(out.v)}$)?`,
+        answer: ans,
+        solution: [`[[f2b-optica|Reflexión total interna]]: el ángulo crítico es el que da refracción a $90^\\circ$: $n_1\\sin\\theta_c = n_2$.`, `$\\theta_c = \\arcsin\\frac{${dec(out.v)}}{${dec(m.v)}} \\approx ${num(ans, 4)}^\\circ$. Para ángulos mayores, toda la luz se refleja.`],
+        verify: { kind: "zero", fn: a => [m.v * Math.sin(rad(a)) - out.v * Math.sin(Math.PI / 2)] }
+      };
+    }
+  };
+  T["f2b-lente-num"] = {
+    type: "numeric", concepts: ["f2b-lentes"], difficulty: 2,
+    generate(r) {
+      const tipo = r.pick(["convergente", "divergente", "espejo"]), f0 = r.int(5, 40), f = tipo === "divergente" ? -f0 : f0, dobj = r.int(5, 100), ask = r.pick(["di", "m"]);
+      if (Math.abs(dobj - f) < 2) return null;
+      const di = 1 / (1 / f - 1 / dobj), mag = -di / dobj;
+      const desc = tipo === "espejo" ? `Un espejo cóncavo de distancia focal $${f0}$ cm` : `Una lente ${tipo} de distancia focal $${f > 0 ? "" : "-"}${f0}$ cm`;
+      return {
+        prompt: `${desc} tiene un objeto a $${dobj}$ cm. ¿Cuál es ${ask === "di" ? "la distancia de la imagen (cm, positiva si es real)" : "el aumento lateral"}?`,
+        answer: ask === "di" ? di : mag,
+        solution: [`[[f2b-lentes|Ecuación de lentes y espejos]]: $\\frac{1}{d_o} + \\frac{1}{d_i} = \\frac1f$ y $m = -\\frac{d_i}{d_o}$.`, `$d_i = \\left(\\frac{1}{${f}} - \\frac{1}{${dobj}}\\right)^{-1} \\approx ${num(di, 4)}$ cm (${di > 0 ? "imagen real" : "imagen virtual"}); $m \\approx ${num(mag, 4)}$ (${mag < 0 ? "invertida" : "derecha"}, ${Math.abs(mag) > 1 ? "aumentada" : "reducida"}).`],
+        // verificación: trazado de rayos con matrices ABCD; el plano imagen es donde B = 0 y el aumento es A
+        verify: ask === "di"
+          ? { kind: "zero", fn: d => [mul(S(d), mul(L(f), S(dobj)))[0][1] / dobj] }
+          : { kind: "zero", fn: mm => { let lo = -1e4, hi = 1e4; const B = d => mul(S(d), mul(L(f), S(dobj)))[0][1]; for (let i = 0; i < 200; i++) { const mid = (lo + hi) / 2; if (Math.sign(B(mid)) === Math.sign(B(lo))) lo = mid; else hi = mid; } const Mx = mul(S(lo), mul(L(f), S(dobj))); return [mm - Mx[0][0]]; }, tol: 1e-6 }
+      };
+    }
+  };
+  T["f2b-optica-vf"] = {
+    type: "tf", concepts: ["f2b-lentes"], difficulty: 1,
+    generate(r) {
+      const f = -r.int(5, 40), d = r.int(5, 100), q = r.pick(["divergente", "plano"]);
+      if (q === "plano") return { prompt: `<b>Verdadero o falso:</b> la imagen de un objeto a $${d}$ cm de un espejo plano está $${d}$ cm detrás del espejo y es virtual.`, answer: true,
+        explanation: `Un espejo plano es el caso $f \\to \\infty$: $d_i = -d_o$ (virtual, detrás del espejo) y $m = 1$ ([[f2b-lentes]]).`, solution: [`Por eso el espejo "duplica" la distancia aparente.`],
+        verify: { kind: "truth", fn: () => { const di = 1 / (1 / 1e12 - 1 / d); return Math.abs(di + d) < 1e-6; } } };
+      return { prompt: `<b>Verdadero o falso:</b> una lente divergente ($f = ${f}$ cm) con un objeto real a $${d}$ cm forma una imagen real.`, answer: false,
+        explanation: `Con $f < 0$ y $d_o > 0$, $\\frac{1}{d_i} = \\frac1f - \\frac{1}{d_o} < 0$ siempre: la imagen es virtual, derecha y reducida ([[f2b-lentes]]).`, solution: [`Las lentes divergentes de un objeto real siempre dan imágenes virtuales.`],
+        verify: { kind: "truth", fn: () => 1 / (1 / f - 1 / d) > 0 } };
+    }
+  };
+
+  const cards = {
+    "f2b-optica": {
+      title: "Reflexión, refracción y ley de Snell", aliases: ["ley de Snell", "Snell", "refracción", "índice de refracción", "reflexión total interna", "ángulo crítico", "reflexión de la luz"], concepts: ["f2b-optica"],
+      summary: "Reflexión: ángulo de incidencia = de reflexión. Refracción: n₁ sen θ₁ = n₂ sen θ₂. Si n₁ > n₂ y θ₁ > θc, reflexión total.",
+      def: [R`**Índice de refracción:** $n = \frac cv$. **Reflexión:** $\theta_r = \theta_i$. **Refracción (Snell):** $n_1\sin\theta_1 = n_2\sin\theta_2$, con ángulos medidos desde la normal.`,
+        R`**Reflexión total interna:** si la luz va a un medio de menor índice ($n_1 > n_2$) con un ángulo mayor que el **crítico**, $\sin\theta_c = \frac{n_2}{n_1}$, no hay refracción y toda la luz se refleja.`],
+      idea: [R`Al entrar a un medio más denso, la luz se frena y se **acerca** a la normal. La reflexión total es lo que hace funcionar la fibra óptica y el brillo de los diamantes ($\theta_c \approx 24^\circ$).`,
+        R`La **óptica geométrica** trata a la luz como rayos: vale cuando todo es mucho más grande que la longitud de onda. Si no, aparecen la [[f2b-interferencia|interferencia]] y la [[f2b-difraccion|difracción]].`],
+      examples: [{ q: R`Ángulo crítico vidrio–aire ($n = 1{,}5$).`, steps: [R`$\theta_c = \arcsin\frac{1}{1{,}5} \approx 41{,}8^\circ$.`] }],
+      see: ["f2b-lentes", "f2b-em"]
+    },
+    "f2b-lentes": {
+      title: "Espejos y lentes delgadas", aliases: ["lente delgada", "lentes delgadas", "lente convergente", "lente divergente", "espejo cóncavo", "espejo convexo", "espejo plano", "distancia focal", "imagen virtual", "imagen real", "aumento lateral"], concepts: ["f2b-lentes"],
+      summary: "1/d_o + 1/d_i = 1/f y m = −d_i/d_o. d_i > 0: imagen real; d_i < 0: virtual.",
+      def: [R`Para espejos esféricos ($f = \frac R2$) y lentes delgadas: $$\frac{1}{d_o} + \frac{1}{d_i} = \frac1f, \qquad m = -\frac{d_i}{d_o}.$$ Convención: $f > 0$ para espejos cóncavos y lentes convergentes; $d_i > 0$ es imagen **real** (se puede proyectar), $d_i < 0$ es **virtual**; $m < 0$ es imagen invertida.`],
+      idea: [R`**Método gráfico:** un rayo paralelo al eje sale pasando por el foco; uno que pasa por el centro de la lente sigue derecho; donde se cruzan está la imagen.`,
+        R`Una lupa es una lente convergente con el objeto **dentro** de la distancia focal: da una imagen virtual, derecha y aumentada. Una lente divergente siempre da, de un objeto real, una imagen virtual y reducida.`],
+      demo: [R`**Ecuación de la lente con matrices de rayos.** Un rayo con altura $y$ y ángulo $\theta$ avanza $d$: $(y, \theta) \to (y + d\theta, \theta)$; al cruzar una lente: $(y, \theta) \to (y, \theta - y/f)$.`, R`Componiendo objeto→lente→imagen, la altura final no depende del ángulo inicial (todos los rayos de un punto se juntan) si $d_o + d_i - \frac{d_od_i}{f} = 0$, que es $\frac1{d_o} + \frac1{d_i} = \frac1f$. $\blacksquare$`],
+      examples: [{ q: R`Lente de $f = 10$ cm, objeto a 30 cm.`, steps: [R`$\frac1{d_i} = \frac1{10} - \frac1{30} = \frac{1}{15}$: $d_i = 15$ cm, real.`, R`$m = -\frac{15}{30} = -0{,}5$: invertida y de la mitad del tamaño.`] }],
+      see: ["f2b-optica"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-optica": { name: "Reflexión y refracción" }, "f2b-lentes": { name: "Espejos y lentes" } },
+    templates: T,
+    units: [{
+      id: "f2b-optica-u", order: 6, program: "Unidad 6", title: "Óptica geométrica", icon: "lightbulb",
+      diagnostic: ["f2b-snell-num", "f2b-critico-num", "f2b-lente-num"],
+      lessons: [
+        { id: "f2b-snell", title: "Reflexión y refracción", templates: ["f2b-snell-num", "f2b-critico-num"], theory: ["f2b-optica"],
+          intro: R`$n_1\sin\theta_1 = n_2\sin\theta_2$. Reflexión total si $\sin\theta_1 > \frac{n_2}{n_1}$.` },
+        { id: "f2b-lentes", title: "Espejos y lentes", templates: ["f2b-optica-vf", "f2b-lente-num"], theory: ["f2b-lentes"],
+          intro: R`$\frac1{d_o} + \frac1{d_i} = \frac1f$ y $m = -\frac{d_i}{d_o}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 7 · INTERFERENCIA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dec = x => String(x).replace(".", "{,}");
+
+  T["f2b-young-num"] = {
+    type: "numeric", concepts: ["f2b-interferencia"], difficulty: 2,
+    generate(r) {
+      const lam = r.int(400, 700) * 1e-9, d = r.int(1, 10) / 10 * 1e-3, Lp = r.int(1, 5), m = r.int(1, 4), ask = r.pick(["y", "sep"]);
+      const y = m * lam * Lp / d;
+      return {
+        prompt: ask === "y" ? `En un experimento de doble rendija, $\\lambda = ${num(lam * 1e9)}$ nm, la separación entre rendijas es $${dec(num(d * 1000, 3))}$ mm y la pantalla está a $${Lp}$ m. ¿A qué distancia (mm) del centro está la franja brillante de orden $${m}$?`
+          : `En un experimento de doble rendija, $\\lambda = ${num(lam * 1e9)}$ nm, $d = ${dec(num(d * 1000, 3))}$ mm y la pantalla está a $${Lp}$ m. ¿Cuál es la separación (mm) entre franjas brillantes consecutivas?`,
+        answer: ask === "y" ? y * 1000 : lam * Lp / d * 1000,
+        solution: [`[[f2b-interferencia|Doble rendija]]: hay máximo cuando la diferencia de camino es un número entero de longitudes de onda, $d\\sin\\theta = m\\lambda$.`, `Para ángulos chicos, $y_m \\approx \\frac{m\\lambda L}{d}$; separación entre franjas $\\frac{\\lambda L}{d} \\approx ${num(lam * Lp / d * 1000, 4)}$ mm.`],
+        // verificación: posición exacta donde la diferencia de caminos a las dos rendijas vale mλ (bisección)
+        verify: { kind: "value", tol: 2e-3, fn: () => {
+          const pos = mm2 => { let lo = 0, hi = 0.5; for (let i = 0; i < 100; i++) { const yy = (lo + hi) / 2, dd = Math.hypot(Lp, yy + d / 2) - Math.hypot(Lp, yy - d / 2); if (dd < mm2 * lam) lo = yy; else hi = yy; } return lo; };
+          return ask === "y" ? pos(m) * 1000 : (pos(2) - pos(1)) * 1000;
+        } }
+      };
+    }
+  };
+  T["f2b-pelicula-num"] = {
+    type: "numeric", concepts: ["f2b-interferencia"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["jabon", "antirreflejo"]), lam = r.int(400, 700), m = r.int(0, 2);
+      if (v === "jabon") {
+        const n = r.pick([1.33, 1.35, 1.4]), t = (m + 0.5) * lam / (2 * n);
+        return { prompt: `Una película de jabón ($n = ${dec(n)}$) en el aire se ve brillante por reflexión para $\\lambda = ${lam}$ nm. ¿Cuál es el ${["menor", "segundo", "tercer"][m]} espesor posible (nm)?`, answer: t,
+          solution: [`Las reflexiones en las dos caras: la de arriba (aire→jabón) tiene un desfase de media longitud de onda y la de abajo no ([[f2b-interferencia|películas delgadas]]).`, `Constructiva: $2nt = \\left(m + \\frac12\\right)\\lambda \\Rightarrow t = \\frac{(m + 1/2)\\lambda}{2n} \\approx ${num(t, 4)}$ nm.`],
+          // verificación: desfase total entre los dos rayos reflejados (camino + medio ciclo por reflexión en medio más denso) = múltiplo de 2π
+          verify: { kind: "zero", fn: tt => [Math.cos(2 * Math.PI * 2 * n * tt / lam + Math.PI) - 1, Math.round((2 * n * tt / lam + 0.5)) - (m + 1) === 0 ? 0 : 1], tol: 1e-6 } };
+      }
+      const nc = r.pick([1.25, 1.38]), ng = 1.5, t = (2 * m + 1) * lam / (4 * nc);
+      return { prompt: `Una capa antirreflejo ($n = ${dec(nc)}$) sobre vidrio ($n = 1{,}5$) debe anular la reflexión de $\\lambda = ${lam}$ nm. ¿Cuál es el ${["menor", "segundo", "tercer"][m]} espesor posible (nm)?`, answer: t,
+        solution: [`Las dos reflexiones (aire→capa y capa→vidrio) tienen desfase de media onda, así que se compensan ([[f2b-interferencia|películas delgadas]]).`, `Destructiva: $2nt = \\left(m + \\frac12\\right)\\lambda \\Rightarrow t = \\frac{(2m + 1)\\lambda}{4n} \\approx ${num(t, 4)}$ nm.`],
+        verify: { kind: "zero", fn: tt => [Math.cos(2 * Math.PI * 2 * nc * tt / lam + Math.PI - Math.PI) + 1], tol: 1e-6 } };
+    }
+  };
+  T["f2b-interf-vf"] = {
+    type: "tf", concepts: ["f2b-interferencia"], difficulty: 1,
+    generate(r) {
+      const lam = r.int(400, 700), d = r.int(1, 10) / 10, k = r.pick([2, 3]), q = r.pick(["d", "lam"]);
+      const claim = q === "d" ? `si se multiplica por $${k}$ la separación entre las rendijas, las franjas quedan $${k}$ veces más separadas`
+        : `si se cambia la luz de $${lam}$ nm por una de $${k * lam}$ nm, las franjas quedan $${k}$ veces más separadas`;
+      const ans = q === "lam";
+      return {
+        prompt: `<b>Verdadero o falso:</b> en un experimento de doble rendija ($d = ${dec(d)}$ mm), ${claim}.`,
+        answer: ans,
+        explanation: `La separación entre franjas es $\\Delta y = \\frac{\\lambda L}{d}$: proporcional a $\\lambda$ e inversamente proporcional a $d$ ([[f2b-interferencia]]).`,
+        solution: [q === "d" ? `Con $${k}d$ las franjas quedan $${k}$ veces más **juntas**.` : `Con $${k}\\lambda$ las franjas quedan $${k}$ veces más separadas.`],
+        // verificación: separación exacta entre los dos primeros máximos calculada con la diferencia de caminos
+        verify: { kind: "truth", fn: () => {
+          const sep = (ll, dd) => { const pos = m => { let lo = 0, hi = 0.5; for (let i = 0; i < 100; i++) { const y = (lo + hi) / 2; if (Math.hypot(1, y + dd / 2) - Math.hypot(1, y - dd / 2) < m * ll) lo = y; else hi = y; } return lo; }; return pos(2) - pos(1); };
+          const base = sep(lam * 1e-9, d * 1e-3), nuevo = q === "d" ? sep(lam * 1e-9, k * d * 1e-3) : sep(k * lam * 1e-9, d * 1e-3);
+          return Math.abs(nuevo / base - k) < 1e-2;
+        } }
+      };
+    }
+  };
+  T["f2b-michelson-num"] = {
+    type: "numeric", concepts: ["f2b-interferencia"], difficulty: 2,
+    generate(r) {
+      const lam = r.int(400, 700), N = r.int(10, 500), ask = r.pick(["d", "N"]), d = N * lam / 2;
+      return {
+        prompt: ask === "d" ? `En un interferómetro de Michelson con luz de $${lam}$ nm se cuentan $${N}$ franjas que pasan al mover un espejo. ¿Cuánto se movió el espejo (μm)?`
+          : `En un interferómetro de Michelson con luz de $${lam}$ nm, un espejo se mueve $${num(d / 1000, 4).replace(".", "{,}")}$ μm. ¿Cuántas franjas pasan?`,
+        answer: ask === "d" ? d / 1000 : N,
+        solution: [`Mover el espejo $\\Delta d$ cambia el camino del brazo en $2\\Delta d$ (ida y vuelta) ([[f2b-interferencia|Michelson]]).`, `Cada franja corresponde a un cambio de camino de $\\lambda$: $N = \\frac{2\\Delta d}{\\lambda}$.`],
+        verify: { kind: "zero", fn: x => [ask === "d" ? (2 * x * 1000) / lam - N : x - 2 * d / lam] }
+      };
+    }
+  };
+
+  const cards = {
+    "f2b-interferencia": {
+      title: "Interferencia de la luz", aliases: ["interferencia", "doble rendija", "experimento de Young", "fuentes coherentes", "películas delgadas", "película delgada", "interferómetro de Michelson", "Michelson", "diferencia de camino"], concepts: ["f2b-interferencia"],
+      summary: "Dos ondas coherentes se suman: diferencia de camino mλ da máximo, (m + ½)λ da mínimo. Doble rendija: y_m ≈ mλL/d.",
+      def: [R`Dos fuentes **coherentes** (con diferencia de fase constante) interfieren: **constructivamente** donde la diferencia de camino es $m\lambda$ y **destructivamente** donde es $(m + \frac12)\lambda$.`,
+        R`**Doble rendija (Young):** máximos en $d\sin\theta = m\lambda$; en la pantalla, $y_m \approx \frac{m\lambda L}{d}$. La intensidad varía como $I = I_0\cos^2\left(\frac{\pi d\sin\theta}{\lambda}\right)$.`,
+        R`**Películas delgadas:** la reflexión en un medio de mayor índice agrega un desfase de media onda. Comparando $2nt$ con $\lambda$ (y contando esos desfases) se ve si la reflexión es constructiva o destructiva.`],
+      idea: [R`La interferencia es la prueba de que la luz es una onda. Los colores de las burbujas de jabón y de las manchas de aceite son interferencia en películas delgadas; las capas antirreflejo de los anteojos usan interferencia destructiva.`,
+        R`El **interferómetro de Michelson** divide un haz en dos brazos y los recombina: cada franja que pasa corresponde a un cambio de camino de una longitud de onda, así que mide distancias del orden de los nanómetros (hoy detecta ondas gravitacionales).`],
+      examples: [{ q: R`Rendijas a 0,2 mm, luz de 500 nm, pantalla a 2 m. ¿Separación entre franjas?`, steps: [R`$\frac{\lambda L}{d} = \frac{5\times10^{-7}\cdot 2}{2\times10^{-4}} = 5$ mm.`] }],
+      see: ["f2b-difraccion", "f2b-ondas"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-interferencia": { name: "Interferencia" } },
+    templates: T,
+    units: [{
+      id: "f2b-interferencia-u", order: 7, program: "Unidad 7", title: "Interferencia", icon: "sparkles",
+      diagnostic: ["f2b-young-num", "f2b-pelicula-num", "f2b-michelson-num"],
+      lessons: [
+        { id: "f2b-young", title: "Doble rendija", templates: ["f2b-young-num", "f2b-michelson-num"], theory: ["f2b-interferencia"],
+          intro: R`Máximos donde la diferencia de camino es $m\lambda$: $d\sin\theta = m\lambda$, $y_m \approx \frac{m\lambda L}{d}$.` },
+        { id: "f2b-peliculas", title: "Películas delgadas", templates: ["f2b-pelicula-num", "f2b-interf-vf"], theory: ["f2b-interferencia"],
+          intro: R`Compará $2nt$ con $\lambda$ y sumá medio ciclo por cada reflexión en un medio de mayor índice.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 8 · DIFRACCIÓN
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dec = x => String(x).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180, deg = x => x * 180 / Math.PI;
+
+  T["f2b-rendija-num"] = {
+    type: "numeric", concepts: ["f2b-difraccion"], difficulty: 2,
+    generate(r) {
+      const lam = r.int(400, 700) * 1e-9, a = r.int(5, 100) * 1e-6, Lp = r.int(1, 4), ask = r.pick(["ang", "ancho"]);
+      const th = Math.asin(lam / a), w = 2 * Lp * Math.tan(th);
+      return {
+        prompt: ask === "ang" ? `Luz de $${num(lam * 1e9)}$ nm pasa por una rendija de $${num(a * 1e6)}$ μm. ¿A qué ángulo (grados) está el primer mínimo de difracción?`
+          : `Luz de $${num(lam * 1e9)}$ nm pasa por una rendija de $${num(a * 1e6)}$ μm y se observa en una pantalla a $${Lp}$ m. ¿Cuál es el ancho (mm) del máximo central?`,
+        answer: ask === "ang" ? deg(th) : w * 1000,
+        solution: [`[[f2b-difraccion|Rendija simple]]: mínimos en $a\\sin\\theta = m\\lambda$ ($m = \\pm1, \\pm2, \\dots$).`, `$\\theta_1 = \\arcsin\\frac{\\lambda}{a} \\approx ${num(deg(th), 4)}^\\circ$; el máximo central va de $-\\theta_1$ a $\\theta_1$: ancho $2L\\tan\\theta_1 \\approx ${num(w * 1000, 4)}$ mm.`],
+        // verificación: el primer cero de la intensidad (sen β / β)² buscado numéricamente
+        verify: { kind: "value", tol: 1e-6, fn: () => { const I = t => { const b = Math.PI * a * Math.sin(t) / lam; return Math.sin(b) / b; }; let lo = 1e-9, hi = Math.min(Math.PI / 2, 1.5 * lam / a < 1 ? Math.asin(Math.min(1, 1.5 * lam / a)) : Math.PI / 2); for (let i = 0; i < 100; i++) { const mid = (lo + hi) / 2; if (I(mid) > 0) lo = mid; else hi = mid; } return ask === "ang" ? deg(lo) : 2 * Lp * Math.tan(lo) * 1000; } }
+      };
+    }
+  };
+  T["f2b-red-num"] = {
+    type: "numeric", concepts: ["f2b-difraccion"], difficulty: 2,
+    generate(r) {
+      const N = r.pick([100, 300, 500, 600, 1000, 1200]), lam = r.int(400, 700) * 1e-9, d = 1e-3 / N, m = r.int(1, 3), ask = r.pick(["ang", "max"]);
+      if (ask === "ang" && m * lam / d >= 1) return null;
+      // si d/λ es entero, ese orden saldría a 90° (no se observa): se evita el caso límite
+      if (ask === "max" && Math.abs(d / lam - Math.round(d / lam)) < 1e-6) return null;
+      const ans = ask === "ang" ? deg(Math.asin(m * lam / d)) : Math.floor(d / lam - 1e-12);
+      return {
+        prompt: ask === "ang" ? `Una red de difracción tiene $${N}$ líneas por mm. ¿A qué ángulo (grados) aparece el máximo de orden $${m}$ para luz de $${num(lam * 1e9)}$ nm?`
+          : `Una red de difracción tiene $${N}$ líneas por mm. Con luz de $${num(lam * 1e9)}$ nm, ¿cuál es el máximo orden que se puede observar?`,
+        answer: ans,
+        solution: [`[[f2b-difraccion|Red de difracción]]: $d = \\frac{1}{${N}}$ mm $\\approx ${num(d * 1e9)}$ nm y máximos en $d\\sin\\theta = m\\lambda$.`, ask === "ang" ? `$\\theta = \\arcsin\\frac{${m}\\lambda}{d} \\approx ${num(ans, 4)}^\\circ$.` : `Como $\\sin\\theta \\le 1$: $m \\le \\frac{d}{\\lambda} \\approx ${num(d / lam, 3)}$, así que el máximo orden es $${ans}$.`],
+        verify: ask === "ang" ? { kind: "zero", fn: a => [d * Math.sin(rad(a)) - m * lam].map(x => x / lam) } : { kind: "zero", fn: mm => [mm * lam < d ? 0 : 1, (mm + 1) * lam > d ? 0 : 1, Math.abs(mm - Math.round(mm))] }
+      };
+    }
+  };
+  T["f2b-bragg-num"] = {
+    type: "numeric", concepts: ["f2b-difraccion"], difficulty: 2,
+    generate(r) {
+      const d = r.int(20, 40) / 100, lam = r.int(5, 20) / 100, m = r.int(1, 2);
+      if (m * lam / (2 * d) >= 1) return null;
+      const th = deg(Math.asin(m * lam / (2 * d)));
+      return {
+        prompt: `Rayos X de $${dec(lam)}$ nm inciden sobre un cristal con planos separados $${dec(d)}$ nm. ¿A qué ángulo (grados, medido desde los planos) aparece la reflexión de Bragg de orden $${m}$?`,
+        answer: th,
+        solution: [`[[f2b-difraccion|Ley de Bragg]]: las reflexiones en planos sucesivos se suman en fase si $2d\\sin\\theta = m\\lambda$.`, `$\\theta = \\arcsin\\frac{${m}\\cdot${dec(lam)}}{2\\cdot${dec(d)}} \\approx ${num(th, 4)}^\\circ$.`],
+        verify: { kind: "zero", fn: a => [(2 * d * Math.sin(rad(a)) - m * lam) / lam] }
+      };
+    }
+  };
+  T["f2b-difr-vf"] = {
+    type: "tf", concepts: ["f2b-difraccion"], difficulty: 1,
+    generate(r) {
+      const lam = r.int(400, 700) * 1e-9, [a1, a2] = r.distinct(2, 5, 80).sort((x, y) => x - y), q = r.pick(["angosta", "ancha"]);
+      return {
+        prompt: `<b>Verdadero o falso:</b> con la misma luz, una rendija de $${q === "angosta" ? a1 : a2}$ μm produce un máximo central de difracción **más ancho** que una de $${q === "angosta" ? a2 : a1}$ μm.`,
+        answer: q === "angosta",
+        explanation: `El primer mínimo está en $\\sin\\theta = \\frac{\\lambda}{a}$: cuanto más angosta la rendija, más se abre la luz ([[f2b-difraccion]]).`,
+        solution: [`La difracción es notable cuando la abertura es comparable con la longitud de onda.`],
+        verify: { kind: "truth", fn: () => { const w = a => Math.asin(Math.min(1, lam / (a * 1e-6))); return q === "angosta" ? w(a1) > w(a2) : w(a2) > w(a1); } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2b-difraccion": {
+      title: "Difracción: rendija, red y rayos X", aliases: ["difracción", "rendija simple", "red de difracción", "ley de Bragg", "Bragg", "difracción de Fraunhofer", "difracción de Fresnel"], concepts: ["f2b-difraccion"],
+      summary: "Rendija de ancho a: mínimos en a sen θ = mλ. Red: máximos en d sen θ = mλ. Cristales: 2d sen θ = mλ (Bragg).",
+      def: [R`**Difracción:** la luz se abre al pasar por una abertura o borde. **Fraunhofer** (pantalla lejos, rayos casi paralelos) y **Fresnel** (cerca).`,
+        R`**Rendija simple de ancho $a$:** mínimos en $a\sin\theta = m\lambda$ ($m \neq 0$); intensidad $I = I_0\left(\frac{\sin\beta}{\beta}\right)^2$ con $\beta = \frac{\pi a\sin\theta}{\lambda}$.`,
+        R`**Red de difracción** (muchas rendijas separadas $d$): máximos muy finos en $d\sin\theta = m\lambda$. **Bragg** (planos de un cristal separados $d$): $2d\sin\theta = m\lambda$.`],
+      idea: [R`Cuanto más angosta la rendija, más ancho el máximo central: la difracción importa cuando la abertura es comparable con $\lambda$. Por eso el sonido (de longitud de onda grande) dobla las esquinas y la luz casi no.`,
+        R`Las redes separan los colores con muchísima precisión (espectroscopía), y la difracción de rayos X por cristales permitió medir estructuras atómicas, como la del ADN.`],
+      examples: [{ q: R`Red de 500 líneas/mm con luz de 600 nm. ¿Ángulo del primer orden?`, steps: [R`$d = 2000$ nm; $\sin\theta = \frac{600}{2000} = 0{,}3$, así que $\theta \approx 17{,}5^\circ$.`] }],
+      see: ["f2b-interferencia", "f2b-optica"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-difraccion": { name: "Difracción" } },
+    templates: T,
+    units: [{
+      id: "f2b-difraccion-u", order: 8, program: "Unidad 8", title: "Difracción", icon: "sparkles",
+      diagnostic: ["f2b-rendija-num", "f2b-red-num", "f2b-bragg-num"],
+      lessons: [
+        { id: "f2b-rendija", title: "Rendija simple", templates: ["f2b-difr-vf", "f2b-rendija-num"], theory: ["f2b-difraccion"],
+          intro: R`Mínimos en $a\sin\theta = m\lambda$. Rendija más angosta, máximo central más ancho.` },
+        { id: "f2b-redes", title: "Redes y rayos X", templates: ["f2b-red-num", "f2b-bragg-num"], theory: ["f2b-difraccion"],
+          intro: R`Red: $d\sin\theta = m\lambda$. Bragg: $2d\sin\theta = m\lambda$.` }
+      ]
+    }],
+    cards
+  });
+})();
