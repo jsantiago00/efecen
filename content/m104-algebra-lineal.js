@@ -122,6 +122,9 @@
       def: [R`Un vector de $\mathbb{R}^n$ es una lista $(v_1, \dots, v_n)$; se suman componente a componente y se multiplican por escalares. Geométricamente, en $\mathbb{R}^2$ y $\mathbb{R}^3$ son flechas (clases de cuplas equipolentes).`,
         R`Una **combinación lineal** de $\vec v_1, \dots, \vec v_k$ es $\alpha_1\vec v_1 + \dots + \alpha_k\vec v_k$. Los vectores son **linealmente independientes (LI)** si la única combinación que da $\vec 0$ es la trivial ($\alpha_i = 0$); si no, son **LD**.`],
       idea: [R`LD significa que hay "redundancia": alguno se escribe con los otros. En $\mathbb{R}^3$: dos vectores son LD si son paralelos, y tres si son coplanares, que pasa si y solo si el [[al-determinante|determinante]] que forman es $0$.`],
+      demo: [R`**LD $\iff$ alguno es combinación de los otros.** Si $\alpha_1\vec v_1 + \dots + \alpha_k\vec v_k = \vec 0$ con algún coeficiente no nulo, digamos $\alpha_1 \neq 0$, despejamos: $$\vec v_1 = -\frac{\alpha_2}{\alpha_1}\vec v_2 - \dots - \frac{\alpha_k}{\alpha_1}\vec v_k.$$`,
+        R`Al revés, si $\vec v_1 = \beta_2\vec v_2 + \dots + \beta_k\vec v_k$, pasando todo a un lado queda $1\cdot\vec v_1 - \beta_2\vec v_2 - \dots - \beta_k\vec v_k = \vec 0$, una combinación no trivial (el coeficiente de $\vec v_1$ es $1$).`,
+        R`**Dos vectores de $\mathbb{R}^3$:** son LD si y solo si uno es múltiplo del otro, o sea, si son paralelos (o alguno es $\vec 0$).`],
       examples: [{ q: R`¿Son LI $(1, 2)$ y $(2, 4)$?`, steps: [R`$(2, 4) = 2(1, 2)$: son LD (paralelos).`] }],
       see: ["al-producto-escalar", "al-base", "al-determinante"]
     },
@@ -290,6 +293,9 @@
         R`**Tipos:** cuadrada, diagonal, triangular (superior o inferior), identidad $I$, **transpuesta** $A^T$ (filas por columnas), **simétrica** ($A^T = A$), escalonada y escalonada reducida.`],
       idea: [R`El producto es asociativo y distributivo, pero **no conmutativo**: en general $AB \neq BA$, y puede pasar que $AB = 0$ con $A, B \neq 0$. Vale $(AB)^T = B^TA^T$.`,
         R`$AB$ representa "hacer primero $B$ y después $A$" (composición de [[al-transformacion|transformaciones lineales]]).`],
+      demo: [R`**$(AB)^T = B^TA^T$.** El elemento $(i, j)$ de $(AB)^T$ es el $(j, i)$ de $AB$: $\sum_k a_{jk}b_{ki}$. El elemento $(i, j)$ de $B^TA^T$ es $\sum_k (B^T)_{ik}(A^T)_{kj} = \sum_k b_{ki}a_{jk}$. Son la misma suma.`,
+        R`**No conmuta.** Con $A = \begin{pmatrix}0 & 1\\0 & 0\end{pmatrix}$ y $B = \begin{pmatrix}0 & 0\\1 & 0\end{pmatrix}$: $AB = \begin{pmatrix}1 & 0\\0 & 0\end{pmatrix}$ pero $BA = \begin{pmatrix}0 & 0\\0 & 1\end{pmatrix}$. Y $A\cdot A = 0$ aunque $A \neq 0$.`,
+        R`**Asociatividad.** $\big((AB)C\big)_{ij} = \sum_l\left(\sum_k a_{ik}b_{kl}\right)c_{lj}$ y $\big(A(BC)\big)_{ij} = \sum_k a_{ik}\left(\sum_l b_{kl}c_{lj}\right)$. Las dos son la suma de $a_{ik}b_{kl}c_{lj}$ sobre todos los $k$ y $l$.`],
       examples: [{ q: R`Calculá $\begin{pmatrix}1 & 2\\0 & 1\end{pmatrix}\begin{pmatrix}3\\4\end{pmatrix}$.`, steps: [R`$(1\cdot3 + 2\cdot4,\ 0\cdot3 + 1\cdot4) = (11, 4)$.`] }],
       see: ["al-determinante", "al-inversa", "al-sistemas"]
     },
@@ -300,6 +306,10 @@
         R`**Propiedades:** intercambiar dos filas cambia el signo; multiplicar una fila por $k$ multiplica el determinante por $k$; sumar a una fila un múltiplo de otra no lo cambia. Por eso $\det(kA) = k^n\det A$. Además $\det(A^T) = \det A$, $\det(AB) = \det A\det B$, y el determinante de una triangular es el producto de su diagonal.`],
       idea: [R`$|\det A|$ es el factor por el que $A$ multiplica áreas (volúmenes en 3D), y el signo dice si invierte la orientación. Si $\det A = 0$, $A$ "aplasta" el espacio: sus filas son LD y no es inversible.`,
         R`**Cálculo por reducción:** se triangula con operaciones de fila llevando la cuenta de los cambios, y después se multiplica la diagonal. Es mucho más rápido que Laplace para $n \ge 4$.`],
+      demo: [R`**$\det(kA) = k^n\det A$.** $kA$ es $A$ con cada una de sus $n$ filas multiplicada por $k$. Cada fila multiplica el determinante por $k$, así que en total queda multiplicado por $k^n$.`,
+        R`**Triangular.** Si $A$ es triangular superior, desarrollamos por la primera columna: el único elemento que puede ser no nulo es $a_{11}$, así que $\det A = a_{11}\det A'$, con $A'$ triangular de orden $n - 1$. Repitiendo, $\det A = a_{11}a_{22}\cdots a_{nn}$.`,
+        R`**Fila repetida.** Si dos filas son iguales, intercambiarlas no cambia la matriz pero cambia el signo del determinante: $\det A = -\det A$, así que $\det A = 0$. De ahí sale que sumar a una fila un múltiplo de otra no lo cambia: por linealidad en esa fila, el determinante nuevo es el viejo más $k$ veces uno con una fila repetida, que vale $0$.`,
+        R`**Área en $\mathbb{R}^2$.** El paralelogramo de lados $(a, b)$ y $(c, d)$ tiene área $|\vec u \times \vec v|$ pensando los vectores en $\mathbb{R}^3$ con tercera coordenada $0$: $(a, b, 0)\times(c, d, 0) = (0, 0, ad - bc)$. Su norma es $|ad - bc|$.`],
       examples: [{ q: R`$\det\begin{pmatrix}2 & 1 & 0\\0 & 3 & 5\\0 & 0 & -1\end{pmatrix}$.`, steps: [R`Es triangular: $2\cdot 3\cdot(-1) = -6$.`] }],
       see: ["al-inversa", "al-cramer", "al-producto-vectorial"]
     },
@@ -310,6 +320,10 @@
         R`**Gauss-Jordan:** se reduce $[A \mid I]$ hasta $[I \mid A^{-1}]$. **Adjunta:** $A^{-1} = \frac{1}{\det A}\operatorname{adj}(A)$, con $\operatorname{adj}(A)$ la transpuesta de la matriz de cofactores. Para $2\times2$: $\begin{pmatrix}a & b\\c & d\end{pmatrix}^{-1} = \frac{1}{ad - bc}\begin{pmatrix}d & -b\\-c & a\end{pmatrix}$.`],
       idea: [R`¿Por qué funciona Gauss-Jordan? Cada operación de fila es multiplicar a izquierda por una matriz elemental $E_i$. Si $E_k\cdots E_1A = I$, ese producto es $A^{-1}$, y aplicado a $I$ da justamente $A^{-1}$.`,
         R`$(AB)^{-1} = B^{-1}A^{-1}$ (se invierte el orden) y $(A^T)^{-1} = (A^{-1})^T$.`],
+      demo: [R`**La fórmula $2\times2$.** Multiplicamos: $$\begin{pmatrix}a & b\\c & d\end{pmatrix}\begin{pmatrix}d & -b\\-c & a\end{pmatrix} = \begin{pmatrix}ad - bc & 0\\0 & ad - bc\end{pmatrix} = (ad - bc)\,I.$$ Dividiendo por $ad - bc \neq 0$ se obtiene $I$.`,
+        R`**Si $A$ es inversible, $\det A \neq 0$.** Por $\det(AB) = \det A\det B$: $\det A\cdot\det A^{-1} = \det I = 1$, así que $\det A$ no puede ser $0$, y además $\det A^{-1} = \frac{1}{\det A}$.`,
+        R`**$(AB)^{-1} = B^{-1}A^{-1}$.** Comprobamos: $(AB)(B^{-1}A^{-1}) = A(BB^{-1})A^{-1} = AIA^{-1} = AA^{-1} = I$, y lo mismo en el otro orden.`,
+        R`**$(A^T)^{-1} = (A^{-1})^T$.** Transponiendo $AA^{-1} = I$ y usando $(XY)^T = Y^TX^T$: $(A^{-1})^TA^T = I^T = I$.`],
       examples: [{ q: R`Inversa de $\begin{pmatrix}2 & 1\\5 & 3\end{pmatrix}$.`, steps: [R`$\det = 1$, así que $A^{-1} = \begin{pmatrix}3 & -1\\-5 & 2\end{pmatrix}$.`] }],
       see: ["al-determinante", "al-sistemas", "al-matrices"]
     }
@@ -444,6 +458,9 @@
         R`**Gauss:** llevar a forma escalonada y resolver hacia atrás. **Gauss-Jordan:** seguir hasta la escalonada reducida (pivotes $1$ con ceros arriba y abajo).`],
       idea: [R`Un sistema **homogéneo** ($\vec b = \vec 0$) siempre tiene la solución trivial; tiene otras si y solo si las columnas de $A$ son LD (para $A$ cuadrada: $\det A = 0$).`,
         R`Geométricamente, en $\mathbb{R}^3$ cada ecuación es un plano: la solución es su intersección (un punto, una recta, un plano o vacía).`],
+      demo: [R`**Las operaciones de fila no cambian las soluciones.** Si $\vec x$ cumple las ecuaciones $E_1$ y $E_2$, también cumple $kE_1$ ($k \neq 0$) y $E_2 + kE_1$. Y cada operación se deshace con otra del mismo tipo (dividir por $k$, restar $kE_1$, volver a intercambiar), así que tampoco aparecen soluciones nuevas.`,
+        R`**Homogéneo con soluciones no triviales.** Si $\vec a_1, \dots, \vec a_n$ son las columnas de $A$, entonces $A\vec x = x_1\vec a_1 + \dots + x_n\vec a_n$. Así que $A\vec x = \vec 0$ con $\vec x \neq \vec 0$ es justo una combinación lineal no trivial de las columnas que da $\vec 0$: las columnas son LD.`,
+        R`Para $A$ cuadrada, columnas LD equivale a $\det A = 0$ (ver [[al-determinante]]).`],
       examples: [{ q: R`Resolvé $x + y = 3$, $x - y = 1$.`, steps: [R`Restando: $2y = 2$, así que $y = 1$ y $x = 2$.`] }],
       see: ["al-rouche", "al-cramer", "al-inversa"]
     },
@@ -453,6 +470,9 @@
       def: [R`El **rango** de una matriz es la cantidad de filas no nulas en su forma escalonada (= máximo número de filas o de columnas LI).`,
         R`**Rouché-Frobenius** para $A\vec x = \vec b$ con $n$ incógnitas:<br>• Si $\operatorname{rg}A \neq \operatorname{rg}[A\mid b]$: **incompatible**.<br>• Si $\operatorname{rg}A = \operatorname{rg}[A\mid b] = n$: **compatible determinado**.<br>• Si $\operatorname{rg}A = \operatorname{rg}[A\mid b] < n$: **compatible indeterminado**, con $n - \operatorname{rg}A$ parámetros libres.`],
       idea: [R`Si al escalonar aparece una fila $(0\ 0\ \cdots\ 0 \mid c)$ con $c \neq 0$, eso dice "$0 = c$": imposible. Cada incógnita sin pivote es un parámetro libre.`],
+      demo: [R`Escribimos $A\vec x = x_1\vec a_1 + \dots + x_n\vec a_n$, con $\vec a_j$ las columnas de $A$. El sistema tiene solución si y solo si $\vec b$ es combinación lineal de las columnas.`,
+        R`Si $\vec b$ es combinación de las columnas, agregarla no aumenta la cantidad de columnas LI: $\operatorname{rg}[A\mid b] = \operatorname{rg}A$. Si no lo es, aporta una dirección nueva: $\operatorname{rg}[A\mid b] = \operatorname{rg}A + 1$. Eso es la condición de compatibilidad.`,
+        R`**Cuántas soluciones.** En la forma escalonada hay $\operatorname{rg}A$ pivotes. Las incógnitas sin pivote se pueden elegir libremente, y cada elección determina las demás al resolver hacia atrás. Quedan $n - \operatorname{rg}A$ parámetros: ninguno (solución única) si el rango es $n$, e infinitas soluciones si es menor.`],
       examples: [{ q: R`$x + y = 1$, $2x + 2y = 3$.`, steps: [R`Restando el doble de la primera: $0 = 1$.`, R`$\operatorname{rg}A = 1 < \operatorname{rg}[A\mid b] = 2$: incompatible (rectas paralelas).`] }],
       see: ["al-sistemas", "al-base", "al-nucleo-imagen"]
     },
@@ -588,6 +608,9 @@
         R`$W \subseteq V$ es un **subespacio** si $\vec 0 \in W$, y $\vec u + \vec v \in W$ y $\alpha\vec u \in W$ para todo $\vec u, \vec v \in W$ y $\alpha \in \mathbb{R}$.`],
       idea: [R`Ejemplos: $\mathbb{R}^n$; las matrices $m\times n$; los polinomios de grado $\le n$; las funciones continuas en $[a,b]$. Lo que importa no es qué son los "vectores" sino que se puedan combinar linealmente.`,
         R`Los subespacios de $\mathbb{R}^3$ son: $\{\vec 0\}$, las rectas por el origen, los planos por el origen y todo $\mathbb{R}^3$. Un plano que **no** pasa por el origen no es subespacio.`],
+      demo: [R`**El $\vec 0$ tiene que estar.** Si $W$ es cerrado por producto por escalares y $\vec u \in W$, entonces $0\cdot\vec u = \vec 0 \in W$. Por eso el plano $x + y + z = 1$ no es subespacio: $(0, 0, 0)$ no lo cumple.`,
+        R`**Un plano por el origen sí lo es.** Sea $W = \{(x, y, z) : ax + by + cz = 0\}$. Si $\vec u$ y $\vec v$ cumplen la ecuación, $\vec u + \vec v$ también: $a(u_1 + v_1) + b(u_2 + v_2) + c(u_3 + v_3) = 0 + 0$. Y $\alpha\vec u$ da $\alpha\cdot 0 = 0$.`,
+        R`**Una recta por el origen** es $\{t\,\vec d : t \in \mathbb{R}\}$: $s\vec d + t\vec d = (s + t)\vec d$ y $\alpha(t\vec d) = (\alpha t)\vec d$ siguen en la recta.`],
       examples: [{ q: R`¿Es subespacio $\{(x, y) : y = x^2\}$?`, steps: [R`$(1, 1)$ está pero $2(1, 1) = (2, 2)$ no ($2 \neq 4$).`, R`No es cerrado para el producto por escalares: no es subespacio.`] }],
       see: ["al-base", "al-vectores"]
     },
@@ -598,6 +621,9 @@
         R`**Coordenadas:** si $B = \{\vec b_1, \dots, \vec b_n\}$ es base, cada $\vec v$ se escribe de **una única** forma como $\vec v = \sum c_i\vec b_i$; los $c_i$ son sus coordenadas en $B$.`],
       idea: [R`La dimensión del espacio generado por unos vectores es el [[al-rouche|rango]] de la matriz que los tiene como filas: escalonando se ve cuántos son "realmente distintos".`,
         R`En un espacio de dimensión $n$: $n$ vectores LI ya son base; más de $n$ siempre son LD; menos de $n$ no generan. **Cambio de base:** pasar de coordenadas en una base a otra es multiplicar por una matriz inversible.`],
+      demo: [R`**Las coordenadas son únicas.** Si $\vec v = \sum c_i\vec b_i = \sum c_i'\vec b_i$, restando queda $\sum(c_i - c_i')\vec b_i = \vec 0$. Como la base es LI, todos los coeficientes son $0$: $c_i = c_i'$.`,
+        R`**Más de $n$ vectores son LD.** Si $\vec v_1, \dots, \vec v_k$ están en $\mathbb{R}^n$ con $k > n$, buscar $\alpha_i$ con $\sum\alpha_i\vec v_i = \vec 0$ es un sistema homogéneo de $n$ ecuaciones con $k$ incógnitas. Tiene a lo sumo $n$ pivotes, así que quedan $k - n \ge 1$ parámetros libres y hay soluciones no triviales ([[al-rouche]]).`,
+        R`**$n$ vectores LI generan.** Si no generaran, habría un $\vec w$ que no es combinación de ellos, y entonces los $n + 1$ vectores $\vec v_1, \dots, \vec v_n, \vec w$ serían LI. Eso contradice el punto anterior.`],
       examples: [{ q: R`Coordenadas de $(3, 1)$ en la base $\{(1, 1), (1, -1)\}$.`, steps: [R`$\alpha + \beta = 3$, $\alpha - \beta = 1$: $\alpha = 2$, $\beta = 1$.`] }],
       see: ["al-espacio-vectorial", "al-vectores", "al-rouche"]
     },
@@ -725,6 +751,9 @@
       def: [R`$T: V \to W$ es **lineal** si para todo $\vec u, \vec v$ y todo escalar $\alpha$: $$T(\vec u + \vec v) = T(\vec u) + T(\vec v), \qquad T(\alpha\vec u) = \alpha T(\vec u).$$ En particular $T(\vec 0) = \vec 0$.`],
       idea: [R`Una transformación lineal queda **determinada** por lo que les hace a los vectores de una base, porque todo lo demás es combinación lineal. Ejemplos: rotaciones, reflexiones, proyecciones, homotecias. También la [[derivada]] (en el espacio de polinomios) y la integral.`,
         R`$T$ es **inversible** si es biyectiva; su inversa también es lineal, y su matriz es la [[al-inversa|inversa]] de la matriz de $T$.`],
+      demo: [R`**$T(\vec 0) = \vec 0$.** Por la segunda condición con $\alpha = 0$: $T(\vec 0) = T(0\cdot\vec 0) = 0\cdot T(\vec 0) = \vec 0$. Por eso una traslación $T(\vec v) = \vec v + \vec c$ con $\vec c \neq \vec 0$ no es lineal.`,
+        R`**Queda determinada por una base.** Si $\{\vec b_1, \dots, \vec b_n\}$ es base y $\vec v = \sum c_i\vec b_i$, aplicando las dos condiciones $$T(\vec v) = T\left(\sum c_i\vec b_i\right) = \sum c_i\,T(\vec b_i).$$ Conociendo los $T(\vec b_i)$, se conoce $T$ en todo vector.`,
+        R`**La inversa es lineal.** Si $T$ es biyectiva, sean $\vec u = T(\vec x)$ y $\vec v = T(\vec y)$. Entonces $T(\vec x + \vec y) = \vec u + \vec v$, así que $T^{-1}(\vec u + \vec v) = \vec x + \vec y = T^{-1}(\vec u) + T^{-1}(\vec v)$. Igual con $\alpha\vec u$.`],
       examples: [{ q: R`¿Es lineal $T(x, y) = (x + 1, y)$?`, steps: [R`$T(0, 0) = (1, 0) \neq (0, 0)$: no es lineal (es una traslación).`] }],
       see: ["al-nucleo-imagen", "al-matriz-asociada"]
     },
@@ -735,6 +764,10 @@
         R`**Teorema de la dimensión:** si $T: V \to W$ con $\dim V = n$, $$\dim N(T) + \dim\operatorname{Im}(T) = n.$$`],
       idea: [R`Con la matriz $A$ de $T$: la imagen está generada por las columnas de $A$ (dimensión $\operatorname{rg}A$) y el núcleo son las soluciones de $A\vec x = \vec 0$, con $n - \operatorname{rg}A$ parámetros libres ([[al-rouche|Rouché-Frobenius]]).`,
         R`$T$ es inyectiva si y solo si $N(T) = \{\vec 0\}$. Lo que "se pierde" en el núcleo es exactamente lo que le falta a la imagen para llenar las $n$ dimensiones.`],
+      demo: [R`**El núcleo es un subespacio.** $T(\vec 0) = \vec 0$, así que $\vec 0 \in N(T)$. Si $T(\vec u) = T(\vec v) = \vec 0$, entonces $T(\vec u + \vec v) = \vec 0 + \vec 0$ y $T(\alpha\vec u) = \alpha\vec 0 = \vec 0$. Con la imagen es parecido: $T(\vec x) + T(\vec y) = T(\vec x + \vec y)$ y $\alpha T(\vec x) = T(\alpha\vec x)$.`,
+        R`**Inyectiva $\iff N(T) = \{\vec 0\}$.** Si $T(\vec u) = T(\vec v)$, entonces $T(\vec u - \vec v) = \vec 0$, o sea $\vec u - \vec v \in N(T)$. Si el núcleo es solo $\vec 0$, $\vec u = \vec v$. Al revés, si $T$ es inyectiva, el único que va a $\vec 0$ es $\vec 0$.`,
+        R`**Teorema de la dimensión.** Tomamos una base $\{\vec k_1, \dots, \vec k_r\}$ de $N(T)$ y la completamos a una base de $V$ con $\vec u_1, \dots, \vec u_s$, donde $r + s = n$. Veamos que $T(\vec u_1), \dots, T(\vec u_s)$ es base de la imagen.`,
+        R`**Generan:** todo $\vec v$ es $\sum a_i\vec k_i + \sum b_j\vec u_j$, y $T(\vec v) = \sum b_j T(\vec u_j)$ porque $T(\vec k_i) = \vec 0$. **Son LI:** si $\sum b_j T(\vec u_j) = \vec 0$, entonces $\sum b_j\vec u_j \in N(T)$, así que es combinación de los $\vec k_i$. Como la base completa es LI, todos los $b_j$ son $0$. Entonces $\dim\operatorname{Im}T = s = n - r$.`],
       examples: [{ q: R`$T(x, y, z) = (x + y, y + z)$. ¿Dimensión del núcleo?`, steps: [R`$\operatorname{rg}\begin{pmatrix}1 & 1 & 0\\0 & 1 & 1\end{pmatrix} = 2$, así que $\dim\operatorname{Im} = 2$.`, R`$\dim N = 3 - 2 = 1$: es la recta generada por $(1, -1, 1)$.`] }],
       see: ["al-transformacion", "al-rouche", "al-base"]
     },
@@ -745,6 +778,9 @@
         R`Dos matrices son **semejantes** si $A' = P^{-1}AP$ con $P$ inversible: representan la misma transformación en bases distintas ($P$ es la matriz de cambio de base).`],
       idea: [R`Rotación de ángulo $\theta$: $\begin{pmatrix}\cos\theta & -\sin\theta\\\sin\theta & \cos\theta\end{pmatrix}$, porque $(1, 0) \mapsto (\cos\theta, \sin\theta)$ y $(0, 1) \mapsto (-\sin\theta, \cos\theta)$.`,
         R`Las matrices semejantes comparten determinante, traza y [[al-autovalores|autovalores]]: son propiedades de la transformación, no de la base. Elegir la base adecuada puede dejar una matriz diagonal ([[al-diagonalizacion]]).`],
+      demo: [R`**$[T(\vec v)] = A[\vec v]$.** Si $\vec v = \sum c_j\vec b_j$, por linealidad $T(\vec v) = \sum c_j T(\vec b_j)$. En coordenadas, eso es $\sum c_j$ por la columna $j$ de $A$, que es exactamente el producto $A\,[\vec v]$.`,
+        R`**Matrices semejantes tienen el mismo determinante.** $\det(P^{-1}AP) = \det P^{-1}\det A\det P = \frac{1}{\det P}\det A\det P = \det A$.`,
+        R`**Y el mismo polinomio característico** (por lo tanto, los mismos autovalores): $P^{-1}AP - \lambda I = P^{-1}(A - \lambda I)P$, y por lo anterior $\det(P^{-1}AP - \lambda I) = \det(A - \lambda I)$.`],
       examples: [{ q: R`Matriz de la reflexión respecto de $y = x$.`, steps: [R`$(1, 0) \mapsto (0, 1)$ y $(0, 1) \mapsto (1, 0)$.`, R`$A = \begin{pmatrix}0 & 1\\1 & 0\end{pmatrix}$.`] }],
       see: ["al-transformacion", "al-diagonalizacion"]
     }
@@ -863,6 +899,9 @@
         R`Para $2\times2$: $p(\lambda) = \lambda^2 - (\operatorname{tr}A)\lambda + \det A$. En general, la suma de los autovalores es la traza y el producto, el determinante.`],
       idea: [R`Un autovector es una dirección que $A$ no gira: solo la estira o encoge (por $\lambda$). Para encontrarlos: primero los $\lambda$ (raíces del polinomio característico) y después, para cada uno, el núcleo de $A - \lambda I$.`,
         R`Aparecen en todos lados: modos normales de oscilación, ejes principales de inercia, estados estacionarios, mecánica cuántica (los valores medibles son autovalores).`],
+      demo: [R`**Por qué el polinomio característico.** $A\vec v = \lambda\vec v$ es lo mismo que $(A - \lambda I)\vec v = \vec 0$. Hay un $\vec v \neq \vec 0$ que lo cumple si y solo si el sistema homogéneo tiene soluciones no triviales, o sea, si y solo si $\det(A - \lambda I) = 0$ ([[al-sistemas]]).`,
+        R`**El caso $2\times2$.** $$\det\begin{pmatrix}a - \lambda & b\\c & d - \lambda\end{pmatrix} = (a - \lambda)(d - \lambda) - bc = \lambda^2 - (a + d)\lambda + (ad - bc),$$ o sea $\lambda^2 - (\operatorname{tr}A)\lambda + \det A$.`,
+        R`Si las raíces son $\lambda_1$ y $\lambda_2$, el polinomio es $(\lambda - \lambda_1)(\lambda - \lambda_2) = \lambda^2 - (\lambda_1 + \lambda_2)\lambda + \lambda_1\lambda_2$. Comparando coeficientes: $\lambda_1 + \lambda_2 = \operatorname{tr}A$ y $\lambda_1\lambda_2 = \det A$.`],
       examples: [{ q: R`Autovalores de $\begin{pmatrix}2 & 1\\1 & 2\end{pmatrix}$.`, steps: [R`$\lambda^2 - 4\lambda + 3 = 0$: $\lambda = 1$ y $\lambda = 3$.`, R`Autovectores: $(1, -1)$ para $1$ y $(1, 1)$ para $3$.`] }],
       see: ["al-diagonalizacion", "al-determinante", "al-nucleo-imagen"]
     },
@@ -874,6 +913,10 @@
         R`**Matrices simétricas** ($A^T = A$): sus autovalores son reales, autovectores de autovalores distintos son ortogonales, y se diagonalizan con una $P$ **ortogonal** ($P^{-1} = P^T$).`],
       idea: [R`Diagonalizar es elegir una base de autovectores, donde $A$ actúa por separado en cada eje. Así las potencias son fáciles: $A^k = PD^kP^{-1}$.`,
         R`Contraejemplo clásico: $\begin{pmatrix}a & 1\\0 & a\end{pmatrix}$ tiene un solo autovalor y una sola dirección de autovectores: no es diagonalizable.`],
+      demo: [R`**Por qué las columnas de $P$ son autovectores.** $P^{-1}AP = D$ equivale a $AP = PD$. La columna $j$ de $AP$ es $A\vec p_j$, y la columna $j$ de $PD$ es $d_j\vec p_j$. Así que $A\vec p_j = d_j\vec p_j$ para cada $j$. Y $P$ es inversible justo cuando sus columnas son LI.`,
+        R`**Potencias.** $A = PDP^{-1}$, así que $A^2 = PDP^{-1}PDP^{-1} = PD^2P^{-1}$: los $P^{-1}P$ del medio se cancelan. En general $A^k = PD^kP^{-1}$, y $D^k$ es elevar cada elemento de la diagonal a la $k$.`,
+        R`**Autovalores distintos dan autovectores LI** (dos): si $A\vec u = \lambda\vec u$, $A\vec v = \mu\vec v$ con $\lambda \neq \mu$ y $\alpha\vec u + \beta\vec v = \vec 0$, aplicando $A$ queda $\alpha\lambda\vec u + \beta\mu\vec v = \vec 0$. Restando $\lambda$ veces la primera: $\beta(\mu - \lambda)\vec v = \vec 0$, así que $\beta = 0$, y entonces $\alpha = 0$.`,
+        R`**Simétricas: autovectores ortogonales.** Si $A^T = A$, entonces $(A\vec u)\cdot\vec v = \vec u\cdot(A\vec v)$. Con autovectores de $\lambda \neq \mu$: $\lambda\,\vec u\cdot\vec v = \mu\,\vec u\cdot\vec v$, o sea $(\lambda - \mu)\,\vec u\cdot\vec v = 0$, y por lo tanto $\vec u\cdot\vec v = 0$.`],
       examples: [{ q: R`Calculá $A^{10}$ con $A = PDP^{-1}$ y $D = \operatorname{diag}(1, 2)$.`, steps: [R`$A^{10} = P\,\operatorname{diag}(1, 1024)\,P^{-1}$.`] }],
       see: ["al-autovalores", "al-matriz-asociada", "al-gram-schmidt"]
     },
@@ -883,6 +926,9 @@
       def: [R`**Gram-Schmidt:** dada una base $\{\vec u_1, \dots, \vec u_k\}$: $$\vec w_1 = \vec u_1, \qquad \vec w_j = \vec u_j - \sum_{i<j}\frac{\vec u_j\cdot\vec w_i}{\vec w_i\cdot\vec w_i}\vec w_i.$$ Los $\vec w_j$ son ortogonales y generan lo mismo; dividiendo por sus normas, se obtiene una base ortonormal.`],
       idea: [R`Cada paso le saca al vector nuevo "la parte que ya estaba" en las direcciones anteriores (su [[al-producto-escalar|proyección]]), y queda solo lo perpendicular.`,
         R`La **proyección ortogonal** de $\vec v$ sobre un subespacio con base ortonormal $\{\vec e_i\}$ es $\sum(\vec v\cdot\vec e_i)\vec e_i$: el punto del subespacio más cercano a $\vec v$ (la base de los mínimos cuadrados).`],
+      demo: [R`**Los $\vec w_j$ son ortogonales.** Supongamos que $\vec w_1, \dots, \vec w_{j-1}$ ya son ortogonales entre sí. Para $l < j$, al hacer el producto escalar con $\vec w_l$, de la suma solo sobrevive el término $i = l$: $$\vec w_j\cdot\vec w_l = \vec u_j\cdot\vec w_l - \frac{\vec u_j\cdot\vec w_l}{\vec w_l\cdot\vec w_l}\,\vec w_l\cdot\vec w_l = 0.$$`,
+        R`**Generan lo mismo.** Cada $\vec w_j$ es $\vec u_j$ menos una combinación de los anteriores, y al revés, $\vec u_j$ es $\vec w_j$ más esa combinación. Y ningún $\vec w_j$ es $\vec 0$: si lo fuera, $\vec u_j$ sería combinación de los $\vec u$ anteriores, y la base no sería LI.`,
+        R`**La proyección es el punto más cercano.** Sea $\vec p = \sum(\vec v\cdot\vec e_i)\vec e_i$. Entonces $\vec v - \vec p$ es ortogonal a cada $\vec e_i$, y por lo tanto a todo el subespacio. Si $\vec q$ es otro punto del subespacio, $\vec p - \vec q$ está en él, y por Pitágoras $$|\vec v - \vec q|^2 = |\vec v - \vec p|^2 + |\vec p - \vec q|^2 \ge |\vec v - \vec p|^2.$$`],
       examples: [{ q: R`Ortogonalizá $(1, 1)$ y $(1, 0)$.`, steps: [R`$\vec w_2 = (1, 0) - \frac{1}{2}(1, 1) = \left(\frac12, -\frac12\right)$.`, R`Chequeo: $(1, 1)\cdot\left(\frac12, -\frac12\right) = 0$ ✓.`] }],
       see: ["al-euclideo", "al-producto-escalar", "al-diagonalizacion"]
     }
