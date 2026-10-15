@@ -204,29 +204,271 @@
 
   E.registerExams("m104", {
     self: SELF,
+    // los ítems con `any` sortean entre ejercicios de distintos años (2018, 2019, 2024, 2026)
     exams: [
       { id: "p1", kind: "parcial", title: "1.er parcial", topics: "Vectores, matrices, determinantes y sistemas", minutes: 120, pass: 60,
         items: [
-          { title: "Vectores en el espacio", parts: [{ self: "al-ex-paralelogramo", pts: 16 }, { tpl: "al-proy-num", pts: 6 }] },
-          { title: "Determinante e inversa", parts: [{ self: "al-ex-adjunta", pts: 20 }] },
-          { title: "Sistema con parámetro", parts: [{ self: "al-ex-sistema-k", pts: 14 }, { tpl: "al-param-num", pts: 10 }] },
+          { any: [
+            { title: "Vectores en el espacio", parts: [{ self: "al-ex-paralelogramo", pts: 16 }, { tpl: "al-proy-num", pts: 6 }] },
+            { title: "Un rombo en el plano", parts: [{ tpl: "al-ex-rombo", pts: 12 }, { pick: ["al-escalar-num", "al-dist-num"], pts: 10 }] }
+          ] },
+          { any: [
+            { title: "Determinante e inversa", parts: [{ self: "al-ex-adjunta", pts: 20 }] },
+            { title: "Ecuación matricial e inversa", parts: [{ tpl: "al-ex-matrices", pts: 8 }, { self: "al-ex-adjunta", pts: 12 }] }
+          ] },
+          { any: [
+            { title: "Sistema con parámetro", parts: [{ self: "al-ex-sistema-k", pts: 14 }, { tpl: "al-param-num", pts: 10 }] },
+            { title: "Rouché-Frobenius con parámetro", parts: [{ tpl: "al-ex-rouche-k", pts: 12 }, { tpl: "al-rouche-mc", pts: 12 }] }
+          ] },
           { title: "Verdadero o falso (justificando)", parts: [{ tpl: "al-li-vf", pts: 6 }, { tpl: "al-matriz-vf", pts: 6 }, { tpl: "al-homog-vf", pts: 6 }, { tpl: "al-detprop-num", pts: 6 }] },
-          { title: "Rouché-Frobenius", parts: [{ tpl: "al-rouche-mc", pts: 10 }] }
+          { title: "Sistemas", parts: [{ pick: ["al-rouche-mc", "al-cramer-num", "al-sistema-num"], pts: 10 }] }
         ] },
       { id: "p2", kind: "parcial", title: "2.º parcial", topics: "Espacios vectoriales y transformaciones lineales", minutes: 120, pass: 60,
         items: [
-          { title: "Subespacios", parts: [{ self: "al-ex-subespacio", pts: 20 }] },
-          { title: "Bases y coordenadas", parts: [{ tpl: "al-coord-num", pts: 10 }, { tpl: "al-dim-num", pts: 10 }] },
-          { title: "Transformaciones lineales: núcleo e imagen", parts: [{ tpl: "al-tl-vf", pts: 8 }, { tpl: "al-nucleo-num", pts: 12 }, { tpl: "al-dimteo-mc", pts: 10 }] },
+          { title: "Subespacios", parts: [{ any: [{ self: "al-ex-subespacio" }, { self: "al-ex-subespacio-param" }], pts: 20 }] },
+          { any: [
+            { title: "Bases y coordenadas", parts: [{ tpl: "al-coord-num", pts: 10 }, { tpl: "al-dim-num", pts: 10 }] },
+            { title: "Coordenadas en una base de matrices", parts: [{ tpl: "al-ex-coord-m2", pts: 20 }] }
+          ] },
+          { any: [
+            { title: "Transformaciones lineales: núcleo e imagen", parts: [{ tpl: "al-tl-vf", pts: 8 }, { tpl: "al-nucleo-num", pts: 12 }, { tpl: "al-dimteo-mc", pts: 10 }] },
+            { title: "Resta de transformaciones lineales", parts: [{ self: "al-ex-tl-resta", pts: 30 }] }
+          ] },
           { title: "Matriz asociada y familias", parts: [{ tpl: "al-matriz-tl-num", pts: 10 }, { tpl: "al-base-vf", pts: 10 }, { tpl: "al-subesp-vf", pts: 10 }] }
         ] },
       { id: "final", kind: "final", title: "Final regular (parte escrita)", topics: "Toda la materia, con demostraciones. En el real se necesita el 60 % del escrito para pasar al oral.", minutes: 60, pass: 60,
         items: [
-          { title: "Núcleo de una transformación lineal", parts: [{ self: "al-ex-demo-nucleo", pts: 15 }, { tpl: "al-dimteo-mc", pts: 10 }] },
-          { title: "Isomorfismo, matriz asociada y autovalores", parts: [{ self: "al-ex-iso-diag", pts: 30 }] },
+          { any: [
+            { title: "Núcleo de una transformación lineal", parts: [{ self: "al-ex-demo-nucleo", pts: 15 }, { tpl: "al-dimteo-mc", pts: 10 }] },
+            { title: "Propiedades de las transformaciones lineales", parts: [{ self: "al-ex-demo-tl-props", pts: 15 }, { tpl: "al-tl-vf", pts: 10 }] }
+          ] },
+          { any: [
+            { title: "Isomorfismo, matriz asociada y autovalores", parts: [{ self: "al-ex-iso-diag", pts: 30 }] },
+            { title: "Autovalores y diagonalización ortogonal", parts: [{ self: "al-ex-eigen-sim", pts: 30 }] }
+          ] },
           { title: "Verdadero o falso (justificando)", parts: [{ tpl: "al-diag-vf", pts: 9 }, { tpl: "al-matriz-vf", pts: 8 }, { tpl: "al-homog-vf", pts: 8 }] },
-          { title: "Ortogonalidad", parts: [{ self: "al-ex-demo-ortog", pts: 20 }] }
+          { title: "Demostración", parts: [{ any: [{ self: "al-ex-demo-ortog" }, { self: "al-ex-demo-autovec" }], pts: 20 }] }
         ] }
     ]
   });
+})();
+
+/* ===== M104 · Evaluaciones: más variantes (parciales 2018 y 2019, final regular parte II) ===== */
+(function () {
+  const E = window.Efecen, R = String.raw;
+  const T = {}, SELF = {};
+  const pm = M => `\\begin{pmatrix} ${M.map(row => row.join(" & ")).join(R` \\ `)} \\end{pmatrix}`;
+  const vec = v => `(${v.join(", ")})`;
+  const nf = (H, x, d = 3) => H.num(x, d).replace(".", "{,}");
+  // rango por eliminación gaussiana (para los verify)
+  const rank = A0 => {
+    const A = A0.map(r => r.slice()), m = A.length, n = A[0].length;
+    let rk = 0;
+    for (let c = 0; c < n && rk < m; c++) {
+      let p = rk;
+      for (let i = rk + 1; i < m; i++) if (Math.abs(A[i][c]) > Math.abs(A[p][c])) p = i;
+      if (Math.abs(A[p][c]) < 1e-9) continue;
+      [A[rk], A[p]] = [A[p], A[rk]];
+      for (let i = 0; i < m; i++) if (i !== rk) { const f = A[i][c] / A[rk][c]; for (let j = c; j < n; j++) A[i][j] -= f * A[rk][j]; }
+      rk++;
+    }
+    return rk;
+  };
+
+  // sistema 3×3 con parámetro: ¿para qué k hay infinitas soluciones o ninguna?
+  T["al-ex-rouche-k"] = {
+    type: "numeric", concepts: ["al-rouche"], difficulty: 3,
+    generate(r, H) {
+      const r1 = [1, r.nz(-3, 3), r.int(-3, 3)], r2 = [r.nz(-2, 3), r.nz(-3, 3), r.int(-3, 3)];
+      if (r1[0] * r2[1] - r1[1] * r2[0] === 0) return null;
+      const [k0, k1] = r.distinct(2, -3, 3), b1 = r.int(-4, 4), b2 = r.int(-4, 4);
+      const A = k => [r1, r2, [r1[0] + r2[0], r1[1] + r2[1], r1[2] + r2[2] + (k - k0) * (k - k1)]], b = k => [b1, b2, b1 + b2 + (k - k0)];
+      const ask = r.pick(["inf", "none"]), ans = ask === "inf" ? k0 : k1;
+      const c3 = H.poly([[1, "k^{2}"], [-(k0 + k1), "k"], [k0 * k1 + r1[2] + r2[2], ""]]), b3 = H.poly([[1, "k"], [b1 + b2 - k0, ""]]);
+      const eq = (row, bb) => `${H.poly([[row[0], "x"], [row[1], "y"], [row[2], "z"]])} = ${bb}`;
+      return {
+        prompt: `Dado el sistema $$\\begin{cases} ${eq(r1, b1)} \\\\ ${eq(r2, b2)} \\\\ ${H.poly([[r1[0] + r2[0], "x"], [r1[1] + r2[1], "y"]])} + (${c3})z = ${b3} \\end{cases}$$ ¿para qué valor de $k$ el sistema ${ask === "inf" ? "tiene **infinitas** soluciones" : "**no** tiene solución"}?`,
+        answer: ans,
+        solution: [
+          `Restando a la tercera ecuación la suma de las dos primeras queda $(k - ${H.par(k0)})(k - ${H.par(k1)})\\,z = k - ${H.par(k0)}$ (después de simplificar).`,
+          `Si $k \\neq ${k0}$ y $k \\neq ${k1}$: $\\operatorname{rg}A = \\operatorname{rg}[A|b] = 3$, compatible determinado.`,
+          `Si $k = ${k0}$: la tercera fila queda nula en la ampliada, $\\operatorname{rg}A = \\operatorname{rg}[A|b] = 2 < 3$: **infinitas** soluciones.`,
+          `Si $k = ${k1}$: queda $0 = ${k1 - k0}$, $\\operatorname{rg}A = 2 \\neq \\operatorname{rg}[A|b] = 3$: **sin solución**.`
+        ],
+        verify: { kind: "truth", target: true, fn: () => { const ra = rank(A(ans)), rb = rank(A(ans).map((row, i) => row.concat(b(ans)[i]))); return ask === "inf" ? ra === 2 && rb === 2 : ra === 2 && rb === 3; } }
+      };
+    }
+  };
+
+  // sistema de dos ecuaciones matriciales: A − B = M y 2A + B = N
+  T["al-ex-matrices"] = {
+    type: "numeric", concepts: ["al-matrices"], difficulty: 2,
+    generate(r, H) {
+      const A = [0, 1, 2].map(() => [r.int(-4, 4), r.int(-4, 4), r.int(-4, 4)]), B = [0, 1, 2].map(() => [r.int(-4, 4), r.int(-4, 4), r.int(-4, 4)]);
+      const M = A.map((row, i) => row.map((x, j) => x - B[i][j])), N = A.map((row, i) => row.map((x, j) => 2 * x + B[i][j]));
+      const which = r.pick(["A", "B"]), i = r.int(0, 2), j = r.int(0, 2), ans = (which === "A" ? A : B)[i][j];
+      return {
+        prompt: `Las matrices $A$ y $B$ de orden 3 cumplen $$A - B = ${pm(M)} \\quad\\text{y}\\quad 2A + B = ${pm(N)}.$$ ¿Cuánto vale el elemento $(${i + 1}, ${j + 1})$ de $${which}$?`,
+        answer: ans,
+        solution: [R`Sumando las dos ecuaciones: $3A = (A - B) + (2A + B)$, así que $A = \frac13\left[(A - B) + (2A + B)\right]$.`,
+          `$A = ${pm(A)}$ y $B = A - (A - B) = ${pm(B)}$.`, `El elemento $(${i + 1}, ${j + 1})$ de $${which}$ es $${ans}$.`],
+        verify: { kind: "zero", fn: x => { const a = which === "A" ? x : A[i][j], b2 = which === "B" ? x : B[i][j]; return [a - b2 - M[i][j], 2 * a + b2 - N[i][j]]; } }
+      };
+    }
+  };
+
+  // rombo: diagonales perpendiculares y área
+  T["al-ex-rombo"] = {
+    type: "numeric", concepts: ["al-escalar", "al-vectores"], difficulty: 2,
+    generate(r, H) {
+      const C = [r.int(-3, 5), r.int(-3, 5)], u = [r.nz(-3, 3), r.int(-3, 3)], t = r.pick([1, 2]), v = [-u[1] * t, u[0] * t];
+      const P = [[C[0] + u[0], C[1] + u[1]], [C[0] + v[0], C[1] + v[1]], [C[0] - u[0], C[1] - u[1]], [C[0] - v[0], C[1] - v[1]]];
+      const area = 2 * t * (u[0] ** 2 + u[1] ** 2);
+      return {
+        prompt: `Sean $a = ${vec(P[0])}$, $b = ${vec(P[1])}$, $c = ${vec(P[2])}$ y $d = ${vec(P[3])}$ en $\\mathbb{R}^2$. Comprobá que las diagonales del cuadrilátero $abcd$ son perpendiculares y calculá su área.`,
+        answer: area,
+        solution: [`Diagonales: $\\overrightarrow{ac} = ${vec([P[2][0] - P[0][0], P[2][1] - P[0][1]])}$ y $\\overrightarrow{bd} = ${vec([P[3][0] - P[1][0], P[3][1] - P[1][1]])}$; su producto escalar es $0$: son perpendiculares (y se cortan en su punto medio: es un rombo).`,
+          `Área de un rombo: $\\frac{\\|\\overrightarrow{ac}\\|\\,\\|\\overrightarrow{bd}\\|}{2} = ${area}$.`],
+        // otro camino: fórmula del zapatero con los cuatro vértices
+        verify: { kind: "value", fn: () => Math.abs(P.reduce((s, p, k) => s + p[0] * P[(k + 1) % 4][1] - P[(k + 1) % 4][0] * p[1], 0)) / 2 }
+      };
+    }
+  };
+
+  // coordenadas de una matriz en una base de M2x2
+  T["al-ex-coord-m2"] = {
+    type: "numeric", concepts: ["al-base"], difficulty: 3,
+    generate(r, H) {
+      const Bs = [0, 1, 2, 3].map(() => [[r.int(-2, 3), r.int(-2, 3)], [r.int(-2, 3), r.int(-2, 3)]]);
+      if (rank(Bs.map(b => b.flat())) < 4) return null;
+      const c = [r.int(-3, 3), r.int(-3, 3), r.int(-3, 3), r.int(-3, 3)], k = r.int(0, 3);
+      const D = [[0, 0], [0, 0]].map((row, i) => row.map((_, j) => c.reduce((s, ci, q) => s + ci * Bs[q][i][j], 0)));
+      return {
+        prompt: `En $M_{2\\times2}(\\mathbb{R})$ se tiene la base $B = \\left\\{ ${Bs.map(pm).join(",\\ ")} \\right\\}$. Si $D = ${pm(D)}$ en la base canónica, ¿cuál es la ${["primera", "segunda", "tercera", "cuarta"][k]} componente de $D$ en la base $B$?`,
+        answer: c[k],
+        solution: [R`Buscamos $\alpha_1, \dots, \alpha_4$ con $D = \alpha_1 B_1 + \alpha_2 B_2 + \alpha_3 B_3 + \alpha_4 B_4$: igualando los cuatro elementos queda un sistema de $4\times4$.`,
+          `Resolviéndolo: $[D]_B = (${c.join(", ")})$. La componente pedida es $${c[k]}$.`],
+        verify: { kind: "zero", fn: x => { const cc = c.slice(); cc[k] = x; return [0, 1].flatMap(i => [0, 1].map(j => cc.reduce((s, ci, q) => s + ci * Bs[q][i][j], 0) - D[i][j])); } }
+      };
+    }
+  };
+
+  // ---------- desarrollo ----------
+  // subespacio de P3 dado como combinación de dos parámetros
+  SELF["al-ex-subespacio-param"] = {
+    concepts: ["al-subespacio", "al-base"],
+    generate(r, H) {
+      const p = [r.int(-2, 2), r.int(-2, 2), r.int(-2, 2), r.int(-2, 2)], q = [r.int(-2, 3), r.int(-2, 3), r.int(-2, 3), r.int(-2, 3)];
+      if (rank([p, q]) < 2 || p[0] === 0 && q[0] === 0) return null;
+      const coef = i => H.poly([[p[i], "a"], [q[i], "b"]]);
+      const pol = c => H.poly([[c[0], "x^{3}"], [c[1], "x^{2}"], [c[2], "x"], [c[3], ""]]);
+      const terms = ["x^3", "x^2", "x", ""].map((m, i) => `(${coef(i)})${m}`).join(" + ");
+      return {
+        prompt: `Sea $F$ el conjunto de los polinomios de la forma $p(x) = ${terms}$, con $a, b \\in \\mathbb{R}$. a) Determiná si $F$ es un subespacio de $P_3$. b) En caso afirmativo, hallá una base y la dimensión de $F$.`,
+        rubric: [
+          { text: `Reescribe $p = a(${pol(p)}) + b(${pol(q)})$: $F$ es el conjunto generado por esos dos polinomios.`, w: 3 },
+          { text: R`Prueba que es subespacio: contiene al $0$ ($a = b = 0$) y es cerrado por suma y por producto por escalares (o porque todo conjunto generado lo es).`, w: 4 },
+          { text: R`Prueba que los dos polinomios son LI y concluye $\dim F = 2$.`, w: 3 }
+        ],
+        solution: [
+          `Agrupando por $a$ y por $b$: $p(x) = a(${pol(p)}) + b(${pol(q)})$. Entonces $F = \\operatorname{gen}\\{${pol(p)},\\ ${pol(q)}\\}$.`,
+          R`Todo conjunto generado es un subespacio: con $a = b = 0$ sale el polinomio nulo, y sumar dos elementos o multiplicar por un escalar da otra combinación de los mismos dos polinomios.`,
+          `Son LI porque no son múltiplo uno del otro (sus coeficientes no son proporcionales). Base $\\{${pol(p)},\\ ${pol(q)}\\}$: $\\dim F = 2$.`
+        ],
+        verify: { kind: "truth", target: true, fn: () => rank([p, q]) === 2 }
+      };
+    }
+  };
+
+  // h = f − g: matriz, linealidad, nulidad, rango y epimorfismo
+  SELF["al-ex-tl-resta"] = {
+    concepts: ["al-tl", "al-nucleo", "al-matriz-tl"],
+    generate(r, H) {
+      const F = [0, 1, 2].map(() => [r.int(-2, 3), r.int(-2, 3), r.int(-2, 3), r.int(-2, 3)]), G = [0, 1, 2].map(() => [r.int(-2, 3), r.int(-2, 3), r.int(-2, 3), r.int(-2, 3)]);
+      const Hm = F.map((row, i) => row.map((x, j) => x - G[i][j])), rk = rank(Hm);
+      if (rk < 2) return null;
+      const comp = row => H.poly(row.map((c, j) => [c, `x_{${j + 1}}`]));
+      const fx = M => `(${M.map(comp).join(",\\ ")})`;
+      return {
+        prompt: `Sean $f, g: \\mathbb{R}^4 \\to \\mathbb{R}^3$ las transformaciones lineales $f(x_1, x_2, x_3, x_4) = ${fx(F)}$ y $g(x_1, x_2, x_3, x_4) = ${fx(G)}$. a) Determiná si $h = f - g$ es una transformación lineal. b) En caso afirmativo, hallá su nulidad y su rango. c) Hallá la matriz de $h$ en las bases canónicas. d) ¿Es $h$ un epimorfismo?`,
+        rubric: [
+          { text: R`a) La resta de lineales es lineal (verifica aditividad y homogeneidad).`, w: 2 },
+          { text: `c) $[h] = ${pm(Hm)}$.`, w: 2 },
+          { text: `b) Rango $= ${rk}$ (escalonando la matriz) y nulidad $= 4 - ${rk} = ${4 - rk}$ (teorema de la dimensión).`, w: 4 },
+          { text: `d) ${rk === 3 ? "Sí: el rango es 3 = dim del codominio." : `No: el rango es ${rk} < 3.`}`, w: 2 }
+        ],
+        solution: [
+          R`a) $h(\vec u + \vec v) = f(\vec u + \vec v) - g(\vec u + \vec v) = f(\vec u) + f(\vec v) - g(\vec u) - g(\vec v) = h(\vec u) + h(\vec v)$, y lo mismo con $\lambda\vec u$: es lineal.`,
+          `c) $h(x) = ${fx(Hm)}$, así que $[h] = ${pm(Hm)}$.`,
+          `b) Escalonando, la matriz tiene rango $${rk}$: $\\dim\\operatorname{Im} h = ${rk}$. Por el teorema de la dimensión, $\\dim N(h) = 4 - ${rk} = ${4 - rk}$.`,
+          `d) ${rk === 3 ? "Como $\\dim\\operatorname{Im} h = 3 = \\dim\\mathbb{R}^3$, $h$ es suryectiva: es un epimorfismo." : `Como $\\dim\\operatorname{Im} h = ${rk} < 3$, $h$ no es suryectiva: no es un epimorfismo.`}`
+        ],
+        verify: { kind: "rank", A: Hm, target: rk }
+      };
+    }
+  };
+
+  // autovalores y diagonalización ortogonal de una matriz simétrica 2×2
+  SELF["al-ex-eigen-sim"] = {
+    concepts: ["al-autovalores", "al-diagonalizacion"],
+    generate(r, H) {
+      // A = P D P^T con autovectores enteros (p, q) y (−q, p)
+      const p = r.nz(-2, 2), q = r.nz(-2, 2), n2 = p * p + q * q, l1 = r.int(-4, 5), l2 = l1 + r.pick([-1, 1]) * n2;
+      const a = (l1 * p * p + l2 * q * q), b = (l1 - l2) * p * q, c = (l1 * q * q + l2 * p * p);
+      if (a % n2 || b % n2 || c % n2) return null;
+      const A = [[a / n2, b / n2], [b / n2, c / n2]], tr = l1 + l2, de = l1 * l2;
+      return {
+        prompt: `Sea $A = ${pm(A)}$. a) Hallá el polinomio y la ecuación característica. b) Hallá los valores propios, los vectores propios y los subespacios propios. c) Indicá la multiplicidad algebraica y geométrica de cada valor propio. d) ¿Es $A$ diagonalizable ortogonalmente? Si lo es, hallá $P$ ortogonal y $D$ diagonal con $P^TAP = D$.`,
+        rubric: [
+          { text: `a) $p(\\lambda) = \\lambda^2 ${H.sg(-tr)}\\lambda ${H.sg(de)}$; ecuación $p(\\lambda) = 0$.`, w: 2 },
+          { text: `b) $\\lambda = ${l1}$ con $S_{${l1}} = \\operatorname{gen}\\{(${p}, ${q})\\}$ y $\\lambda = ${l2}$ con $S_{${l2}} = \\operatorname{gen}\\{(${-q}, ${p})\\}$.`, w: 4 },
+          { text: R`c) Cada valor propio tiene multiplicidad algebraica y geométrica $1$.`, w: 1 },
+          { text: `d) Sí, por ser simétrica: $P = \\frac{1}{\\sqrt{${n2}}}${pm([[p, -q], [q, p]])}$ y $D = ${pm([[l1, 0], [0, l2]])}$.`, w: 3 }
+        ],
+        solution: [
+          `a) $\\det(A - \\lambda I) = \\lambda^2 - (\\operatorname{tr}A)\\lambda + \\det A = \\lambda^2 ${H.sg(-tr)}\\lambda ${H.sg(de)}$.`,
+          `b) Las raíces son $\\lambda_1 = ${l1}$ y $\\lambda_2 = ${l2}$. Resolviendo $(A - \\lambda I)\\vec v = \\vec 0$: para $${l1}$, $\\vec v = (${p}, ${q})$; para $${l2}$, $\\vec v = (${-q}, ${p})$.`,
+          R`c) Son raíces simples (multiplicidad algebraica 1) y cada subespacio propio es una recta (multiplicidad geométrica 1).`,
+          `d) $A$ es simétrica: sus autovectores de autovalores distintos son ortogonales (acá $(${p}, ${q})\\cdot(${-q}, ${p}) = 0$). Normalizándolos: $P = \\frac{1}{\\sqrt{${n2}}}${pm([[p, -q], [q, p]])}$, $P^TAP = ${pm([[l1, 0], [0, l2]])}$.`
+        ],
+        verify: { kind: "zero", tol: 1e-9, fn: () => [[p, q, l1], [-q, p, l2]].flatMap(([x, y, l]) => [A[0][0] * x + A[0][1] * y - l * x, A[1][0] * x + A[1][1] * y - l * y]) }
+      };
+    }
+  };
+
+  // demostraciones del final
+  SELF["al-ex-demo-tl-props"] = {
+    concepts: ["al-tl"],
+    generate() {
+      return {
+        prompt: R`Sean $V$ y $W$ espacios vectoriales reales y $f: V \to W$ una transformación lineal. Demostrá que: a) $f(\vec 0) = \vec 0$; b) $f(-\vec v) = -f(\vec v)$ para todo $\vec v \in V$; c) $f(\vec v - \vec w) = f(\vec v) - f(\vec w)$ para todos $\vec v, \vec w \in V$.`,
+        rubric: [
+          { text: R`a) $f(\vec 0) = f(0\cdot\vec 0) = 0\cdot f(\vec 0) = \vec 0$ (o con $f(\vec 0) = f(\vec 0 + \vec 0) = 2f(\vec 0)$).`, w: 1 },
+          { text: R`b) $f(-\vec v) = f((-1)\vec v) = (-1)f(\vec v) = -f(\vec v)$.`, w: 1 },
+          { text: R`c) $f(\vec v - \vec w) = f(\vec v + (-\vec w)) = f(\vec v) + f(-\vec w) = f(\vec v) - f(\vec w)$, usando b).`, w: 1 }
+        ],
+        solution: [R`a) Por la homogeneidad con $\lambda = 0$: $f(\vec 0) = f(0\,\vec 0) = 0\,f(\vec 0) = \vec 0_W$.`,
+          R`b) $-\vec v = (-1)\vec v$, y por homogeneidad $f(-\vec v) = (-1)f(\vec v) = -f(\vec v)$.`,
+          R`c) $\vec v - \vec w = \vec v + (-\vec w)$. Por aditividad y por b): $f(\vec v - \vec w) = f(\vec v) + f(-\vec w) = f(\vec v) - f(\vec w)$.`]
+      };
+    }
+  };
+  SELF["al-ex-demo-autovec"] = {
+    concepts: ["al-autovalores"],
+    generate() {
+      return {
+        prompt: R`Sea $f$ un endomorfismo de un espacio vectorial $V$ y sea $\vec u$ un vector propio de $f$ asociado al valor propio $\lambda$. Demostrá que todo vector no nulo linealmente dependiente de $\vec u$ es también un vector propio de $f$ asociado a $\lambda$.`,
+        rubric: [
+          { text: R`Escribe el vector como $\vec v = \alpha\vec u$ con $\alpha \neq 0$ (para que $\vec v \neq \vec 0$).`, w: 1 },
+          { text: R`Calcula $f(\vec v) = f(\alpha\vec u) = \alpha f(\vec u) = \alpha\lambda\vec u = \lambda(\alpha\vec u) = \lambda\vec v$.`, w: 2 },
+          { text: R`Concluye que $\vec v$ es vector propio de $\lambda$ (es no nulo y cumple la definición).`, w: 1 }
+        ],
+        solution: [R`Si $\vec v$ es LD con $\vec u$ (y no nulo), entonces $\vec v = \alpha\vec u$ con $\alpha \neq 0$.`,
+          R`Por la linealidad de $f$: $f(\vec v) = f(\alpha\vec u) = \alpha f(\vec u) = \alpha(\lambda\vec u) = \lambda(\alpha\vec u) = \lambda\vec v$.`,
+          R`Como $\vec v \neq \vec 0$ y $f(\vec v) = \lambda\vec v$, $\vec v$ es un vector propio asociado a $\lambda$.`]
+      };
+    }
+  };
+
+  E.registerExams("m104", { self: SELF, templates: T });
 })();

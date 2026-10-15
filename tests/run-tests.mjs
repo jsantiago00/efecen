@@ -479,6 +479,32 @@ for (const cid of E.courseOrder) {
   ok(Math.abs(bb.x0 - (10 - 1.75)) < 1e-9 && Math.abs(bb.y1 - (20 + 1.75)) < 0.01, w, "caja del trazo con el grosor");
 }
 
+// plantillas propias de las evaluaciones: corrección automática, verify obligatorio y variedad
+for (const [cid, ex] of Object.entries(E.exams || {})) {
+  if (ONLY && cid !== ONLY) continue;
+  const c = E.courses[cid];
+  for (const [id, t] of Object.entries(ex.templates)) {
+    const w0 = `${cid}/examen/${id}`, answers = new Set(), Nt = Math.min(N, t.testN || N);
+    ok(!c.templates[id], w0, "el id choca con una plantilla de la materia");
+    for (const k of t.concepts) ok(c.concepts[k], w0, `concepto no definido: ${k}`);
+    for (let s = 1; s <= Nt; s++) {
+      const w = `${w0}#${s}`;
+      let inst;
+      try { inst = E.instantiateExam(cid, id, s * 2654435761 >>> 0); } catch (e) { fail(w, "excepción: " + e.message); continue; }
+      ok(inst.type === t.type, w, `type ${inst.type} != ${t.type}`);
+      checkTex(w + " prompt", inst.prompt);
+      for (const x of inst.solution || []) checkTex(w + " solución", x);
+      if (inst.type === "numeric") { ok(Number.isFinite(inst.answer), w, `respuesta no finita: ${inst.answer}`); answers.add(inst.prompt + "|" + inst.answer); }
+      else if (inst.type === "mc") { ok(inst.options.length === 4 && new Set(inst.options).size === 4, w, "opciones inválidas"); inst.options.forEach(o => checkTex(w, o)); answers.add(inst.prompt + inst.correct); }
+      else if (inst.type === "tf") { ok(typeof inst.answer === "boolean" && !!inst.explanation, w, "V/F inválido"); answers.add(inst.prompt + inst.answer); }
+      else fail(w, "tipo no soportado en plantillas de examen: " + inst.type);
+      ok(!/undefined|NaN/.test(inst.prompt + (inst.solution || []).join("")), w, "texto con undefined o NaN");
+      if (inst.verify) runVerify(inst.verify, inst.type === "mc" ? undefined : inst.answer, w);
+      else fail(w, "plantilla de examen sin verify");
+    }
+    if (Nt >= 10) ok(answers.size >= (t.type === "tf" ? 2 : 5), w0, `poca variedad: ${answers.size} variantes`);
+  }
+}
 // evaluaciones (parciales y finales simulados): puntajes, plantillas y ejercicios de desarrollo
 for (const [cid, ex] of Object.entries(E.exams || {})) {
   const c = E.courses[cid];
@@ -486,20 +512,25 @@ for (const [cid, ex] of Object.entries(E.exams || {})) {
   if (!c) continue;
   for (const x of ex.list) {
     const w = `${cid}/examen/${x.id}`;
-    const parts = x.items.flatMap(it => it.parts);
-    ok(parts.reduce((t, p) => t + p.pts, 0) === 100, w, "los puntajes no suman 100");
+    // con ítems alternativos, todas las alternativas tienen que valer lo mismo
+    const itemPts = it => it.parts.reduce((t, p) => t + p.pts, 0);
+    for (const it of x.items) if (it.any) ok(it.any.every(a => itemPts(a) === itemPts(it.any[0])), w, `alternativas de "${it.any[0].title}" con distinto puntaje`);
+    const items = x.items.map(it => (it.any ? it.any[0] : it)), parts = x.items.flatMap(it => (it.any ? it.any.flatMap(a => a.parts) : it.parts));
+    ok(items.reduce((t, it) => t + itemPts(it), 0) === 100, w, "los puntajes no suman 100");
     ok(x.minutes > 0 && x.pass > 0 && x.pass <= 100 && !!x.title && !!x.topics, w, "faltan minutos, aprobación, título o temas");
-    for (const p of parts) {
-      const tpls = p.tpl ? [p.tpl] : p.pick || [];
-      ok(tpls.length > 0 || !!p.self, w, "parte sin plantilla ni ejercicio de desarrollo");
-      for (const t of tpls) ok(!!c.templates[t], w, `plantilla inexistente: ${t}`);
-      if (p.self) ok(!!ex.self[p.self], w, `ejercicio de desarrollo inexistente: ${p.self}`);
-      ok(p.pts > 0, w, "parte con puntaje no positivo");
+    for (const p0 of parts) {
+      ok(p0.pts > 0, w, "parte con puntaje no positivo");
+      for (const p of p0.any || [p0]) {
+        const tpls = p.tpl ? [p.tpl] : p.pick || [];
+        ok(tpls.length > 0 || !!p.self, w, "parte sin plantilla ni ejercicio de desarrollo");
+        for (const t of tpls) ok(!!E.examTemplate(cid, t), w, `plantilla inexistente: ${t}`);
+        if (p.self) ok(!!ex.self[p.self], w, `ejercicio de desarrollo inexistente: ${p.self}`);
+      }
     }
     for (let k = 0; k < Math.min(N, 40); k++) {
       const b = E.buildExam(cid, x.id, 1000 + k);
       for (const p of b.parts) {
-        if (!p.self) { E.instantiate(c, p.tpl, p.seed); continue; }
+        if (!p.self) { E.instantiateExam(cid, p.tpl, p.seed); continue; }
         const o = E.instantiateSelf(cid, p.self, p.seed, p.args), ws = `${w}/${p.self}`;
         ok(typeof o.prompt === "string" && o.prompt.length > 10 && Array.isArray(o.solution) && o.solution.length > 0, ws, "falta enunciado o resolución");
         ok(Array.isArray(o.rubric) && o.rubric.length > 0 && o.rubric.every(q => q.w > 0 && q.text), ws, "rúbrica inválida");

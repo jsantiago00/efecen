@@ -846,9 +846,21 @@ body.board-split .nav { padding-bottom: 0; }
   // ---------- evaluaciones: parciales y finales simulados ----------
   // E.exams[cid] = { self: { id: { concepts, generate(r, H, args) → { prompt, rubric: [{ text, w }], solution } } }, list: [examen] }
   // examen: { id, kind: "parcial" | "final", title, topics, minutes, pass, items: [{ title, parts: [parte] }] }
-  // parte: { pts, tpl } (plantilla fija), { pts, pick: [...] } (una al azar) o { pts, self, args } (de desarrollo, autocorregida)
+  // parte: { pts, tpl } (plantilla fija), { pts, pick: [...] } (una al azar), { pts, self, args } (de desarrollo,
+  // autocorregida) o { pts, any: [alternativas] }: en cada intento se sortea una de las alternativas (cada una es
+  // una parte sin pts), así un mismo examen puede traer ejercicios distintos, como pasa de un año a otro.
+  // Las plantillas de nivel examen (corrección automática, con verify) van en `templates` y se buscan ahí si la
+  // materia no tiene una con ese id.
   E.exams = {};
-  E.registerExams = function (cid, def) { E.exams[cid] = { self: def.self || {}, list: def.exams || [] }; };
+  E.registerExams = function (cid, def) {
+    const prev = E.exams[cid] || { self: {}, templates: {}, list: [] };
+    E.exams[cid] = { self: Object.assign(prev.self, def.self), templates: Object.assign(prev.templates, def.templates), list: prev.list.concat(def.exams || []) };
+  };
+  E.examTemplate = (cid, id) => (E.courses[cid].templates[id] || (E.exams[cid] && E.exams[cid].templates[id]));
+  E.instantiateExam = function (cid, id, seed) {
+    const t = E.examTemplate(cid, id);
+    return E.instantiate({ templates: { [id]: t } }, id, seed);
+  };
   E.instantiateSelf = function (cid, id, seed, args) {
     const g = E.exams[cid].self[id];
     for (let tries = 0; tries < 30; tries++) {
@@ -871,11 +883,16 @@ body.board-split .nav { padding-bottom: 0; }
   // arma un intento: cada parte con su plantilla (sorteada si hay varias) y su semilla
   E.buildExam = function (cid, examId, seed) {
     const ex = E.exams[cid].list.find(e => e.id === examId), r = E.rng(seed), parts = [];
-    ex.items.forEach((it, i) => it.parts.forEach((p, j) => parts.push({
-      item: i, label: it.parts.length > 1 ? `${i + 1}.${j + 1}` : `${i + 1}`, pts: p.pts,
-      tpl: p.tpl || (p.pick ? r.pick(p.pick) : null), self: p.self || null, args: p.args || null, seed: r.int(1, 1e9)
-    })));
-    return { exam: ex, parts };
+    // un ítem también puede ser { any: [ítems] }: se sortea el ejercicio entero (todas las alternativas valen lo mismo)
+    const items = ex.items.map(it => (it.any ? r.pick(it.any) : it));
+    items.forEach((it, i) => it.parts.forEach((p0, j) => {
+      const p = p0.any ? r.pick(p0.any) : p0;
+      parts.push({
+        item: i, label: it.parts.length > 1 ? `${i + 1}.${j + 1}` : `${i + 1}`, pts: p0.pts,
+        tpl: p.tpl || (p.pick ? r.pick(p.pick) : null), self: p.self || null, args: p.args || null, seed: r.int(1, 1e9)
+      });
+    }));
+    return { exam: Object.assign({}, ex, { items }), parts };
   };
 
   // ---------- Estado persistente ----------
@@ -2231,7 +2248,7 @@ body.board-split .nav { padding-bottom: 0; }
   function startExam(cid, examId) {
     const c = course(cid), b = E.buildExam(cid, examId, E.newSeed());
     for (const p of b.parts) {
-      p.inst = p.self ? E.instantiateSelf(cid, p.self, p.seed, p.args) : E.instantiate(c, p.tpl, p.seed);
+      p.inst = p.self ? E.instantiateSelf(cid, p.self, p.seed, p.args) : E.instantiateExam(cid, p.tpl, p.seed);
       p.ans = p.self ? { v: null } : initAns(p.inst);
     }
     S.activeCourse = cid;
@@ -2372,7 +2389,7 @@ body.board-split .nav { padding-bottom: 0; }
     const grades = {};
     for (const p of s.parts) {
       const okp = p.self ? partScore(p) >= 0.6 * p.pts : p.ok;
-      const concepts = p.self ? p.inst.concepts : c.templates[p.tpl].concepts;
+      const concepts = p.self ? p.inst.concepts : E.examTemplate(s.cid, p.tpl).concepts;
       for (const k of concepts) if (c.concepts[k]) (grades[ckey(s.cid, k)] = grades[ckey(s.cid, k)] || []).push(okp ? 4 : 1);
       if (!p.self) { S.answered++; if (p.ok) S.answeredOk++; }
     }
@@ -2392,7 +2409,7 @@ body.board-split .nav { padding-bottom: 0; }
     save();
     // los conceptos a reforzar: partes con menos de la mitad del puntaje
     const weak = [];
-    for (const p of s.parts) if (partScore(p) < 0.5 * p.pts) for (const k of (p.self ? p.inst.concepts : c.templates[p.tpl].concepts)) if (c.concepts[k] && !weak.includes(k)) weak.push(k);
+    for (const p of s.parts) if (partScore(p) < 0.5 * p.pts) for (const k of (p.self ? p.inst.concepts : E.examTemplate(s.cid, p.tpl).concepts)) if (c.concepts[k] && !weak.includes(k)) weak.push(k);
     ui.examResult = { s, score, weak, streakUp, goalHit, ms: s.tEnd - s.t0, best: st.best };
     ui.session = null;
     ui.route = "exam-result";

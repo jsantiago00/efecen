@@ -125,7 +125,7 @@ node tests/run-tests.mjs 20           # pasada rápida antes de commitear
   - después leé una muestra: los años recientes, con sus resoluciones, y PDF con texto antes que escaneos;
   - salteá «Apuntes y Libros» y los duplicados «(1)».
 - **Qué anotar:** solo la estructura (temas, tipos de ejercicio y puntajes), en `docs/parciales/<materia>.md`. No copies enunciados ni nombres de estudiantes.
-- **Cómo armarlos:** en `content/<código>-examenes.js`, con plantillas existentes (`tpl` o `pick`) y ejercicios de desarrollo propios (`self`, con rúbrica). Cada examen suma 100 puntos (lo verifica un test). Si un ejercicio de desarrollo tiene cuentas, lleva `verify`, igual que las plantillas.
+- **Cómo armarlos:** en `content/<código>-examenes.js`, con plantillas existentes (`tpl` o `pick`) y ejercicios de desarrollo propios (`self`, con rúbrica). Cada examen suma 100 puntos (lo verifica un test). Si un ejercicio de desarrollo tiene cuentas, lleva `verify`, igual que las plantillas. Para que cada intento traiga ejercicios distintos, usá `any` en las partes o en los ítems: todas las alternativas de un ítem tienen que valer lo mismo. Las plantillas de nivel examen que no pertenecen a ninguna lección van en `templates`, con `verify`.
 
 ## Firebase (sincronización)
 

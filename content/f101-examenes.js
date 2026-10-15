@@ -189,27 +189,315 @@
 
   E.registerExams("f101", {
     self: SELF,
+    // los ítems con `any` sortean entre problemas que aparecieron en distintos años (promocionales, 2024, 2025)
     exams: [
-      { id: "p1", kind: "parcial", title: "1.er parcial promocional", topics: "Cinemática, dinámica, energía, choques y fluidos", minutes: 150, pass: 60,
+      { id: "p1", kind: "parcial", title: "1.er parcial", topics: "Cinemática, dinámica, energía, choques y fluidos", minutes: 150, pass: 60,
         items: [
-          { title: "Fluidos", parts: [{ tpl: "f1-bernoulli-num", pts: 12 }, { tpl: "f1-continuidad-num", pts: 8 }, { tpl: "f1-presion-num", pts: 10 }] },
-          { title: "Choque y trabajo de la fricción", parts: [{ self: "f1-ex-tejo", pts: 35 }] },
-          { title: "Dinámica con rozamiento y movimiento relativo", parts: [{ self: "f1-ex-bloques", pts: 35 }] }
+          { any: [
+            { title: "Dinámica con rozamiento y movimiento relativo", parts: [{ self: "f1-ex-bloques", pts: 35 }] },
+            { title: "Una caja en la camioneta", parts: [{ self: "f1-ex-camioneta", pts: 35 }] }
+          ] },
+          { any: [
+            { title: "Choque y trabajo de la fricción", parts: [{ self: "f1-ex-tejo", pts: 35 }] },
+            { title: "Choque en un cruce", parts: [{ tpl: "f1-ex-choque2d-v", pts: 20 }, { tpl: "f1-ex-choque2d-ang", pts: 15 }] }
+          ] },
+          { any: [
+            { title: "Fluidos", parts: [{ tpl: "f1-bernoulli-num", pts: 12 }, { tpl: "f1-continuidad-num", pts: 8 }, { tpl: "f1-presion-num", pts: 10 }] },
+            { title: "Fluidos: caño con pistón", parts: [{ tpl: "f1-ex-piston", pts: 30 }] },
+            { title: "Energía con resorte y rozamiento", parts: [{ self: "f1-ex-resorte-plano", pts: 30 }] }
+          ] }
         ] },
-      { id: "p2", kind: "parcial", title: "2.º parcial promocional", topics: "Rotación, momento angular, equilibrio y gravitación", minutes: 150, pass: 60,
+      { id: "p2", kind: "parcial", title: "2.º parcial", topics: "Rotación, momento angular, equilibrio y gravitación", minutes: 150, pass: 60,
         items: [
-          { title: "Momento angular", parts: [{ self: "f1-ex-taburete", pts: 35 }] },
-          { title: "Equilibrio del cuerpo rígido", parts: [{ tpl: "f1-escalera-num", pts: 15 }, { tpl: "f1-viga-num", pts: 15 }] },
-          { title: "Gravitación", parts: [{ self: "f1-ex-trabajo-grav", pts: 20 }, { tpl: "f1-orbita-num", pts: 15 }] }
+          { any: [
+            { title: "Momento angular", parts: [{ self: "f1-ex-taburete", pts: 35 }] },
+            { title: "Bala en un blanco que pivotea", parts: [{ self: "f1-ex-bala", pts: 35 }] },
+            { title: "Cilindro, cable y bloque", parts: [{ tpl: "f1-ex-cilindro-bloque", pts: 20 }, { tpl: "f1-ex-tambor-marte", pts: 15 }] }
+          ] },
+          { any: [
+            { title: "Equilibrio del cuerpo rígido", parts: [{ tpl: "f1-escalera-num", pts: 15 }, { tpl: "f1-viga-num", pts: 15 }] },
+            { title: "Puente levadizo", parts: [{ tpl: "f1-ex-puente-cable", pts: 15 }, { tpl: "f1-ex-puente-cae", pts: 15 }] }
+          ] },
+          { any: [
+            { title: "Gravitación", parts: [{ self: "f1-ex-trabajo-grav", pts: 20 }, { tpl: "f1-orbita-num", pts: 15 }] },
+            { title: "Gravitación y lunas", parts: [{ tpl: "f1-ex-luna", pts: 20 }, { pick: ["f1-grav-num", "f1-escape-num"], pts: 15 }] },
+            { title: "Rodadura y momento angular", parts: [{ tpl: "f1-rodadura-num", pts: 20 }, { tpl: "f1-patinadora-num", pts: 15 }] }
+          ] }
         ] },
       { id: "final", kind: "final", title: "Final (libre)", topics: "Toda la materia: equilibrio, energía, gravitación, oscilaciones y fluidos. Si sos regular, el final incluye los problemas 3, 4 y 5.", minutes: 180, pass: 60,
         items: [
-          { title: "Equilibrio", parts: [{ pick: ["f1-escalera-num", "f1-viga-num"], pts: 20 }] },
-          { title: "Energía, resorte y rozamiento", parts: [{ self: "f1-ex-resorte-plano", pts: 20 }] },
-          { title: "Gravitación y órbitas", parts: [{ tpl: "f1-grav-num", pts: 10 }, { tpl: "f1-orbita-num", pts: 10 }] },
-          { title: "Oscilaciones", parts: [{ self: "f1-ex-mas-bloques", pts: 20 }] },
-          { title: "Flotación", parts: [{ self: "f1-ex-globo", pts: 20 }] }
+          { title: "Equilibrio", parts: [{ pick: ["f1-escalera-num", "f1-viga-num", "f1-ex-puente-cable"], pts: 20 }] },
+          { title: "Energía", parts: [{ any: [{ self: "f1-ex-resorte-plano" }, { tpl: "f1-ex-cilindro-bloque" }, { tpl: "f1-ex-puente-cae" }], pts: 20 }] },
+          { title: "Gravitación y órbitas", parts: [{ any: [{ tpl: "f1-grav-num" }, { tpl: "f1-ex-luna" }], pts: 10 }, { pick: ["f1-orbita-num", "f1-kepler-num"], pts: 10 }] },
+          { title: "Oscilaciones", parts: [{ any: [{ self: "f1-ex-mas-bloques" }, { tpl: "f1-pendulo-num" }, { tpl: "f1-amort-num" }], pts: 20 }] },
+          { title: "Fluidos", parts: [{ any: [{ self: "f1-ex-globo" }, { tpl: "f1-arquimedes-num" }, { tpl: "f1-ex-piston" }], pts: 20 }] }
         ] }
     ]
   });
+})();
+
+/* ===== F101 · Evaluaciones: más variantes (parciales 2024 y 2025) =====
+   Problemas de nivel parcial con corrección automática (cada uno con verify por simulación o por otro
+   planteo) y problemas de desarrollo nuevos. g = 9,8 m/s² en todos. */
+(function () {
+  const E = window.Efecen, R = String.raw, g = 9.8;
+  const T = {}, SELF = {};
+  const nf = (H, x, d = 2) => H.num(x, d).replace(".", "{,}");
+  // integra x'' = acc(x, v) con un paso fijo (método de Verlet en velocidad), hasta que stop(x, v, t)
+  const sim = (x, v, acc, stop, dt = 1e-5, tmax = 100) => {
+    let t = 0, a = acc(x, v);
+    while (!stop(x, v, t) && t < tmax) { x += v * dt + 0.5 * a * dt * dt; const a2 = acc(x, v); v += 0.5 * (a + a2) * dt; a = a2; t += dt; }
+    return { x, v, t };
+  };
+
+  // caja que resbala en la caja de una camioneta que arranca
+  T["f1-ex-camioneta"] = {
+    type: "numeric", concepts: ["f1-rozamiento", "f1-relativo"], difficulty: 3, testN: 60,
+    generate(r, H) {
+      const m = r.pick([10, 12, 15, 20]), mus = r.pick([0.15, 0.19, 0.22]), muk = +(mus - r.pick([0.03, 0.04, 0.05])).toFixed(2), a = r.pick([2.4, 2.6, 2.8, 3.0]), d = r.pick([1.2, 1.5, 1.8, 2.1]);
+      if (a <= mus * g) return null;
+      const arel = a - muk * g, t = Math.sqrt(2 * d / arel);
+      return {
+        prompt: `Una caja de $${m}$ kg está en la caja de una camioneta, a $${nf(H, d)}$ m del borde trasero (abierto). Los coeficientes de rozamiento entre la caja y el piso son $\\mu_s = ${nf(H, mus)}$ y $\\mu_k = ${nf(H, muk)}$. La camioneta arranca con aceleración $${nf(H, a)}$ m/s² ($g = 9{,}8$ m/s²). ¿Cuánto tarda la caja en caerse por atrás (en s)?`,
+        answer: t, tolerance: 0.01,
+        solution: [
+          `Para acompañar a la camioneta, la caja necesitaría una fuerza $ma = ${nf(H, m * a, 1)}$ N, pero el rozamiento estático da como máximo $\\mu_s mg = ${nf(H, mus * m * g, 1)}$ N: **resbala**.`,
+          `Resbalando, el rozamiento dinámico la acelera hacia adelante con $a_c = \\mu_k g = ${nf(H, muk * g)}$ m/s². Respecto de la camioneta, la caja va hacia atrás con $a_{rel} = ${nf(H, a)} - ${nf(H, muk * g)} = ${nf(H, arel, 3)}$ m/s².`,
+          `$${nf(H, d)} = \\frac12 a_{rel}t^2 \\Rightarrow t = \\sqrt{\\frac{2\\cdot${nf(H, d)}}{${nf(H, arel, 3)}}} \\approx ${nf(H, t, 3)}$ s.`
+        ],
+        verify: { kind: "value", tol: 1e-3, fn: () => { let xc = 0, vc = 0, xk = d, vk = 0, tt = 0; const dt = 1e-5; while (xk > xc && tt < 50) { vc += a * dt; xc += vc * dt; vk += muk * g * dt; xk += vk * dt; tt += dt; } return tt; } }
+      };
+    }
+  };
+
+  // choque plástico en un cruce (2D): rapidez y dirección de los restos
+  const choque = (r) => {
+    const m1 = r.pick([800, 1000, 1200, 1500]), m2 = r.pick([1600, 2000, 2400, 2500]), v1 = r.pick([10, 12, 15, 18]), v2 = r.pick([8, 10, 12, 14]);
+    const vx = m2 * v2 / (m1 + m2), vy = m1 * v1 / (m1 + m2);
+    return { m1, m2, v1, v2, vx, vy, v: Math.hypot(vx, vy), ang: Math.atan2(vy, vx) * 180 / Math.PI };
+  };
+  const choqueTxt = (H, c) => `Un auto de $${c.m1}$ kg que va hacia el norte a $${c.v1}$ m/s choca en un cruce con una camioneta de $${c.m2}$ kg que va hacia el este a $${c.v2}$ m/s. Quedan enganchados y se mueven juntos.`;
+  T["f1-ex-choque2d-v"] = {
+    type: "numeric", concepts: ["f1-choques", "f1-momento"], difficulty: 2,
+    generate(r, H) {
+      const c = choque(r);
+      return {
+        prompt: `${choqueTxt(H, c)} ¿Con qué rapidez (m/s) salen los restos justo después del choque?`,
+        answer: c.v, tolerance: 0.01,
+        solution: [R`Durante el choque las fuerzas externas son despreciables: se conserva $\vec p$ en cada eje.`,
+          `Este: $${c.m2}\\cdot${c.v2} = ${c.m1 + c.m2}\\,v_x \\Rightarrow v_x \\approx ${nf(H, c.vx, 3)}$ m/s. Norte: $${c.m1}\\cdot${c.v1} = ${c.m1 + c.m2}\\,v_y \\Rightarrow v_y \\approx ${nf(H, c.vy, 3)}$ m/s.`,
+          `$v = \\sqrt{v_x^2 + v_y^2} \\approx ${nf(H, c.v, 3)}$ m/s.`],
+        verify: { kind: "zero", tol: 1e-9, scale: 1e5, fn: v => { const th = Math.atan2(c.vy, c.vx); return [c.m2 * c.v2 - (c.m1 + c.m2) * v * Math.cos(th), c.m1 * c.v1 - (c.m1 + c.m2) * v * Math.sin(th)]; } }
+      };
+    }
+  };
+  T["f1-ex-choque2d-ang"] = {
+    type: "numeric", concepts: ["f1-choques", "f1-vectores"], difficulty: 2,
+    generate(r, H) {
+      const c = choque(r);
+      return {
+        prompt: `${choqueTxt(H, c)} ¿Qué ángulo (en grados) forma la velocidad de los restos con la dirección este, hacia el norte?`,
+        answer: c.ang, tolerance: 0.01,
+        solution: [`Por conservación de la cantidad de movimiento: $v_x = \\frac{${c.m2}\\cdot${c.v2}}{${c.m1 + c.m2}}$ y $v_y = \\frac{${c.m1}\\cdot${c.v1}}{${c.m1 + c.m2}}$.`,
+          `$\\tan\\theta = \\frac{v_y}{v_x} = \\frac{${c.m1}\\cdot${c.v1}}{${c.m2}\\cdot${c.v2}} \\approx ${nf(H, c.vy / c.vx, 3)}$, así que $\\theta \\approx ${nf(H, c.ang, 1)}^\\circ$ al norte del este.`],
+        verify: { kind: "zero", tol: 1e-9, scale: 1e5, fn: ang => { const t = ang * Math.PI / 180, v = Math.hypot(c.vx, c.vy); return [c.m2 * c.v2 - (c.m1 + c.m2) * v * Math.cos(t), c.m1 * c.v1 - (c.m1 + c.m2) * v * Math.sin(t)]; } }
+      };
+    }
+  };
+
+  // cilindro que gira con un bloque colgado de un cable enrollado
+  T["f1-ex-cilindro-bloque"] = {
+    type: "numeric", concepts: ["f1-energia", "f1-inercia"], difficulty: 2, testN: 60,
+    generate(r, H) {
+      const M = r.pick([4, 6, 8, 10]), m = r.pick([1, 1.5, 2, 3]), R0 = r.pick([0.1, 0.15, 0.2, 0.25]), h = r.pick([1.5, 2, 2.5, 3]);
+      const v = Math.sqrt(2 * m * g * h / (m + M / 2));
+      return {
+        prompt: `Un cable liviano está enrollado en un cilindro macizo de $${M}$ kg y radio $${nf(H, R0)}$ m, que gira sin fricción alrededor de un eje horizontal fijo. Del extremo libre cuelga un bloque de $${nf(H, m)}$ kg, que se suelta desde el reposo a $${nf(H, h)}$ m del piso; el cable no resbala ($g = 9{,}8$ m/s², $I = \\frac12 MR^2$). ¿Con qué rapidez (m/s) llega el bloque al piso?`,
+        answer: v, tolerance: 0.01,
+        solution: [R`No hay fuerzas no conservativas que hagan trabajo: se conserva la energía mecánica. Además $v = \omega R$ (el cable no resbala).`,
+          `$mgh = \\frac12 mv^2 + \\frac12\\left(\\frac12 MR^2\\right)\\frac{v^2}{R^2} = \\frac12\\left(m + \\frac M2\\right)v^2$.`,
+          `$v = \\sqrt{\\frac{2mgh}{m + M/2}} = \\sqrt{\\frac{2\\cdot${nf(H, m)}\\cdot 9{,}8\\cdot${nf(H, h)}}{${nf(H, m + M / 2)}}} \\approx ${nf(H, v, 3)}$ m/s. (No depende de $R$.)`],
+        // dinámica con Newton: bloque mg − T = ma y cilindro T R = I α, resolviendo T en cada paso
+        verify: { kind: "value", tol: 1e-4, fn: () => { const I = 0.5 * M * R0 * R0; const acc = () => { const a = m * g / (m + I / (R0 * R0)); return a; }; return sim(0, 0, acc, x => x >= h).v; } }
+      };
+    }
+  };
+
+  // tambor que se prueba en la Tierra y se usa en Marte
+  T["f1-ex-tambor-marte"] = {
+    type: "numeric", concepts: ["f1-energia", "f1-inercia"], difficulty: 3,
+    generate(r, H) {
+      const m = r.pick([10, 12, 15, 20]), hE = r.pick([4, 5, 6]), frac = r.pick([0.3, 0.35, 0.4, 0.45]), gM = 3.71;
+      const KT = Math.round(frac * m * g * hE), hM = hE * g / gM;
+      return {
+        prompt: `Una masa de $${m}$ kg cuelga de un alambre enrollado en un tambor uniforme que gira sin fricción. En la Tierra ($g = 9{,}8$ m/s²), al caer $${hE}$ m desde el reposo, la masa le da al tambor $${KT}$ J de energía cinética. Si el mismo sistema se usa en Marte ($g = 3{,}71$ m/s²), ¿qué distancia (en m) tiene que caer la masa para darle al tambor esos mismos $${KT}$ J?`,
+        answer: hM, tolerance: 0.01,
+        solution: [R`Como $v = \omega R$, en cualquier instante $\frac{K_{tambor}}{K_{masa}} = \frac{\frac12 I\omega^2}{\frac12 mv^2} = \frac{I}{mR^2}$: la energía se reparte siempre en la misma proporción.`,
+          `Entonces $K_{tambor}$ es una fracción fija de $mgh$. Para la misma $K_{tambor}$ hace falta el mismo $mgh$: $g_T h_T = g_M h_M$.`,
+          `$h_M = \\frac{9{,}8\\cdot${hE}}{3{,}71} \\approx ${nf(H, hM, 2)}$ m.`],
+        verify: { kind: "zero", tol: 1e-9, fn: hm => { const q = KT / (m * g * hE - KT); /* I/(mR²) */ return [m * gM * hm * q / (1 + q) - KT]; } }
+      };
+    }
+  };
+
+  // bala que se incrusta en un blanco cuadrado que pivotea en su borde superior
+  const bala = r => {
+    const M = r.pick([0.5, 0.75, 1.0]), s = r.pick([0.2, 0.25, 0.3]), m = r.pick([1.5, 2, 2.5]) / 1000, v = r.pick([300, 350, 400]);
+    const I = M * s * s / 3 + m * (s / 2) ** 2, w = m * v * (s / 2) / I, hc = 0.5 * I * w * w / ((M + m) * g);
+    return { M, s, m, v, I, w, hc };
+  };
+  const balaTxt = (H, b) => `Un blanco es una tabla cuadrada de madera de $${nf(H, b.M)}$ kg y $${nf(H, b.s)}$ m de lado, que cuelga de un eje horizontal sin fricción en su borde superior. Una bala de $${nf(H, b.m * 1000, 1)}$ g que viaja horizontalmente a $${b.v}$ m/s le pega de frente en el centro y queda incrustada ($g = 9{,}8$ m/s²; para la tabla, $I = \\frac13 Ms^2$ respecto del borde).`;
+  T["f1-ex-bala-w"] = {
+    type: "numeric", concepts: ["f1-momento-angular"], difficulty: 3,
+    generate(r, H) {
+      const b = bala(r);
+      return {
+        prompt: `${balaTxt(H, b)} ¿Qué rapidez angular (rad/s) tiene la tabla justo después del impacto?`,
+        answer: b.w, tolerance: 0.01,
+        solution: [R`Durante el impacto, la fuerza del eje no hace torque respecto de él y el peso casi no actúa: se conserva el momento angular respecto del eje.`,
+          `$m v \\frac{s}{2} = \\left(\\frac13 Ms^2 + m\\frac{s^2}{4}\\right)\\omega$, así que $\\omega \\approx \\frac{${nf(H, b.m * b.v * b.s / 2, 4)}}{${nf(H, b.I, 5)}} \\approx ${nf(H, b.w, 3)}$ rad/s.`],
+        verify: { kind: "zero", tol: 1e-9, fn: w => [b.m * b.v * b.s / 2 - (b.M * b.s * b.s / 3 + b.m * b.s * b.s / 4) * w] }
+      };
+    }
+  };
+  T["f1-ex-bala-h"] = {
+    type: "numeric", concepts: ["f1-momento-angular", "f1-energia"], difficulty: 3, testN: 60,
+    generate(r, H) {
+      const b = bala(r);
+      return {
+        prompt: `${balaTxt(H, b)} ¿Qué altura máxima (en cm) sube el centro de la tabla respecto de su posición de equilibrio?`,
+        answer: b.hc * 100, tolerance: 0.01,
+        solution: [`Primero, conservación del momento angular en el impacto: $\\omega \\approx ${nf(H, b.w, 3)}$ rad/s.`,
+          R`Después del impacto no hay fuerzas no conservativas que hagan trabajo: $\frac12 I\omega^2 = (M + m)\,g\,h$, porque el centro de la tabla y la bala suben lo mismo.`,
+          `$h = \\frac{I\\omega^2}{2(M + m)g} \\approx ${nf(H, b.hc * 100, 2)}$ cm.`],
+        // simula el péndulo físico después del choque hasta que se detiene
+        verify: { kind: "value", tol: 1e-3, fn: () => { const d = b.s / 2, K = (b.M + b.m) * g * d / b.I; const out = sim(0, b.w, th => -K * Math.sin(th), (th, w) => w <= 0, 1e-5); return d * (1 - Math.cos(out.x)) * 100; } }
+      };
+    }
+  };
+
+  // puente levadizo sostenido por un cable horizontal
+  T["f1-ex-puente-cable"] = {
+    type: "numeric", concepts: ["f1-equilibrio", "f1-torque"], difficulty: 3,
+    generate(r, H) {
+      const W = r.pick([30000, 40000, 45000, 50000]), L = r.pick([10, 12, 14]), th = r.pick([30, 37, 45, 53]), d = r.pick([3, 3.5, 4]);
+      const t = th * Math.PI / 180, Tn = W * (L / 2) * Math.cos(t) / (d * Math.sin(t));
+      return {
+        prompt: `Un puente levadizo uniforme de $${L}$ m y $${W}$ N se sostiene a $${th}^\\circ$ sobre la horizontal con un cable **horizontal**, unido al puente a $${nf(H, d)}$ m de la rótula (medidos a lo largo del puente). ¿Cuál es la tensión del cable (en kN)?`,
+        answer: Tn / 1000, tolerance: 0.01,
+        solution: [R`Tomamos torques respecto de la rótula: así las dos componentes de la fuerza de la rótula no aparecen.`,
+          `El peso actúa en el centro, a $${L / 2}$ m: su brazo es $${L / 2}\\cos${th}^\\circ$. El cable es horizontal y está a $${nf(H, d)}$ m: su brazo es $${nf(H, d)}\\sin${th}^\\circ$.`,
+          `$T\\cdot${nf(H, d)}\\sin${th}^\\circ = ${W}\\cdot${L / 2}\\cos${th}^\\circ \\Rightarrow T \\approx ${nf(H, Tn / 1000, 2)}$ kN. (La rótula hace $${W / 1000}$ kN hacia arriba y $T$ hacia afuera.)`],
+        // otro planteo: torques respecto del punto donde está el cable (ahí sí aparece la rótula, con Nx = T y Ny = W)
+        verify: { kind: "zero", tol: 1e-9, scale: 1e6, fn: ans => { const T1 = ans * 1000, px = d * Math.cos(t), py = d * Math.sin(t), cx = (L / 2) * Math.cos(t); return [-px * W + py * T1 - W * (cx - px)]; } }
+      };
+    }
+  };
+
+  // puente levadizo que cae cuando se corta el cable
+  T["f1-ex-puente-cae"] = {
+    type: "numeric", concepts: ["f1-torque", "f1-energia"], difficulty: 3, testN: 60,
+    generate(r, H) {
+      const L = r.pick([6, 8, 10]), th = r.pick([45, 50, 60, 70]), t = th * Math.PI / 180;
+      const w = Math.sqrt(3 * g * Math.sin(t) / L);
+      return {
+        prompt: `Un puente levadizo uniforme de $${L}$ m está articulado sin fricción en un extremo y se sostiene a $${th}^\\circ$ sobre la horizontal con un cable en el otro extremo. Si el cable se corta, ¿qué rapidez angular (rad/s) tiene el puente justo antes de quedar horizontal? (Modelalo como una varilla: $I = \\frac13 ML^2$ respecto de la articulación; $g = 9{,}8$ m/s².)`,
+        answer: w, tolerance: 0.01,
+        solution: [R`La aceleración angular cambia con el ángulo (el torque del peso depende de $\theta$), así que no sirven las ecuaciones de $\alpha$ constante: usamos energía.`,
+          `El centro de masa baja $\\frac L2\\sin${th}^\\circ$: $Mg\\frac L2\\sin${th}^\\circ = \\frac12\\cdot\\frac13 ML^2\\omega^2$.`,
+          `$\\omega = \\sqrt{\\frac{3g\\sin${th}^\\circ}{L}} \\approx ${nf(H, w, 3)}$ rad/s.`],
+        verify: { kind: "value", tol: 1e-3, fn: () => { const out = sim(t, 0, th1 => -(3 * g / (2 * L)) * Math.cos(th1), th1 => th1 <= 0, 1e-5); return -out.v; } }
+      };
+    }
+  };
+
+  // Bernoulli + equilibrio: pistón con resorte en un tubo vertical conectado al caño
+  T["f1-ex-piston"] = {
+    type: "numeric", concepts: ["f1-hidrodinamica", "f1-hidrostatica", "f1-hooke"], difficulty: 3,
+    generate(r, H) {
+      const rho = 1000, v0 = r.pick([1.0, 1.2, 1.5]), P0 = r.pick([1.6e5, 1.8e5, 2.0e5]), h = r.pick([0.2, 0.3, 0.4]), A = r.pick([2, 3, 4]) * 1e-4, mp = r.pick([0.5, 1.0, 1.5]), k = r.pick([800, 1000, 1500]);
+      const v = 4 * v0, P = P0 + 0.5 * rho * (v0 * v0 - v * v), Pp = P - rho * g * h, x = (Pp * A - mp * g) / k;
+      if (x <= 0) return null;
+      return {
+        prompt: `Por un caño horizontal circula agua ($\\rho = 1000$ kg/m³). En una sección de radio $2r$ la presión es $${nf(H, P0 / 1000, 0)}$ kPa y la velocidad $${nf(H, v0)}$ m/s; después el caño se angosta a radio $r$. Sobre la parte angosta hay un tubo vertical de sección $${nf(H, A * 1e4, 0)}$ cm² con un pistón de $${nf(H, mp)}$ kg, en equilibrio a $${nf(H, h)}$ m sobre el eje del caño, apoyado contra un resorte de $k = ${k}$ N/m (arriba del pistón hay vacío). ¿Cuánto está comprimido el resorte (en cm)? ($g = 9{,}8$ m/s²)`,
+        answer: x * 100, tolerance: 0.01,
+        solution: [
+          `Continuidad: el área es 4 veces menor, así que $v = 4v_0 = ${nf(H, v)}$ m/s.`,
+          `Bernoulli entre las dos secciones (misma altura): $P = P_0 + \\frac12\\rho(v_0^2 - v^2) \\approx ${nf(H, P / 1000, 2)}$ kPa.`,
+          `El agua del tubo vertical está quieta: en el pistón la presión es $P - \\rho g h \\approx ${nf(H, Pp / 1000, 2)}$ kPa.`,
+          `Equilibrio del pistón (vacío arriba): $(P - \\rho g h)A = m g + kx$, así que $x = \\frac{${nf(H, Pp * A, 2)} - ${nf(H, mp * g, 2)}}{${k}} \\approx ${nf(H, x * 100, 2)}$ cm.`
+        ],
+        // otro camino: energía por unidad de volumen (Bernoulli generalizado) desde C hasta el pistón
+        verify: { kind: "zero", tol: 1e-9, scale: 1e3, fn: xc => { const e0 = P0 + 0.5 * rho * v0 * v0, ep = e0 - 0.5 * rho * (4 * v0) ** 2 - rho * g * h; return [ep * A - mp * g - k * xc / 100]; } }
+      };
+    }
+  };
+
+  // gravitación: aceleración orbital de una luna a partir de la gravedad en la superficie del planeta
+  T["f1-ex-luna"] = {
+    type: "numeric", concepts: ["f1-gravitacion", "f1-orbitas"], difficulty: 2,
+    generate(r, H) {
+      const R0 = r.pick([25000, 24800, 58200, 69900]) * 1e3, gs = r.pick([8.9, 10.4, 11.1, 24.8]), hh = r.pick([100000, 130000, 190000, 400000]) * 1e3;
+      const rr = R0 + hh, a = gs * R0 * R0 / (rr * rr);
+      return {
+        prompt: `Un planeta tiene un radio de $${nf(H, R0 / 1e3, 0)}$ km y en su superficie la gravedad es $${nf(H, gs)}$ m/s². Una de sus lunas está en órbita circular a $${nf(H, hh / 1e3, 0)}$ km **sobre la superficie**. ¿Cuál es la aceleración (en m/s²) de la luna debida a su movimiento orbital?`,
+        answer: a, tolerance: 0.01,
+        solution: [R`En la superficie, $g = \frac{GM}{R^2}$, así que $GM = gR^2$.`,
+          `La luna está a $r = R + h = ${nf(H, rr / 1e3, 0)}$ km del centro. Su aceleración (centrípeta) la da la gravedad: $a = \\frac{GM}{r^2} = g\\frac{R^2}{r^2}$.`,
+          `$a = ${nf(H, gs)}\\cdot\\left(\\frac{${nf(H, R0 / 1e3, 0)}}{${nf(H, rr / 1e3, 0)}}\\right)^2 \\approx ${nf(H, a, 4)}$ m/s².`],
+        // otro camino: período de la órbita (Kepler) y aceleración centrípeta 4π² r / T²
+        verify: { kind: "value", tol: 1e-9, fn: () => { const GM = gs * R0 * R0, Tp = 2 * Math.PI * Math.sqrt(rr ** 3 / GM); return 4 * Math.PI * Math.PI * rr / (Tp * Tp); } }
+      };
+    }
+  };
+
+  // ---------- desarrollo ----------
+  SELF["f1-ex-camioneta"] = {
+    concepts: ["f1-rozamiento", "f1-newton"],
+    generate(r, H) {
+      const m = r.pick([10, 12, 15]), mus = r.pick([0.18, 0.2, 0.22]), muk = +(mus - 0.04).toFixed(2), a = r.pick([2.4, 2.6, 2.8]), d = r.pick([1.5, 1.8, 2.0]);
+      if (a <= mus * g) return null;
+      const arel = a - muk * g, t = Math.sqrt(2 * d / arel), xt = 0.5 * a * t * t;
+      return {
+        prompt: `Una caja de $${m}$ kg descansa en el piso de la caja de una camioneta sin puerta trasera, a $${nf(H, d)}$ m del borde. Los coeficientes de rozamiento son $\\mu_s = ${nf(H, mus)}$ y $\\mu_k = ${nf(H, muk)}$. La camioneta arranca con aceleración $${nf(H, a)}$ m/s² ($g = 9{,}8$ m/s²). a) ¿Puede la caja mantenerse sobre la camioneta sin resbalar? Justificá con el DCL y la fuerza neta que necesitaría. b) Si resbala, ¿cuánto tarda en caerse por atrás? c) ¿Qué distancia recorre la camioneta en ese tiempo?`,
+        rubric: [
+          { text: R`a) DCL: peso, normal y rozamiento (hacia adelante). Necesitaría $ma$, mayor que $\mu_s mg$: resbala.`, w: 4 },
+          { text: `b) Aceleración relativa $a - \\mu_k g \\approx ${nf(H, arel, 3)}$ m/s² y $t \\approx ${nf(H, t, 3)}$ s.`, w: 3 },
+          { text: `c) $x = \\frac12 a t^2 \\approx ${nf(H, xt, 2)}$ m.`, w: 3 }
+        ],
+        solution: [
+          `a) Si no resbalara, la caja tendría la aceleración de la camioneta, y la única fuerza horizontal sobre ella es el rozamiento: haría falta $f = ma = ${nf(H, m * a, 1)}$ N. El máximo estático es $\\mu_s mg = ${nf(H, mus * m * g, 1)}$ N: no alcanza, **resbala**.`,
+          `b) Resbalando, $f_k = \\mu_k mg$ la acelera hacia adelante con $\\mu_k g = ${nf(H, muk * g)}$ m/s². Respecto de la camioneta retrocede con $${nf(H, arel, 3)}$ m/s²: $t = \\sqrt{\\frac{2\\cdot${nf(H, d)}}{${nf(H, arel, 3)}}} \\approx ${nf(H, t, 3)}$ s.`,
+          `c) La camioneta parte del reposo: $x = \\frac12\\cdot${nf(H, a)}\\cdot${nf(H, t, 3)}^2 \\approx ${nf(H, xt, 2)}$ m.`
+        ],
+        verify: { kind: "zero", tol: 1e-3, fn: () => { let xc = 0, vc = 0, xk = d, vk = 0, tt = 0; const dt = 1e-5; while (xk > xc && tt < 50) { vc += a * dt; xc += vc * dt; vk += muk * g * dt; xk += vk * dt; tt += dt; } return [(tt - t) / t, (xc - xt) / xt]; } }
+      };
+    }
+  };
+  SELF["f1-ex-bala"] = {
+    concepts: ["f1-momento-angular", "f1-energia"],
+    generate(r, H) {
+      const b = bala(r), d = b.s / 2;
+      // rapidez mínima para dar la vuelta completa: el centro tiene que subir 2d
+      const wmin = Math.sqrt(2 * (b.M + b.m) * g * 2 * d / b.I), vmin = wmin * b.I / (b.m * d);
+      return {
+        prompt: `${balaTxt(H, b)} a) ¿Qué rapidez angular tiene la tabla justo después del impacto? ¿Qué principio de conservación usaste y por qué vale? b) ¿Qué altura máxima sube el centro de la tabla? Justificá el principio que uses. c) ¿Qué rapidez mínima tendría que tener la bala para que la tabla dé una vuelta completa?`,
+        rubric: [
+          { text: `a) Momento angular respecto del eje (la fuerza del eje no hace torque): $\\omega \\approx ${nf(H, b.w, 3)}$ rad/s.`, w: 4 },
+          { text: R`a) Justifica: durante el choque, el torque externo respecto del eje es despreciable (no se conserva la energía).`, w: 1 },
+          { text: `b) Energía mecánica después del impacto: $h \\approx ${nf(H, b.hc * 100, 2)}$ cm.`, w: 3 },
+          { text: R`b) Justifica: después del impacto solo hace trabajo el peso.`, w: 1 },
+          { text: `c) Que el centro suba $2\\cdot\\frac s2$: $\\omega_{min} \\approx ${nf(H, wmin, 2)}$ rad/s y $v_{min} \\approx ${nf(H, vmin, 0)}$ m/s.`, w: 4 }
+        ],
+        solution: [
+          `a) $I = \\frac13 Ms^2 + m\\left(\\frac s2\\right)^2 \\approx ${nf(H, b.I, 5)}$ kg·m². Conservación del momento angular respecto del eje: $mv\\frac s2 = I\\omega$, así que $\\omega \\approx ${nf(H, b.w, 3)}$ rad/s.`,
+          `b) Desde justo después del impacto, $\\frac12 I\\omega^2 = (M + m)gh$: $h \\approx ${nf(H, b.hc * 100, 2)}$ cm.`,
+          `c) Para dar la vuelta, el centro tiene que llegar arriba de todo (subir $s$) con $\\omega \\ge 0$: $\\frac12 I\\omega_{min}^2 = (M + m)g\\,s$, o sea $\\omega_{min} \\approx ${nf(H, wmin, 2)}$ rad/s. Con el momento angular: $v_{min} = \\frac{I\\omega_{min}}{m s/2} \\approx ${nf(H, vmin, 0)}$ m/s.`
+        ],
+        verify: { kind: "zero", tol: 2e-3, fn: () => { const K = (b.M + b.m) * g * d / b.I; const out = sim(0, b.w, th => -K * Math.sin(th), (th, w) => w <= 0, 1e-5); const up = sim(0, wmin * 1.001, th => -K * Math.sin(th), (th, w) => th >= Math.PI || w <= 0, 1e-5); return [(d * (1 - Math.cos(out.x)) - b.hc) / b.hc, up.x >= Math.PI ? 0 : 1]; } }
+      };
+    }
+  };
+
+  E.registerExams("f101", { self: SELF, templates: T });
 })();

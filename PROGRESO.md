@@ -76,6 +76,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **M104 y F101:** las dos tienen sus evaluaciones (`content/m104-examenes.js` y `content/f101-examenes.js`), y su análisis está en `docs/parciales/m104.md` y `docs/parciales/f101.md`.
   - **M104:** 1.er y 2.º parcial, y la parte escrita del final regular.
   - **F101:** dos parciales promocionales y el final libre.
+- **Variedad entre intentos:** las partes y los ítems pueden tener `any`, que sortea entre ejercicios de distintos años, y cada materia puede tener **plantillas propias del examen** (`templates` en `E.registerExams`), con corrección automática y `verify`, que no pertenecen a ninguna lección. La suite las prueba como a las demás: tipo, LaTeX, `verify` obligatorio y variedad. Exige además que todas las alternativas de un ítem valgan lo mismo. El 15/10 se leyó una segunda muestra de M101, F101 y M104 (ver «Segunda muestra» en cada `docs/parciales/*.md`).
 - **Verificación en desarrollo:** los ejercicios de desarrollo con cuentas llevan `verify`, como las plantillas, y la suite lo corre. Se recalcula por otro camino: simulación del movimiento, integración numérica de fuerzas, Gauss, A·A⁻¹ = I y residuos de A·x = b.
 - **Pendiente:**
   - las evaluaciones de F102B y M102;
