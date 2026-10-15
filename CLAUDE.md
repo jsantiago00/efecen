@@ -81,7 +81,7 @@ Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101
   - los `aliases` se auto-enlazan y tienen que ser **únicos entre todas las materias** (el test avisa qué alias choca; sacalo de la ficha nueva);
   - **no pongas LaTeX dentro del texto de un link**;
   - no enlaces a fichas que todavía no existen (el test falla): agregá el link cuando la ficha exista.
-- **Demostraciones:** toda ficha que enuncie una fórmula o un teorema lleva `demo`: de dónde sale, paso a paso (pedido del usuario). Solo las definiciones, recetas y postulados pueden ir sin ella.
+- **Demostraciones:** toda ficha que enuncie una fórmula o un teorema lleva `demo`: de dónde sale, paso a paso (pedido del usuario). Solo las definiciones, recetas y postulados pueden ir sin ella. Escribila como **pasos numerados** («**Paso 1.** …»), uno por idea, y justificá cada paso con palabras: qué propiedad se usa y por qué. No encadenes cuentas sin explicar (pedido del usuario, 15/10). La «idea» explica la intuición, sin repetir la demo.
 - **Física:** g = 9,8 m/s², aclarado en cada enunciado.
 - **Contenido 100 % original.** De los programas oficiales solo se toma la lista de temas.
 
