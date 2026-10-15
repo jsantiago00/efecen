@@ -454,6 +454,13 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 .picker button.on { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
 
 /* toast + confetti */
+.login-ask { position: fixed; inset: 0; z-index: 55; background: rgba(20, 16, 40, .55); display: grid; place-items: end center; padding: 16px; animation: fadeIn .2s ease-out; }
+.login-box { width: 100%; max-width: 420px; background: var(--card); border-radius: 24px; padding: 22px 20px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.login-box .schrodi { width: 96px; height: 96px; }
+.login-box h2 { font-size: 1.3rem; margin: 0; }
+.login-box p { margin: 0 0 6px; }
+@media (min-width: 700px) { .login-ask { place-items: center; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 #toast { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top)); transform: translate(-50%, -150%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 14px; font-weight: 800; z-index: 60; transition: transform .3s; max-width: calc(100% - 32px); }
 #toast.show { transform: translate(-50%, 0); }
 #toast:not(.show) { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top))); }
@@ -1063,7 +1070,7 @@ body.board-split .nav { padding-bottom: 0; }
   E.syncHooks = {
     get: () => S,
     set(s) { S = s; E.store.save(S); if (!ui.session) render(); },
-    status() { if (ui.route === "settings" && !ui.session) render(); }
+    status() { if (ui.route === "settings" && !ui.session) render(); askLogin(); }
   };
 
 
@@ -1717,6 +1724,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
+    askLogin();
   }
 
   // ---------- INICIO ----------
@@ -2294,6 +2302,28 @@ body.board-split .nav { padding-bottom: 0; }
       <p class="muted small" style="text-align:center">efecen v${E.version} · hecho para volver a la FCEN</p>
     </main>${nav("settings")}`;
   }
+  // al abrir la app sin sesión iniciada, Schrödi invita a entrar con Google para no depender del progreso local.
+  // «Ahora no» lo pospone una semana en este dispositivo.
+  const ASK_KEY = "efecen-login-ask";
+  function askLogin() {
+    const sy = E.sync, el = $("#loginAsk");
+    if (!sy || sy.user || !sy.ready) { if (el) el.remove(); return; }
+    if (el) { const b = $("[data-act=login]", el); b.disabled = !!sy.busy; b.lastChild.textContent = sy.busy ? "Entrando…" : "Entrar con Google"; $(".login-err", el).textContent = sy.error || ""; return; }
+    if (ui.session || ui.learn || ui.route !== "home") return;
+    let later = null;
+    try { later = localStorage.getItem(ASK_KEY); } catch (e) { }
+    if (later && E.diffDays(later, today()) < 7) return;
+    const d = document.createElement("div");
+    d.id = "loginAsk"; d.className = "login-ask";
+    d.innerHTML = `<div class="login-box" role="dialog" aria-modal="true" aria-labelledby="loginAskT">${mascot("wow")}
+      <h2 id="loginAskT">Guardá tu progreso</h2>
+      <p class="muted">Entrá con tu cuenta de Google y tu progreso se guarda en la nube: no lo perdés si borrás el navegador y lo tenés igual en el celu, la tablet y la compu.</p>
+      <button class="btn block" data-act="login">${icon("check")}<span>Entrar con Google</span></button>
+      <button class="btn ghost block" data-act="login-later">Ahora no</button>
+      <p class="muted small login-err" style="margin:0"></p></div>`;
+    document.body.appendChild(d);
+  }
+
   // instalar la app: Chrome avisa con beforeinstallprompt cuando se puede instalar
   let installEvt = null;
   const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -2770,6 +2800,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "sound": S.settings.sound = !S.settings.sound; save(); render(); if (S.settings.sound) Snd.play("correct"); break;
       case "export": exportData(); break;
       case "login": if (E.sync) E.sync.signIn(); break;
+      case "login-later": try { localStorage.setItem(ASK_KEY, today()); } catch (e2) { } $("#loginAsk").remove(); break;
       case "logout": if (E.sync && confirm("¿Cerrar sesión? Tu progreso queda guardado en este dispositivo y en la nube.")) E.sync.signOut(); break;
       case "import": $("#importFile").click(); break;
       case "reset":

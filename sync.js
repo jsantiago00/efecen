@@ -24,6 +24,7 @@ const db = getFirestore(fb);
 
 const sync = E.sync = {
   user: null, busy: false, pending: false, error: null, lastSync: null,
+  ready: false, // true cuando Firebase ya dijo si hay alguien logueado
   changed() { if (sync.user) schedule(); },
   async signIn() {
     sync.busy = true; sync.error = null; notify();
@@ -74,7 +75,7 @@ async function pull() {
 getRedirectResult(auth).catch(e => { sync.error = "No se pudo entrar: " + (e.code || e.message); notify(); });
 onAuthStateChanged(auth, u => {
   sync.user = u ? { uid: u.uid, displayName: u.displayName, email: u.email, photoURL: u.photoURL } : null;
-  sync.busy = false; sync.lastSync = null;
+  sync.busy = false; sync.lastSync = null; sync.ready = true;
   notify();
   if (u) pull();
 });

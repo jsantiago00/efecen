@@ -96,6 +96,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - Proyecto Firebase `efecen-46bfd`, con login de Google. La app web se llama `efecen-web` y Firestore está en `southamerica-east1`.
 - `sync.js` (módulo aparte) maneja el login y guarda el progreso en `users/{uid}`, como texto JSON en el campo `data`. Si no carga, por ejemplo sin conexión, la app sigue funcionando en modo local.
 - Al entrar y al volver a la app se baja el progreso remoto y se combina con el local con `E.store.merge`. Lo acumulable queda con el máximo o la unión; los ajustes, la racha y la materia activa se toman del dispositivo usado más recientemente. Los tests verifican que combinar sea idempotente y que no pierda nada.
+- **Invitación a entrar.** Si al abrir la app no hay sesión iniciada, en Inicio aparece un cartel de Schrödi con «Entrar con Google» y «Ahora no». Sale recién cuando Firebase confirma que no hay nadie logueado (`E.sync.ready`) y desaparece al entrar. «Ahora no» lo pospone 7 días en ese dispositivo (localStorage `efecen-login-ask`). Sin conexión, sync.js no carga y el cartel no aparece.
 - Las reglas están en `firestore.rules` y cada usuario solo accede a su documento. Para desplegarlas: `firebase deploy --only firestore:rules`.
 - Dominios autorizados en Auth: localhost, 127.0.0.1, santiagososa.com.ar, www.santiagososa.com.ar y los de Firebase.
 
