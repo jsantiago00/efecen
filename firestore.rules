@@ -9,6 +9,17 @@ service cloud.firestore {
         && request.resource.data.data is string
         && request.resource.data.data.size() < 900000;
     }
+    // liga de la semana: cualquiera con sesión ve el ranking; cada uno escribe solo su fila
+    match /leagues/{week}/players/{uid} {
+      allow read: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && week.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(["name", "photo", "xp", "updatedAt"])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && request.resource.data.photo is string && request.resource.data.photo.size() <= 500
+        && request.resource.data.xp is int && request.resource.data.xp >= 0 && request.resource.data.xp <= 30000;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

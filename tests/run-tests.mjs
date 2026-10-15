@@ -457,6 +457,17 @@ for (const cid of E.courseOrder) {
   ok(a.xp === 120 && b.courses.m101.lessons.l1.done === false, w, "modificó sus argumentos");
 }
 
+// liga semanal: semana de lunes a domingo, XP de la semana y nombre visible
+{
+  const w = "liga";
+  ok(E.weekStart("2026-10-15") === "2026-10-12" && E.weekStart("2026-10-12") === "2026-10-12" && E.weekStart("2026-10-18") === "2026-10-12" && E.weekStart("2026-10-19") === "2026-10-19", w, "la semana no empieza el lunes");
+  ok(E.weekStart("2027-01-01") === "2026-12-28", w, "la semana que cruza el año está mal");
+  const st = { xpByDay: { "2026-10-11": 99, "2026-10-12": 10, "2026-10-15": 30, "2026-10-18": 5, "2026-10-19": 7 } };
+  ok(E.weekXp(st, "2026-10-15") === 45, w, "XP de la semana mal sumado");
+  ok(E.leagueName("Juan Santiago Sosa") === "Juan S." && E.leagueName("  Ana ") === "Ana" && E.leagueName("") === "Anónimo" && E.leagueName(null) === "Anónimo", w, "nombre visible en la liga");
+  ok(E.DAILY_GOAL === 50, w, "la meta diaria debe ser fija");
+}
+
 // ejercicio del día: el mismo todo el día, de los más exigentes, nunca V/F
 {
   const w = "E.dailyPick";

@@ -134,6 +134,7 @@ node tests/run-tests.mjs 20           # pasada rápida antes de commitear
   - Guarda en `users/{uid}`: `{ data: JSON del estado, updatedAt, app }`.
   - Al entrar y al volver a la app, baja lo remoto y lo combina con `E.store.merge` (idempotente y sin pérdida; tiene tests). Después sube el resultado.
   - Cada `save()` de la app llama a `E.sync.changed()`, que sube con un debounce de 2 s.
+- **Liga semanal:** `Efecen.sync.league` (`publish()`, `load(n)`) escribe y lee `leagues/{lunes}/players/{uid}`. La meta diaria es fija (`E.DAILY_GOAL`). Si cambian las reglas de XP, actualizá también el texto «Cómo se suma» de `renderLeague`.
 - **Ganchos de la app:** `E.syncHooks.get/set/status`. La UI está en `accountCard()`, dentro de `renderSettings`.
 - **Reglas:** cada usuario solo accede a su documento. Para desplegarlas: `firebase deploy --only firestore:rules`. Hace falta el Firebase CLI con login; si la sesión en la nube no lo tiene, pedile al usuario que lo haga desde su compu.
 - **Si cambia el estado guardado** (`E.store.defaults`): actualizá `E.store.migrate` y `E.store.merge`, y sus tests.

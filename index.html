@@ -235,6 +235,15 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .node.boss .ic { width: 38px; height: 38px; }
 .node.boss.won { background: var(--gold); color: #3A2A00; box-shadow: 0 6px 0 var(--gold-d); }
 .node.boss.locked { background: var(--lock); color: var(--muted); box-shadow: 0 6px 0 var(--lock-d); }
+.lg-list { display: flex; flex-direction: column; gap: 4px; }
+.lg-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 14px; }
+.lg-row.me { background: var(--primary-soft); }
+.lg-row img, .lg-av { width: 36px; height: 36px; border-radius: 50%; flex: none; }
+.lg-av { display: grid; place-items: center; background: var(--line); font-weight: 900; }
+.lg-pos { width: 26px; text-align: center; font-weight: 900; color: var(--muted); }
+.lg-pos.top1 { color: var(--gold-d); } .lg-pos.top2 { color: #8C93A3; } .lg-pos.top3 { color: #B87333; }
+.lg-xp { font-weight: 900; }
+.lg-gap { text-align: center; color: var(--muted); }
 .daily-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: inherit; font: inherit; border: 2px solid var(--gold); cursor: pointer; }
 .daily-card:disabled { border-color: var(--line); cursor: default; opacity: 1; }
 .daily-ico { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--gold); color: #3A2A00; }
@@ -741,6 +750,13 @@ body.board-split .nav { padding-bottom: 0; }
   const pad = n => String(n).padStart(2, "0");
   E.fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   E.today = () => E.fmtDate(new Date());
+  // la meta diaria es fija para todos (como en la liga compiten todos con las mismas reglas)
+  E.DAILY_GOAL = 50;
+  // liga semanal: la semana va de lunes a domingo; se identifica por la fecha de su lunes
+  E.weekStart = str => { const [y, m, d] = str.split("-").map(Number), wd = (new Date(y, m - 1, d).getDay() + 6) % 7; return E.addDays(str, -wd); };
+  E.weekXp = (s, date) => { const w = E.weekStart(date); let t = 0; for (let i = 0; i < 7; i++) t += s.xpByDay[E.addDays(w, i)] || 0; return t; };
+  // nombre que se muestra en la liga: el primer nombre y la inicial del apellido
+  E.leagueName = full => { const p = String(full || "").trim().split(/\s+/).filter(Boolean); return !p.length ? "Anónimo" : (p[0] + (p[1] ? " " + p[1][0].toUpperCase() + "." : "")).slice(0, 40); };
   E.addDays = (str, n) => { const [y, m, d] = str.split("-").map(Number); return E.fmtDate(new Date(y, m - 1, d + n)); };
   E.diffDays = (a, b) => { const [y1, m1, d1] = a.split("-").map(Number); const [y2, m2, d2] = b.split("-").map(Number); return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 864e5); };
 
@@ -950,7 +966,7 @@ body.board-split .nav { padding-bottom: 0; }
     key: "efecen:v1",
     defaults: () => ({
       app: "efecen", version: 1,
-      settings: { goal: 50, sound: true, theme: "auto" },
+      settings: { goal: 50, sound: true, theme: "auto", league: true },
       xp: 0, streak: 0, bestStreak: 0, lastActive: null,
       xpByDay: {}, activeCourse: null,
       courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0, read: {},
@@ -1070,7 +1086,7 @@ body.board-split .nav { padding-bottom: 0; }
   E.syncHooks = {
     get: () => S,
     set(s) { S = s; E.store.save(S); if (!ui.session) render(); },
-    status() { if (ui.route === "settings" && !ui.session) render(); askLogin(); }
+    status() { if ((ui.route === "settings" || ui.route === "league") && !ui.session) render(); else if (ui.route === "home" && !ui.session) leagueHomeRefresh(); askLogin(); }
   };
 
 
@@ -1656,7 +1672,7 @@ body.board-split .nav { padding-bottom: 0; }
 
   // ---------- navegación ----------
   function go(route, params = {}) {
-    const hash = { home: "#/", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
+    const hash = { home: "#/", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
     if (location.hash !== hash) history.pushState(null, "", hash);
     ui.route = route; ui.params = params;
     render();
@@ -1666,6 +1682,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (h.startsWith("curso/")) { ui.route = "course"; ui.params = { id: h.slice(6) }; }
     else if (h === "stats") ui.route = "stats";
     else if (h === "carrera") ui.route = "career";
+    else if (h === "liga") ui.route = "league";
     else if (h === "aprender") ui.route = "learn";
     else if (h === "ajustes") ui.route = "settings";
     else if (h === "creditos") ui.route = "credits";
@@ -1720,7 +1737,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, summary: renderSummary, "exam-result": renderExamResult };
+    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, summary: renderSummary, "exam-result": renderExamResult };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1747,7 +1764,7 @@ body.board-split .nav { padding-bottom: 0; }
   const badge = (txt, cls = "") => `<span class="subj-badge ${cls}">${txt}</span>`;
   function renderHome() {
     const cid = activeCourse(), c = course(cid);
-    const due = allDue().length, l = currentLesson(cid), xt = xpToday(), goal = S.settings.goal;
+    const due = allDue().length, l = currentLesson(cid), xt = xpToday(), goal = E.DAILY_GOAL;
     const firstTime = firstTimeIn(cid);
     const st = shownStreak();
     let msg, mood = "idle";
@@ -1769,6 +1786,7 @@ body.board-split .nav { padding-bottom: 0; }
       <button class="btn big block" data-act="daily">${icon("play")}${firstTime ? "Empezar" : "Sesión del día"}</button>
       ${parts.length && !firstTime ? `<div class="daily-sub muted small">${esc(parts.join(" · "))}</div>` : ""}
       ${firstTime ? "" : dailyCard()}
+      ${firstTime ? "" : `<div id="leagueHome">${leagueHomeCard()}</div>`}
       ${firstTime ? "" : `<button class="btn ghost block" data-act="rush" data-cid="${cid}">${icon("timer")}Contrarreloj · ${esc(c.code || c.title)}${cState(cid).rush ? ` <span class="muted small">(récord ${cState(cid).rush})</span>` : ""}</button>`}
       <h2 class="section-title">Tu carrera</h2>
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
@@ -2105,7 +2123,7 @@ body.board-split .nav { padding-bottom: 0; }
       S.lastActive = t; streakUp = true;
       S.bestStreak = Math.max(S.bestStreak, S.streak);
     }
-    return { streakUp, goalHit: before < S.settings.goal && S.xpByDay[t] >= S.settings.goal };
+    return { streakUp, goalHit: before < E.DAILY_GOAL && S.xpByDay[t] >= E.DAILY_GOAL };
   }
   function finish() {
     const s = ui.session, cid = s.cid, cs = cState(cid), t = today();
@@ -2225,7 +2243,7 @@ body.board-split .nav { padding-bottom: 0; }
     const weak = weakConcepts(cid).filter(x => x.card.seen >= 2 && (x.card.ok / x.card.seen < 0.8 || x.card.ef < 2.2)).slice(0, 5);
     const dm = d => { const [, m, dd] = d.split("-"); return d === t ? "hoy" : `${+dd}/${+m}`; };
     // heatmap: 12 semanas, columnas = semanas (lunes arriba)
-    const goal = S.settings.goal, cells = [];
+    const goal = E.DAILY_GOAL, cells = [];
     const now = new Date();
     const dow = (now.getDay() + 6) % 7;
     const start = E.addDays(t, -(7 * 11 + dow));
@@ -2239,6 +2257,7 @@ body.board-split .nav { padding-bottom: 0; }
     const tileS = (ic, color, v, l) => `<div class="stat-tile"><span style="color:${color}">${icon(ic)}</span><div><b>${v}</b><span>${l}</span></div></div>`;
     app.innerHTML = `<main class="screen">
       <h1 style="font-size:1.4rem">Estadísticas</h1>
+      <button class="course-card" data-act="go" data-r="league"><span class="course-ico">${icon("trophy")}</span><span class="grow"><b>Liga de la semana</b><span class="muted small" style="display:block">${E.weekXp(S, today())} XP esta semana</span></span>${icon("chevron-right")}</button>
       ${subjectPicker()}
       <section class="stat-tiles">
         ${tileS("flame", "var(--fire)", shownStreak(), `racha (mejor: ${S.bestStreak})`)}
@@ -2276,8 +2295,6 @@ body.board-split .nav { padding-bottom: 0; }
     app.innerHTML = `<main class="screen">
       <h1 style="font-size:1.4rem">Ajustes</h1>
       <section class="card">
-        <div class="set-row" style="flex-direction:column;align-items:stretch"><div><div class="lbl">Meta diaria</div><div class="desc">XP por día (un ejercicio bien = 10 XP)</div></div>
-          ${seg("goal", [[20, "20"], [50, "50"], [100, "100"], [150, "150"]], st.goal)}</div>
         <div class="set-row"><div><div class="lbl">Sonido</div><div class="desc">Efectos al responder</div></div>
           <button class="switch ${st.sound ? "on" : ""}" data-act="sound" role="switch" aria-checked="${st.sound}" aria-label="Sonido"></button></div>
         <div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tema</div>
@@ -2324,6 +2341,70 @@ body.board-split .nav { padding-bottom: 0; }
     document.body.appendChild(d);
   }
 
+  // ---------- LIGA DE LA SEMANA ----------
+  // Todos suman con las mismas reglas: el XP de la semana (lunes a domingo) se publica en
+  // leagues/{lunes}/players/{uid} (sync.js). Hace falta haber entrado con Google.
+  const leagueCache = { at: 0, data: null, loading: false, error: null };
+  const daysLeft = () => 6 - E.diffDays(E.weekStart(today()), today());
+  const leftTxt = () => { const n = daysLeft(); return n === 0 ? "termina hoy" : n === 1 ? "queda 1 día" : `quedan ${n} días`; };
+  function loadLeague(force) {
+    const lg = E.sync && E.sync.league;
+    if (!lg || !E.sync.user || leagueCache.loading) return;
+    if (!force && leagueCache.data && Date.now() - leagueCache.at < 60000) return;
+    leagueCache.loading = true;
+    lg.load(30).then(d => { leagueCache.data = d; leagueCache.error = null; }, e => { leagueCache.error = e.code === "permission-denied" ? "La liga todavía no está activada en el servidor." : navigator.onLine ? "No se pudo cargar la liga." : "Sin conexión."; })
+      .finally(() => { leagueCache.loading = false; leagueCache.at = Date.now(); if (ui.session) return; if (ui.route === "league") render(); else if (ui.route === "home") leagueHomeRefresh(); });
+  }
+  function leagueHomeRefresh() { const el = $("#leagueHome"); if (el) el.innerHTML = leagueHomeCard(); }
+  function leagueHomeCard() {
+    const sy = E.sync, wx = E.weekXp(S, today());
+    let line;
+    if (!sy || !sy.user) line = "Entrá con Google para competir con los demás.";
+    else if (!S.settings.league) line = "No participás (lo cambiás en Ajustes).";
+    else {
+      loadLeague();
+      const d = leagueCache.data;
+      line = d && d.me ? `Vas ${d.me.rank}.º de ${d.total} · ${leftTxt()}` : leagueCache.error ? leagueCache.error : `${leftTxt()[0].toUpperCase() + leftTxt().slice(1)}`;
+    }
+    return `<button class="course-card" data-act="go" data-r="league"><span class="course-ico">${icon("trophy")}</span>
+      <span class="grow"><b>Liga de la semana</b><span class="muted small" style="display:block">${wx} XP · ${esc(line)}</span></span>${icon("chevron-right")}</button>`;
+  }
+  function renderLeague() {
+    const sy = E.sync, wx = E.weekXp(S, today());
+    let body;
+    if (!sy) body = `<p class="muted">Cargando la conexión… (la liga necesita internet).</p>`;
+    else if (!sy.user) body = `<section class="card diag-card">${mascot("think")}<div class="grow"><b>Competí con los demás</b>
+      <p class="muted small" style="margin:4px 0 10px">Cada semana, de lunes a domingo, se arma un ranking con el XP que suma cada uno. Para entrar, iniciá sesión con Google.</p>
+      <button class="btn sm" data-act="login">Entrar con Google</button></div></section>`;
+    else if (!S.settings.league) body = `<section class="card"><p class="muted" style="margin:0 0 10px">Elegiste no aparecer en la liga.</p><button class="btn sm" data-act="league-toggle">Participar</button></section>`;
+    else {
+      loadLeague();
+      const d = leagueCache.data, uid = sy.user.uid;
+      if (!d) body = `<p class="muted">${esc(leagueCache.error || "Cargando el ranking…")}</p>`;
+      else {
+        const row = (p, i) => `<div class="lg-row ${p.uid === uid ? "me" : ""}"><span class="lg-pos ${i < 3 ? "top" + (i + 1) : ""}">${i + 1}</span>
+          ${p.photo ? `<img src="${esc(p.photo)}" alt="" width="36" height="36" referrerpolicy="no-referrer">` : `<span class="lg-av">${esc(p.name[0] || "?")}</span>`}
+          <span class="grow"><b>${esc(p.name)}</b>${p.uid === uid ? ` <span class="muted small">(vos)</span>` : ""}</span><span class="lg-xp">${p.xp} XP</span></div>`;
+        const inTop = d.top.some(p => p.uid === uid);
+        body = `<section class="card lg-list">${d.top.length ? d.top.map(row).join("") : `<p class="muted" style="margin:0">Todavía nadie sumó XP esta semana. ¡Arrancá vos!</p>`}
+          ${!inTop && d.me ? `<div class="lg-gap">…</div>${row(Object.assign({ uid, name: E.leagueName(sy.user.displayName), photo: sy.user.photoURL || "" , xp: d.me.xp }), d.me.rank - 1)}` : ""}</section>
+          <p class="muted small" style="text-align:center">${d.total} ${d.total === 1 ? "participante" : "participantes"} · ${leftTxt()}${leagueCache.error ? " · " + esc(leagueCache.error) : ""}</p>`;
+      }
+    }
+    app.innerHTML = `<main class="screen">
+      <div class="map-head"><button class="iconbtn" data-act="go" data-r="home" aria-label="Volver">${icon("chevron-left")}</button>
+        <div class="grow"><h1 style="font-size:1.4rem">Liga de la semana</h1><p class="muted small" style="margin:2px 0 0">Del lunes ${fmtShort(E.weekStart(today()))} al domingo ${fmtShort(E.addDays(E.weekStart(today()), 6))} · vos: ${wx} XP</p></div>
+        ${sy && sy.user && S.settings.league ? `<button class="iconbtn" data-act="league-reload" aria-label="Actualizar">${icon("rotate-ccw")}</button>` : ""}</div>
+      ${body}
+      <section class="card"><b>Cómo se suma</b><ul class="muted small" style="margin:6px 0 0;padding-left:1.1em">
+        <li>Cada ejercicio bien: 10 XP (5 si es un reintento o del diagnóstico, 3 en el contrarreloj).</li>
+        <li>Lección completada: +10 XP, y +5 más si salió perfecta.</li>
+        <li>Ejercicio del día: 30 XP. Jefe vencido: +30 XP la primera vez, +15 las siguientes.</li>
+        <li>La meta diaria es de ${E.DAILY_GOAL} XP para todos. El lunes arranca una semana nueva.</li></ul></section>
+    </main>${nav("stats")}`;
+  }
+  const fmtShort = d => { const [, m, dd] = d.split("-"); return `${+dd}/${+m}`; };
+
   // instalar la app: Chrome avisa con beforeinstallprompt cuando se puede instalar
   let installEvt = null;
   const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -2361,7 +2442,9 @@ body.board-split .nav { padding-bottom: 0; }
         ${u.photoURL ? `<img src="${esc(u.photoURL)}" alt="" width="36" height="36" style="border-radius:50%;flex:none" referrerpolicy="no-referrer">` : ""}
         <div style="min-width:0"><div class="lbl">${esc(u.displayName || "Tu cuenta")}</div><div class="desc" style="overflow:hidden;text-overflow:ellipsis">${esc(u.email || "")}</div></div></div>
         <button class="btn sm ghost" data-act="logout">Salir</button></div>
-      <p class="muted small" style="margin:6px 0 0">${st}</p></section>`;
+      <p class="muted small" style="margin:6px 0 0">${st}</p>
+      <div class="set-row"><div><div class="lbl">Aparecer en la liga</div><div class="desc">Tu nombre (${esc(E.leagueName(u.displayName))}), tu foto y tu XP de la semana, visibles para quienes usan efecen</div></div>
+        <button class="switch ${S.settings.league ? "on" : ""}" data-act="league-toggle" role="switch" aria-checked="${!!S.settings.league}" aria-label="Aparecer en la liga"></button></div></section>`;
   }
   function renderCredits() {
     app.innerHTML = `<main class="screen">
@@ -2750,6 +2833,8 @@ body.board-split .nav { padding-bottom: 0; }
       case "boss": startBoss(el.dataset.cid, el.dataset.id); break;
       case "rush": startRush(el.dataset.cid); break;
       case "challenge": startChallenge(); break;
+      case "league-reload": loadLeague(true); break;
+      case "league-toggle": S.settings.league = !S.settings.league; save(); if (E.sync && E.sync.league) E.sync.league.publish(); leagueCache.data = null; render(); break;
       case "install": if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; render(); }); } break;
       case "pick-subject": S.activeCourse = el.dataset.id; save(); render(); break;
       case "learn-back": history.back(); break;
@@ -2792,7 +2877,6 @@ body.board-split .nav { padding-bottom: 0; }
         inp.dispatchEvent(new Event("input", { bubbles: true }));
         break;
       }
-      case "goal": S.settings.goal = +el.dataset.v; save(); render(); break;
       case "theme": S.settings.theme = el.dataset.v; save(); render(); break;
       case "board": if (E.board) E.board.toggle(); break;
       case "board-show": E.board.setPref("show", el.dataset.v); boardAvail = E.board.available(); if (!E.board.available()) E.board.close(); render(); break;
