@@ -98,7 +98,279 @@
 
   // ---------- preferencias de este dispositivo (no se sincronizan) ----------
   const PREF_KEY = "efecen-board";
-  const prefs = Object.assign({ show: "auto", pen: false, finger: null, tool: "pen", color: "ink", size: 1, hlColor: "yellow", paper: "grid", promptOpen: true, split: true }, (() => {
+  // ---------- formas: si el lápiz queda quieto al final del trazo, se vuelve línea, círculo, etc. ----------
+  // (adaptado del reconocedor de Notillas; sin DOM, lo usan los tests)
+  const Sh = (() => {
+    const DEG = Math.PI / 180, N = 64;
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const pathLength = pts => { let l = 0; for (let i = 1; i < pts.length; i++) l += dist(pts[i - 1], pts[i]); return l; };
+    function bounds(pts) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const p of pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+      return { x0, y0, x1, y1, diag: Math.hypot(x1 - x0, y1 - y0) };
+    }
+    const centroid = pts => { let x = 0, y = 0; for (const p of pts) { x += p.x; y += p.y; } return { x: x / pts.length, y: y / pts.length }; };
+    // remuestreo equiespaciado a n puntos
+    function resample(pts, n) {
+      const L = pathLength(pts);
+      if (pts.length < 2 || L === 0) return Array.from({ length: n }, () => ({ ...pts[0] }));
+      const step = L / (n - 1), out = [{ ...pts[0] }];
+      let acc = 0, prev = pts[0];
+      for (let i = 1; i < pts.length; i++) {
+        const cur = pts[i];
+        let d = dist(prev, cur);
+        while (acc + d >= step && out.length < n) {
+          const t = (step - acc) / d, q = { x: prev.x + (cur.x - prev.x) * t, y: prev.y + (cur.y - prev.y) * t };
+          out.push(q); prev = q; d = dist(prev, cur); acc = 0;
+        }
+        acc += d; prev = cur;
+      }
+      while (out.length < n) out.push({ ...pts[pts.length - 1] });
+      return out;
+    }
+    function distToSeg(p, a, b) {
+      const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+      const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0;
+      return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+    }
+    // Ramer–Douglas–Peucker: índices de los vértices que quedan
+    function rdp(pts, eps) {
+      const keep = new Array(pts.length).fill(false);
+      keep[0] = keep[pts.length - 1] = true;
+      const stack = [[0, pts.length - 1]];
+      while (stack.length) {
+        const [a, b] = stack.pop();
+        let best = -1, bestD = eps;
+        for (let i = a + 1; i < b; i++) { const d = distToSeg(pts[i], pts[a], pts[b]); if (d > bestD) { bestD = d; best = i; } }
+        if (best >= 0) { keep[best] = true; stack.push([a, best], [best, b]); }
+      }
+      return keep.flatMap((k, i) => (k ? [i] : []));
+    }
+    function angleAt(a, b, c) {
+      let d = Math.abs(Math.atan2(a.y - b.y, a.x - b.x) - Math.atan2(c.y - b.y, c.x - b.x)) / DEG;
+      return d > 180 ? 360 - d : d;
+    }
+    function meanDistToPolyline(pts, poly, closed) {
+      let sum = 0;
+      const n = poly.length, segs = closed ? n : n - 1;
+      for (const p of pts) { let best = Infinity; for (let i = 0; i < segs; i++) best = Math.min(best, distToSeg(p, poly[i], poly[(i + 1) % n])); sum += best; }
+      return sum / pts.length;
+    }
+    function densify(verts, closed, step = 3) {
+      const out = [], n = verts.length, segs = closed ? n : n - 1;
+      for (let i = 0; i < segs; i++) {
+        const a = verts[i], b = verts[(i + 1) % n], k = Math.max(1, Math.ceil(dist(a, b) / step));
+        for (let j = 0; j < k; j++) out.push({ x: a.x + (b.x - a.x) * j / k, y: a.y + (b.y - a.y) * j / k });
+      }
+      out.push(closed ? { ...verts[0] } : { ...verts[n - 1] });
+      return out;
+    }
+    // ---- ajustes por mínimos cuadrados ----
+    function fitLine(pts) {
+      const c = centroid(pts);
+      let sxx = 0, syy = 0, sxy = 0;
+      for (const p of pts) { const dx = p.x - c.x, dy = p.y - c.y; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+      const theta = 0.5 * Math.atan2(2 * sxy, sxx - syy), nx = -Math.sin(theta), ny = Math.cos(theta);
+      let sq = 0;
+      for (const p of pts) sq += ((p.x - c.x) * nx + (p.y - c.y) * ny) ** 2;
+      return { c, theta, rms: Math.sqrt(sq / pts.length) };
+    }
+    const det3 = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+    function solve3(m, v) {
+      const d = det3(m);
+      if (Math.abs(d) < 1e-12) return null;
+      return [0, 1, 2].map(k => det3(m.map((row, i) => row.map((x, j) => (j === k ? v[i] : x)))) / d);
+    }
+    // círculo: ajuste algebraico de Kåsa y unas iteraciones de Gauss–Newton sobre la distancia geométrica
+    function fitCircle(pts) {
+      let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sz = 0, sxz = 0, syz = 0;
+      const n = pts.length;
+      for (const { x, y } of pts) { const z = x * x + y * y; sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; sz += z; sxz += x * z; syz += y * z; }
+      const sol = solve3([[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]], [-sxz, -syz, -sz]);
+      if (!sol) return null;
+      let cx = -sol[0] / 2, cy = -sol[1] / 2, r = Math.sqrt(Math.max(0, cx * cx + cy * cy - sol[2]));
+      for (let it = 0; it < 8; it++) {
+        const jtj = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], jtr = [0, 0, 0];
+        for (const p of pts) {
+          const d = Math.max(1e-9, Math.hypot(p.x - cx, p.y - cy)), j = [-(p.x - cx) / d, -(p.y - cy) / d, -1], res = d - r;
+          for (let a = 0; a < 3; a++) { jtr[a] += j[a] * res; for (let b = 0; b < 3; b++) jtj[a][b] += j[a] * j[b]; }
+        }
+        const st = solve3(jtj, jtr.map(v => -v));
+        if (!st) break;
+        cx += st[0]; cy += st[1]; r += st[2];
+        if (Math.hypot(st[0], st[1], st[2]) < 1e-6) break;
+      }
+      let sq = 0;
+      for (const p of pts) sq += (dist(p, { x: cx, y: cy }) - r) ** 2;
+      return { cx, cy, r: Math.abs(r), rms: Math.sqrt(sq / n) };
+    }
+    // elipse: centro y orientación por componentes principales; semiejes por mínimos cuadrados
+    function fitEllipse(pts) {
+      const c = centroid(pts), { theta } = fitLine(pts), cos = Math.cos(theta), sin = Math.sin(theta);
+      let s40 = 0, s04 = 0, s22 = 0, s20 = 0, s02 = 0;
+      const uv = pts.map(p => {
+        const dx = p.x - c.x, dy = p.y - c.y, u = dx * cos + dy * sin, v = -dx * sin + dy * cos;
+        s40 += u ** 4; s04 += v ** 4; s22 += u * u * v * v; s20 += u * u; s02 += v * v;
+        return [u, v];
+      });
+      const det = s40 * s04 - s22 * s22;
+      if (Math.abs(det) < 1e-12) return null;
+      const A = (s20 * s04 - s02 * s22) / det, B = (s40 * s02 - s22 * s20) / det;
+      if (A <= 0 || B <= 0) return null;
+      const a = 1 / Math.sqrt(A), b = 1 / Math.sqrt(B);
+      let sum = 0;
+      for (const [u, v] of uv) { const phi = Math.atan2(v, u), re = a * b / Math.hypot(b * Math.cos(phi), a * Math.sin(phi)); sum += Math.abs(Math.hypot(u, v) - re); }
+      return { cx: c.x, cy: c.y, a, b, theta, err: sum / pts.length };
+    }
+    // ---- reconocimiento ----
+    function recognize(input) {
+      if (input.length < 3) return null;
+      const L = pathLength(input), box = bounds(input);
+      if (L < 20 || box.diag < 15) return null;
+      const pts = resample(input, N), D = box.diag;
+      const closed = dist(pts[0], pts[N - 1]) < 0.18 * D && L > 2 * D * 0.9;
+      return closed ? recognizeClosed(pts, D) : recognizeOpen(pts, L, D);
+    }
+    function recognizeOpen(pts, L, D) {
+      const a = pts[0], b = pts[pts.length - 1], chord = dist(a, b), line = fitLine(pts);
+      if (chord / L > 0.9 && line.rms / L < 0.03) return lineShape(a, b, line.rms / L);
+      const arrow = detectArrow(pts, L, D);
+      if (arrow) return arrow;
+      const circle = fitCircle(pts);
+      if (circle && circle.r < 3 * D && circle.rms / circle.r < 0.045) {
+        let sweep = 0, prev = Math.atan2(pts[0].y - circle.cy, pts[0].x - circle.cx);
+        for (const p of pts) {
+          const ang = Math.atan2(p.y - circle.cy, p.x - circle.cx);
+          let d = ang - prev;
+          if (d > Math.PI) d -= 2 * Math.PI;
+          if (d < -Math.PI) d += 2 * Math.PI;
+          sweep += d; prev = ang;
+        }
+        const deg = Math.abs(sweep) / DEG;
+        if (deg >= 30 && deg <= 300) {
+          const a0 = Math.atan2(pts[0].y - circle.cy, pts[0].x - circle.cx);
+          const verts = Array.from({ length: 49 }, (_, i) => { const t = a0 + sweep * i / 48; return { x: circle.cx + circle.r * Math.cos(t), y: circle.cy + circle.r * Math.sin(t) }; });
+          return { kind: "arc", verts, closed: false, center: { x: circle.cx, y: circle.cy }, mode: "similarity", rotate: true, error: circle.rms / circle.r };
+        }
+      }
+      return null;
+    }
+    // ángulo a múltiplos de 45° si está a menos de 5°
+    function snapEnd(a, b) {
+      const len = dist(a, b), ang = Math.atan2(b.y - a.y, a.x === b.x && a.y === b.y ? 1 : b.x - a.x);
+      const snapped = Math.round(ang / (45 * DEG)) * 45 * DEG, use = Math.abs(ang - snapped) < 5 * DEG ? snapped : ang;
+      return { x: a.x + len * Math.cos(use), y: a.y + len * Math.sin(use) };
+    }
+    const lineShape = (a, b, error) => ({ kind: "line", verts: [a, snapEnd(a, b)], closed: false, center: a, mode: "endpoint", rotate: true, rebuild: tip => [a, snapEnd(a, tip)], error });
+    // flecha de un solo trazo: un tramo largo y recto, y al final un gancho corto en V
+    function detectArrow(pts, L, D) {
+      const idx = rdp(pts, 0.04 * D);
+      if (idx.length < 3 || idx.length > 7) return null;
+      const tail = pts[idx[0]], tipI = idx[1], tip = pts[tipI], shaft = dist(tail, tip);
+      if (shaft < 0.45 * L) return null;
+      for (let i = 0; i <= tipI; i++) if (distToSeg(pts[i], tail, tip) > 0.04 * shaft) return null;
+      for (let i = tipI; i < pts.length; i++) if (dist(pts[i], tip) > 0.5 * shaft) return null;
+      const barbLen = dist(pts[idx[2]], tip);
+      if (barbLen < 0.08 * shaft) return null;
+      const ang = angleAt(tail, tip, pts[idx[2]]);
+      if (ang < 10 || ang > 80) return null;
+      const build = t => arrowVerts(tail, t, Math.min(barbLen, 0.4 * dist(tail, t)));
+      return { kind: "arrow", verts: build(tip), closed: false, center: tail, mode: "endpoint", rotate: true, rebuild: build, error: 0 };
+    }
+    function arrowVerts(tail, tip, barb) {
+      const ang = Math.atan2(tail.y - tip.y, tail.x - tip.x);
+      const b1 = { x: tip.x + barb * Math.cos(ang + 30 * DEG), y: tip.y + barb * Math.sin(ang + 30 * DEG) };
+      const b2 = { x: tip.x + barb * Math.cos(ang - 30 * DEG), y: tip.y + barb * Math.sin(ang - 30 * DEG) };
+      return [tail, tip, b1, tip, b2];
+    }
+    function recognizeClosed(pts, D) {
+      const loop = pts.slice(0, -1), c = centroid(loop), poly = polygonFrom(loop, c, D);
+      const polyErr = poly ? meanDistToPolyline(loop, poly, true) / D : Infinity;
+      const ell = fitEllipse(loop), ellErr = ell ? ell.err / D : Infinity;
+      if (poly && poly.length >= 3 && poly.length <= 6 && polyErr < 0.03 && polyErr <= ellErr * 1.15) return polygonShape(poly, polyErr);
+      if (ell && ellErr < 0.03) {
+        const center = { x: ell.cx, y: ell.cy };
+        if (Math.min(ell.a, ell.b) / Math.max(ell.a, ell.b) > 0.85) {
+          const r = loop.reduce((s, p) => s + dist(p, center), 0) / loop.length;
+          return { kind: "circle", verts: ellipseVerts(center, r, r, 0), closed: true, center, mode: "similarity", rotate: false, error: ellErr };
+        }
+        return { kind: "ellipse", verts: ellipseVerts(center, ell.a, ell.b, ell.theta), closed: true, center, mode: "similarity", rotate: false, error: ellErr };
+      }
+      return null;
+    }
+    function ellipseVerts(c, a, b, theta) {
+      const cos = Math.cos(theta), sin = Math.sin(theta);
+      return Array.from({ length: 72 }, (_, i) => { const t = i / 72 * 2 * Math.PI, u = a * Math.cos(t), v = b * Math.sin(t); return { x: c.x + u * cos - v * sin, y: c.y + u * sin + v * cos }; });
+    }
+    function polygonFrom(loop, c, D) {
+      let far = 0;
+      loop.forEach((p, i) => { if (dist(p, c) > dist(loop[far], c)) far = i; });
+      const ring = [...loop.slice(far), ...loop.slice(0, far)];
+      ring.push(ring[0]);
+      let verts = rdp(ring, 0.045 * D).map(i => ring[i]);
+      verts.pop();
+      // fusiona esquinas muy cercanas y saca las casi llanas
+      for (let changed = true; changed && verts.length > 3;) {
+        changed = false;
+        for (let i = 0; i < verts.length && verts.length > 3; i++) {
+          const prev = verts[(i - 1 + verts.length) % verts.length], cur = verts[i], next = verts[(i + 1) % verts.length];
+          if (dist(cur, next) < 0.1 * D) { verts[i] = { x: (cur.x + next.x) / 2, y: (cur.y + next.y) / 2 }; verts.splice((i + 1) % verts.length, 1); changed = true; break; }
+          if (angleAt(prev, cur, next) > 155) { verts.splice(i, 1); changed = true; break; }
+        }
+      }
+      verts = verts.filter(Boolean);
+      return verts.length >= 3 ? verts : null;
+    }
+    function polygonShape(verts, error) {
+      const c = centroid(verts), base = { closed: true, center: c, mode: "similarity", rotate: true, error };
+      if (verts.length === 3) return { ...base, kind: "triangle", verts };
+      if (verts.length === 4) {
+        const angles = verts.map((v, i) => angleAt(verts[(i + 3) % 4], v, verts[(i + 1) % 4]));
+        if (angles.every(a => Math.abs(a - 90) < 15)) { const rect = fitRectangle(verts); return { ...base, kind: rect.square ? "square" : "rectangle", verts: rect.verts, center: rect.center }; }
+        return { ...base, kind: "quad", verts };
+      }
+      return { ...base, kind: "polygon", verts: regularize(verts, c) };
+    }
+    function fitRectangle(v) {
+      let sx = 0, sy = 0;
+      for (let i = 0; i < 4; i++) { const a = Math.atan2(v[(i + 1) % 4].y - v[i].y, v[(i + 1) % 4].x - v[i].x) * 4; sx += Math.cos(a); sy += Math.sin(a); }
+      let theta = Math.atan2(sy, sx) / 4;
+      const snapped = Math.round(theta / (90 * DEG)) * 90 * DEG;
+      if (Math.abs(theta - snapped) < 7 * DEG) theta = snapped;
+      const c = centroid(v), cos = Math.cos(theta), sin = Math.sin(theta);
+      let hw = 0, hh = 0;
+      for (const p of v) { hw += Math.abs((p.x - c.x) * cos + (p.y - c.y) * sin); hh += Math.abs(-(p.x - c.x) * sin + (p.y - c.y) * cos); }
+      hw /= 4; hh /= 4;
+      const square = Math.min(hw, hh) / Math.max(hw, hh) > 0.9;
+      if (square) hw = hh = (hw + hh) / 2;
+      const corner = (u, w) => ({ x: c.x + u * cos - w * sin, y: c.y + u * sin + w * cos });
+      return { verts: [corner(-hw, -hh), corner(hw, -hh), corner(hw, hh), corner(-hw, hh)], center: c, square };
+    }
+    // pentágonos y hexágonos con lados parecidos se vuelven regulares
+    function regularize(v, c) {
+      const n = v.length, sides = v.map((p, i) => dist(p, v[(i + 1) % n])), mean = sides.reduce((a, b) => a + b, 0) / n;
+      if (Math.sqrt(sides.reduce((a, s) => a + (s - mean) ** 2, 0) / n) / mean > 0.2) return v;
+      const r = v.reduce((a, p) => a + dist(p, c), 0) / n, a0 = Math.atan2(v[0].y - c.y, v[0].x - c.x);
+      const dir = v.reduce((a, p, i) => a + p.x * v[(i + 1) % n].y - v[(i + 1) % n].x * p.y, 0) >= 0 ? 1 : -1;
+      return Array.from({ length: n }, (_, i) => { const t = a0 + dir * 2 * Math.PI * i / n; return { x: c.x + r * Math.cos(t), y: c.y + r * Math.sin(t) }; });
+    }
+    // con el lápiz todavía apoyado, la forma sigue al lápiz: el extremo (líneas, flechas) o escala y rota desde el centro
+    function adjustShape(shape, anchor, pen) {
+      if (shape.mode === "endpoint" && shape.rebuild) return shape.rebuild(pen);
+      const c = shape.center, v0 = { x: anchor.x - c.x, y: anchor.y - c.y }, v1 = { x: pen.x - c.x, y: pen.y - c.y }, l0 = Math.hypot(v0.x, v0.y);
+      if (l0 < 1) return shape.verts;
+      const k = Math.max(0.1, Math.min(10, Math.hypot(v1.x, v1.y) / l0));
+      const rot = shape.rotate ? Math.atan2(v1.y, v1.x) - Math.atan2(v0.y, v0.x) : 0, cos = Math.cos(rot) * k, sin = Math.sin(rot) * k;
+      return shape.verts.map(p => ({ x: c.x + (p.x - c.x) * cos - (p.y - c.y) * sin, y: c.y + (p.x - c.x) * sin + (p.y - c.y) * cos }));
+    }
+    // puntos del trazo (presión constante) a partir de los vértices
+    const toStroke = (verts, closed) => densify(verts, closed).flatMap(p => [p.x, p.y, 0.5]);
+    const fromStroke = flat => { const out = []; for (let i = 0; i + 1 < flat.length; i += 3) out.push({ x: flat[i], y: flat[i + 1] }); return out; };
+    return { recognize, adjustShape, toStroke, fromStroke };
+  })();
+  const HOLD_MS = 500, HOLD_PX = 6;   // quieto más de 500 ms, moviéndose menos de 6 px de pantalla
+
+  const prefs = Object.assign({ show: "auto", pen: false, finger: null, shapes: true, tool: "pen", color: "ink", size: 1, hlColor: "yellow", paper: "grid", promptOpen: true, split: true }, (() => {
     try { return JSON.parse(localStorage.getItem(PREF_KEY)) || {}; } catch (e) { return {}; }
   })());
   const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) { /* sin almacenamiento */ } };
@@ -218,7 +490,8 @@
     live.addEventListener("pointermove", onMove);
     live.addEventListener("pointerup", onUp);
     live.addEventListener("pointercancel", onUp);
-    live.addEventListener("pointerleave", e => { if (e.pointerType !== "touch" && !cur) clearLive(); });
+    // el lápiz salió del alcance: se olvida el estado del botón (si no, el próximo toque podía alternar de más)
+    live.addEventListener("pointerleave", e => { if (e.pointerType !== "touch" && !cur) { clearLive(); if (e.pointerType === "pen") btn = null; } });
     live.addEventListener("wheel", onWheel, { passive: false });
     live.addEventListener("contextmenu", onContextMenu);
     new ResizeObserver(resize).observe(el.querySelector(".board-stage"));
@@ -342,14 +615,20 @@
   // botón del S Pen: Chrome lo informa como botón 2 (barril) y la punta de borrar como 32.
   // - Apretarlo y soltarlo sin tocar la pantalla alterna entre el borrador y la herramienta anterior.
   // - Mantenerlo apretado mientras se escribe borra solo mientras dura el trazo.
-  let btn = null, btnReleased = 0;
+  // - Un clic largo (más de 1,5 s) sin tocar no hace nada, por si se apretó sin querer.
+  let btn = null, btnReleased = 0, hoverBtnSeen = false;
   const btnPressed = e => e.pointerType === "pen" && (e.buttons & 34) !== 0;
   function trackButton(e) {
     if (e.pointerType !== "pen") return;
-    const pressed = btnPressed(e);
-    if (pressed && !btn) btn = { touched: e.type === "pointerdown" || (e.buttons & 1) !== 0 || !!cur };
-    else if (pressed && (e.type === "pointerdown" || cur)) btn.touched = true;
-    else if (!pressed && btn) { const b = btn; btn = null; btnReleased = performance.now(); if (!b.touched) toggleEraser(); }
+    const pressed = btnPressed(e), touching = (e.buttons & 1) !== 0 || e.type === "pointerdown" || !!cur;
+    if (pressed) {
+      if (!btn) btn = { t: performance.now(), touched: touching };
+      else if (touching) btn.touched = true;
+      if (!touching) hoverBtnSeen = true;   // este equipo informa el botón al pasar por encima
+    } else if (btn) {
+      const b = btn; btn = null; btnReleased = performance.now();
+      if (!b.touched && btnReleased - b.t < 1500) toggleEraser();
+    }
   }
   function toggleEraser() {
     if (prefs.tool === "eraser") prefs.tool = prefs.prevTool && prefs.prevTool !== "eraser" ? prefs.prevTool : "pen";
@@ -360,7 +639,8 @@
   // algunos Android no mandan el estado del botón al pasar el lápiz por encima, pero sí un "clic derecho"
   function onContextMenu(e) {
     e.preventDefault();
-    if (btn || performance.now() - btnReleased < 600 || performance.now() - lastPen > 1500) return;
+    // con el lápiz apoyado, un «clic largo» no es el botón (pasaba al dejar el lápiz quieto: cambiaba de modo solo)
+    if (cur || hoverBtnSeen || btn || performance.now() - btnReleased < 600 || performance.now() - lastPen > 1500) return;
     toggleEraser();
   }
   function onDown(e) {
@@ -377,7 +657,7 @@
       if (fingerDraws() && !touches.size && !cur) return startStroke(e);
       if (cur && cur.type === "touch") { cancelStroke(); }
       touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      live.setPointerCapture(e.pointerId);
+      capture(e);
       startGesture();
       return;
     }
@@ -386,8 +666,10 @@
     if (touches.size) { touches.clear(); gesture = null; }
     startStroke(e);
   }
+  // si el puntero ya no está activo (eventos sintéticos, un lápiz que se fue), no cortar el trazo por eso
+  function capture(e) { try { live.setPointerCapture(e.pointerId); } catch (err) { /* sigue sin captura */ } }
   function startStroke(e) {
-    live.setPointerCapture(e.pointerId);
+    capture(e);
     // botón del S Pen (barril) o la punta de borrar: borra mientras se mantiene
     const erase = prefs.tool === "eraser" || (e.buttons & 32) || (e.pointerType === "pen" && (e.buttons & 2));
     const [x, y] = toPage(e);
@@ -398,7 +680,29 @@
     }
     const hl = prefs.tool === "hl";
     const s = { c: hl ? prefs.hlColor : prefs.color, w: SIZES[hl ? "hl" : "pen"][prefs.size], h: hl ? 1 : 0, p: [x, y, pressureOf(e)] };
-    cur = { id: e.pointerId, type: e.pointerType, s, path: strokePath(s), n: 1 };
+    cur = { id: e.pointerId, type: e.pointerType, s, path: strokePath(s), n: 1, still: [e.clientX, e.clientY] };
+    armHold();
+    drawLive();
+  }
+  // formas: si el lápiz queda quieto, el trazo se vuelve la forma reconocida; mientras siga apoyado, la forma lo sigue
+  function armHold() {
+    if (!cur || cur.erase) return;
+    clearTimeout(cur.holdT);
+    if (!prefs.shapes || cur.shape) return;
+    const c = cur;
+    c.holdT = setTimeout(() => {
+      if (cur !== c || c.erase || c.shape) return;
+      const pts = Sh.fromStroke(c.s.p), sh = Sh.recognize(pts);
+      if (!sh) return;
+      c.shape = sh; c.anchor = pts[pts.length - 1];
+      setShape(c, sh.verts);
+      if (navigator.vibrate) navigator.vibrate(8);
+    }, HOLD_MS);
+  }
+  function setShape(c, verts) {
+    c.s.p = Sh.toStroke(verts, c.shape.closed);
+    c.path = strokePath(c.s); c.n = c.s.p.length / 3;
+    predicted = [];
     drawLive();
   }
   function onMove(e) {
@@ -406,6 +710,7 @@
     // se apretó el botón en medio de un trazo: lo escrito queda y sigue borrando
     if (cur && !cur.erase && e.pointerId === cur.id && btnPressed(e)) {
       const c = cur;
+      clearTimeout(c.holdT);
       if (c.s.p.length > 3) commitStroke(c);
       cur = { id: c.id, type: c.type, erase: true, acts: [] };
       clearLive();
@@ -417,6 +722,9 @@
     }
     const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
     if (cur.erase) { for (const ev of evs.length ? evs : [e]) eraseMove(...toPage(ev)); return; }
+    if (cur.shape) { const [x, y] = toPage(e); setShape(cur, Sh.adjustShape(cur.shape, cur.anchor, { x, y })); return; }
+    // se movió: vuelve a esperar a que quede quieto
+    if (Math.hypot(e.clientX - cur.still[0], e.clientY - cur.still[1]) > HOLD_PX) { cur.still = [e.clientX, e.clientY]; armHold(); }
     const s = cur.s, minD = 0.6 / Math.max(view.z, 1);
     for (const ev of evs.length ? evs : [e]) {
       const [x, y] = toPage(ev), n = s.p.length;
@@ -466,6 +774,7 @@
     if (!cur || e.pointerId !== cur.id) return;
     if (e.pointerType === "pen") lastPen = performance.now();
     const c = cur; cur = null; predicted = [];
+    clearTimeout(c.holdT);
     cancelAnimationFrame(rafLive); rafLive = 0;
     clearLive();
     if (c.erase) {
@@ -484,7 +793,7 @@
     fillStroke(bctx, c.s, theme());   // ya está la transformación de la hoja en bctx
     persist(page);
   }
-  function cancelStroke() { cur = null; predicted = []; clearLive(); }
+  function cancelStroke() { if (cur) clearTimeout(cur.holdT); cur = null; predicted = []; clearLive(); }
 
   // gestos con los dedos: uno mueve, dos hacen zoom
   function startGesture() {
@@ -661,4 +970,5 @@
     if (typeof MutationObserver === "function") new MutationObserver(reTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   }
   E.board = api;
+  E.boardShapes = Sh;
 })();

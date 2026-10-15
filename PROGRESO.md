@@ -48,6 +48,21 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Dónde aparece:** un botón con un lápiz en la barra de inicio, en la de cada ejercicio, en *Aprender* y en cada ficha de los apuntes (cada ficha tiene su hoja). Solo se muestra en tablets (puntero táctil y pantalla de al menos 600 px de lado) o si ya se usó un lápiz en ese dispositivo. En Ajustes se puede elegir Auto, Siempre o Nunca.
 - **Tests:** la suite prueba la parte sin DOM: alcance del borrador, deshacer y rehacer, y guardado compacto. El dibujo con lápiz, el borrado, el arrastre con el dedo, el zoom y la persistencia se probaron en Chromium emulando una tablet de 1280 × 800 y de 800 × 1280.
 
+- **Formas automáticas (15/10).** Se adaptó a JS el reconocedor de Notillas (`src/recognition/`), que vive en `board.js` como `Sh` y se expone en `E.boardShapes`. Si el lápiz queda quieto 500 ms (moviéndose menos de 6 px), el trazo se vuelve una línea (con ajuste a 45°), flecha, arco, círculo, elipse, triángulo, rectángulo, cuadrado o polígono regular. Sin levantar el lápiz, la forma se ajusta: el extremo sigue al lápiz, o la forma escala y rota desde el centro. Se apaga en Ajustes → Pizarra. Tiene tests con trazos «temblorosos».
+- **Botón del S Pen, más robusto.**
+  - Un clic sin tocar (de menos de 1,5 s) alterna el borrador.
+  - Mantenido mientras se escribe, borra solo ese trazo.
+  - Si el lápiz sale del alcance, se olvida el estado del botón.
+  - El «clic derecho» de respaldo ya no actúa con el lápiz apoyado. Era la causa probable del comportamiento errático: dejar el lápiz quieto disparaba un clic largo que cambiaba de modo.
+  - Tampoco actúa si el equipo ya informa el botón al pasar por encima.
+- **`setPointerCapture`** puede fallar sin cortar el trazo.
+
+## Fórmulas en los apuntes
+
+- Las fórmulas destacadas (`$$…$$`) van centradas y numeradas (1), (2)… dentro de cada ficha, con una sola numeración para toda la ficha, así se pueden citar.
+- Una fórmula en línea larga (más de ~30 símbolos y con un =, ≤, →…) pasa sola a su propio renglón, numerada. Las cortas no se cortan al final del renglón (`.km`, `nowrap`).
+- Si una fórmula numerada no entra en el ancho, `fitEqs` la parte en renglones alineados (`aligned`) en cada signo de relación de primer nivel. Si hace falta, también la parte antes de cada + o −, o deja el lado izquierdo solo. Recién después la achica, hasta el 60 %. Las pocas que no se pueden partir solas están escritas a mano con `aligned`.
+
 ## Demostraciones en los apuntes
 
 - El usuario pidió que las fórmulas tengan su deducción (por ejemplo, faltaba cos(a+b)). La ficha `identidades-trig` (M101) ahora tiene la suma y la resta de seno, coseno y tangente, el ángulo doble, sen² y cos² en función de cos 2x, y la demostración de cada una a partir de cos(a−b) (distancia entre dos puntos de la circunferencia unidad).

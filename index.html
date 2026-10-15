@@ -67,6 +67,12 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .muted { color: var(--muted); }
 .small { font-size: .875rem; }
 .katex { font-size: 1.08em; }
+.km { white-space: nowrap; }
+.eq { display: flex; align-items: center; gap: 10px; margin: .7em 0; }
+.eq-m { flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden; text-align: center; scrollbar-width: none; }
+.eq-m::-webkit-scrollbar { display: none; }
+.eq-m .katex-display { margin: 0; overflow: visible; }
+.eq-n { flex: none; color: var(--muted); font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .katex-display { margin: .6em 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .ov, .katex-display, .solution li { scrollbar-width: none; }
 .ov::-webkit-scrollbar, .katex-display::-webkit-scrollbar, .solution li::-webkit-scrollbar { display: none; }
@@ -1112,12 +1118,98 @@ body.board-split .nav { padding-bottom: 0; }
     const ctx = Object.assign({ seen: new Set() }, opts);
     // la negrita puede envolver fórmulas, así que se resuelve antes de separar el LaTeX
     return String(s).replace(/\*\*([\s\S]+?)\*\*/g, "<b>$1</b>").split(/(\$\$[^$]+\$\$|\$[^$]+\$)/g).map(p => {
-      if (p.startsWith("$$") && p.length > 4) return K(p.slice(2, -2), true);
-      if (p.startsWith("$") && p.length > 2) return K(p.slice(1, -1), false);
+      if (p.startsWith("$$") && p.length > 4) return eqHtml(p.slice(2, -2), ctx.eq);
+      if (p.startsWith("$") && p.length > 2) {
+        const m = p.slice(1, -1);
+        // en los apuntes, una fórmula larga en el medio del texto se corta mal: pasa a su propio renglón, centrada
+        return ctx.eq && longInline(m) ? eqHtml(m, ctx.eq) : `<span class="km">${K(m, false)}</span>`;
+      }
       return E.linkText(p, ctx);
     }).join("");
   }
   const texL = s => tex(s, { auto: true });
+  // fórmulas destacadas: centradas y, en los apuntes (eq = contador de la ficha), numeradas (1), (2)… para poder citarlas
+  function eqHtml(m, eq) {
+    if (!eq) return K(m, true);
+    return `<div class="eq"><div class="eq-m" data-tex="${esc(m)}">${K(m, true)}</div><span class="eq-n">(${++eq.n})</span></div>`;
+  }
+  // si una fórmula numerada no entra en el ancho, se achica (hasta 60 %) en vez de cortarse; las details cerradas
+  // se ajustan al abrirse
+  // Primero intenta partirla en renglones alineados en cada «=» (o ≤, ≈…) de primer nivel; si un lado sigue
+  // siendo largo, también lo corta antes de cada «+» o «−» de primer nivel, como se hace a mano.
+  const vlen = m => m.replace(/\\(left|right|big|Big|bigg|,|;|!|quad|qquad|displaystyle|dfrac|tfrac|frac|text)/g, "").replace(/\\[a-zA-Z]+/g, "x").replace(/[{}^_\s]/g, "").length;
+  function topSplit(m, re) {
+    const parts = [];
+    let depth = 0, last = 0;
+    for (let i = 0; i < m.length; i++) {
+      const ch = m[i];
+      if (ch === "\\" && (m[i + 1] === "{" || m[i + 1] === "}")) { i++; continue; }
+      if (ch === "\\" && /^\\(left|right|big|Big|bigg|Bigg)l?(?![a-zA-Z])/.test(m.slice(i))) {
+        const w = /^\\(left|right|big|Big|bigg|Bigg)l?/.exec(m.slice(i))[0];
+        if (w === "\\left" || /^\\[bB]igg?l$/.test(w)) depth++; else if (w === "\\right" || /^\\[bB]igg?r/.test(m.slice(i))) depth--;
+        i += w.length - 1; continue;
+      }
+      if (ch === "{" || ch === "(" || ch === "[") depth++;
+      else if (ch === "}" || ch === ")" || ch === "]") depth--;
+      else if (depth === 0 && i > last) {
+        const r = re.exec(m.slice(i));
+        if (r && m.slice(last, i).trim()) { parts.push(m.slice(last, i)); last = i; i += r[0].length - 1; }
+      }
+    }
+    parts.push(m.slice(last));
+    return parts;
+  }
+  const REL = /^(=|<|>|\\(?:leq?|geq?|approx|Rightarrow|Longrightarrow|iff|equiv|neq)(?![a-zA-Z]))/;
+  function splitEq(m, terms, alone, max = 22) {
+    const rows = [];
+    // agrupa los términos de un lado en renglones de largo parecido
+    const chunk = seg => {
+      if (!terms || vlen(seg) <= max - 4) return [seg];
+      const out = [];
+      let cur = "";
+      for (const t of topSplit(seg, /^[+-]/)) { if (cur && vlen(cur + t) > max) { out.push(cur); cur = t; } else cur += t; }
+      if (cur) out.push(cur);
+      return out;
+    };
+    for (const piece of topSplit(m, /^,?\s*\\qquad(?![a-zA-Z])/).map(x => x.replace(/^,?\s*\\qquad/, ""))) {
+      const segs = topSplit(piece, REL), start = rows.length;
+      segs.forEach((seg, j) => chunk(seg).forEach((c, k) => {
+        if (j === 0) rows.push(k === 0 ? c : "&\\quad " + c);
+        // el primer signo queda en el mismo renglón que el lado izquierdo, y es el punto de alineación
+        else if (j === 1 && k === 0 && rows.length === start + 1 && !alone) rows[start] += " &" + c;
+        else if (j === 1 && k === 0 && rows.length === start + 1) { rows[start] += " &"; rows.push("&" + c); }
+        else rows.push(k === 0 ? "&" + c : "&\\quad " + c);
+      }));
+      if (segs.length === 1) for (let i = start; i < rows.length; i++) if (!rows[i].startsWith("&")) rows[i] = "&" + rows[i];
+    }
+    if (rows.length < 2) return null;
+    return "\\begin{aligned}" + rows.join(" \\\\ ") + "\\end{aligned}";
+  }
+  function fitEqs(root) {
+    for (const m of $$(".eq-m", root)) {
+      if (!m.offsetParent) continue;
+      m.style.fontSize = "";
+      const ratio = () => m.clientWidth / ($(".katex", m) || m).scrollWidth;
+      if (ratio() < 0.85 && !m.dataset.split && m.dataset.tex) {
+        m.dataset.split = "1";
+        for (const [terms, alone, max] of [[false, false], [true, false, 22], [true, true, 22], [true, true, 15], [true, true, 10]]) {
+          const alt = splitEq(m.dataset.tex, terms, alone, max);
+          if (!alt) continue;
+          m.innerHTML = K(alt, true);
+          if (ratio() >= 0.85) break;
+        }
+      }
+      const r = ratio();
+      if (r < 1) m.style.fontSize = Math.max(0.6, r * 0.98) + "em";
+    }
+    // una fórmula en línea que no entra en el renglón puede cortarse (es mejor que salirse de la pantalla)
+    for (const k of $$(".km", root)) if (k.offsetParent && k.offsetWidth > k.parentElement.clientWidth) k.classList.remove("km");
+  }
+  document.addEventListener("toggle", e => { if (e.target.open) fitEqs(e.target); }, true);
+  window.addEventListener("resize", () => { clearTimeout(fitEqs.t); fitEqs.t = setTimeout(() => fitEqs(document), 150); });
+  // largo «visual» aproximado de una fórmula: cada comando cuenta como un símbolo; las llaves y los ^ _ no cuentan
+  const longInline = m => /=|<|>|\\[lg]eq?\b|\\to\b|\\Rightarrow|\\iff/.test(m)
+    && m.replace(/\\(left|right|big|Big|,|;|quad|qquad|displaystyle|dfrac|tfrac)/g, "").replace(/\\[a-zA-Z]+/g, "x").replace(/[{}^_\s]/g, "").length > 30;
 
   // ---------- mascota: Schrödi, el gato de Schrödinger (diseño original, CC0) ----------
   // Estados: idle (asomado a medias, en superposición), think, wow, happy (acierto),
@@ -2426,7 +2518,10 @@ body.board-split .nav { padding-bottom: 0; }
       <div class="set-row" style="flex-direction:column;align-items:stretch"><div><div class="lbl">Pizarra</div><div class="desc">Una hoja para hacer cuentas con el lápiz. En automático aparece solo en tablets o si usaste un lápiz en este dispositivo${b.available() ? " (acá está activa: botón del lápiz arriba)" : ""}.</div></div>
         ${seg("board-show", [["auto", "Auto"], ["on", "Siempre"], ["off", "Nunca"]], p.show)}</div>
       ${b.available() ? `<div class="set-row"><div><div class="lbl">Dibujar con el dedo</div><div class="desc">Apagado, el dedo mueve la hoja y la palma no raya mientras escribís con el lápiz.</div></div>
-        <button class="switch ${b.fingerDraws() ? "on" : ""}" data-act="board-finger" role="switch" aria-checked="${b.fingerDraws()}" aria-label="Dibujar con el dedo"></button></div>` : ""}
+        <button class="switch ${b.fingerDraws() ? "on" : ""}" data-act="board-finger" role="switch" aria-checked="${b.fingerDraws()}" aria-label="Dibujar con el dedo"></button></div>
+      <div class="set-row"><div><div class="lbl">Formas automáticas</div><div class="desc">Si al terminar un trazo dejás el lápiz quieto medio segundo, se vuelve una recta, flecha, círculo, rectángulo o triángulo prolijo. Sin levantarlo, lo podés agrandar o rotar.</div></div>
+        <button class="switch ${p.shapes !== false ? "on" : ""}" data-act="board-shapes" role="switch" aria-checked="${p.shapes !== false}" aria-label="Formas automáticas"></button></div>
+      <div class="set-row"><div><div class="lbl">Botón del lápiz</div><div class="desc">Un clic sin tocar la pantalla alterna lápiz y borrador. Mantenido mientras escribís, borra solo durante ese trazo.</div></div></div>` : ""}
     </section>`;
   }
   // tarjeta de cuenta: login con Google y estado de la sincronización
@@ -2508,6 +2603,7 @@ body.board-split .nav { padding-bottom: 0; }
     document.body.classList.add("learn-open");
     el.scrollTop = 0;
     drawGraphs(el);
+    fitEqs(el);
     if (!S.read[id]) { S.read[id] = true; save(); }
   }
   function learnHead(crumb) {
@@ -2517,7 +2613,7 @@ body.board-split .nav { padding-bottom: 0; }
       <span class="learn-crumb">${icon("graduation-cap")} ${esc(crumb)}</span>
       ${boardBtn()}<button class="iconbtn" data-act="learn-close" aria-label="Cerrar apuntes">${icon("x")}</button></header>`;
   }
-  const block = b => typeof b === "string" ? `<div class="para">${tex(b)}</div>`
+  const block = (b, eq) => typeof b === "string" ? `<div class="para">${tex(b, { eq })}</div>`
     : b.graph ? `<figure>${graphHtml(b.graph, "fig-graph")}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>`
     : b.svg ? `<figure>${b.svg}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>` : "";
   const lsec = (title, ic, inner, open) => inner
@@ -2526,9 +2622,11 @@ body.board-split .nav { padding-bottom: 0; }
     const c = course(card.course);
     const gu = c.units.find(u => u.id === card.group);
     const group = gu ? gu.title : "";
-    const blocks = arr => (arr && arr.length ? arr.map(block).join("") : "");
-    const examples = (card.examples || []).map((ex, i) => `<div class="ex"><div class="ex-q"><b>Ejemplo ${i + 1}.</b> ${tex(ex.q)}</div>
-      <details class="ex-sol"><summary>Ver resolución</summary><ol>${ex.steps.map(st => `<li>${tex(st)}</li>`).join("")}</ol></details></div>`).join("");
+    // una sola numeración de fórmulas para toda la ficha
+    const eq = { n: 0 };
+    const blocks = arr => (arr && arr.length ? arr.map(b => block(b, eq)).join("") : "");
+    const examples = (card.examples || []).map((ex, i) => `<div class="ex"><div class="ex-q"><b>Ejemplo ${i + 1}.</b> ${tex(ex.q, { eq })}</div>
+      <details class="ex-sol"><summary>Ver resolución</summary><ol>${ex.steps.map(st => `<li>${tex(st, { eq })}</li>`).join("")}</ol></details></div>`).join("");
     const lessons = c.lessonList.filter(l => (l.theory || []).includes(card.id));
     const inSession = !!ui.session;
     const practice = inSession ? "" : (card.concepts || []).filter(k => c.concepts[k] && templatesFor(card.course, k).length).slice(0, 2)
@@ -2881,6 +2979,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "board": if (E.board) E.board.toggle(); break;
       case "board-show": E.board.setPref("show", el.dataset.v); boardAvail = E.board.available(); if (!E.board.available()) E.board.close(); render(); break;
       case "board-finger": E.board.setPref("finger", !E.board.fingerDraws()); render(); break;
+      case "board-shapes": E.board.setPref("shapes", E.board.prefs.shapes === false); render(); break;
       case "sound": S.settings.sound = !S.settings.sound; save(); render(); if (S.settings.sound) Snd.play("correct"); break;
       case "export": exportData(); break;
       case "login": if (E.sync) E.sync.signIn(); break;

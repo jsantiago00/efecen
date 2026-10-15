@@ -486,6 +486,30 @@ for (const cid of E.courseOrder) {
 // pizarra (board.js): borrador, deshacer/rehacer y guardado, sin DOM
 {
   vm.runInContext(fs.readFileSync(path.join(root, "board.js"), "utf8"), ctx, { filename: "board.js" });
+  // formas automáticas: trazos «a mano» (con temblor) que se tienen que reconocer
+  {
+    const Sh = E.boardShapes, w2 = "pizarra/formas";
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5);
+    const jit = (pts, j) => pts.map(p => ({ x: p.x + rnd() * j, y: p.y + rnd() * j }));
+    const seg = (a, b, n) => Array.from({ length: n + 1 }, (_, i) => ({ x: a.x + (b.x - a.x) * i / n, y: a.y + (b.y - a.y) * i / n }));
+    const poly = (vs, n) => vs.flatMap((v, i) => seg(v, vs[(i + 1) % vs.length], n).slice(i ? 1 : 0));
+    const circ = (cx, cy, r, from, to, n) => Array.from({ length: n + 1 }, (_, i) => { const t = from + (to - from) * i / n; return { x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) }; });
+    const kind = pts => { const r = Sh.recognize(pts); return r ? r.kind : null; };
+    ok(kind(jit(seg({ x: 0, y: 0 }, { x: 300, y: 40 }, 60), 3)) === "line", w2, "una recta no se reconoce");
+    const l = Sh.recognize(jit(seg({ x: 0, y: 0 }, { x: 300, y: 8 }, 60), 2));
+    ok(l && Math.abs(l.verts[1].y - l.verts[0].y) < 1e-6, w2, "una recta casi horizontal debe quedar horizontal");
+    ok(kind(jit(circ(200, 200, 100, 0, 2 * Math.PI, 80), 4)) === "circle", w2, "un círculo no se reconoce");
+    ok(kind(jit(circ(200, 200, 100, 0, Math.PI, 50), 3)) === "arc", w2, "un arco no se reconoce");
+    ok(kind(jit(poly([{ x: 0, y: 0 }, { x: 300, y: 0 }, { x: 300, y: 150 }, { x: 0, y: 150 }], 25).concat([{ x: 0, y: 0 }]), 3)) === "rectangle", w2, "un rectángulo no se reconoce");
+    ok(kind(jit(poly([{ x: 0, y: 200 }, { x: 150, y: 0 }, { x: 300, y: 200 }], 30).concat([{ x: 0, y: 200 }]), 3)) === "triangle", w2, "un triángulo no se reconoce");
+    const scribble = Array.from({ length: 80 }, (_, i) => ({ x: i * 4, y: 60 * Math.sin(i * 0.9) + 40 * Math.cos(i * 0.37) }));
+    ok(Sh.recognize(scribble) === null, w2, "un garabato no debe volverse forma");
+    ok(Sh.recognize([{ x: 0, y: 0 }, { x: 3, y: 2 }, { x: 5, y: 1 }]) === null, w2, "un trazo chiquito (un punto, una coma) no debe volverse forma");
+    const c = Sh.recognize(jit(circ(0, 0, 100, 0, 2 * Math.PI, 80), 2));
+    const big = Sh.adjustShape(c, { x: 100, y: 0 }, { x: 200, y: 0 });
+    ok(Math.abs(Math.hypot(big[0].x, big[0].y) - 2 * Math.hypot(c.verts[0].x, c.verts[0].y)) < 1, w2, "al alejar el lápiz, el círculo tiene que agrandarse desde el centro");
+    ok(Sh.toStroke(c.verts, true).length % 3 === 0, w2, "los puntos del trazo de una forma van de a tres (x, y, presión)");
+  }
   const B = E.board.T, w = "pizarra";
   const mk = (pts, wd = 4) => ({ c: "ink", w: wd, h: 0, p: pts.flatMap(([x, y]) => [x, y, 0.5]) });
   const pg = { s: [] };
