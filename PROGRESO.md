@@ -88,6 +88,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Contrarreloj.** Dura 60 s y trae preguntas rápidas (opción múltiple, V/F y encontrar el error) de las lecciones abiertas de la materia. Si hay pocas, suma numéricas fáciles. Cada acierto vale 10 puntos, multiplicados por 1 + ⌊racha/3⌋ (hasta ×4). Se guarda el récord por materia. Se entra desde Inicio o desde la tarjeta «Juegos» del mapa.
 - Los dos juegos califican los conceptos en el repaso espaciado, igual que una sesión común.
 - **Estado:** `S.courses[cid].bosses[unitId] = { won, wins }` y `S.courses[cid].rush` (récord). Al combinar dispositivos, `E.store.merge` deja el jefe vencido si lo está en alguno, `wins` con el máximo y el récord con el máximo. Tiene tests.
+- **Ejercicio del día.** Aparece en Inicio y sale de las lecciones que ya completaste, de todas las materias. Elige entre las plantillas de dificultad 3 si hay al menos 3; si no, entre las de dificultad 2 y 3. Nunca es un V/F. Es el mismo todo el día, en todos los dispositivos, porque la semilla es la fecha (`E.dailySeed` y `E.dailyPick`, con tests). Tenés un solo intento: si lo resolvés bien suma 30 XP, y si no, muestra la resolución. Igual califica el repaso espaciado. Se cuentan los días seguidos resueltos. El estado va en `S.daily[fecha] = { cid, tpl, ok }`, con los últimos 120 días. Al combinar dispositivos, un día queda resuelto si lo está en alguno.
 - **Idea para más adelante:** un memotest de fórmulas (unir cada fórmula con su nombre).
 
 ## Cuenta y sincronización (Firebase)

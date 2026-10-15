@@ -235,6 +235,11 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .node.boss .ic { width: 38px; height: 38px; }
 .node.boss.won { background: var(--gold); color: #3A2A00; box-shadow: 0 6px 0 var(--gold-d); }
 .node.boss.locked { background: var(--lock); color: var(--muted); box-shadow: 0 6px 0 var(--lock-d); }
+.daily-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: inherit; font: inherit; border: 2px solid var(--gold); cursor: pointer; }
+.daily-card:disabled { border-color: var(--line); cursor: default; opacity: 1; }
+.daily-ico { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--gold); color: #3A2A00; }
+.daily-ico .ic { width: 26px; height: 26px; }
+.daily-card .small .ic { width: 14px; height: 14px; color: var(--fire); vertical-align: -2px; }
 .games-card { display: flex; flex-direction: column; gap: 8px; }
 .games-card > .row .ic { width: 26px; height: 26px; color: var(--fire); }
 .game-hud { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius); background: var(--card); border: 2px solid var(--line); }
@@ -920,6 +925,19 @@ body.board-split .nav { padding-bottom: 0; }
     return { exam: Object.assign({}, ex, { items }), parts };
   };
 
+  // ---------- Ejercicio del día ----------
+  // Sale de las lecciones ya completadas y es el mismo todo el día (la semilla es la fecha).
+  // Se queda con las plantillas más exigentes que tengas: dificultad 3 si hay al menos 3, si no 2 y 3.
+  // `cands` es una lista de { cid, tpl, difficulty, type } en un orden fijo.
+  E.dailySeed = date => { let h = 2166136261; for (const ch of "efecen-dia-" + date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h % 1e9 + 1; };
+  E.dailyPick = (cands, date) => {
+    const ok = cands.filter(c => c.type !== "tf" && c.difficulty >= 2);
+    if (!ok.length) return null;
+    const hard = ok.filter(c => c.difficulty >= 3), pool = hard.length >= 3 ? hard : ok;
+    const r = E.rng(E.dailySeed(date));
+    return Object.assign({ seed: r.int(1, 1e9) }, r.pick(pool));
+  };
+
   // ---------- Estado persistente ----------
   E.store = {
     key: "efecen:v1",
@@ -929,7 +947,8 @@ body.board-split .nav { padding-bottom: 0; }
       xp: 0, streak: 0, bestStreak: 0, lastActive: null,
       xpByDay: {}, activeCourse: null,
       courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0, read: {},
-      exams: {} // "m101/p1" -> { best, attempts: [{ d, t, score }] } (los más nuevos primero)
+      exams: {}, // "m101/p1" -> { best, attempts: [{ d, t, score }] } (los más nuevos primero)
+      daily: {} // ejercicio del día: "2026-10-15" -> { cid, tpl, ok }
     }),
     migrate(s) {
       const d = E.store.defaults();
@@ -999,6 +1018,11 @@ body.board-split .nav { padding-bottom: 0; }
         const e = out.exams[k] = out.exams[k] || { best: 0, attempts: [] }, have = new Set(e.attempts.map(x => x.t));
         e.best = max(e.best, oe.best);
         e.attempts = e.attempts.concat((oe.attempts || []).filter(x => !have.has(x.t))).sort((x, y) => y.t - x.t).slice(0, 30);
+      }
+      // ejercicio del día: si se resolvió bien en algún dispositivo, cuenta como resuelto
+      for (const [d, od] of Object.entries(older.daily)) {
+        const x = out.daily[d];
+        if (!x || (od.ok && !x.ok)) out.daily[d] = od;
       }
       const seen = new Set();
       out.log = a.log.concat(b.log).filter(l => { const k = JSON.stringify(l); return seen.has(k) ? false : seen.add(k); })
@@ -1574,6 +1598,44 @@ body.board-split .nav { padding-bottom: 0; }
         <span class="exam-best ${cs.rush ? "pass" : ""}">${cs.rush ? `récord ${cs.rush}` : "Sin jugar"}</span>${icon("chevron-right")}</button></section>`;
   }
 
+  // ---------- EJERCICIO DEL DÍA ----------
+  // uno por día, de lo que ya completaste, de los más exigentes; un solo intento
+  function dailyChallenge() {
+    const cands = [];
+    for (const cid of E.courseOrder) {
+      const c = course(cid);
+      for (const l of c.lessonList) if (lessonDone(cid, l)) for (const t of l.templates) cands.push({ cid, tpl: t, difficulty: c.templates[t].difficulty, type: c.templates[t].type });
+    }
+    return E.dailyPick(cands, today());
+  }
+  // días seguidos con el ejercicio del día bien resuelto (hoy cuenta solo si ya lo hiciste)
+  function dailyStreak() {
+    let n = 0, d = today();
+    if (!S.daily[d]) d = E.addDays(d, -1);
+    while (S.daily[d] && S.daily[d].ok) { n++; d = E.addDays(d, -1); }
+    return n;
+  }
+  function dailyCard() {
+    const t = today(), done = S.daily[t], ch = done || dailyChallenge();
+    if (!ch || !course(ch.cid) || !course(ch.cid).templates[ch.tpl]) return "";
+    const c = course(ch.cid), tp = c.templates[ch.tpl], ds = dailyStreak();
+    const st = done ? (done.ok ? `<span class="exam-best pass">${icon("check")}Resuelto</span>` : `<span class="exam-best fail">Mañana hay otro</span>`)
+      : `<span class="exam-best">+${DAILY_XP} XP</span>`;
+    return `<button class="card daily-card" data-act="challenge" ${done ? "disabled" : ""}>
+      <span class="daily-ico">${icon("calendar")}</span>
+      <span class="grow"><b>Ejercicio del día</b>
+        <span class="muted small" style="display:block">${esc(c.code || c.title)} · ${esc(c.concepts[tp.concepts[0]].name)} · ${"★".repeat(tp.difficulty)}</span>
+        ${ds >= 2 ? `<span class="muted small" style="display:block">${icon("flame")}${ds} días seguidos</span>` : ""}</span>${st}</button>`;
+  }
+  const DAILY_XP = 30;
+  function startChallenge() {
+    const t = today();
+    if (S.daily[t]) return;
+    const ch = dailyChallenge();
+    if (!ch) return;
+    startSession({ kind: "challenge", cid: ch.cid, challenge: ch, items: [{ cid: ch.cid, tpl: ch.tpl, seed: ch.seed, src: "challenge" }] });
+  }
+
   function startSession(opts) {
     S.activeCourse = opts.cid;
     ui.session = Object.assign({
@@ -1698,6 +1760,7 @@ body.board-split .nav { padding-bottom: 0; }
       <section class="card goal">${ring(xt, goal)}<div class="grow"><b>Meta diaria</b><div class="muted small">${xt} / ${goal} XP hoy</div></div></section>
       <button class="btn big block" data-act="daily">${icon("play")}${firstTime ? "Empezar" : "Sesión del día"}</button>
       ${parts.length && !firstTime ? `<div class="daily-sub muted small">${esc(parts.join(" · "))}</div>` : ""}
+      ${firstTime ? "" : dailyCard()}
       ${firstTime ? "" : `<button class="btn ghost block" data-act="rush" data-cid="${cid}">${icon("timer")}Contrarreloj · ${esc(c.code || c.title)}${cState(cid).rush ? ` <span class="muted small">(récord ${cState(cid).rush})</span>` : ""}</button>`}
       <h2 class="section-title">Tu carrera</h2>
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
@@ -1800,6 +1863,7 @@ body.board-split .nav { padding-bottom: 0; }
     const prog = s.kind === "boss" ? 1 - s.boss.hp / s.boss.max : s.kind === "rush" ? rushLeft() / RUSH_MS : s.i / s.items.length;
     const tag = item.src === "review" ? `<span class="ses-tag review">${icon("rotate-ccw")}Repaso · ${esc(c.concepts[item.focus || c.templates[item.tpl].concepts[0]].name)}</span>`
       : item.src === "diag" ? `<span class="ses-tag">${icon("target")}Diagnóstico · Unidad ${item.unit + 1}</span>`
+      : item.src === "challenge" ? `<span class="ses-tag review">${icon("calendar")}Ejercicio del día · un solo intento</span>`
       : `<span class="ses-tag">${icon("sparkles")}${TYPE_LABEL[inst.type]}</span>`;
     app.innerHTML = `<div class="session">
       <div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="bar ${s.kind === "rush" ? "gold" : ""}"><i style="width:${prog * 100}%"></i></div>${s.kind === "rush" ? `<span class="rush-time" id="rushTime">${Math.ceil(rushLeft() / 1000)}</span>` : ""}${boardBtn()}</div>
@@ -1945,13 +2009,13 @@ body.board-split .nav { padding-bottom: 0; }
       const q = E.srs.grade(ok, ms, t.difficulty);
       for (const k of t.concepts) (s.grades[ckey(icid, k)] = s.grades[ckey(icid, k)] || []).push(q);
       S.answered++; if (ok) S.answeredOk++;
-      gain = ok ? (item.src === "diag" ? 5 : s.kind === "rush" ? 3 : 10) : 0;
+      gain = ok ? (item.src === "diag" ? 5 : s.kind === "rush" ? 3 : s.challenge ? DAILY_XP : 10) : 0;
     } else if (ok) gain = 5;
     s.xp += gain;
     if (s.kind === "rush") return rushAnswered(ok);
     const bossMsg = s.kind === "boss" ? bossAnswered(ok) : "";
     // si falló, vuelve al final de la cola con valores nuevos (salvo en el diagnóstico y los juegos)
-    if (!ok && first && item.src !== "diag" && !s.boss) s.items.push({ cid: icid, tpl: item.tpl, seed: E.newSeed(), src: item.src, focus: item.focus, retry: true });
+    if (!ok && first && item.src !== "diag" && !s.boss && !s.challenge) s.items.push({ cid: icid, tpl: item.tpl, seed: E.newSeed(), src: item.src, focus: item.focus, retry: true });
     if (item.src === "diag") diagProgress(item, ok);
     Snd.play(ok ? "correct" : "wrong");
     if (!ok && navigator.vibrate) navigator.vibrate(40);
@@ -2061,11 +2125,17 @@ body.board-split .nav { padding-bottom: 0; }
       b.won = b.hp <= 0;
       if (b.won) { s.xp += bs.won ? 15 : 30; bs.won = true; bs.wins = (bs.wins || 0) + 1; }
     }
+    if (s.challenge) {
+      const d = s.challenge;
+      S.daily[t] = { cid: d.cid, tpl: d.tpl, ok: s.firstOk > 0 };
+      // se guardan los últimos 120 días
+      for (const k of Object.keys(S.daily).sort().slice(0, -120)) delete S.daily[k];
+    }
     if (s.rush) { record = s.rush.score > (cs.rush || 0); if (record) cs.rush = s.rush.score; clearInterval(rushTimer); }
     // 3) XP, racha y registro
     const { streakUp, goalHit } = addXp(s.xp);
     const lesson = s.lessonId && course(cid).lessonList.find(x => x.id === s.lessonId);
-    const title = s.kind === "diag" ? "Test diagnóstico" : s.kind === "practice" ? "Práctica: " + s.title : s.boss ? "Jefe: " + s.boss.name : s.rush ? "Contrarreloj" : lesson ? lesson.title : "Repaso";
+    const title = s.kind === "diag" ? "Test diagnóstico" : s.kind === "practice" ? "Práctica: " + s.title : s.boss ? "Jefe: " + s.boss.name : s.rush ? "Contrarreloj" : s.challenge ? "Ejercicio del día" : lesson ? lesson.title : "Repaso";
     S.log.unshift({ d: t, kind: s.kind, title, n: s.firstN, ok: s.firstOk, xp: s.xp, c: cid });
     S.log = S.log.slice(0, 60);
     save();
@@ -2075,7 +2145,7 @@ body.board-split .nav { padding-bottom: 0; }
     history.replaceState(null, "", "#/");
     renderSummary();
     Snd.play(lessonDoneNow || goalHit ? "complete" : streakUp ? "streak" : "complete");
-    if (lessonDoneNow || goalHit || (s.kind === "diag" && s.diag.passed.length) || (s.boss && s.boss.won) || (record && s.rush.score)) confetti();
+    if (lessonDoneNow || goalHit || (s.kind === "diag" && s.diag.passed.length) || (s.boss && s.boss.won) || (record && s.rush.score) || (s.challenge && s.firstOk)) confetti();
   }
 
   // ---------- RESUMEN ----------
@@ -2096,6 +2166,11 @@ body.board-split .nav { padding-bottom: 0; }
       title = b.won ? `¡Venciste a ${b.name}!` : `${b.name} ganó esta vez`;
       sub = b.won ? `La unidad «${course(s.cid).units[b.idx].title}» ya tiene su corona. Podés volver a desafiarlo cuando quieras.`
         : `Le sacaste ${b.max - b.hp} de ${b.max} puntos de vida. Repasá lo que te costó y volvé a desafiarlo.`;
+    } else if (s.challenge) {
+      const ds = dailyStreak();
+      title = s.firstOk ? "¡Ejercicio del día resuelto!" : "Hoy no salió";
+      sub = s.firstOk ? (ds >= 2 ? `Llevás ${ds} días seguidos resolviéndolo.` : "Mañana te espera otro, de lo que ya aprendiste.")
+        : "Mirá bien la resolución: este tema va a volver en tus repasos. Mañana hay otro.";
     } else if (s.rush) {
       title = z.record && s.rush.score ? "¡Nuevo récord!" : "¡Se acabó el tiempo!";
       sub = `Hiciste ${s.rush.score} puntos con ${s.rush.ok} aciertos (mejor racha: ${s.rush.bestStreak}). Tu récord en ${course(s.cid).code || course(s.cid).title}: ${cState(s.cid).rush || 0}.`;
@@ -2103,7 +2178,7 @@ body.board-split .nav { padding-bottom: 0; }
     else if (z.lessonAcc != null && z.lessonAcc < 0.75) { title = "¡Casi!"; sub = `Para completar la lección necesitás 75% de aciertos al primer intento (sacaste ${Math.round(z.lessonAcc * 100)}%). Repetila cuando quieras.`; }
     // Schrödi: festeja si terminaste la lección, se prende fuego con la racha
     if (!z.mood) {
-      const party = z.lessonDoneNow || (s.kind === "diag" && s.diag.passed.length) || (s.boss && s.boss.won) || (z.record && s.rush.score);
+      const party = z.lessonDoneNow || (s.kind === "diag" && s.diag.passed.length) || (s.boss && s.boss.won) || (z.record && s.rush.score) || (s.challenge && s.firstOk);
       const streak = z.streakUp && S.streak >= 2;
       z.mood = party ? "party" : s.boss ? "sad" : streak ? "streak" : acc >= 0.6 || s.kind === "diag" ? "happy" : "idle";
       z.quip = party ? quip("party") : streak ? quip("streak", S.streak) : "";
@@ -2631,6 +2706,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "unittest": startUnitTest(el.dataset.cid, el.dataset.id); break;
       case "boss": startBoss(el.dataset.cid, el.dataset.id); break;
       case "rush": startRush(el.dataset.cid); break;
+      case "challenge": startChallenge(); break;
       case "pick-subject": S.activeCourse = el.dataset.id; save(); render(); break;
       case "learn-back": history.back(); break;
       case "learn-close": closeLearn(); break;

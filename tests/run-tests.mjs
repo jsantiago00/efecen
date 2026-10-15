@@ -428,13 +428,13 @@ for (const cid of E.courseOrder) {
     srs: { "m101/limite": { ef: 2.5, int: 4, reps: 2, due: "2026-10-14", last: "2026-10-10", seen: 6, ok: 5 } },
     courses: { m101: { lessons: { l1: { done: true, plays: 2, best: 0.8 } }, diag: null, unitsOpen: { u1: true }, bosses: { u1: { won: true, wins: 2 } }, rush: 210 } },
     log: [{ d: "2026-10-10", kind: "lesson", title: "A", n: 5, ok: 4, xp: 40, c: "m101" }],
-    exams: { "m101/p1": { best: 72, attempts: [{ d: "2026-10-10", t: 2, score: 72 }, { d: "2026-10-09", t: 1, score: 50 }] } } });
+    exams: { "m101/p1": { best: 72, attempts: [{ d: "2026-10-10", t: 2, score: 72 }, { d: "2026-10-09", t: 1, score: 50 }] } }, daily: { "2026-10-10": { cid: "m101", tpl: "x", ok: true }, "2026-10-11": { cid: "m101", tpl: "y", ok: false } } });
   const b = Object.assign(D(), { xp: 90, answered: 25, answeredOk: 22, bestStreak: 5, streak: 1, lastActive: "2026-10-12",
     xpByDay: { "2026-10-10": 30, "2026-10-12": 60 }, read: { tfc: true }, activeCourse: "f101", settings: { goal: 100, sound: false, theme: "dark" },
     srs: { "m101/limite": { ef: 2.6, int: 6, reps: 3, due: "2026-10-18", last: "2026-10-12", seen: 9, ok: 8 }, "f101/f1-mruv": { ef: 2.5, int: 1, reps: 1, due: "2026-10-13", last: "2026-10-12", seen: 3, ok: 3 } },
     courses: { m101: { lessons: { l1: { done: false, plays: 1, best: 0.9 }, l2: { done: true, plays: 1, best: 1 } }, diag: null, bosses: { u1: { won: false, wins: 0 }, u2: { won: true, wins: 1 } }, rush: 140 }, f101: { lessons: {}, diag: null } },
     log: [{ d: "2026-10-12", kind: "lesson", title: "B", n: 5, ok: 5, xp: 50, c: "f101" }],
-    exams: { "m101/p1": { best: 64, attempts: [{ d: "2026-10-12", t: 3, score: 64 }, { d: "2026-10-09", t: 1, score: 50 }] }, "m101/p2": { best: 80, attempts: [{ d: "2026-10-12", t: 4, score: 80 }] } } });
+    exams: { "m101/p1": { best: 64, attempts: [{ d: "2026-10-12", t: 3, score: 64 }, { d: "2026-10-09", t: 1, score: 50 }] }, "m101/p2": { best: 80, attempts: [{ d: "2026-10-12", t: 4, score: 80 }] } }, daily: { "2026-10-11": { cid: "m101", tpl: "y", ok: true }, "2026-10-12": { cid: "f101", tpl: "z", ok: false } } });
   const m = E.store.merge(a, b), w = "store.merge";
   // comparación con las claves ordenadas (el orden de las claves no importa)
   const canon = x => JSON.stringify(x, (k, v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([p], [q]) => (p < q ? -1 : 1))) : v));
@@ -449,11 +449,27 @@ for (const cid of E.courseOrder) {
   ok(m.log.length === 2 && m.log[0].title === "B", w, "historial: unión ordenada, la más nueva primero");
   ok(m.exams["m101/p1"].best === 72 && m.exams["m101/p1"].attempts.map(x => x.t).join() === "3,2,1" && m.exams["m101/p2"].best === 80, w, "evaluaciones: unión de intentos y la mejor nota");
   ok(m.courses.m101.bosses.u1.won && m.courses.m101.bosses.u1.wins === 2 && m.courses.m101.bosses.u2.won && m.courses.m101.rush === 210, w, "juegos: jefe vencido si lo está en alguno y el mejor récord");
+  ok(m.daily["2026-10-10"].ok && m.daily["2026-10-11"].ok && m.daily["2026-10-12"].tpl === "z", w, "ejercicio del día: unión, resuelto si lo está en alguno");
   ok(canon(E.store.merge(m, m)) === canon(m), w, "no es idempotente");
   ok(canon(E.store.merge(m, a)) === canon(m) && canon(E.store.merge(b, m)) === canon(m), w, "volver a combinar con un estado viejo cambia el resultado");
   const ba = E.store.merge(b, a);
   ok(ba.xp === m.xp && ba.srs["m101/limite"].seen === 9 && ba.lastActive === m.lastActive && ba.log.length === 2, w, "el orden de los argumentos cambia el resultado");
   ok(a.xp === 120 && b.courses.m101.lessons.l1.done === false, w, "modificó sus argumentos");
+}
+
+// ejercicio del día: el mismo todo el día, de los más exigentes, nunca V/F
+{
+  const w = "E.dailyPick";
+  const cands = [{ cid: "a", tpl: "t1", difficulty: 1, type: "mc" }, { cid: "a", tpl: "t2", difficulty: 2, type: "numeric" }, { cid: "a", tpl: "t3", difficulty: 3, type: "tf" },
+    { cid: "a", tpl: "t4", difficulty: 3, type: "mc" }, { cid: "b", tpl: "t5", difficulty: 2, type: "order" }];
+  const p1 = E.dailyPick(cands, "2026-10-15"), p2 = E.dailyPick(cands, "2026-10-15");
+  ok(p1 && p1.tpl === p2.tpl && p1.seed === p2.seed, w, "no es el mismo en el mismo día");
+  const days = Array.from({ length: 40 }, (_, i) => E.dailyPick(cands, E.addDays("2026-10-01", i)));
+  ok(days.every(x => ["t2", "t4", "t5"].includes(x.tpl)), w, "eligió una plantilla fácil o de V/F");
+  ok(new Set(days.map(x => x.tpl)).size === 3, w, "no varía entre días");
+  const hard = cands.concat([{ cid: "b", tpl: "t6", difficulty: 3, type: "numeric" }, { cid: "b", tpl: "t7", difficulty: 3, type: "match" }]);
+  ok(Array.from({ length: 30 }, (_, i) => E.dailyPick(hard, E.addDays("2026-10-01", i))).every(x => x.difficulty === 3), w, "con 3 o más difíciles, debe elegir entre ellas");
+  ok(E.dailyPick([], "2026-10-15") === null, w, "sin lecciones hechas no hay ejercicio del día");
 }
 
 // pizarra (board.js): borrador, deshacer/rehacer y guardado, sin DOM
