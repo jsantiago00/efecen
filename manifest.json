@@ -1,6 +1,7 @@
 {
   "name": "efecen — repasá matemática y física",
   "short_name": "efecen",
+  "id": "efecen-app",
   "description": "Repasá cálculo, física y álgebra lineal jugando, 5-10 minutos por día.",
   "lang": "es-AR",
   "start_url": "./",
@@ -10,6 +11,7 @@
   "background_color": "#F6F5FB",
   "theme_color": "#5B4BDB",
   "categories": ["education"],
+  "prefer_related_applications": false,
   "icons": [
     { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

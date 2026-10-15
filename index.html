@@ -2275,6 +2275,7 @@ body.board-split .nav { padding-bottom: 0; }
         <div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tema</div>
           ${seg("theme", [["auto", "Auto"], ["light", "Claro"], ["dark", "Oscuro"]], st.theme)}</div>
       </section>
+      ${installCard()}
       ${accountCard()}
       ${boardCard()}
       <section class="card">
@@ -2292,6 +2293,18 @@ body.board-split .nav { padding-bottom: 0; }
       <button class="course-card" data-act="go" data-r="credits"><span class="course-ico">${icon("info")}</span><span class="grow"><b>Créditos</b><span class="muted small" style="display:block">Assets, fuentes y licencias</span></span>${icon("chevron-right")}</button>
       <p class="muted small" style="text-align:center">efecen v${E.version} · hecho para volver a la FCEN</p>
     </main>${nav("settings")}`;
+  }
+  // instalar la app: Chrome avisa con beforeinstallprompt cuando se puede instalar
+  let installEvt = null;
+  const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if (ui.route === "settings" && !ui.session) render(); });
+  window.addEventListener("appinstalled", () => { installEvt = null; toast("¡App instalada!"); if (ui.route === "settings" && !ui.session) render(); });
+  function installCard() {
+    if (isStandalone()) return "";
+    return `<section class="card">
+      <div class="set-row"><div><div class="lbl">Instalar la app</div><div class="desc">${installEvt ? "Queda como una app más, con su ícono, y funciona sin conexión." : "Si tu navegador no ofrece instalarla, abrí el menú (⋮) y elegí «Instalar app» o «Agregar a la pantalla principal»."}</div></div>
+        ${installEvt ? `<button class="btn sm" data-act="install">${icon("download")}Instalar</button>` : ""}</div>
+      ${installEvt ? "" : `<p class="muted small" style="margin:6px 0 0">Si te dice que ya está instalada pero no la ves: en Android, sacar el ícono de la pantalla de inicio no la desinstala. Buscala en el cajón de apps o en Ajustes → Aplicaciones → efecen, desinstalala y volvé a probar.</p>`}</section>`;
   }
   // pizarra: ajustes de este dispositivo (no se sincronizan, porque cada uno tiene o no lápiz)
   function boardCard() {
@@ -2707,6 +2720,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "boss": startBoss(el.dataset.cid, el.dataset.id); break;
       case "rush": startRush(el.dataset.cid); break;
       case "challenge": startChallenge(); break;
+      case "install": if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; render(); }); } break;
       case "pick-subject": S.activeCourse = el.dataset.id; save(); render(); break;
       case "learn-back": history.back(); break;
       case "learn-close": closeLearn(); break;
