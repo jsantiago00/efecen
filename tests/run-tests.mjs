@@ -426,13 +426,13 @@ for (const cid of E.courseOrder) {
   const a = Object.assign(D(), { xp: 120, answered: 30, answeredOk: 20, bestStreak: 3, streak: 2, lastActive: "2026-10-10",
     xpByDay: { "2026-10-09": 50, "2026-10-10": 70 }, read: { derivada: true }, activeCourse: "m101",
     srs: { "m101/limite": { ef: 2.5, int: 4, reps: 2, due: "2026-10-14", last: "2026-10-10", seen: 6, ok: 5 } },
-    courses: { m101: { lessons: { l1: { done: true, plays: 2, best: 0.8 } }, diag: null, unitsOpen: { u1: true } } },
+    courses: { m101: { lessons: { l1: { done: true, plays: 2, best: 0.8 } }, diag: null, unitsOpen: { u1: true }, bosses: { u1: { won: true, wins: 2 } }, rush: 210 } },
     log: [{ d: "2026-10-10", kind: "lesson", title: "A", n: 5, ok: 4, xp: 40, c: "m101" }],
     exams: { "m101/p1": { best: 72, attempts: [{ d: "2026-10-10", t: 2, score: 72 }, { d: "2026-10-09", t: 1, score: 50 }] } } });
   const b = Object.assign(D(), { xp: 90, answered: 25, answeredOk: 22, bestStreak: 5, streak: 1, lastActive: "2026-10-12",
     xpByDay: { "2026-10-10": 30, "2026-10-12": 60 }, read: { tfc: true }, activeCourse: "f101", settings: { goal: 100, sound: false, theme: "dark" },
     srs: { "m101/limite": { ef: 2.6, int: 6, reps: 3, due: "2026-10-18", last: "2026-10-12", seen: 9, ok: 8 }, "f101/f1-mruv": { ef: 2.5, int: 1, reps: 1, due: "2026-10-13", last: "2026-10-12", seen: 3, ok: 3 } },
-    courses: { m101: { lessons: { l1: { done: false, plays: 1, best: 0.9 }, l2: { done: true, plays: 1, best: 1 } }, diag: null }, f101: { lessons: {}, diag: null } },
+    courses: { m101: { lessons: { l1: { done: false, plays: 1, best: 0.9 }, l2: { done: true, plays: 1, best: 1 } }, diag: null, bosses: { u1: { won: false, wins: 0 }, u2: { won: true, wins: 1 } }, rush: 140 }, f101: { lessons: {}, diag: null } },
     log: [{ d: "2026-10-12", kind: "lesson", title: "B", n: 5, ok: 5, xp: 50, c: "f101" }],
     exams: { "m101/p1": { best: 64, attempts: [{ d: "2026-10-12", t: 3, score: 64 }, { d: "2026-10-09", t: 1, score: 50 }] }, "m101/p2": { best: 80, attempts: [{ d: "2026-10-12", t: 4, score: 80 }] } } });
   const m = E.store.merge(a, b), w = "store.merge";
@@ -448,6 +448,7 @@ for (const cid of E.courseOrder) {
   ok(l1.done && l1.plays === 2 && l1.best === 0.9 && m.courses.m101.lessons.l2.done && m.courses.f101 && m.courses.m101.unitsOpen.u1, w, "lecciones: hechas si lo están en alguno, con el mejor resultado");
   ok(m.log.length === 2 && m.log[0].title === "B", w, "historial: unión ordenada, la más nueva primero");
   ok(m.exams["m101/p1"].best === 72 && m.exams["m101/p1"].attempts.map(x => x.t).join() === "3,2,1" && m.exams["m101/p2"].best === 80, w, "evaluaciones: unión de intentos y la mejor nota");
+  ok(m.courses.m101.bosses.u1.won && m.courses.m101.bosses.u1.wins === 2 && m.courses.m101.bosses.u2.won && m.courses.m101.rush === 210, w, "juegos: jefe vencido si lo está en alguno y el mejor récord");
   ok(canon(E.store.merge(m, m)) === canon(m), w, "no es idempotente");
   ok(canon(E.store.merge(m, a)) === canon(m) && canon(E.store.merge(b, m)) === canon(m), w, "volver a combinar con un estado viejo cambia el resultado");
   const ba = E.store.merge(b, a);

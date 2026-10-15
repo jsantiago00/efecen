@@ -82,6 +82,14 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - las evaluaciones de F102B y M102;
   - las plantillas de nivel parcial que faltan (ver el final de cada `docs/parciales/*.md`).
 
+## Juegos
+
+- **Jefe de unidad.** Al completar una unidad aparece un nodo rojo al final de su camino, con un jefe: una paradoja famosa (Zenón, el demonio de Maxwell, el hotel de Hilbert, el monstruo de Weierstrass…). El jefe tiene 8 de vida y vos 3 vidas. Cada acierto le saca 1, y desde el tercero seguido, 2. Las preguntas salen de todas las plantillas de la unidad, de menor a mayor dificultad, y no hay reintentos. Si lo vencés, el nodo queda con una corona y suma 30 XP (15 las veces siguientes).
+- **Contrarreloj.** Dura 60 s y trae preguntas rápidas (opción múltiple, V/F y encontrar el error) de las lecciones abiertas de la materia. Si hay pocas, suma numéricas fáciles. Cada acierto vale 10 puntos, multiplicados por 1 + ⌊racha/3⌋ (hasta ×4). Se guarda el récord por materia. Se entra desde Inicio o desde la tarjeta «Juegos» del mapa.
+- Los dos juegos califican los conceptos en el repaso espaciado, igual que una sesión común.
+- **Estado:** `S.courses[cid].bosses[unitId] = { won, wins }` y `S.courses[cid].rush` (récord). Al combinar dispositivos, `E.store.merge` deja el jefe vencido si lo está en alguno, `wins` con el máximo y el récord con el máximo. Tiene tests.
+- **Idea para más adelante:** un memotest de fórmulas (unir cada fórmula con su nombre).
+
 ## Cuenta y sincronización (Firebase)
 
 - Proyecto Firebase `efecen-46bfd`, con login de Google. La app web se llama `efecen-web` y Firestore está en `southamerica-east1`.

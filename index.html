@@ -231,6 +231,31 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .node-wrap.locked .node-label { color: var(--muted); }
 .start-tip { position: absolute; top: -34px; background: var(--card); color: var(--primary); border: 2px solid var(--line); font-weight: 900; font-size: .75rem; letter-spacing: .06em; padding: 3px 10px; border-radius: 10px; animation: bob 1.4s ease-in-out infinite; white-space: nowrap; }
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.node.boss { width: 86px; height: 80px; border-radius: 28px; background: var(--bad); box-shadow: 0 6px 0 var(--bad-d); }
+.node.boss .ic { width: 38px; height: 38px; }
+.node.boss.won { background: var(--gold); color: #3A2A00; box-shadow: 0 6px 0 var(--gold-d); }
+.node.boss.locked { background: var(--lock); color: var(--muted); box-shadow: 0 6px 0 var(--lock-d); }
+.games-card { display: flex; flex-direction: column; gap: 8px; }
+.games-card > .row .ic { width: 26px; height: 26px; color: var(--fire); }
+.game-hud { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius); background: var(--card); border: 2px solid var(--line); }
+.game-hud .bar { height: 14px; margin: 4px 0; }
+.game-hud .bar > i { background: var(--bad); }
+.boss-say { font-style: italic; line-height: 1.25; }
+.boss-svg { width: 64px; height: 64px; flex: none; }
+.boss-svg.hit { animation: shake .45s; filter: brightness(1.6); }
+.boss-svg.atk { animation: lunge .5s; }
+@keyframes lunge { 0%,100% { transform: scale(1); } 40% { transform: scale(1.25) translateY(4px); } }
+.hearts { display: flex; align-items: center; gap: 2px; color: var(--bad); }
+.hearts .ic { width: 20px; height: 20px; fill: currentColor; }
+.hearts .off { color: var(--lock); }
+.hearts .off .ic { fill: none; }
+.combo { margin-left: 8px; font-weight: 900; font-size: .8rem; color: var(--fire); }
+.rush-time { font-weight: 900; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+.rush-time.low { color: var(--bad); }
+.rush-score { font-size: 1.5rem; font-weight: 900; }
+.rush-flash { font-weight: 900; text-align: center; padding: 10px; border-radius: var(--radius); }
+.rush-flash.ok { background: var(--ok-soft); color: var(--ok-d); }
+.rush-flash.bad { background: var(--bad-soft); color: var(--bad-d); }
 .diag-card { display: flex; gap: 12px; align-items: center; }
 .diag-card .schrodi { width: 64px; height: 64px; flex: none; }
 
@@ -954,6 +979,15 @@ body.board-split .nav { padding-bottom: 0; }
         const st = out.courses[cid] = out.courses[cid] || { lessons: {}, diag: null };
         st.lessons = st.lessons || {}; st.unitsOpen = Object.assign({}, oc.unitsOpen || {}, st.unitsOpen || {});
         st.diag = st.diag || oc.diag || null;
+        // juegos: un jefe vencido en algún dispositivo queda vencido; el récord del contrarreloj, el máximo
+        if (oc.bosses) {
+          st.bosses = st.bosses || {};
+          for (const [uid, ob] of Object.entries(oc.bosses)) {
+            const b = st.bosses[uid] = st.bosses[uid] || {};
+            b.won = !!(b.won || ob.won); b.wins = max(b.wins, ob.wins);
+          }
+        }
+        if (st.rush || oc.rush) st.rush = max(st.rush, oc.rush);
         for (const [lid, ol] of Object.entries(oc.lessons || {})) {
           const l = st.lessons[lid] = st.lessons[lid] || {};
           l.done = !!(l.done || ol.done); l.plays = max(l.plays, ol.plays); l.best = max(l.best, ol.best);
@@ -1423,6 +1457,123 @@ body.board-split .nav { padding-bottom: 0; }
   }
   const diagItems = (cid, u) => E.unitDiagnostic(course(cid), u).map(t => ({ cid, tpl: t, seed: E.newSeed(), src: "diag", unit: u.index }));
 
+  // ---------- JUEGOS ----------
+  // Jefe de unidad: al completar una unidad aparece su jefe (una paradoja famosa). Tenés 3 vidas;
+  // cada acierto le saca vida y 3 seguidos pegan doble. Contrarreloj: 60 s de preguntas rápidas
+  // de las lecciones abiertas, con multiplicador por racha. Los dos califican el repaso espaciado.
+  const BOSSES = [
+    { name: "Zenón de Elea", color: "#8E7CF0", taunt: "Para llegar a la respuesta primero tenés que llegar a la mitad…" },
+    { name: "el demonio de Maxwell", color: "#E5484D", taunt: "Yo separo las respuestas buenas de las malas. ¿Y vos?" },
+    { name: "el hotel de Hilbert", color: "#0EA5C6", taunt: "Siempre tengo lugar para un ejercicio más." },
+    { name: "el monstruo de Weierstrass", color: "#1FA866", taunt: "Soy continuo en todos lados y derivable en ninguno." },
+    { name: "la trompeta de Gabriel", color: "#E0A21B", taunt: "Volumen finito, superficie infinita. Pintame si podés." },
+    { name: "el genio de Laplace", color: "#5B4BDB", taunt: "Conozco todas las condiciones iniciales. Hasta las tuyas." },
+    { name: "la paradoja de los gemelos", color: "#FF8A1F", taunt: "Mientras dudás, tu gemelo ya envejeció." },
+    { name: "Banach-Tarski", color: "#C2414A", taunt: "De una esfera saco dos. De un error, saco dos más." },
+    { name: "la curva de Peano", color: "#15804D", taunt: "Lleno todo el cuadrado. ¿Te queda lugar para pensar?" }
+  ];
+  function bossFor(cid, u) {
+    const ci = Math.max(0, E.courseOrder.indexOf(cid));
+    return BOSSES[(ci * 4 + u.index) % BOSSES.length];
+  }
+  function bossSvg(b) {
+    const mouth = b.hp <= 0 ? "M30 58 Q40 50 50 58" : b.anim === "atk" ? "M30 52 Q40 62 50 52" : "M31 55 L36 52 L40 56 L44 52 L49 55";
+    return `<svg class="boss-svg ${b.anim || ""}" viewBox="0 0 80 80" aria-hidden="true">
+      <path d="M12 68 Q6 28 40 10 Q74 28 68 68 Q61 61 54 68 Q47 61 40 68 Q33 61 26 68 Q19 61 12 68Z" fill="${b.color}"/>
+      <ellipse cx="29" cy="36" rx="7" ry="8" fill="#fff"/><ellipse cx="51" cy="36" rx="7" ry="8" fill="#fff"/>
+      <circle cx="31" cy="38" r="3.5" fill="#1B1B2F"/><circle cx="49" cy="38" r="3.5" fill="#1B1B2F"/>
+      <path d="M20 25 L36 30 M60 25 L44 30" stroke="#1B1B2F" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="${mouth}" stroke="#1B1B2F" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+  const RUSH_MS = 60000;
+  let rushTimer = null;
+  const rushLeft = () => { const s = ui.session; return s && s.rush ? Math.max(0, s.rush.end - Date.now()) : 0; };
+  const rushMult = st => Math.min(4, 1 + Math.floor(st / 3));
+  function gameHud(s) {
+    if (s.boss) {
+      const b = s.boss;
+      return `<div class="game-hud">${bossSvg(b)}<div class="grow"><b>${esc(b.name[0].toUpperCase() + b.name.slice(1))}</b>
+        ${b.anim ? "" : `<div class="muted small boss-say">«${esc(b.taunt)}»</div>`}
+        <div class="bar"><i style="width:${b.hp / b.max * 100}%"></i></div>
+        <div class="hearts">${[0, 1, 2].map(i => `<span class="${i < b.lives ? "" : "off"}">${icon("heart")}</span>`).join("")}${b.streak >= 2 ? `<span class="combo">${icon("zap")}racha ${b.streak}${b.streak >= 3 ? " · golpe doble" : ""}</span>` : ""}</div></div></div>`;
+    }
+    const r = s.rush;
+    return `<div class="game-hud"><div class="grow"><span class="muted small">Puntos</span><div class="rush-score">${r.score}</div></div>
+      <div style="text-align:right">${r.streak >= 3 ? `<span class="combo">${icon("zap")}×${rushMult(r.streak)}</span>` : `<span class="muted small">racha ${r.streak}</span>`}</div></div>
+      ${r.flash ? `<div class="rush-flash ${r.flash.ok ? "ok" : "bad"}" style="margin-top:8px">${r.flash.html}</div>` : ""}`;
+  }
+  // ítems de un juego: del jefe, las plantillas de la unidad de menor a mayor dificultad; del contrarreloj, preguntas rápidas
+  function gameItems(s, n) {
+    const c = course(s.cid), r = E.rng(E.newSeed()), out = [];
+    let pool = r.shuffle(s.pool.slice());
+    if (s.boss) pool.sort((a, b) => c.templates[a].difficulty - c.templates[b].difficulty);
+    while (out.length < n) {
+      if (!pool.length) pool = r.shuffle(s.pool.slice());
+      out.push({ cid: s.cid, tpl: pool.shift(), seed: E.newSeed(), src: s.kind });
+    }
+    return out;
+  }
+  function startBoss(cid, unitId) {
+    const c = course(cid), units = realUnits(c), u = units.find(x => x.id === unitId);
+    if (!u || !unitDone(cid, u)) return;
+    const b = bossFor(cid, u);
+    const pool = u.lessons.flatMap(l => l.templates);
+    const s0 = { kind: "boss", cid, pool, boss: Object.assign({ unit: u.id, idx: u.index, hp: 8, max: 8, lives: 3, streak: 0 }, b) };
+    s0.items = gameItems(s0, 12);
+    startSession(s0);
+  }
+  function bossAnswered(ok) {
+    const b = ui.session.boss;
+    if (ok) {
+      b.streak++;
+      const dmg = b.streak >= 3 ? 2 : 1;
+      b.hp = Math.max(0, b.hp - dmg); b.anim = "hit";
+      return b.hp <= 0 ? "¡Golpe final! El jefe cayó." : dmg > 1 ? `¡Golpe doble! Le quedan ${b.hp} de vida.` : `¡Le pegaste! Le quedan ${b.hp} de vida.`;
+    }
+    b.lives--; b.streak = 0; b.anim = "atk";
+    return b.lives <= 0 ? "Te quedaste sin vidas. Mirá la resolución antes de seguir." : `Te sacó una vida (te ${b.lives === 1 ? "queda 1" : "quedan " + b.lives}).`;
+  }
+  // preguntas rápidas: opción múltiple, V/F y encontrar el error; si hay pocas, también numéricas fáciles
+  function startRush(cid) {
+    const c = course(cid), ls = c.lessonList.filter(l => lessonUnlocked(cid, l));
+    const all = ls.flatMap(l => l.templates);
+    let pool = all.filter(t => ["mc", "tf", "error"].includes(c.templates[t].type));
+    if (pool.length < 6) pool = pool.concat(all.filter(t => c.templates[t].type === "numeric" && c.templates[t].difficulty <= 2));
+    if (!pool.length) pool = all;
+    if (!pool.length) return;
+    const s0 = { kind: "rush", cid, pool, rush: { end: Date.now() + RUSH_MS, score: 0, ok: 0, streak: 0, bestStreak: 0 } };
+    s0.items = gameItems(s0, 20);
+    startSession(s0);
+    clearInterval(rushTimer);
+    rushTimer = setInterval(() => {
+      const s = ui.session;
+      if (!s || !s.rush) { clearInterval(rushTimer); return; }
+      const left = rushLeft(), el = $("#rushTime"), bar = $(".ses-top .bar > i");
+      if (el) { el.textContent = Math.ceil(left / 1000); el.classList.toggle("low", left < 10000); }
+      if (bar) bar.style.width = left / RUSH_MS * 100 + "%";
+      if (left <= 0 && s.phase === "answer") { clearInterval(rushTimer); Snd.play("complete"); finish(); }
+    }, 200);
+  }
+  function rushAnswered(ok) {
+    const s = ui.session, r = s.rush;
+    if (ok) { r.streak++; r.ok++; r.bestStreak = Math.max(r.bestStreak, r.streak); const p = 10 * rushMult(r.streak); r.score += p; r.flash = { ok, html: `+${p}` }; }
+    else { r.streak = 0; r.flash = { ok, html: correctText(s.inst) }; }
+    Snd.play(ok ? "correct" : "wrong");
+    if (!ok && navigator.vibrate) navigator.vibrate(40);
+    rerenderAnswer();
+    $("#hud").innerHTML = gameHud(s);
+    r.flash = null;
+    r.adv = setTimeout(next, ok ? 550 : 1800);
+  }
+  function gamesCard(cid) {
+    const c = course(cid), cs = cState(cid), units = realUnits(c);
+    const won = units.filter(u => (cs.bosses || {})[u.id] && cs.bosses[u.id].won).length;
+    return `<section class="card games-card"><div class="row" style="gap:10px">${icon("swords")}<div class="grow"><b>Juegos</b>
+      <p class="muted small" style="margin:2px 0 0">Al completar cada unidad aparece su jefe al final del camino (${won}/${units.length} vencidos). El contrarreloj te da 60 segundos de preguntas rápidas de lo que ya abriste.</p></div></div>
+      <button class="exam-row" data-act="rush" data-cid="${cid}"><span class="grow"><b>Contrarreloj</b><span class="muted small" style="display:block">60 s · 3 aciertos seguidos multiplican los puntos</span></span>
+        <span class="exam-best ${cs.rush ? "pass" : ""}">${cs.rush ? `récord ${cs.rush}` : "Sin jugar"}</span>${icon("chevron-right")}</button></section>`;
+  }
+
   function startSession(opts) {
     S.activeCourse = opts.cid;
     ui.session = Object.assign({
@@ -1463,6 +1614,7 @@ body.board-split .nav { padding-bottom: 0; }
     }
     if (ui.session) {
       if (!confirm("¿Salir de la sesión? Se pierde el progreso de esta sesión.")) { history.pushState(null, "", "#/sesion"); return; }
+      if (ui.session.rush) { clearTimeout(ui.session.rush.adv); clearInterval(rushTimer); }
       ui.session = null;
     }
     fromHash(); render();
@@ -1546,6 +1698,7 @@ body.board-split .nav { padding-bottom: 0; }
       <section class="card goal">${ring(xt, goal)}<div class="grow"><b>Meta diaria</b><div class="muted small">${xt} / ${goal} XP hoy</div></div></section>
       <button class="btn big block" data-act="daily">${icon("play")}${firstTime ? "Empezar" : "Sesión del día"}</button>
       ${parts.length && !firstTime ? `<div class="daily-sub muted small">${esc(parts.join(" · "))}</div>` : ""}
+      ${firstTime ? "" : `<button class="btn ghost block" data-act="rush" data-cid="${cid}">${icon("timer")}Contrarreloj · ${esc(c.code || c.title)}${cState(cid).rush ? ` <span class="muted small">(récord ${cState(cid).rush})</span>` : ""}</button>`}
       <h2 class="section-title">Tu carrera</h2>
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
       ${sg && sg.course !== cid ? subjectCard(sg, badge("Sugerida")) : ""}
@@ -1595,11 +1748,15 @@ body.board-split .nav { padding-bottom: 0; }
           <span class="node-label">${esc(l.title)}${d && best != null ? `<br><span class="muted small">${(cs.lessons[l.id].tested ? "por test" : `mejor: ${Math.round(best * 100)}%`)}</span>` : ""}</span>
           ${l.theory && l.theory.length ? `<button class="notes-link" data-act="learn" data-id="lesson:${l.id}">${icon("graduation-cap")}apuntes</button>` : ""}</div>`;
       }).join("");
+      const bs = (cs.bosses || {})[u.id], won = !!(bs && bs.won), bn = bossFor(cid, u);
+      const bossNode = `<div class="node-wrap ${done ? "" : "locked"}" style="transform:translateX(${offs[k++ % offs.length]}px)">
+          <button class="node boss ${won ? "won" : done ? "" : "locked"}" data-act="boss" data-cid="${cid}" data-id="${u.id}" ${done ? "" : "disabled"} aria-label="Jefe de la unidad: ${esc(bn.name)}">${icon(won ? "crown" : done ? "swords" : "lock")}</button>
+          <span class="node-label">Jefe: ${esc(bn.name)}<br><span class="muted small">${won ? `vencido${bs.wins > 1 ? ` ${bs.wins} veces` : ""}` : done ? "¡Desafialo!" : "al completar la unidad"}</span></span></div>`;
       const label = u.program ? `${u.program} · ` : "";
       return `<section class="unit ${done ? "done" : unl ? "" : "locked"}">
         <div class="unit-head">${icon(done ? "trophy" : unl ? (u.icon || "book-open") : "lock")}<div class="grow"><p class="unit-prog">${esc(label)}${nDone}/${u.lessons.length} lecciones</p><h3>${esc(u.title)}</h3>
           ${unl ? "" : `<button class="btn sm gold unit-test" data-act="unittest" data-cid="${cid}" data-id="${u.id}">${icon("target")}Test de la unidad</button>`}</div></div>
-        ${nodes}</section>`;
+        ${nodes}${bossNode}</section>`;
     }).join("");
     app.innerHTML = `<main class="screen">
       <div class="map-head"><button class="iconbtn" data-act="go" data-r="career" aria-label="Volver a la carrera">${icon("chevron-left")}</button>
@@ -1609,6 +1766,7 @@ body.board-split .nav { padding-bottom: 0; }
         <div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="diag" data-cid="${cid}">Hacer el test</button>
         <button class="btn sm ghost" data-act="skipdiag" data-cid="${cid}">Empezar de cero</button></div></div></section>` : ""}
       ${examsCard(cid)}
+      ${gamesCard(cid)}
       ${units || `<p class="muted">Esta materia todavía no tiene unidades.</p>`}
     </main>${nav("career")}`;
   }
@@ -1639,13 +1797,13 @@ body.board-split .nav { padding-bottom: 0; }
     if (!item.inst) item.inst = E.instantiate(c, item.tpl, item.seed);
     const inst = s.inst = item.inst;
     s.phase = "answer"; s.ans = initAns(inst); s.tStart = Date.now();
-    const prog = s.i / s.items.length;
+    const prog = s.kind === "boss" ? 1 - s.boss.hp / s.boss.max : s.kind === "rush" ? rushLeft() / RUSH_MS : s.i / s.items.length;
     const tag = item.src === "review" ? `<span class="ses-tag review">${icon("rotate-ccw")}Repaso · ${esc(c.concepts[item.focus || c.templates[item.tpl].concepts[0]].name)}</span>`
       : item.src === "diag" ? `<span class="ses-tag">${icon("target")}Diagnóstico · Unidad ${item.unit + 1}</span>`
       : `<span class="ses-tag">${icon("sparkles")}${TYPE_LABEL[inst.type]}</span>`;
     app.innerHTML = `<div class="session">
-      <div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="bar"><i style="width:${prog * 100}%"></i></div>${boardBtn()}</div>
-      <div class="ses-body">${tag}
+      <div class="ses-top"><button class="iconbtn" data-act="quit" aria-label="Salir">${icon("x")}</button><div class="bar ${s.kind === "rush" ? "gold" : ""}"><i style="width:${prog * 100}%"></i></div>${s.kind === "rush" ? `<span class="rush-time" id="rushTime">${Math.ceil(rushLeft() / 1000)}</span>` : ""}${boardBtn()}</div>
+      <div class="ses-body">${s.kind === "boss" || s.kind === "rush" ? `<div id="hud">${gameHud(s)}</div>` : ""}${tag}
         <div class="prompt">${texL(inst.prompt)}</div>
         ${inst.graph ? graphHtml(inst.graph) : ""}
         <div id="answer">${answerHtml(inst, s.ans)}</div>
@@ -1787,23 +1945,26 @@ body.board-split .nav { padding-bottom: 0; }
       const q = E.srs.grade(ok, ms, t.difficulty);
       for (const k of t.concepts) (s.grades[ckey(icid, k)] = s.grades[ckey(icid, k)] || []).push(q);
       S.answered++; if (ok) S.answeredOk++;
-      gain = ok ? (item.src === "diag" ? 5 : 10) : 0;
+      gain = ok ? (item.src === "diag" ? 5 : s.kind === "rush" ? 3 : 10) : 0;
     } else if (ok) gain = 5;
     s.xp += gain;
-    // si falló, vuelve al final de la cola con valores nuevos (salvo en el diagnóstico)
-    if (!ok && first && item.src !== "diag") s.items.push({ cid: icid, tpl: item.tpl, seed: E.newSeed(), src: item.src, focus: item.focus, retry: true });
+    if (s.kind === "rush") return rushAnswered(ok);
+    const bossMsg = s.kind === "boss" ? bossAnswered(ok) : "";
+    // si falló, vuelve al final de la cola con valores nuevos (salvo en el diagnóstico y los juegos)
+    if (!ok && first && item.src !== "diag" && !s.boss) s.items.push({ cid: icid, tpl: item.tpl, seed: E.newSeed(), src: item.src, focus: item.focus, retry: true });
     if (item.src === "diag") diagProgress(item, ok);
     Snd.play(ok ? "correct" : "wrong");
     if (!ok && navigator.vibrate) navigator.vibrate(40);
     rerenderAnswer();
-    $(".ses-top .bar > i").style.width = ((s.i + 1) / s.items.length * 100) + "%";
+    if (s.boss) { $("#hud").innerHTML = gameHud(s); $(".ses-top .bar > i").style.width = (1 - s.boss.hp / s.boss.max) * 100 + "%"; }
+    else $(".ses-top .bar > i").style.width = ((s.i + 1) / s.items.length * 100) + "%";
     const titles = ok ? ["¡Bien!", "¡Excelente!", "¡Eso!", "¡Joya!", "¡Genial!", "¡Impecable!"] : ["Casi...", "Ojo acá", "Uy, no", "Mmm…"];
     const sol = s.inst.solution || [];
     const sheet = $("#sheet");
     sheet.className = "sheet " + (ok ? "ok" : "bad");
     sheet.innerHTML = `<div class="sheet-inner">
       <div class="fb-head">${mascot(ok ? "happy" : "sad")}<div class="grow"><div class="fb-title">${titles[Math.floor(Math.random() * titles.length)]}</div>
-        <div class="fb-quip">${esc(quip(ok ? "ok" : "bad"))}${gain ? ` <span class="xp-pop pop">+${gain} XP</span>` : ""}</div></div></div>
+        <div class="fb-quip">${esc(bossMsg || quip(ok ? "ok" : "bad"))}${gain ? ` <span class="xp-pop pop">+${gain} XP</span>` : ""}</div></div></div>
       <div class="fb-scroll">
         ${ok && s.inst.type !== "tf" && s.inst.type !== "error" ? "" : `<div class="fb-answer">${correctText(s.inst)}</div>`}
         ${s.inst.explanation ? `<div>${texL(s.inst.explanation)}</div>` : ""}
@@ -1818,7 +1979,11 @@ body.board-split .nav { padding-bottom: 0; }
   function next() {
     const s = ui.session;
     if (!s) return;
+    if (s.boss && (s.boss.hp <= 0 || s.boss.lives <= 0)) return finish();
+    if (s.rush) { clearTimeout(s.rush.adv); if (rushLeft() <= 0) return finish(); }
     s.i++;
+    // los juegos no tienen largo fijo: siguen hasta que gana alguien o se acaba el tiempo
+    if (s.i >= s.items.length && (s.boss || s.rush)) s.items.push(...gameItems(s, 10));
     if (s.i >= s.items.length) return finish();
     renderExercise();
   }
@@ -1890,20 +2055,27 @@ body.board-split .nav { padding-bottom: 0; }
       if (lessonAcc >= 0.75 && !st.done) { st.done = true; lessonDoneNow = true; s.xp += 10; if (lessonAcc === 1) s.xp += 5; }
     }
     if (s.kind === "diag") applyDiagnostic(s);
+    let record = false;
+    if (s.boss) {
+      const b = s.boss, bs = (cs.bosses = cs.bosses || {})[b.unit] = cs.bosses[b.unit] || { won: false, wins: 0 };
+      b.won = b.hp <= 0;
+      if (b.won) { s.xp += bs.won ? 15 : 30; bs.won = true; bs.wins = (bs.wins || 0) + 1; }
+    }
+    if (s.rush) { record = s.rush.score > (cs.rush || 0); if (record) cs.rush = s.rush.score; clearInterval(rushTimer); }
     // 3) XP, racha y registro
     const { streakUp, goalHit } = addXp(s.xp);
     const lesson = s.lessonId && course(cid).lessonList.find(x => x.id === s.lessonId);
-    const title = s.kind === "diag" ? "Test diagnóstico" : s.kind === "practice" ? "Práctica: " + s.title : lesson ? lesson.title : "Repaso";
+    const title = s.kind === "diag" ? "Test diagnóstico" : s.kind === "practice" ? "Práctica: " + s.title : s.boss ? "Jefe: " + s.boss.name : s.rush ? "Contrarreloj" : lesson ? lesson.title : "Repaso";
     S.log.unshift({ d: t, kind: s.kind, title, n: s.firstN, ok: s.firstOk, xp: s.xp, c: cid });
     S.log = S.log.slice(0, 60);
     save();
-    ui.summary = { s, lessonDoneNow, lessonAcc, streakUp, goalHit, ms: Date.now() - s.t0 };
+    ui.summary = { s, lessonDoneNow, lessonAcc, streakUp, goalHit, record, ms: Date.now() - s.t0 };
     ui.session = null;
     ui.route = "summary";
     history.replaceState(null, "", "#/");
     renderSummary();
     Snd.play(lessonDoneNow || goalHit ? "complete" : streakUp ? "streak" : "complete");
-    if (lessonDoneNow || goalHit || (s.kind === "diag" && s.diag.passed.length)) confetti();
+    if (lessonDoneNow || goalHit || (s.kind === "diag" && s.diag.passed.length) || (s.boss && s.boss.won) || (record && s.rush.score)) confetti();
   }
 
   // ---------- RESUMEN ----------
@@ -1919,13 +2091,21 @@ body.board-split .nav { padding-bottom: 0; }
       sub = units.length ? `Desbloqueaste: ${units.join(", ")}. Esos temas van a volver como repaso.`
         : s.diag.single ? "Para abrir la unidad necesitás 2 de 3. Pegale una leída a los apuntes y probá de nuevo cuando quieras."
         : "No pasa nada: así repasás todo con calma, desde la primera lección.";
+    } else if (s.boss) {
+      const b = s.boss;
+      title = b.won ? `¡Venciste a ${b.name}!` : `${b.name} ganó esta vez`;
+      sub = b.won ? `La unidad «${course(s.cid).units[b.idx].title}» ya tiene su corona. Podés volver a desafiarlo cuando quieras.`
+        : `Le sacaste ${b.max - b.hp} de ${b.max} puntos de vida. Repasá lo que te costó y volvé a desafiarlo.`;
+    } else if (s.rush) {
+      title = z.record && s.rush.score ? "¡Nuevo récord!" : "¡Se acabó el tiempo!";
+      sub = `Hiciste ${s.rush.score} puntos con ${s.rush.ok} aciertos (mejor racha: ${s.rush.bestStreak}). Tu récord en ${course(s.cid).code || course(s.cid).title}: ${cState(s.cid).rush || 0}.`;
     } else if (z.lessonDoneNow) { title = "¡Lección completada!"; sub = "Se desbloqueó lo que sigue en el mapa."; }
     else if (z.lessonAcc != null && z.lessonAcc < 0.75) { title = "¡Casi!"; sub = `Para completar la lección necesitás 75% de aciertos al primer intento (sacaste ${Math.round(z.lessonAcc * 100)}%). Repetila cuando quieras.`; }
     // Schrödi: festeja si terminaste la lección, se prende fuego con la racha
     if (!z.mood) {
-      const party = z.lessonDoneNow || (s.kind === "diag" && s.diag.passed.length);
+      const party = z.lessonDoneNow || (s.kind === "diag" && s.diag.passed.length) || (s.boss && s.boss.won) || (z.record && s.rush.score);
       const streak = z.streakUp && S.streak >= 2;
-      z.mood = party ? "party" : streak ? "streak" : acc >= 0.6 || s.kind === "diag" ? "happy" : "idle";
+      z.mood = party ? "party" : s.boss ? "sad" : streak ? "streak" : acc >= 0.6 || s.kind === "diag" ? "happy" : "idle";
       z.quip = party ? quip("party") : streak ? quip("streak", S.streak) : "";
       z.streakQuip = party && streak ? quip("streak", S.streak) : "";
     }
@@ -1940,11 +2120,12 @@ body.board-split .nav { padding-bottom: 0; }
       ${sub ? `<p class="muted" style="margin:0">${esc(sub)}</p>` : ""}
       <div class="tiles">
         <div class="tile gold"><div class="lab">XP</div><div class="val">${icon("star")}${s.xp}</div></div>
-        <div class="tile ok"><div class="lab">Precisión</div><div class="val">${Math.round(acc * 100)}%</div></div>
+        ${s.rush ? `<div class="tile ok"><div class="lab">Puntos</div><div class="val">${s.rush.score}</div></div>` : `<div class="tile ok"><div class="lab">Precisión</div><div class="val">${Math.round(acc * 100)}%</div></div>`}
         <div class="tile"><div class="lab">Tiempo</div><div class="val">${mm}:${String(ss).padStart(2, "0")}</div></div>
       </div>
       <div class="row" style="flex-wrap:wrap;justify-content:center">${extra.join("")}</div>
-      <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="go" data-r="${s.kind === "lesson" || s.kind === "diag" ? "course" : "home"}" data-id="${s.cid}">Continuar</button></div></div>
+      <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="go" data-r="${s.kind === "lesson" || s.kind === "diag" || s.boss ? "course" : "home"}" data-id="${s.cid}">Continuar</button>
+        ${s.boss || s.rush ? `<button class="btn ghost block" data-act="${s.boss ? "boss" : "rush"}" data-cid="${s.cid}" data-id="${s.boss ? s.boss.unit : ""}">${icon("rotate-ccw")}Otra vez</button>` : ""}</div></div>
     </main>`;
   }
 
@@ -2448,6 +2629,8 @@ body.board-split .nav { padding-bottom: 0; }
       case "go": go(el.dataset.r, { id: el.dataset.id }); break;
       case "learn": openLearn(el.dataset.id); break;
       case "unittest": startUnitTest(el.dataset.cid, el.dataset.id); break;
+      case "boss": startBoss(el.dataset.cid, el.dataset.id); break;
+      case "rush": startRush(el.dataset.cid); break;
       case "pick-subject": S.activeCourse = el.dataset.id; save(); render(); break;
       case "learn-back": history.back(); break;
       case "learn-close": closeLearn(); break;
@@ -2460,7 +2643,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "practice": startPractice(el.dataset.cid, el.dataset.k); break;
       case "begin": renderExercise(); break;
       case "quit":
-        if (confirm("¿Salir de la sesión? Se pierde el progreso de esta sesión.")) { ui.session = null; history.replaceState(null, "", "#/"); fromHash(); render(); }
+        if (confirm("¿Salir de la sesión? Se pierde el progreso de esta sesión.")) { if (s && s.rush) { clearTimeout(s.rush.adv); clearInterval(rushTimer); } ui.session = null; history.replaceState(null, "", "#/"); fromHash(); render(); }
         break;
       case "check": check(); break;
       case "exam": startExam(el.dataset.cid, el.dataset.id); break;
