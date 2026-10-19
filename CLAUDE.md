@@ -22,10 +22,11 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. Evaluaciones de M106 (y de F102B y M102).
-2. M105 Probabilidad y Estadística. No hay programa: usá un temario estándar y anotalo.
-3. F102A Física General II A (programa 2026).
-4. 3.º y 4.º año.
+1. M105 Probabilidad y Estadística. No hay programa: usá un temario estándar y anotalo.
+2. F102A Física General II A (programa 2026).
+3. 3.º y 4.º año.
+
+Las evaluaciones de las seis materias completas ya están hechas.
 
 ## Estructura
 
