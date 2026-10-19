@@ -26,7 +26,7 @@
         { n: 1, subjects: [
           { code: "F102B", title: "Física General II B", course: "f102b", step: 4 },
           { code: "M102", title: "Cálculo II", course: "m102", step: 5 },
-          { code: "M106", title: "Geometría Analítica", step: 6 }
+          { code: "M106", title: "Geometría Analítica", course: "m106", step: 6 }
         ] },
         { n: 2, subjects: [
           { code: "M105", title: "Probabilidad y Estadística", step: 7 },

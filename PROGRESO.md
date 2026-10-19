@@ -13,7 +13,8 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 3 | F101 Física General I | **completa**: unidad transversal y 10 unidades | 62 | 34 |
 | 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción) | 35 | 16 |
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
-| 6+ | M106, M105, F102A, … | pendiente: aparecen en la carrera como "Próximamente" | — | — |
+| 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
+| 7+ | M105, F102A, … | pendiente: aparecen en la carrera como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
@@ -139,9 +140,9 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 
 ## Pendiente (en el orden del trayecto)
 
-**En pausa (pedido del usuario, 14/10/2026):** no se crean materias nuevas hasta el domingo; antes vienen otras funciones: el login con Firebase y la pizarra ya están hechos.
+La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
-1. **M106 Geometría Analítica** (programa 2026, id `1zJG9qufZgWfBU6f1gS-BFlFjg1Yy7PVN`).
+1. **Evaluaciones de M106** (y las de F102B y M102): buscar parciales en Apunteca.
 2. **M105 Probabilidad y Estadística:** no encontré el programa; habría que usar un temario estándar.
 3. **F102A Física General II A** (programa 2026, Ruben Santos, 2.º semestre, id `1BxA2eBt5T1-dD9DsLp7OTR9daGUVkvwi`).
 4. **3.º y 4.º año.**
@@ -154,6 +155,7 @@ Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Fí
 - **M104 Introducción al Álgebra Lineal:** [programa 2020](https://fcen.uncuyo.edu.ar/upload/programa-ial-2020-def.pdf).
 - **F101 Física General I:** [programa 2021](https://fcen.uncuyo.edu.ar/upload/fisica-general-i-2021.pdf).
 - **M102 Cálculo II:** programa oficial 2026 (prof. Fernanda Massut), en la carpeta de programas 2026 de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `1fk1ekCbqvSeZW7QsuRLCluEq4qAS84jW`).
+- **M106 Geometría Analítica:** programa oficial 2026 (prof. Silvia Raichman), Drive, id `1zJG9qufZgWfBU6f1gS-BFlFjg1Yy7PVN`. 6 unidades: vectores, planos y rectas, cónicas, superficies, coordenadas polares/cilíndricas/esféricas y ecuación general de segundo grado.
 - **F102B Física General II B:** programa oficial 2026, en la carpeta de programas 2026 de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `16hZ72EbvPHfhWjXEY54p2Vi6ThuxTNvt`).
 - **Plan de estudios y trayecto sugerido:** el que indicó el usuario, consistente con la [distribución curricular](https://fcen.uncuyo.edu.ar/distribucion-curricular) de la facultad.
 
