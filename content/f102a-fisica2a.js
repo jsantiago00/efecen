@@ -1372,3 +1372,215 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 7 · FUENTES DE CAMPO MAGNÉTICO
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dec = v => String(v).replace(".", "{,}");
+  const MU = R`\mu_0 = 4\pi\times10^{-7}\ \text{T m/A}`;
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  // Biot-Savart numérico para una curva p(t), t ∈ [a, b]: B en el punto P (vector)
+  const biot = (I, p, dp, a, b, P, n = 400) => [0, 1, 2].map(j => F.simpson(t => { const q = p(t), rr = P.map((c, i) => c - q[i]), d = Math.hypot(...rr); return F.mu0 * I / (4 * Math.PI) * cross(dp(t), rr)[j] / d ** 3; }, a, b, n));
+  // hilo recto infinito sobre el eje z, por x = d·tan u (sin truncar)
+  const wireB = (I, d) => F.simpson(u => F.mu0 * I / (4 * Math.PI) * Math.cos(u) / d, -Math.PI / 2, Math.PI / 2, 400);
+
+  T["f2a-hilo-num"] = {
+    type: "numeric", concepts: ["f2a-biot"], difficulty: 3,
+    generate(r) {
+      const I = r.int(1, 30), d = r.int(1, 20), inf = r.bool(), L = r.int(2, 40) * 2;
+      const dm = d / 100, Lm = L / 100, ans = (inf ? F.mu0 * I / (2 * Math.PI * dm) : F.mu0 * I / (4 * Math.PI * dm) * 2 * (Lm / 2) / Math.hypot(Lm / 2, dm)) * 1e6;
+      return {
+        prompt: inf ? `Un cable recto muy largo lleva una corriente de $${I}$ A. ¿Cuánto vale el campo magnético a $${d}$ cm del cable (en μT)? ($${MU}$)`
+          : `Un tramo recto de cable de $${L}$ cm lleva una corriente de $${I}$ A. ¿Cuánto vale el campo magnético que produce en un punto de su mediatriz a $${d}$ cm del tramo (en μT)? ($${MU}$; ignorá el resto del circuito)`,
+        answer: ans,
+        solution: [`[[f2a-biot-savart|Biot-Savart]]: cada tramo aporta $dB = \\frac{\\mu_0I}{4\\pi}\\frac{dl\\sin\\theta}{r^2}$, todos en el mismo sentido (alrededor del cable).`,
+          inf ? `Integrando a lo largo de todo el cable, $B = \\frac{\\mu_0I}{2\\pi d} \\approx ${nf(ans)}$ μT.` : `Integrando entre los extremos, $B = \\frac{\\mu_0I}{4\\pi d}(\\sin\\theta_2 - \\sin\\theta_1)$ con $\\sin\\theta_2 = -\\sin\\theta_1 = \\frac{L/2}{\\sqrt{(L/2)^2 + d^2}}$: $B \\approx ${nf(ans)}$ μT.`],
+        // otro camino: Biot-Savart vectorial numérico (para el infinito, con x = d·tan u)
+        verify: { kind: "value", tol: 1e-7, fn: () => (inf ? wireB(I, dm) : Math.hypot(...biot(I, t => [0, 0, t], () => [0, 0, 1], -Lm / 2, Lm / 2, [dm, 0, 0], 2000))) * 1e6 }
+      };
+    }
+  };
+
+  T["f2a-espira-num"] = {
+    type: "numeric", concepts: ["f2a-biot"], difficulty: 3,
+    generate(r) {
+      const I = r.int(1, 20), Rc = r.int(2, 20), N = r.pick([1, 1, 5, 10, 50, 100]), kind = r.pick(["centro", "eje", "arco"]), x = r.int(1, 30), th = r.pick([60, 90, 120, 180, 270]);
+      const Rm = Rc / 100, xm = x / 100, t = th * Math.PI / 180;
+      const B = { centro: F.mu0 * N * I / (2 * Rm), eje: F.mu0 * N * I * Rm * Rm / (2 * (Rm * Rm + xm * xm) ** 1.5), arco: F.mu0 * I * t / (4 * Math.PI * Rm) }[kind], ans = B * 1e6;
+      const coil = N === 1 ? "Una espira circular" : `Una bobina plana de $${N}$ vueltas`;
+      return {
+        prompt: kind === "arco" ? `Un cable forma un arco de circunferencia de $${th}°$ y radio $${Rc}$ cm, por el que circulan $${I}$ A; los tramos que llegan y salen del arco son radiales. ¿Cuánto vale el campo magnético en el centro del arco (en μT)? ($${MU}$)`
+          : `${coil} de radio $${Rc}$ cm lleva una corriente de $${I}$ A. ¿Cuánto vale el campo magnético ${kind === "centro" ? "en su centro" : `sobre su eje, a $${x}$ cm del centro`} (en μT)? ($${MU}$)`,
+        answer: ans,
+        solution: [`[[f2a-biot-savart|Biot-Savart]]: en el centro todos los elementos están a la distancia $R$ y perpendiculares al radio, así que $dB = \\frac{\\mu_0I}{4\\pi}\\frac{dl}{R^2}$${kind === "eje" ? "; sobre el eje, las componentes perpendiculares se cancelan y queda la axial" : ""}.`,
+          { centro: `Sumando toda la circunferencia ($2\\pi R$) y las $N$ vueltas: $B = \\frac{\\mu_0NI}{2R} \\approx ${nf(ans)}$ μT.`, eje: `$B = \\frac{\\mu_0NIR^2}{2(R^2 + x^2)^{3/2}} \\approx ${nf(ans)}$ μT.`, arco: `Los tramos radiales no aportan (en ellos $d\\vec l$ es paralelo a $\\vec r$). El arco tiene largo $R\\theta$: $B = \\frac{\\mu_0I\\theta}{4\\pi R} \\approx ${nf(ans)}$ μT.` }[kind]],
+        // otro camino: Biot-Savart vectorial numérico sobre la curva
+        verify: { kind: "value", tol: 1e-7, fn: () => {
+          const P = kind === "eje" ? [0, 0, xm] : [0, 0, 0], tmax = kind === "arco" ? t : 2 * Math.PI;
+          const Bv = biot(I, s => [Rm * Math.cos(s), Rm * Math.sin(s), 0], s => [-Rm * Math.sin(s), Rm * Math.cos(s), 0], 0, tmax, P, 800);
+          return Math.hypot(...Bv) * (kind === "arco" ? 1 : N) * 1e6;
+        } }
+      };
+    }
+  };
+
+  T["f2a-paralelos-num"] = {
+    type: "numeric", concepts: ["f2a-ampere"], difficulty: 3,
+    generate(r) {
+      const I1 = r.int(1, 30), I2 = r.int(1, 30), same = r.bool(), d = r.int(2, 30), ask = r.pick(["F", "Bmid", "Bout"]), dm = d / 100, x = r.int(1, 10);
+      const s2 = same ? 1 : -1;
+      // campo según +y en puntos del eje x; cable 1 en x = 0 y cable 2 en x = d, corrientes según ±z
+      const By = X => F.mu0 / (2 * Math.PI) * (I1 / X + s2 * I2 / (X - dm));
+      const ans = { F: F.mu0 * I1 * I2 / (2 * Math.PI * dm) * 1e6, Bmid: Math.abs(By(dm / 2)) * 1e6, Bout: Math.abs(By(dm + x / 100)) * 1e6 }[ask];
+      if (ans < 1e-6) return null;
+      return {
+        prompt: `Dos cables rectos, largos y paralelos, separados $${d}$ cm, llevan corrientes de $${I1}$ A y $${I2}$ A en ${same ? "el mismo sentido" : "sentidos opuestos"}. ${{ F: "¿Cuál es el módulo de la fuerza por unidad de largo entre ellos (en μN/m)?", Bmid: "¿Cuánto vale el campo magnético en el punto medio entre ellos (en μT)?", Bout: `¿Cuánto vale el campo magnético en un punto del plano de los cables, del lado del segundo, a $${x}$ cm de él (en μT)?` }[ask]} ($${MU}$)`,
+        answer: ans,
+        solution: [`Cada cable produce $B = \\frac{\\mu_0I}{2\\pi r}$ ([[f2a-biot-savart|hilo infinito]]), en círculos a su alrededor.`,
+          ask === "F" ? `[[f2a-fuerza-paralelos|Fuerza entre cables]]: $\\frac FL = \\frac{\\mu_0I_1I_2}{2\\pi d} \\approx ${nf(ans)}$ μN/m; ${same ? "se atraen (corrientes en el mismo sentido)" : "se repelen (sentidos opuestos)"}.`
+            : ask === "Bmid" ? `En el punto medio los campos de los dos valen $\\frac{\\mu_0I_i}{2\\pi(d/2)}$ y ${same ? "tienen sentidos opuestos: se restan" : "tienen el mismo sentido: se suman"}. $B \\approx ${nf(ans)}$ μT.`
+              : `Afuera, a $${x}$ cm del segundo y $${d + x}$ cm del primero, los campos ${same ? "tienen el mismo sentido y se suman" : "tienen sentidos opuestos y se restan"}: $B \\approx ${nf(ans)}$ μT.`],
+        // otro camino: Biot-Savart numérico de cada cable (con x = d·tan u) y fuerza como I₂·L·B₁
+        verify: { kind: "value", tol: 1e-7, fn: () => {
+          if (ask === "F") return I2 * wireB(I1, dm) * 1e6;
+          const X = ask === "Bmid" ? dm / 2 : dm + x / 100, b1 = wireB(I1, X), b2 = wireB(I2, Math.abs(X - dm)) * Math.sign(X - dm) * s2;
+          return Math.abs(b1 + b2) * 1e6;
+        } }
+      };
+    }
+  };
+
+  T["f2a-solenoide-num"] = {
+    type: "numeric", concepts: ["f2a-ampere"], difficulty: 3,
+    generate(r) {
+      const I = r.int(1, 50) / 10, tor = r.bool(), N = r.int(tor ? 10 : 1, 20) * 50;
+      if (tor) {
+        const Rt = r.int(10, 30), a = r.pick([1, 1.5, 2]), ans = F.mu0 * N * I / (2 * Math.PI * Rt / 100) * 1e3;
+        return {
+          prompt: `Un toroide tiene $${N}$ vueltas de alambre, radio medio $${Rt}$ cm y una sección circular de $${dec(a)}$ cm de radio. Por el alambre circulan $${dec(I)}$ A. ¿Cuánto vale el campo magnético en el centro de su sección, a $${Rt}$ cm del eje (en mT)? ($${MU}$)`,
+          answer: ans,
+          solution: [`[[f2a-ampere|Ley de Ampère]] con una circunferencia de radio $r$ dentro del toroide: $B\\cdot2\\pi r = \\mu_0NI$, porque la atraviesan las $N$ vueltas.`, `$B = \\frac{\\mu_0NI}{2\\pi r} \\approx ${nf(ans)}$ mT. Afuera del toroide el campo es nulo.`],
+          // otro camino: suma de Biot-Savart de las N espiras, una por una
+          verify: { kind: "value", tol: 1e-3, fn: () => {
+            const R0 = Rt / 100, am = a / 100, P = [R0, 0, 0], Bt = [0, 0, 0], M = 120;
+            for (let k = 0; k < N; k++) {
+              const ph = 2 * Math.PI * (k + 0.5) / N, c = [R0 * Math.cos(ph), R0 * Math.sin(ph), 0], e1 = [Math.cos(ph), Math.sin(ph), 0], e2 = [0, 0, 1];
+              for (let m = 0; m < M; m++) {
+                const s = 2 * Math.PI * (m + 0.5) / M, q = c.map((v, i) => v + am * (Math.cos(s) * e1[i] + Math.sin(s) * e2[i])), dl = e1.map((v, i) => am * 2 * Math.PI / M * (-Math.sin(s) * v + Math.cos(s) * e2[i])), rr = P.map((v, i) => v - q[i]), d = Math.hypot(...rr), cr = cross(dl, rr);
+                for (let i = 0; i < 3; i++) Bt[i] += F.mu0 * I / (4 * Math.PI) * cr[i] / d ** 3;
+              }
+            }
+            return Math.hypot(...Bt) * 1e3;
+          } }
+        };
+      }
+      const L = r.int(10, 100), ans = F.mu0 * N / (L / 100) * I * 1e3;
+      return {
+        prompt: `Un solenoide largo de $${L}$ cm tiene $${N}$ vueltas y lleva una corriente de $${dec(I)}$ A. ¿Cuánto vale el campo magnético en su interior, lejos de los extremos (en mT)? ($${MU}$)`,
+        answer: ans,
+        solution: [`[[f2a-ampere|Ley de Ampère]] con un rectángulo que tiene un lado de largo $\\ell$ adentro y otro afuera: solo aporta el de adentro, $B\\ell = \\mu_0(n\\ell)I$.`, `Con $n = \\frac NL = ${nf(N / (L / 100))}$ vueltas/m: $B = \\mu_0nI \\approx ${nf(ans)}$ mT.`],
+        // otro camino: suma de los campos axiales de las espiras (solenoide infinito, con z = R·tan u)
+        verify: { kind: "value", tol: 1e-7, fn: () => { const n = N / (L / 100), Rs = 0.02; return F.simpson(u => { const z = Rs * Math.tan(u), dz = Rs / Math.cos(u) ** 2; return n * F.mu0 * I * Rs * Rs / (2 * (Rs * Rs + z * z) ** 1.5) * dz; }, -Math.PI / 2 * (1 - 1e-9), Math.PI / 2 * (1 - 1e-9), 400) * 1e3; } }
+      };
+    }
+  };
+  T["f2a-solenoide-num"].testN = 60;
+
+  T["f2a-cable-grueso-tf"] = {
+    type: "tf", concepts: ["f2a-ampere"], difficulty: 2,
+    generate(r) {
+      const f = r.pick([2, 3, 4]), inside = r.bool(), claim = r.pick(inside ? [1 / f, f, 1 / (f * f)] : [1 / f, 1 / (f * f), f]);
+      const real = 1 / f; // adentro a R/f: B = B(R)/f; afuera a f·R: B = B(R)/f
+      const say = c => c >= 1 ? `$${c}$ veces el` : `$\\frac1{${Math.round(1 / c)}}$ del`;
+      return {
+        prompt: `<b>Verdadero o falso:</b> un cable recto y largo de radio $R$ lleva una corriente repartida uniformemente en su sección. ${inside ? `A una distancia $\\frac R${f}$ del eje (adentro)` : `A una distancia $${f}R$ del eje (afuera)`}, el campo magnético vale ${say(claim)} valor en la superficie.`,
+        answer: Math.abs(claim - real) < 1e-12,
+        explanation: inside ? `Adentro, la [[f2a-ampere|ley de Ampère]] encierra solo la fracción $\\frac{r^2}{R^2}$ de la corriente: $B = \\frac{\\mu_0Ir}{2\\pi R^2}$, que crece linealmente. A $\\frac R${f}$ vale $\\frac1${f}$ del de la superficie. Es ${Math.abs(claim - real) < 1e-12 ? "verdadero" : "falso"}.`
+          : `Afuera, $B = \\frac{\\mu_0I}{2\\pi r}$, que cae como $\\frac1r$: a $${f}R$ vale $\\frac1${f}$ del de la superficie. Es ${Math.abs(claim - real) < 1e-12 ? "verdadero" : "falso"}.`,
+        solution: [R`Ver [[f2a-ampere|ley de Ampère]]: adentro crece como $r$, afuera cae como $\frac1r$.`],
+        // otro camino: se suma el campo de muchos hilos finos que forman la sección (grilla polar, punto medio)
+        verify: { kind: "truth", fn: () => {
+          const Bat = rr => { let b = 0; const ns = 120, np = 240, Rr = 1; for (let i = 0; i < ns; i++) { const s = (i + 0.5) * Rr / ns; for (let j = 0; j < np; j++) { const p = 2 * Math.PI * (j + 0.5) / np, dx = rr - s * Math.cos(p), dy = -s * Math.sin(p), d2 = dx * dx + dy * dy, dI = s / ns * 2 * Math.PI / np / Math.PI; b += dI * dx / d2; } } return b / (2 * Math.PI); };
+          const ratio = Bat(inside ? 1 / f : f) / Bat(1);
+          return Math.abs(ratio - claim) < 0.05 * claim;
+        } }
+      };
+    }
+  };
+  T["f2a-cable-grueso-tf"].testN = 40;
+
+  const cards = {
+    "f2a-biot-savart": {
+      title: "Ley de Biot-Savart", aliases: ["ley de Biot-Savart", "Biot-Savart", "campo de un hilo recto", "espira circular"], concepts: ["f2a-biot"],
+      summary: "dB⃗ = (μ₀/4π) I dl⃗ × r̂ / r². Hilo infinito: B = μ₀I/(2πd), en círculos. Espira en su centro: μ₀I/(2R); sobre el eje: μ₀IR²/[2(R² + x²)^(3/2)].",
+      def: [R`**Biot-Savart:** un tramo $d\vec l$ con corriente $I$ produce, en un punto a distancia $r$, $d\vec B = \frac{\mu_0}{4\pi}\frac{I\,d\vec l\times\hat r}{r^2}$, con $\mu_0 = 4\pi\times10^{-7}$ T m/A la permeabilidad del vacío. El campo total es la suma (integral) sobre el circuito.`,
+        R`**Hilo recto:** un tramo visto desde una distancia $d$, con ángulos $\theta_1$ y $\theta_2$ a sus extremos: $B = \frac{\mu_0I}{4\pi d}(\sin\theta_2 - \sin\theta_1)$. Si es infinito, $B = \frac{\mu_0I}{2\pi d}$, con líneas de campo circulares (regla de la mano derecha: pulgar en la corriente).`,
+        R`**Espira circular** de radio $R$: en el centro, $B = \frac{\mu_0I}{2R}$; sobre el eje a distancia $x$, $B = \frac{\mu_0IR^2}{2(R^2 + x^2)^{3/2}}$. Un arco de ángulo $\theta$, en su centro: $\frac{\mu_0I\theta}{4\pi R}$.`],
+      idea: [R`Es el análogo magnético de la ley de [[f2a-coulomb|Coulomb]]: cada pedacito de corriente aporta un campo que cae como $\frac1{r^2}$. La diferencia es el producto vectorial: el campo da vueltas alrededor de la corriente, en lugar de salir de ella.`],
+      demo: [R`**Paso 1 (hilo).** Con el hilo sobre el eje $x$ y el punto a distancia $d$: $|d\vec l\times\hat r| = dx\sin\alpha = dx\frac{d}{r}$, con $r = \sqrt{x^2 + d^2}$. Todos los aportes tienen la misma dirección, así que $B = \frac{\mu_0I}{4\pi}\int\frac{d\,dx}{(x^2 + d^2)^{3/2}}$.`,
+        R`**Paso 2.** Con $x = d\tan u$ (la misma sustitución que para el [[f2a-distribuciones|campo de una varilla]]), el integrando queda $\frac{\cos u}{d}du$, y $B = \frac{\mu_0I}{4\pi d}(\sin\theta_2 - \sin\theta_1)$. Para el hilo infinito los ángulos van de $-90°$ a $90°$: $B = \frac{\mu_0I}{2\pi d}$.`,
+        R`**Paso 3 (centro de la espira).** Todos los elementos están a distancia $R$ y son perpendiculares al radio: $dB = \frac{\mu_0I\,dl}{4\pi R^2}$, todos según el eje. Sumando $\int dl = 2\pi R$: $B = \frac{\mu_0I}{2R}$ (y para un arco, $R\theta$ en lugar de $2\pi R$).`,
+        R`**Paso 4 (eje).** A distancia $x$, cada elemento está a $\sqrt{R^2 + x^2}$ y sigue siendo perpendicular a $\vec r$. Las componentes perpendiculares al eje se cancelan de a pares, y la axial es una fracción $\frac{R}{\sqrt{R^2 + x^2}}$ de cada aporte: $B = \frac{\mu_0I}{4\pi}\frac{2\pi R}{R^2 + x^2}\frac{R}{\sqrt{R^2 + x^2}} = \frac{\mu_0IR^2}{2(R^2 + x^2)^{3/2}}$. $\blacksquare$`],
+      examples: [{ q: R`Un cable con $10$ A, a $5$ cm.`, steps: [R`$B = \frac{4\pi\times10^{-7}\cdot10}{2\pi\cdot0{,}05} = 40$ μT, del orden del campo terrestre.`] }],
+      tips: [R`Los tramos rectos que apuntan hacia el punto (radiales) no aportan nada: ahí $d\vec l$ es paralelo a $\hat r$.`],
+      see: ["f2a-ampere", "f2a-fuerza-paralelos", "f2a-campo-magnetico"]
+    },
+    "f2a-fuerza-paralelos": {
+      title: "Fuerza entre conductores paralelos", aliases: ["fuerza entre conductores paralelos", "cables paralelos", "definición del ampere"], concepts: ["f2a-ampere"],
+      summary: "Dos cables paralelos se atraen si las corrientes van en el mismo sentido y se repelen si van en sentidos opuestos, con F/L = μ₀I₁I₂/(2πd).",
+      def: [R`**Fuerza por unidad de largo** entre dos cables rectos, largos y paralelos a distancia $d$: $\frac FL = \frac{\mu_0I_1I_2}{2\pi d}$. Atractiva si las corrientes tienen el mismo sentido, repulsiva si son opuestas.`,
+        R`**El ampere** se definió así: la corriente que, en dos cables paralelos a $1$ m, produce una fuerza de $2\times10^{-7}$ N por metro. (Desde 2019 se define fijando el valor de la carga elemental.)`],
+      idea: [R`Al revés que con las cargas: corrientes «iguales» se atraen. Cada cable está en el campo del otro, y la fuerza $I\vec L\times\vec B$ apunta hacia el otro cable cuando las corrientes van juntas.`],
+      demo: [R`**Paso 1.** El cable 1 produce, donde está el 2, un campo $B_1 = \frac{\mu_0I_1}{2\pi d}$ ([[f2a-biot-savart|hilo infinito]]), perpendicular al cable 2.`,
+        R`**Paso 2.** Un tramo $L$ del cable 2 siente $F = I_2LB_1$ ([[f2a-fuerza-conductor|fuerza sobre un conductor]]), así que $\frac FL = \frac{\mu_0I_1I_2}{2\pi d}$.`,
+        R`**Paso 3 (sentido).** Con el cable 1 sobre el eje $z$ (corriente $+z$) y el 2 en $x = d$, el campo del 1 en el 2 es $+\hat y$. Si $I_2$ también va según $+z$: $\hat z\times\hat y = -\hat x$, hacia el cable 1: se atraen. Con $I_2$ al revés, la fuerza cambia de signo. $\blacksquare$`],
+      examples: [{ q: R`$20$ A y $30$ A a $10$ cm, en el mismo sentido.`, steps: [R`$\frac FL = \frac{4\pi\times10^{-7}\cdot600}{2\pi\cdot0{,}1} = 1{,}2$ mN/m, atractiva.`] }],
+      tips: [R`Para sumar campos de varios cables, dibujá las circunferencias alrededor de cada uno con la regla de la mano derecha y fijate el sentido en el punto, antes de sumar.`],
+      see: ["f2a-biot-savart", "f2a-fuerza-conductor"]
+    },
+    "f2a-ampere": {
+      title: "Ley de Ampère: cable grueso, solenoide y toroide", aliases: ["ley de Ampère", "solenoide", "toroide", "permeabilidad del vacío"], concepts: ["f2a-ampere"],
+      summary: "∮B⃗·dl⃗ = μ₀I_enc. Con simetría da B: cable de radio R (μ₀Ir/2πR² adentro, μ₀I/2πr afuera), solenoide (μ₀nI), toroide (μ₀NI/2πr).",
+      def: [R`**Ley de Ampère:** para toda curva cerrada, $\oint\vec B\cdot d\vec l = \mu_0I_{enc}$, donde $I_{enc}$ es la corriente neta que atraviesa una superficie apoyada en la curva (con el signo de la regla de la mano derecha). Vale para corrientes estacionarias.`,
+        R`**Cable de radio $R$** con corriente uniforme: $B = \frac{\mu_0Ir}{2\pi R^2}$ adentro y $\frac{\mu_0I}{2\pi r}$ afuera. **Solenoide largo** con $n$ vueltas por metro: $B = \mu_0nI$ adentro (uniforme) y casi cero afuera. **Toroide** de $N$ vueltas: $B = \frac{\mu_0NI}{2\pi r}$ adentro y cero afuera.`,
+        R`**Gauss para el magnetismo:** $\oint\vec B\cdot d\vec A = 0$ por toda superficie cerrada: no hay cargas magnéticas.`],
+      idea: [R`Es al campo magnético lo que la [[f2a-gauss|ley de Gauss]] al eléctrico: vale siempre, pero sirve para calcular solo cuando la simetría permite sacar $B$ de la integral. En lugar de flujo y carga encerrada, circulación y corriente encerrada.`],
+      demo: [R`**Paso 1 (cable, afuera).** Por simetría, $\vec B$ es tangente a las circunferencias centradas en el eje y depende solo de $r$. Con una de ellas: $B\cdot2\pi r = \mu_0I$, así que $B = \frac{\mu_0I}{2\pi r}$, igual que con [[f2a-biot-savart|Biot-Savart]].`,
+        R`**Paso 2 (cable, adentro).** La circunferencia de radio $r < R$ encierra la fracción $\frac{\pi r^2}{\pi R^2}$ de la corriente: $B\cdot2\pi r = \mu_0I\frac{r^2}{R^2}$, y $B = \frac{\mu_0Ir}{2\pi R^2}$.`,
+        R`**Paso 3 (solenoide).** Se toma un rectángulo con un lado de largo $\ell$ adentro, paralelo al eje, y el otro afuera. Afuera el campo es despreciable, y en los lados perpendiculares $\vec B\perp d\vec l$: solo aporta el lado de adentro, $B\ell$. Lo atraviesan $n\ell$ vueltas, así que $B\ell = \mu_0n\ell I$ y $B = \mu_0nI$.`,
+        R`**Paso 4 (toroide).** Con una circunferencia de radio $r$ dentro del toroide, por simetría $B$ es tangente y constante: $B\cdot2\pi r = \mu_0NI$. Una circunferencia afuera encierra corriente neta cero (cada vuelta la cruza dos veces, en sentidos opuestos): $B = 0$. $\blacksquare$`],
+      examples: [{ q: R`Solenoide de $1000$ vueltas en $50$ cm con $2$ A.`, steps: [R`$n = 2000$ /m y $B = 4\pi\times10^{-7}\cdot2000\cdot2 \approx 5{,}0$ mT.`] }],
+      tips: [R`El campo de un solenoide no depende de su radio, solo de las vueltas por metro y la corriente.`],
+      see: ["f2a-biot-savart", "f2a-gauss", "f2a-materiales-magneticos"]
+    },
+    "f2a-materiales-magneticos": {
+      title: "Materiales magnéticos", aliases: ["ferromagnetismo", "paramagnetismo", "diamagnetismo", "permeabilidad magnética", "histéresis"], concepts: ["f2a-ampere"],
+      summary: "Dentro de un material, B = κ_m μ₀nI. Diamagnéticos: κ_m apenas menor que 1. Paramagnéticos: apenas mayor. Ferromagnéticos (hierro, níquel, cobalto): de cientos a miles, con histéresis.",
+      def: [R`**Permeabilidad relativa** $\kappa_m$: el factor en que un material que llena un solenoide multiplica su campo, $B = \kappa_m\mu_0nI = \mu nI$ (con $\mu = \kappa_m\mu_0$ la permeabilidad). Se escribe $\kappa_m = 1 + \chi_m$, con $\chi_m$ la susceptibilidad.`,
+        R`**Diamagnéticos** ($\chi_m < 0$, del orden de $-10^{-5}$: cobre, agua, bismuto): el campo induce dipolos opuestos y son levemente repelidos. **Paramagnéticos** ($\chi_m > 0$, chico: aluminio, oxígeno): sus dipolos atómicos se alinean un poco con el campo y son levemente atraídos.`,
+        R`**Ferromagnéticos** (hierro, níquel, cobalto): sus dipolos se alinean en dominios y $\kappa_m$ llega a miles. La relación entre $B$ y la corriente no es lineal y depende de la historia (**histéresis**): por eso existen los imanes permanentes. Arriba de la temperatura de Curie se vuelven paramagnéticos.`],
+      idea: [R`Los electrones de los átomos son pequeñas espiras de corriente. En casi todos los materiales sus efectos se cancelan o se alinean muy poco; en los ferromagnéticos, la interacción entre vecinos los alinea en bloques, y el material entero se vuelve un imán.`],
+      tips: [R`Por eso los electroimanes y los transformadores llevan núcleo de hierro: con la misma corriente, el campo es cientos o miles de veces mayor.`],
+      see: ["f2a-ampere", "f2a-torque-espira"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-biot": { name: "Biot-Savart" }, "f2a-ampere": { name: "Ley de Ampère" } },
+    templates: T,
+    units: [{
+      id: "f2a-fuentes-u", order: 7, program: "Unidad 7", title: "Fuentes de campo magnético", icon: "rotate-ccw",
+      diagnostic: ["f2a-hilo-num", "f2a-espira-num", "f2a-solenoide-num"],
+      lessons: [
+        { id: "f2a-fuentes-l1", title: "Biot-Savart", templates: ["f2a-hilo-num", "f2a-espira-num", "f2a-paralelos-num"], theory: ["f2a-biot-savart", "f2a-fuerza-paralelos"],
+          intro: R`$d\vec B = \frac{\mu_0}{4\pi}\frac{I\,d\vec l\times\hat r}{r^2}$; hilo infinito: $\frac{\mu_0I}{2\pi d}$.` },
+        { id: "f2a-fuentes-l2", title: "Ley de Ampère", templates: ["f2a-solenoide-num", "f2a-cable-grueso-tf"], theory: ["f2a-ampere", "f2a-materiales-magneticos"],
+          intro: R`$\oint\vec B\cdot d\vec l = \mu_0I_{enc}$; solenoide: $B = \mu_0nI$.` }
+      ]
+    }],
+    cards
+  });
+})();
