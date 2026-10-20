@@ -1290,7 +1290,7 @@
   T["pe-ic-var-num"].testN = 80;
 
   T["pe-tamano-num"] = {
-    type: "numeric", concepts: ["pe-ic-media"], difficulty: 2,
+    type: "numeric", concepts: ["pe-ic-media"], difficulty: 2, testN: 80,
     generate(r) {
       const kind = r.pick(["media", "prop"]), conf = r.pick(CONF), a = 1 - conf, z = S.zq(1 - a / 2);
       if (kind === "media") {
@@ -1485,7 +1485,7 @@
   };
 
   T["pe-errores-tf"] = {
-    type: "tf", concepts: ["pe-hipotesis"], difficulty: 3,
+    type: "tf", concepts: ["pe-hipotesis"], difficulty: 3, testN: 80,
     generate(r) {
       const mu0 = r.int(50, 100), sg = r.pick([5, 8, 10, 12]), n = r.pick([16, 25, 36]), se = sg / Math.sqrt(n), mu1 = Math.round((mu0 + r.pick([0.5, 1, 1.5, 2, 2.5]) * se) * 10) / 10, a = r.pick([0.05, 0.1, 0.01]);
       const c = mu0 + S.zq(1 - a) * se, beta = S.Phi((c - mu1) / se), truth = r.bool(), claim = truth ? beta : 1 - a;
