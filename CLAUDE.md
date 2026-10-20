@@ -25,7 +25,7 @@ La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendiente
 1. F102A Física General II A (programa 2026).
 2. 3.º y 4.º año.
 
-Las evaluaciones de M101, M104, F101, F102B, M102 y M106 ya están hechas; faltan las de M105.
+Las evaluaciones de las siete materias completas ya están hechas.
 
 ## Estructura
 
