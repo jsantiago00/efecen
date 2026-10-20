@@ -111,7 +111,6 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - la alterna: valores eficaces promediando $v^2$ numéricamente; las reactancias derivando o integrando la tensión; el RLC simulado en el tiempo (RK4) hasta el régimen, midiendo amplitud, potencia media y desfase; la resonancia y el factor $Q$, buscando el máximo y los puntos de media potencia.
 - **Notación científica en las respuestas:** el campo de respuesta acepta `1,6e-19`, `1,6E-19` y `1,6×10^-19`, y hay una tecla «×10^». La vista previa y la respuesta correcta se muestran en notación científica cuando el número es muy chico o muy grande. «2e» sola sigue siendo 2·e, y «2e-1» es 2e − 1 (para no romper Cálculo).
 - **Test nuevo:** avisa si queda un comando de TeX o una coma `{,}` fuera de `$…$`, y ahora también se valida con KaTeX el texto de las figuras (antes no se chequeaba).
-- **Faltan:** los parciales simulados.
 
 ## Pizarra (tablets con lápiz)
 
@@ -166,13 +165,14 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Estado:** `S.exams["m101/p1"] = { best, attempts: [{ d, t, score }] }`. `E.store.merge` hace la unión de los intentos y se queda con la mejor nota (tiene tests).
 - **Tests:** cada examen suma 100 y sus plantillas existen. Los ejercicios de desarrollo se generan con 40 semillas: la rúbrica tiene que repartir exacto los puntos, el LaTeX tiene que ser válido y no puede haber «undefined».
 - **M101:** 1.er, 2.º y 3.er parcial, y el final práctico, armados según `docs/parciales/m101.md`.
-- **M104, F101, M106, F102B, M102 y M105:** tienen sus evaluaciones (`content/<código>-examenes.js`), y su análisis está en `docs/parciales/`.
+- **M104, F101, M106, F102B, M102, M105 y F102A:** tienen sus evaluaciones (`content/<código>-examenes.js`), y su análisis está en `docs/parciales/`.
   - **M104:** 1.er y 2.º parcial, y la parte escrita del final regular.
   - **F101:** dos parciales promocionales y el final libre.
   - **M106 (19/10):** 1.er y 2.º parcial, y el examen de promoción, que tiene la misma estructura que el final regular. Se leyeron los parciales y la promoción de 2024, y la promoción y el final de 2025. Hay 9 ejercicios de desarrollo (base ortonormal, haz de planos, eje radical, tangentes en el lado recto, paraboloide, superficie cilíndrica, esfera, cónica en polares con su deducción, cónica rotada e hiperboloide en cilíndricas o esféricas) y una plantilla de examen (`ga-ex-matriz-p`).
   - **F102B (19/10):** los tres parciales (termodinámica, ondas y óptica) y la parte práctica del final regular. Se leyeron los parciales 1 y 3 de 2026, el 2.º de 2025 y el final regular de junio de 2025. Hay 11 ejercicios de desarrollo (ciclos P-V en tres formas y los dos sentidos, entropía, ondas estacionarias, cuerda de guitarra, interferencia con difracción, dos lentes, vela solar) y 9 plantillas de examen. Se verifican con simulaciones: intercambio de calor paso a paso, ecuación del calor discretizada, crestas del Doppler, cuerda con diferencias finitas, intensidad del patrón de rendijas y matrices ABCD.
   - **M102 (19/10):** 1.er y 2.º parcial de regularidad y el final. Se leyeron el 1.er parcial de 2026, el 2.º de 2025, los finales de julio de 2024 y 2025, y el tercer parcial virtual de 2021. Hay 13 ejercicios de desarrollo (serie binomial, tangentes que se cortan, T y N, límites dobles, trazas de cuádricas, plano tangente, puntos críticos, integrales sobre un triángulo, cambio de variables, gradiente de una temperatura, Lagrange con una y dos restricciones, campo conservativo) y 5 plantillas de examen. Los coeficientes de la serie se verifican con la fórmula integral de Cauchy; Lagrange, recorriendo la curva de restricción; Green, con la integral de línea; el flujo, integrando sobre las dos esferas.
   - **M105 (20/10):** en Apunteca solo hay un informe de parcial (2020) y un final práctico (2021), los dos sobre bases de datos reales. Quedaron un 1.er parcial (análisis descriptivo, muestreo estratificado y probabilidad), un 2.º parcial de inferencia armado con las plantillas del temario y el final práctico (intervalos para la varianza y la media a partir de datos, correlación y regresión, y ANOVA por estación), con datos chicos que se pueden calcular a mano. Hay 6 ejercicios de desarrollo, que se verifican con la fórmula de pares para la varianza, el conteo para los cuartiles, la integración de las densidades χ², t y F y la minimización de la suma de cuadrados.
+  - **F102A (20/10):** se leyeron los tres parciales de 2022 (cinco problemas de 20 puntos) y el cuestionario del final de febrero de 2022 (diez preguntas). Quedaron los tres parciales (electrostática; circuitos y magnetostática; inducción y alterna) y un final de diez preguntas cortas, cada una sorteada entre dos plantillas. Hay 5 ejercicios de desarrollo (capacitores con una llave, esfera con densidad variable, barra semiinfinita, espira que atraviesa un campo y filtro RLC) y 3 plantillas de examen (esferita frente a una lámina, cilindro con bobina en un plano inclinado y arcos con corriente).
 - **Variedad entre intentos:** las partes y los ítems pueden tener `any`, que sortea entre ejercicios de distintos años, y cada materia puede tener **plantillas propias del examen** (`templates` en `E.registerExams`), con corrección automática y `verify`, que no pertenecen a ninguna lección. La suite las prueba como a las demás: tipo, LaTeX, `verify` obligatorio y variedad. Exige además que todas las alternativas de un ítem valgan lo mismo. El 15/10 se leyó una segunda muestra de M101, F101 y M104 (ver «Segunda muestra» en cada `docs/parciales/*.md`).
 - **Verificación en desarrollo:** los ejercicios de desarrollo con cuentas llevan `verify`, como las plantillas, y la suite lo corre. Se recalcula por otro camino: simulación del movimiento, integración numérica de fuerzas, Gauss, A·A⁻¹ = I y residuos de A·x = b.
 - **Pendiente:** lo que no pasó a la app, anotado al final de cada `docs/parciales/*.md` (por ejemplo, Stokes en M102 y lente con espejo en F102B).
@@ -222,8 +222,7 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **F102A:** parciales simulados (desde Apunteca).
-2. **3.º y 4.º año.**
+1. **3.º y 4.º año.**
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 
