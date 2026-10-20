@@ -15,7 +15,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
-| 8 | F102A Física General II A | **en curso**: unidades 1 a 8 (electrostática, circuitos de CC, magnetismo e inducción) de 9 | 45 | 36 |
+| 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna) | 51 | 42 |
 | 9+ | 3.º y 4.º año | pendiente: aparecen en la carrera como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
@@ -83,10 +83,10 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - el sesgo de $S^2$ promediando sobre todas las muestras posibles.
 - **Alias que chocaban:** «regla del producto» (es de derivadas, en M101) y «exponencial» (M101). M105 enlaza a la ficha de errores de F101 para «promedio» y «campana de Gauss», y a la de Cauchy-Schwarz de M104.
 
-## F102A Física General II A (en curso, desde el 20/10)
+## F102A Física General II A (20/10)
 
 - **Archivo:** `content/f102a-fisica2a.js`, con prefijo `f2a-`. El primer bloque registra la materia y una biblioteca compartida, `E.f2a`: las constantes ($k$, $\varepsilon_0$, $\mu_0$, $e$, $m_e$, $m_p$), `nf` (número para TeX, en notación científica si es muy chico o muy grande), Simpson, RK4 para sistemas, Gauss para sistemas lineales, sección áurea, y el campo y el potencial de cargas puntuales en el plano.
-- **Hechas:** U1 Carga y campo eléctrico (Coulomb, campo, distribuciones continuas, Gauss, conductores) U2 Potencial eléctrico (energía potencial, potencial, gradiente, equipotenciales) y U3 Capacitancia y dieléctricos (placas, esférico y cilíndrico, serie y paralelo, energía, dieléctricos con la batería conectada o no). U4 Corriente, resistencia y fem (deriva, resistividad y temperatura, fem y resistencia interna, potencia y máxima transferencia). U5 Circuitos de CC (serie y paralelo, Kirchhoff, RC, amperímetros y voltímetros). U6 Campo magnético (fuerza de Lorentz, ciclotrón, selector y espectrómetro, fuerza sobre cables, torque sobre espiras, efecto Hall). U7 Fuentes de campo magnético (Biot-Savart, cables paralelos, Ampère con cable grueso, solenoide y toroide, materiales magnéticos). U8 Inducción (Faraday, Lenz, fem de movimiento y generadores, inductancia propia y mutua, RL). $k$ se define como $1/(4\pi\varepsilon_0)$ exacto, para que las fórmulas con $k$ y con $\varepsilon_0$ den lo mismo.
+- **Hechas:** U1 Carga y campo eléctrico (Coulomb, campo, distribuciones continuas, Gauss, conductores) U2 Potencial eléctrico (energía potencial, potencial, gradiente, equipotenciales) y U3 Capacitancia y dieléctricos (placas, esférico y cilíndrico, serie y paralelo, energía, dieléctricos con la batería conectada o no). U4 Corriente, resistencia y fem (deriva, resistividad y temperatura, fem y resistencia interna, potencia y máxima transferencia). U5 Circuitos de CC (serie y paralelo, Kirchhoff, RC, amperímetros y voltímetros). U6 Campo magnético (fuerza de Lorentz, ciclotrón, selector y espectrómetro, fuerza sobre cables, torque sobre espiras, efecto Hall). U7 Fuentes de campo magnético (Biot-Savart, cables paralelos, Ampère con cable grueso, solenoide y toroide, materiales magnéticos). U8 Inducción (Faraday, Lenz, fem de movimiento y generadores, inductancia propia y mutua, RL). U9 Corriente alterna (valores eficaces, reactancias y fasores, RLC, resonancia, potencia y transformador). $k$ se define como $1/(4\pi\varepsilon_0)$ exacto, para que las fórmulas con $k$ y con $\varepsilon_0$ den lo mismo.
 - **Verificación independiente:**
   - las fuerzas, como $-dU/dx$, y el campo, como $-\nabla V$, con derivadas numéricas;
   - el campo de varillas, anillos, discos y esferas, integrando Coulomb numéricamente (en la esfera, cáscara por cáscara, con el ángulo reparametrizado para resolver el pico cerca de la carga);
@@ -100,9 +100,10 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - las órbitas en un campo magnético, integrando la fuerza de Lorentz con RK4 hasta el cuarto de vuelta; el selector, simulando el desvío; las fuerzas y torques, sumando $I\,d\vec l\times\vec B$ y $\vec r\times\vec F$ lado por lado.
   - Biot-Savart vectorial numérico sobre cada curva; el toroide, sumando una por una las $N$ espiras; el cable grueso, sumando hilos finos en una grilla polar.
   - las fem inducidas, derivando numéricamente el flujo (con Richardson); la barra que frena, con RK4; la inductancia, integrando la densidad de energía $B^2/2\mu_0$; Lenz, con el signo de $-d\Phi/dt$.
+  - la alterna: valores eficaces promediando $v^2$ numéricamente; las reactancias derivando o integrando la tensión; el RLC simulado en el tiempo (RK4) hasta el régimen, midiendo amplitud, potencia media y desfase; la resonancia y el factor $Q$, buscando el máximo y los puntos de media potencia.
 - **Notación científica en las respuestas:** el campo de respuesta acepta `1,6e-19`, `1,6E-19` y `1,6×10^-19`, y hay una tecla «×10^». La vista previa y la respuesta correcta se muestran en notación científica cuando el número es muy chico o muy grande. «2e» sola sigue siendo 2·e, y «2e-1» es 2e − 1 (para no romper Cálculo).
 - **Test nuevo:** avisa si queda un comando de TeX o una coma `{,}` fuera de `$…$`, y ahora también se valida con KaTeX el texto de las figuras (antes no se chequeaba).
-- **Faltan:** U9 Corriente alterna; después, las figuras y los parciales.
+- **Faltan:** las figuras interactivas y los parciales simulados.
 
 ## Pizarra (tablets con lápiz)
 
@@ -213,7 +214,7 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **F102A Física General II A** (programa 2026, Ruben Santos, 2.º semestre, id `1BxA2eBt5T1-dD9DsLp7OTR9daGUVkvwi`).
+1. **F102A:** figuras interactivas y parciales simulados (desde Apunteca).
 2. **3.º y 4.º año.**
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.

@@ -22,10 +22,10 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. F102A Física General II A (programa 2026).
+1. F102A: figuras y parciales simulados (el contenido de las 9 unidades ya está).
 2. 3.º y 4.º año.
 
-Las evaluaciones de las siete materias completas ya están hechas.
+Las evaluaciones de las otras siete materias completas ya están hechas.
 
 ## Estructura
 
@@ -42,7 +42,7 @@ Las evaluaciones de las siete materias completas ya están hechas.
 | `PROGRESO.md` | Bitácora del proyecto. |
 | `firestore.rules`, `firebase.json`, `.firebaserc` | Reglas de Firestore (proyecto `efecen-46bfd`). |
 
-Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica y M105 Probabilidad y Estadística.
+Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística y F102A Física General II A.
 
 ## Cómo se arma una materia
 

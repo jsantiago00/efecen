@@ -1818,3 +1818,260 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 9 · CORRIENTE ALTERNA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dec = v => String(v).replace(".", "{,}");
+  // valor medio de f en un período (Simpson)
+  const mean = (f, Tp, n = 2000) => F.simpson(f, 0, Tp, n) / Tp;
+  // RLC serie con v = V·sen(ωt): se integra L di/dt = v − Ri − q/C con RK4 hasta pasar el transitorio, y se mide el último período
+  const rlcSim = (V, w, Rr, L, C) => {
+    // el transitorio decae con la raíz más lenta de Ls² + Rs + 1/C (si es sobreamortiguado, puede ser mucho más lenta que 2L/R)
+    const a = Rr / (2 * L), b = 1 / (L * C), slow = a * a > b ? a - Math.sqrt(a * a - b) : a;
+    const Tp = 2 * Math.PI / w, nT = Math.max(6, Math.ceil(14 / slow / Tp)), M = 400, h = Tp / M;
+    const f = (t, y) => [y[1], (V * Math.sin(w * t) - Rr * y[1] - y[0] / C) / L];
+    let y = [0, 0], t = 0, imax = 0, P = 0, i0 = 0;
+    for (let k = 0; k < nT * M; k++) {
+      const last = k >= (nT - 1) * M;
+      if (last) { if (k === (nT - 1) * M) i0 = y[1]; imax = Math.max(imax, Math.abs(y[1])); P += V * Math.sin(w * t) * y[1] / M; }
+      const k1 = f(t, y), k2 = f(t + h / 2, y.map((v, j) => v + h / 2 * k1[j])), k3 = f(t + h / 2, y.map((v, j) => v + h / 2 * k2[j])), k4 = f(t + h, y.map((v, j) => v + h * k3[j]));
+      y = y.map((v, j) => v + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j])); t += h;
+    }
+    // i = I·sen(ωt − φ): en el comienzo de un período, i = −I·sen φ; y P = ½VI cos φ
+    return { I: imax, P, phi: Math.atan2(-i0 / imax, 2 * P / (V * imax)) };
+  };
+
+  T["f2a-eficaz-num"] = {
+    type: "numeric", concepts: ["f2a-alterna"], difficulty: 2,
+    generate(r) {
+      const Vp = r.int(1, 40) * 10, f = r.pick([50, 60, 100, 400]), Rr = r.int(1, 20) * 10, wave = r.pick(["seno", "seno", "cuadrada", "triangular", "media onda"]), ask = r.pick(["rms", "P"]);
+      const k = { seno: Math.SQRT1_2, cuadrada: 1, triangular: 1 / Math.sqrt(3), "media onda": 0.5 }[wave], Vr = Vp * k, ans = ask === "rms" ? Vr : Vr * Vr / Rr;
+      const Tp = 1 / f, wf = { seno: t => Vp * Math.sin(2 * Math.PI * f * t), cuadrada: t => (t % Tp < Tp / 2 ? Vp : -Vp), triangular: t => { const u = (t % Tp) / Tp; return Vp * (u < 0.25 ? 4 * u : u < 0.75 ? 2 - 4 * u : 4 * u - 4); }, "media onda": t => Math.max(0, Vp * Math.sin(2 * Math.PI * f * t)) }[wave];
+      const nm = { seno: "senoidal", cuadrada: "cuadrada (que vale $+V_p$ medio período y $-V_p$ el otro)", triangular: "triangular simétrica", "media onda": "senoidal rectificada de media onda (se anula la mitad negativa)" }[wave];
+      return {
+        prompt: `Una tensión ${nm} de amplitud $${Vp}$ V y $${f}$ Hz ${ask === "rms" ? "se aplica a un circuito. ¿Cuál es su valor eficaz (en V)?" : `se aplica a una resistencia de $${Rr}\\ \\Omega$. ¿Qué potencia media se disipa (en W)?`}`,
+        answer: ans,
+        solution: [`El [[f2a-ca|valor eficaz]] es la raíz del valor medio del cuadrado: $V_{ef} = \\sqrt{\\overline{v^2}}$.`,
+          { seno: `Para una senoidal, $\\overline{\\sin^2} = \\frac12$: $V_{ef} = \\frac{V_p}{\\sqrt2} \\approx ${nf(Vr)}$ V.`, cuadrada: `El cuadrado vale siempre $V_p^2$: $V_{ef} = V_p = ${Vp}$ V.`, triangular: `Para una rampa, $\\overline{u^2} = \\frac13$: $V_{ef} = \\frac{V_p}{\\sqrt3} \\approx ${nf(Vr)}$ V.`, "media onda": `El cuadrado es el de la senoidal la mitad del tiempo y cero la otra mitad: $\\overline{v^2} = \\frac{V_p^2}{4}$ y $V_{ef} = \\frac{V_p}{2} = ${nf(Vr)}$ V.` }[wave],
+          ...(ask === "P" ? [`[[f2a-potencia-ca|Potencia media]]: $P = \\frac{V_{ef}^2}{R} \\approx ${nf(ans)}$ W.`] : [])],
+        // otro camino: promedio numérico de v² (y de v²/R) en un período
+        verify: { kind: "value", tol: 1e-5, fn: () => { const m2 = mean(t => wf(t) ** 2, Tp, 4000); return ask === "rms" ? Math.sqrt(m2) : m2 / Rr; } }
+      };
+    }
+  };
+
+  T["f2a-reactancia-num"] = {
+    type: "numeric", concepts: ["f2a-alterna"], difficulty: 2,
+    generate(r) {
+      const ind = r.bool(), Vr = r.pick([12, 24, 110, 220]), f = r.pick([50, 60, 100, 500, 1000]), L = r.int(1, 50) * 10, C = r.int(1, 50), ask = r.pick(["X", "I"]);
+      const w = 2 * Math.PI * f, X = ind ? w * L / 1000 : 1 / (w * C * 1e-6), Ir = Vr / X;
+      const ans = ask === "X" ? X : Ir * 1000;
+      return {
+        prompt: `${ind ? `Una bobina ideal de $${L}$ mH` : `Un capacitor de $${C}$ μF`} se conecta a una fuente alterna de $${Vr}$ V eficaces y $${f}$ Hz. ${ask === "X" ? "¿Cuál es su reactancia (en Ω)?" : "¿Qué corriente eficaz circula (en mA)?"}`,
+        answer: ans,
+        solution: [ind ? `[[f2a-reactancia|Reactancia inductiva]]: $X_L = \\omega L = 2\\pi\\cdot${f}\\cdot${nf(L / 1000)} \\approx ${nf(X)}\\ \\Omega$.` : `[[f2a-reactancia|Reactancia capacitiva]]: $X_C = \\frac1{\\omega C} = \\frac{1}{2\\pi\\cdot${f}\\cdot${nf(C * 1e-6)}} \\approx ${nf(X)}\\ \\Omega$.`,
+          ...(ask === "I" ? [`$I_{ef} = \\frac{V_{ef}}{X} \\approx ${nf(ans)}$ mA, ${ind ? "atrasada" : "adelantada"} $90°$ respecto de la tensión.`] : [])],
+        // otro camino: con v = V√2·sen ωt, la corriente es C·dv/dt (derivada numérica) o (1/L)∫v dt (Simpson), y se mide su amplitud
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const Vp = Vr * Math.SQRT2, v = t => Vp * Math.sin(w * t), Tp = 2 * Math.PI / w;
+          const amp = ind ? Math.abs(F.simpson(v, 0, Tp / 2, 2000)) / (L / 1000) / 2 : (C * 1e-6) * Math.abs(v(1e-9 * Tp) - v(-1e-9 * Tp)) / (2e-9 * Tp);
+          const Ief = amp / Math.SQRT2;
+          return ask === "X" ? Vr / Ief : Ief * 1000;
+        } }
+      };
+    }
+  };
+
+  T["f2a-rlc-num"] = {
+    type: "numeric", concepts: ["f2a-rlc"], difficulty: 3,
+    generate(r) {
+      const Rr = r.int(1, 10) * 10, L = r.int(1, 50) * 10, C = r.int(1, 50), Vr = r.pick([12, 24, 50, 110, 220]), f = r.pick([50, 60, 100, 200, 500]), ask = r.pick(["Z", "I", "phi", "P", "VL"]);
+      const w = 2 * Math.PI * f, XL = w * L / 1000, XC = 1 / (w * C * 1e-6), Z = Math.hypot(Rr, XL - XC), I = Vr / Z, phi = Math.atan((XL - XC) / Rr);
+      const ans = { Z, I, phi: phi * 180 / Math.PI, P: I * I * Rr, VL: I * XL }[ask];
+      return {
+        prompt: `Un circuito RLC serie con $R = ${Rr}\\ \\Omega$, $L = ${L}$ mH y $C = ${C}$ μF se conecta a una fuente de $${Vr}$ V eficaces y $${f}$ Hz. ${{ Z: "¿Cuál es su impedancia (en Ω)?", I: "¿Qué corriente eficaz circula (en A)?", phi: "¿Cuál es el ángulo de fase $\\phi$ de la tensión respecto de la corriente (en grados, positivo si la corriente atrasa)?", P: "¿Qué potencia media consume (en W)?", VL: "¿Cuál es la tensión eficaz sobre la bobina (en V)?" }[ask]}`,
+        answer: ans,
+        solution: [`Reactancias: $X_L = \\omega L \\approx ${nf(XL)}\\ \\Omega$ y $X_C = \\frac1{\\omega C} \\approx ${nf(XC)}\\ \\Omega$.`,
+          `[[f2a-rlc|Impedancia]]: $Z = \\sqrt{R^2 + (X_L - X_C)^2} \\approx ${nf(Z)}\\ \\Omega$; $I_{ef} = \\frac{V_{ef}}{Z} \\approx ${nf(I)}$ A y $\\tan\\phi = \\frac{X_L - X_C}{R}$, $\\phi \\approx ${nf(phi * 180 / Math.PI)}°$ (${XL > XC ? "inductivo: la corriente atrasa" : "capacitivo: la corriente adelanta"}).`,
+          { Z: `Listo: $Z \\approx ${nf(Z)}\\ \\Omega$.`, I: `Listo: $I_{ef} \\approx ${nf(I)}$ A.`, phi: `Listo: $\\phi \\approx ${nf(ans)}°$.`, P: `[[f2a-potencia-ca|Potencia media]]: solo disipa la resistencia, $P = I_{ef}^2R = V_{ef}I_{ef}\\cos\\phi \\approx ${nf(ans)}$ W.`, VL: `$V_L = I_{ef}X_L \\approx ${nf(ans)}$ V (puede ser mayor que la de la fuente: las tensiones de $L$ y $C$ se restan).` }[ask]],
+        // otro camino: simulación del circuito en el tiempo (RK4) hasta el régimen, midiendo amplitud, potencia media y desfase
+        verify: { kind: "value", tol: 2e-3, fn: () => { const s = rlcSim(Vr * Math.SQRT2, w, Rr, L / 1000, C * 1e-6), Ie = s.I / Math.SQRT2; return { Z: Vr / Ie, I: Ie, phi: s.phi * 180 / Math.PI, P: s.P, VL: Ie * w * L / 1000 }[ask]; } }
+      };
+    }
+  };
+  T["f2a-rlc-num"].testN = 60;
+
+  T["f2a-resonancia-num"] = {
+    type: "numeric", concepts: ["f2a-rlc"], difficulty: 3,
+    generate(r) {
+      const Rr = r.int(1, 20) * 5, L = r.int(1, 50) * 10, C = r.int(1, 100) / 10, Vr = r.pick([5, 10, 12, 24]), ask = r.pick(["f0", "I0", "Q"]);
+      const Lh = L / 1000, Cf = C * 1e-6, w0 = 1 / Math.sqrt(Lh * Cf), Q = w0 * Lh / Rr;
+      const ans = { f0: w0 / (2 * Math.PI), I0: Vr / Rr, Q }[ask];
+      return {
+        prompt: `Un circuito RLC serie tiene $R = ${Rr}\\ \\Omega$, $L = ${L}$ mH y $C = ${dec(C)}$ μF, y se alimenta con $${Vr}$ V eficaces de frecuencia variable. ${{ f0: "¿A qué frecuencia la corriente es máxima (en Hz)?", I0: "¿Cuál es esa corriente eficaz máxima (en A)?", Q: "¿Cuál es su factor de calidad $Q = \\frac{\\omega_0L}{R}$?" }[ask]}`,
+        answer: ans,
+        solution: [`[[f2a-resonancia|Resonancia]]: la impedancia $\\sqrt{R^2 + (\\omega L - \\frac1{\\omega C})^2}$ es mínima cuando las reactancias se cancelan, $\\omega_0 = \\frac1{\\sqrt{LC}} \\approx ${nf(w0)}$ rad/s, o sea $f_0 \\approx ${nf(w0 / (2 * Math.PI))}$ Hz.`,
+          { f0: `Listo: $f_0 \\approx ${nf(ans)}$ Hz.`, I0: `Ahí $Z = R$ y $I_{ef} = \\frac{V_{ef}}{R} \\approx ${nf(ans)}$ A.`, Q: `$Q = \\frac{\\omega_0L}{R} \\approx ${nf(Q)}$: cuanto más grande, más angosto el pico (el ancho a media potencia es $\\frac{\\omega_0}{Q}$).` }[ask]],
+        // otro camino: máximo numérico de la corriente (sección áurea, con aritmética compleja) y Q como ω₀/Δω entre los puntos de media potencia
+        verify: { kind: "value", tol: 1e-5, fn: () => {
+          const Iw = x => Vr / Math.hypot(Rr, x * Lh - 1 / (x * Cf)), lo = 1, hi = 1e6;
+          const lw = F.golden(u => -Iw(Math.exp(u)), Math.log(lo), Math.log(hi)), wm = Math.exp(lw), Im = Iw(wm);
+          if (ask === "f0") return wm / (2 * Math.PI);
+          if (ask === "I0") return Im;
+          const half = (a, b) => { const up = Iw(a) < Iw(b); for (let i = 0; i < 200; i++) { const m = (a + b) / 2; if ((Iw(m) ** 2 < Im * Im / 2) === up) a = m; else b = m; } return (a + b) / 2; };
+          return wm / (half(wm, hi) - half(lo, wm));
+        } }
+      };
+    }
+  };
+
+  T["f2a-transformador-num"] = {
+    type: "numeric", concepts: ["f2a-rlc"], difficulty: 2,
+    generate(r) {
+      const N1 = r.int(1, 20) * 100, N2 = r.int(1, 40) * 10, V1 = r.pick([220, 380, 110, 13200]), Rc = r.int(1, 50) * 2, ask = r.pick(["V2", "I2", "I1"]);
+      const V2 = V1 * N2 / N1, I2 = V2 / Rc, I1 = I2 * N2 / N1, ans = { V2, I2, I1: I1 * 1000 }[ask];
+      if (V2 > 5000 || V2 < 1) return null;
+      return {
+        prompt: `Un transformador ideal tiene $${N1}$ vueltas en el primario y $${N2}$ en el secundario. El primario se conecta a $${V1}$ V eficaces, y el secundario alimenta una resistencia de $${Rc}\\ \\Omega$. ${{ V2: "¿Qué tensión eficaz hay en el secundario (en V)?", I2: "¿Qué corriente eficaz circula por el secundario (en A)?", I1: "¿Qué corriente eficaz toma el primario (en mA)?" }[ask]}`,
+        answer: ans,
+        solution: [`[[f2a-transformador|Transformador ideal]]: el mismo flujo atraviesa las dos bobinas, así que $\\frac{V_2}{V_1} = \\frac{N_2}{N_1}$: $V_2 = ${nf(V2)}$ V.`,
+          ...(ask !== "V2" ? [`$I_2 = \\frac{V_2}{R} \\approx ${nf(I2)}$ A.`] : []),
+          ...(ask === "I1" ? [`Sin pérdidas, $V_1I_1 = V_2I_2$: $I_1 = I_2\\frac{N_2}{N_1} \\approx ${nf(I1)}$ A $\\approx ${nf(I1 * 1000)}$ mA.`] : [])],
+        // otro camino: con la respuesta, la fem por vuelta tiene que ser la misma en las dos bobinas y la potencia tiene que conservarse
+        verify: { kind: "zero", fn: x => {
+          if (ask === "V2") return (x / N2 - V1 / N1) / (V1 / N1);
+          const v2 = V1 / N1 * N2;
+          if (ask === "I2") return (x * Rc - v2) / v2;
+          return (V1 * x / 1000 - v2 * v2 / Rc) / (v2 * v2 / Rc);
+        } }
+      };
+    }
+  };
+
+  T["f2a-fase-mc"] = {
+    type: "mc", concepts: ["f2a-alterna"], difficulty: 2,
+    generate(r) {
+      const el = r.pick([{ n: "una resistencia", k: "R" }, { n: "una bobina ideal", k: "L" }, { n: "un capacitor", k: "C" }, { n: "un circuito RLC serie con $X_L > X_C$", k: "RLind" }, { n: "un circuito RLC serie con $X_L < X_C$", k: "RLcap" }, { n: "un circuito RLC serie en resonancia", k: "R0" }]);
+      const lab = { R: "En fase con la tensión", R0: "En fase con la tensión", L: "Atrasada 90° respecto de la tensión", C: "Adelantada 90° respecto de la tensión", RLind: "Atrasada un ángulo entre 0° y 90°", RLcap: "Adelantada un ángulo entre 0° y 90°" };
+      const correct = lab[el.k], all = ["En fase con la tensión", "Atrasada 90° respecto de la tensión", "Adelantada 90° respecto de la tensión", "Atrasada un ángulo entre 0° y 90°", "Adelantada un ángulo entre 0° y 90°"];
+      return {
+        prompt: `Se aplica una tensión senoidal a ${el.n}. ¿Cómo es la corriente?`,
+        ...H.mc(r, correct, r.shuffle(all.filter(o => o !== correct)), { text: true }),
+        solution: [`[[f2a-reactancia|Fasores]]: en una resistencia, $v$ e $i$ están en fase; en una bobina, $v = L\\frac{di}{dt}$ y la corriente atrasa $90°$; en un capacitor, $i = C\\frac{dv}{dt}$ y la corriente adelanta $90°$. En un [[f2a-rlc|RLC]], el ángulo es $\\arctan\\frac{X_L - X_C}{R}$.`],
+        // verificación: desfase medido numéricamente (corriente simulada o derivada/integral numérica de la tensión)
+        verify: { kind: "truth", target: true, fn: () => {
+          const w = 2 * Math.PI * 50; let phi;
+          if (el.k === "R") phi = 0;
+          else if (el.k === "L") { const i = t => F.simpson(s => Math.sin(w * s), 0, t, 200) - 1 / w; phi = Math.atan2(-i(0), i(Math.PI / (2 * w))); }
+          else if (el.k === "C") { const i = t => (Math.sin(w * (t + 1e-7)) - Math.sin(w * (t - 1e-7))) / 2e-7; phi = Math.atan2(-i(0), i(Math.PI / (2 * w))); }
+          else { const L = 0.1, C = el.k === "R0" ? 1 / (w * w * L) : el.k === "RLind" ? 1e-3 : 1e-5; phi = rlcSim(1, w, 20, L, C).phi; }
+          const d = phi * 180 / Math.PI, got = Math.abs(d) < 0.5 ? "En fase con la tensión" : Math.abs(Math.abs(d) - 90) < 0.5 ? (d > 0 ? lab.L : lab.C) : d > 0 ? lab.RLind : lab.RLcap;
+          return got === correct;
+        } }
+      };
+    }
+  };
+  T["f2a-fase-mc"].testN = 60;
+
+  const cards = {
+    "f2a-ca": {
+      title: "Corriente alterna y valores eficaces", aliases: ["corriente alterna", "valor eficaz", "valor rms", "tensión eficaz"], concepts: ["f2a-alterna"],
+      summary: "v = V_p sen ωt, con ω = 2πf. El valor eficaz es √(promedio de v²): para una senoidal, V_p/√2. Los 220 V de la red son eficaces (picos de 311 V).",
+      def: [R`**Tensión alterna senoidal:** $v(t) = V_p\sin\omega t$, con amplitud $V_p$, frecuencia $f$ y $\omega = 2\pi f$ (en la Argentina, $f = 50$ Hz).`,
+        R`**Valor eficaz (rms):** $V_{ef} = \sqrt{\overline{v^2}}$, el valor de una tensión continua que disiparía la misma potencia media en una resistencia. Para una senoidal, $V_{ef} = \frac{V_p}{\sqrt2}$; para una cuadrada, $V_p$; para una triangular, $\frac{V_p}{\sqrt3}$.`],
+      idea: [R`Una corriente que va y viene tiene promedio cero, pero calienta igual: lo que importa para la potencia es el cuadrado. El valor eficaz es la «corriente continua equivalente».`],
+      demo: [R`**Paso 1.** En una resistencia, $p(t) = \frac{v^2}{R}$, y la potencia media es $\frac{\overline{v^2}}{R}$. Para que una tensión continua $V_{ef}$ dé lo mismo, $V_{ef}^2 = \overline{v^2}$.`,
+        R`**Paso 2 (senoidal).** Por la identidad $\sin^2x = \frac{1 - \cos2x}{2}$, el promedio de $\sin^2\omega t$ en un período es $\frac12$ (el coseno promedia cero).`,
+        R`**Paso 3.** Entonces $\overline{v^2} = \frac{V_p^2}{2}$ y $V_{ef} = \frac{V_p}{\sqrt2}$. $\blacksquare$`],
+      examples: [{ q: R`La red de $220$ V.`, steps: [R`$V_p = 220\sqrt2 \approx 311$ V: la tensión oscila entre $-311$ y $311$ V, $50$ veces por segundo.`] }],
+      tips: [R`Salvo que se diga otra cosa, los voltímetros y amperímetros de alterna miden valores eficaces.`],
+      see: ["f2a-reactancia", "f2a-potencia-ca", "f2a-fem-movimiento"]
+    },
+    "f2a-reactancia": {
+      title: "Resistencia, bobina y capacitor en alterna", aliases: ["reactancia inductiva", "reactancia capacitiva", "reactancia", "fasores"], concepts: ["f2a-alterna"],
+      summary: "R: V = IR, en fase. Bobina: V = IX_L con X_L = ωL, la corriente atrasa 90°. Capacitor: V = IX_C con X_C = 1/(ωC), la corriente adelanta 90°.",
+      def: [R`**Resistencia:** $V = IR$ (amplitudes o eficaces), con $v$ e $i$ en fase.`,
+        R`**Bobina:** $V = IX_L$, con **reactancia inductiva** $X_L = \omega L$; la corriente atrasa $90°$ respecto de la tensión. **Capacitor:** $V = IX_C$, con **reactancia capacitiva** $X_C = \frac1{\omega C}$; la corriente adelanta $90°$.`,
+        R`**Fasores:** cada magnitud senoidal se representa con un vector que gira con velocidad angular $\omega$; su proyección es el valor instantáneo. Sumar tensiones en serie es sumar fasores.`],
+      idea: [R`A frecuencias altas, la bobina se opone mucho (la corriente tiene que cambiar muy rápido) y el capacitor casi nada (no llega a cargarse). A frecuencias bajas pasa al revés: en continua, la bobina es un cable y el capacitor, un circuito abierto.`],
+      demo: [R`**Paso 1 (bobina).** Con $i = I\sin\omega t$, la tensión es $v = L\frac{di}{dt} = \omega LI\cos\omega t = \omega LI\sin(\omega t + 90°)$: amplitud $\omega LI$ y la tensión adelanta $90°$ (la corriente atrasa).`,
+        R`**Paso 2 (capacitor).** Con $v = V\sin\omega t$, la carga es $q = Cv$ y $i = \frac{dq}{dt} = \omega CV\cos\omega t$: amplitud $\omega CV$, es decir $V = \frac{I}{\omega C}$, y la corriente adelanta $90°$. $\blacksquare$`],
+      examples: [{ q: R`Capacitor de $10$ μF a $50$ Hz.`, steps: [R`$X_C = \frac{1}{2\pi\cdot50\cdot10^{-5}} \approx 318\ \Omega$.`] }],
+      tips: [R`Regla para recordar: en la bobina (L) la tensión va primero, «ELI»; en el capacitor (C) la corriente va primero, «ICE».`],
+      see: ["f2a-ca", "f2a-rlc", "f2a-inductancia", "f2a-capacitancia"]
+    },
+    "f2a-rlc": {
+      title: "Circuito RLC serie e impedancia", aliases: ["circuito RLC", "impedancia", "ángulo de fase"], concepts: ["f2a-rlc"],
+      summary: "Z = √(R² + (X_L − X_C)²), I = V/Z y tan φ = (X_L − X_C)/R. Si X_L > X_C el circuito es inductivo (la corriente atrasa); si X_L < X_C, capacitivo.",
+      def: [R`**Impedancia** del RLC serie: $Z = \sqrt{R^2 + (X_L - X_C)^2}$, y $V = IZ$ (amplitudes o eficaces).`,
+        R`**Ángulo de fase** de la tensión respecto de la corriente: $\tan\phi = \frac{X_L - X_C}{R}$. Positivo: inductivo, la corriente atrasa. Negativo: capacitivo, la corriente adelanta.`,
+        R`Las tensiones sobre $R$, $L$ y $C$ no se suman como números: $V_L$ y $V_C$ están en oposición, y cada una puede ser mayor que la de la fuente.`],
+      idea: [R`La bobina y el capacitor tiran la fase para lados opuestos y se compensan en parte. Lo que queda de esa diferencia, $X_L - X_C$, se combina «en ángulo recto» con la resistencia, como los catetos de un triángulo.`],
+      demo: [R`**Paso 1.** En serie la corriente es común: $i = I\sin\omega t$. Las tensiones son $v_R = IR\sin\omega t$, $v_L = IX_L\sin(\omega t + 90°)$ y $v_C = IX_C\sin(\omega t - 90°)$ ([[f2a-reactancia]]).`,
+        R`**Paso 2.** En el diagrama de fasores, $V_R$ va sobre el eje de la corriente y $V_L$, $V_C$ sobre la perpendicular, en sentidos opuestos: su suma es $I(X_L - X_C)$ en esa dirección.`,
+        R`**Paso 3.** La tensión total es la suma vectorial de dos fasores perpendiculares, $IR$ e $I(X_L - X_C)$: por Pitágoras, $V = I\sqrt{R^2 + (X_L - X_C)^2} = IZ$, y el ángulo cumple $\tan\phi = \frac{X_L - X_C}{R}$. $\blacksquare$`],
+      examples: [{ q: R`$R = 40\ \Omega$, $X_L = 80\ \Omega$, $X_C = 50\ \Omega$, $100$ V.`, steps: [R`$Z = 50\ \Omega$, $I = 2$ A y $\phi = \arctan0{,}75 \approx 36{,}9°$ (inductivo).`] }],
+      tips: [R`Con números complejos es más rápido: $Z = R + j(X_L - X_C)$, y la impedancia y la fase son el módulo y el argumento.`],
+      see: ["f2a-reactancia", "f2a-resonancia", "f2a-potencia-ca"]
+    },
+    "f2a-resonancia": {
+      title: "Resonancia en un circuito RLC", aliases: ["resonancia eléctrica", "frecuencia de resonancia", "factor de calidad"], concepts: ["f2a-rlc"],
+      summary: "La corriente es máxima cuando X_L = X_C, en ω₀ = 1/√(LC). Ahí Z = R y la corriente está en fase. El factor de calidad Q = ω₀L/R mide lo agudo del pico.",
+      def: [R`**Resonancia:** en $\omega_0 = \frac{1}{\sqrt{LC}}$ las reactancias se igualan, $Z = R$ es mínima, la corriente es máxima ($\frac VR$) y está en fase con la tensión.`,
+        R`**Factor de calidad:** $Q = \frac{\omega_0L}{R}$. El ancho del pico de potencia, entre las frecuencias donde la potencia cae a la mitad, es $\Delta\omega = \frac{\omega_0}{Q} = \frac RL$.`],
+      idea: [R`Es el mismo fenómeno que un [[f1-amortiguadas|oscilador forzado]]: el circuito LC oscila solo con frecuencia $\omega_0$, y si se lo excita justo a esa frecuencia, responde con todo. Así se sintoniza una radio: se varía $C$ hasta que $\omega_0$ coincida con la de la emisora.`],
+      demo: [R`**Paso 1.** $I = \frac{V}{\sqrt{R^2 + (\omega L - \frac1{\omega C})^2}}$ es máxima cuando el denominador es mínimo, y como $R^2$ no depende de $\omega$, cuando $\omega L - \frac1{\omega C} = 0$.`,
+        R`**Paso 2.** Despejando, $\omega^2 = \frac1{LC}$, o sea $\omega_0 = \frac1{\sqrt{LC}}$. Ahí $Z = R$ y $\tan\phi = 0$.`,
+        R`**Paso 3 (ancho).** La potencia cae a la mitad cuando $(\omega L - \frac1{\omega C})^2 = R^2$. Las dos soluciones positivas cumplen $\omega L - \frac{1}{\omega C} = \pm R$; restándolas y usando que su producto es $\omega_0^2$, sale $\omega_2 - \omega_1 = \frac RL = \frac{\omega_0}{Q}$. $\blacksquare$`],
+      examples: [{ q: R`$L = 100$ mH, $C = 10$ μF, $R = 10\ \Omega$.`, steps: [R`$\omega_0 = 1000$ rad/s ($f_0 \approx 159$ Hz) y $Q = \frac{1000\cdot0{,}1}{10} = 10$.`] }],
+      tips: [R`En resonancia, $V_L = V_C = QV$: con $Q$ grande, sobre la bobina y el capacitor puede haber tensiones mucho mayores que la de la fuente.`],
+      see: ["f2a-rlc", "f1-amortiguadas", "f2a-potencia-ca"]
+    },
+    "f2a-potencia-ca": {
+      title: "Potencia en corriente alterna", aliases: ["factor de potencia", "potencia activa", "potencia en alterna"], concepts: ["f2a-rlc"],
+      summary: "P = V_ef I_ef cos φ = I_ef² R. Solo las resistencias consumen energía en promedio: bobinas y capacitores la toman y la devuelven. cos φ es el factor de potencia.",
+      def: [R`**Potencia media:** $P = V_{ef}I_{ef}\cos\phi$, con $\cos\phi$ el **factor de potencia**. En un RLC serie, $P = I_{ef}^2R$: la bobina y el capacitor, en promedio, no consumen.`,
+        R`Una carga con factor de potencia bajo necesita más corriente para la misma potencia, y eso aumenta las pérdidas en los cables; por eso las industrias lo corrigen con capacitores.`],
+      idea: [R`En una bobina o un capacitor, la energía entra durante un cuarto de ciclo y sale en el siguiente: va y viene sin quedarse. Solo la componente de la corriente en fase con la tensión hace trabajo neto.`],
+      demo: [R`**Paso 1.** Con $v = V_p\sin\omega t$ e $i = I_p\sin(\omega t - \phi)$, la potencia instantánea es $p = V_pI_p\sin\omega t\sin(\omega t - \phi)$.`,
+        R`**Paso 2.** Por la identidad $\sin a\sin b = \frac12[\cos(a - b) - \cos(a + b)]$: $p = \frac{V_pI_p}{2}[\cos\phi - \cos(2\omega t - \phi)]$.`,
+        R`**Paso 3.** El segundo término promedia cero en un período: $P = \frac{V_pI_p}{2}\cos\phi = V_{ef}I_{ef}\cos\phi$. En el RLC, $\cos\phi = \frac RZ$ y $V_{ef} = I_{ef}Z$, así que $P = I_{ef}^2R$. $\blacksquare$`],
+      examples: [{ q: R`$220$ V, $5$ A y $\cos\phi = 0{,}8$.`, steps: [R`$P = 220\cdot5\cdot0{,}8 = 880$ W.`] }],
+      tips: [R`$V_{ef}I_{ef}$ (sin el coseno) se llama potencia aparente y se mide en VA, no en W.`],
+      see: ["f2a-rlc", "f2a-ca", "f2a-potencia-electrica"]
+    },
+    "f2a-transformador": {
+      title: "Transformador", aliases: ["transformador", "relación de transformación"], concepts: ["f2a-rlc"],
+      summary: "Dos bobinas en un mismo núcleo: V₂/V₁ = N₂/N₁. Si es ideal, la potencia se conserva: V₁I₁ = V₂I₂, así que las corrientes van al revés: I₂/I₁ = N₁/N₂.",
+      def: [R`**Transformador ideal:** dos bobinas de $N_1$ y $N_2$ vueltas en un núcleo de hierro que conduce todo el flujo, sin pérdidas. $\frac{V_2}{V_1} = \frac{N_2}{N_1}$ y $\frac{I_2}{I_1} = \frac{N_1}{N_2}$.`,
+        R`Solo funciona con corriente alterna: con continua el flujo no cambia y no hay fem inducida. Se usa para elevar la tensión antes del transporte (menos corriente, menos pérdidas $I^2R$ en las líneas) y bajarla para el consumo.`],
+      idea: [R`El flujo variable es el mismo en las dos bobinas, así que la fem por vuelta también: cada bobina tiene una tensión proporcional a sus vueltas. Lo que se gana en tensión se pierde en corriente.`],
+      demo: [R`**Paso 1.** El núcleo hace que el flujo $\Phi$ por cada vuelta sea el mismo en las dos bobinas. Por la [[f2a-faraday|ley de Faraday]], $v_1 = N_1\frac{d\Phi}{dt}$ y $v_2 = N_2\frac{d\Phi}{dt}$.`,
+        R`**Paso 2.** Dividiendo, $\frac{v_2}{v_1} = \frac{N_2}{N_1}$ en todo instante, y lo mismo para los valores eficaces.`,
+        R`**Paso 3.** Sin pérdidas, la potencia que entra es la que sale: $V_1I_1 = V_2I_2$, de donde $\frac{I_2}{I_1} = \frac{V_1}{V_2} = \frac{N_1}{N_2}$. $\blacksquare$`],
+      examples: [{ q: R`De $220$ V a $12$ V con $1100$ vueltas en el primario.`, steps: [R`$N_2 = 1100\cdot\frac{12}{220} = 60$ vueltas.`] }],
+      tips: [R`Desde el primario, una carga $R$ en el secundario «se ve» como $R\left(\frac{N_1}{N_2}\right)^2$: los transformadores también sirven para adaptar impedancias.`],
+      see: ["f2a-faraday", "f2a-inductancia", "f2a-potencia-ca"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-alterna": { name: "Corriente alterna" }, "f2a-rlc": { name: "Circuitos RLC" } },
+    templates: T,
+    units: [{
+      id: "f2a-alterna-u", order: 9, program: "Unidad 9", title: "Corriente alterna", icon: "volume-2",
+      diagnostic: ["f2a-eficaz-num", "f2a-reactancia-num", "f2a-rlc-num"],
+      lessons: [
+        { id: "f2a-alterna-l1", title: "Valores eficaces y reactancias", templates: ["f2a-eficaz-num", "f2a-reactancia-num", "f2a-fase-mc"], theory: ["f2a-ca", "f2a-reactancia"],
+          intro: R`$V_{ef} = \frac{V_p}{\sqrt2}$, $X_L = \omega L$ y $X_C = \frac1{\omega C}$.` },
+        { id: "f2a-alterna-l2", title: "RLC, resonancia y transformadores", templates: ["f2a-rlc-num", "f2a-resonancia-num", "f2a-transformador-num"], theory: ["f2a-rlc", "f2a-resonancia", "f2a-potencia-ca", "f2a-transformador"],
+          intro: R`$Z = \sqrt{R^2 + (X_L - X_C)^2}$, resonancia en $\omega_0 = \frac1{\sqrt{LC}}$ y $P = V_{ef}I_{ef}\cos\phi$.` }
+      ]
+    }],
+    cards
+  });
+})();
