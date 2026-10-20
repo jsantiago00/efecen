@@ -1127,3 +1127,248 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 6 · CAMPO MAGNÉTICO Y FUERZAS MAGNÉTICAS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dec = v => String(v).replace(".", "{,}");
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const U = 1.6605e-27;
+  // movimiento en un campo B uniforme según z (y opcionalmente E según y): estado [x, y, vx, vy]
+  const lorentz = (qm, B, Ey = 0) => (_, s) => [s[2], s[3], qm * s[3] * B, qm * (Ey - s[2] * B)];
+
+  T["f2a-ciclotron-num"] = {
+    type: "numeric", concepts: ["f2a-lorentz"], difficulty: 3,
+    generate(r) {
+      const kind = r.pick(["r", "T", "espectro"]), B = r.int(1, 20) / 10;
+      if (kind === "espectro") {
+        const A = r.pick([12, 14, 16, 20, 23, 35, 39, 40]), dV = r.int(1, 20) * 100, m = A * U, v = Math.sqrt(2 * F.qe * dV / m), rad = m * v / (F.qe * B);
+        return {
+          prompt: `En un espectrómetro de masas, un ion con carga $+e$ y masa $${A}$ u se acelera desde el reposo con $${dV}$ V y entra perpendicular a un campo magnético de $${dec(B)}$ T. ¿Cuál es el radio de su trayectoria (en cm)? ($e = 1{,}602\\times10^{-19}$ C, $1\\ \\text{u} = 1{,}6605\\times10^{-27}$ kg)`,
+          answer: rad * 100,
+          solution: [`La energía que gana al acelerarse da su rapidez: $\\frac12mv^2 = e\\,\\Delta V$, así que $v = \\sqrt{\\frac{2e\\Delta V}{m}} \\approx ${nf(v)}$ m/s.`,
+            `En el campo describe una circunferencia ([[f2a-movimiento-carga|movimiento de una carga en B]]) con $r = \\frac{mv}{eB} \\approx ${nf(rad)}$ m $\\approx ${nf(rad * 100)}$ cm. Iones más pesados describen círculos más grandes: así se separan.`],
+          // otro camino: se integra la fuerza de Lorentz con RK4 hasta el cuarto de vuelta (vx = 0), donde |y| = r
+          verify: { kind: "ode", f: lorentz(F.qe / m, B), y0: [0, 0, v, 0], t1: 0, until: (_, s) => s[2] <= 0, g: (_, s) => s[2], dt: 2 * Math.PI * m / (F.qe * B) / 8000, out: (_, s) => Math.abs(s[1]) * 100, tol: 1e-5 }
+        };
+      }
+      const p = r.pick([{ n: "un protón", q: F.qe, m: F.mp, mt: R`m_p = 1{,}673\times10^{-27}` }, { n: "un electrón", q: -F.qe, m: F.me, mt: R`m_e = 9{,}109\times10^{-31}` }]), v = r.int(1, 50) * 1e5;
+      const rad = p.m * v / (F.qe * B), Tp = 2 * Math.PI * p.m / (F.qe * B);
+      return {
+        prompt: `${p.n[0].toUpperCase() + p.n.slice(1)} entra con rapidez $${nf(v)}$ m/s perpendicular a un campo magnético uniforme de $${dec(B)}$ T. ${kind === "r" ? "¿Cuál es el radio de su trayectoria (en m)?" : "¿Cuánto tarda en dar una vuelta completa (en s)?"} ($e = 1{,}602\\times10^{-19}$ C, $${p.mt}$ kg)`,
+        answer: kind === "r" ? rad : Tp,
+        solution: [`La [[f2a-campo-magnetico|fuerza magnética]] es perpendicular a la velocidad: hace de fuerza centrípeta. $|q|vB = \\frac{mv^2}{r}$.`,
+          kind === "r" ? `$r = \\frac{mv}{|q|B} \\approx ${nf(rad)}$ m.` : `$T = \\frac{2\\pi r}{v} = \\frac{2\\pi m}{|q|B} \\approx ${nf(Tp)}$ s, que no depende de la rapidez (la base del ciclotrón).`],
+        // otro camino: RK4 de la fuerza de Lorentz hasta el cuarto de vuelta
+        verify: { kind: "ode", f: lorentz(p.q / p.m, B), y0: [0, 0, v, 0], t1: 0, until: (_, s) => s[2] <= 0, g: (_, s) => s[2], dt: Tp / 8000, out: (t, s) => kind === "r" ? Math.abs(s[1]) : 4 * t, tol: 1e-5 }
+      };
+    }
+  };
+
+  T["f2a-selector-num"] = {
+    type: "numeric", concepts: ["f2a-lorentz"], difficulty: 2,
+    generate(r) {
+      const Ek = r.int(1, 50), Bm = r.int(5, 200), ask = r.pick(["v", "E"]), v = Ek * 1e3 / (Bm * 1e-3);
+      const vg = r.int(2, 30) * 1e5, Eneed = vg * Bm * 1e-3;
+      const ans = ask === "v" ? v : Eneed / 1e3;
+      return {
+        prompt: ask === "v" ? `En un selector de velocidades hay un campo eléctrico de $${Ek}$ kV/m perpendicular a un campo magnético de $${Bm}$ mT, y los dos perpendiculares al haz. ¿Con qué rapidez (en m/s) tienen que entrar las partículas para pasar sin desviarse?`
+          : `Se quiere armar un selector de velocidades con un campo magnético de $${Bm}$ mT para dejar pasar sin desviarse partículas de $${nf(vg)}$ m/s. ¿Qué campo eléctrico hace falta (en kV/m)?`,
+        answer: ans,
+        solution: [`En el [[f2a-movimiento-carga|selector de velocidades]], la fuerza eléctrica $qE$ y la magnética $qvB$ son opuestas. Pasan derecho las partículas para las que se equilibran: $qE = qvB$.`,
+          ask === "v" ? `$v = \\frac EB = \\frac{${Ek}\\times10^3}{${Bm}\\times10^{-3}} \\approx ${nf(v)}$ m/s, sin importar la carga ni la masa.` : `$E = vB \\approx ${nf(Eneed)}$ V/m $\\approx ${nf(ans)}$ kV/m.`],
+        // otro camino: se simula un protón con esa rapidez (o con ese campo) a lo largo de 10 cm y se mide su desvío
+        verify: { kind: "zero", fn: x => {
+          const qm = F.qe / F.mp, B = Bm * 1e-3, Ey = ask === "v" ? Ek * 1e3 : x * 1e3, v0 = ask === "v" ? x : vg, L = 0.1, f = lorentz(qm, B, Ey);
+          let s = [0, 0, v0, 0]; const h = L / v0 / 2000;
+          for (let i = 0; i < 2000; i++) { const k1 = f(0, s), k2 = f(0, s.map((u, j) => u + h / 2 * k1[j])), k3 = f(0, s.map((u, j) => u + h / 2 * k2[j])), k4 = f(0, s.map((u, j) => u + h * k3[j])); s = s.map((u, j) => u + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j])); }
+          return s[1] / L * 1e3;
+        } }
+      };
+    }
+  };
+
+  T["f2a-fuerza-cable-num"] = {
+    type: "numeric", concepts: ["f2a-fuerza-corriente"], difficulty: 2,
+    generate(r) {
+      const I = r.int(1, 20), B = r.int(1, 15) / 10;
+      if (r.bool()) {
+        const L = r.int(5, 100), th = r.pick([30, 45, 60, 90, 120, 150]), ans = I * L / 100 * B * Math.sin(th * Math.PI / 180);
+        return {
+          prompt: `Un tramo recto de cable de $${L}$ cm lleva una corriente de $${I}$ A y forma un ángulo de $${th}°$ con un campo magnético uniforme de $${dec(B)}$ T. ¿Cuál es el módulo de la fuerza magnética sobre el tramo (en N)?`,
+          answer: ans,
+          solution: [`[[f2a-fuerza-conductor|Fuerza sobre un conductor]]: $\\vec F = I\\vec L\\times\\vec B$, de módulo $ILB\\sin\\theta$.`, `$F = ${I}\\cdot${nf(L / 100)}\\cdot${dec(B)}\\cdot\\sin ${th}° \\approx ${nf(ans)}$ N.`],
+          // otro camino: suma de los dF = I dl × B a lo largo del tramo (Simpson por componentes)
+          verify: { kind: "value", tol: 1e-9, fn: () => { const t = th * Math.PI / 180, dl = [Math.cos(t), 0, Math.sin(t)], Bv = [B, 0, 0]; const c = cross(dl, Bv).map(cmp => F.simpson(() => I * cmp, 0, L / 100, 10)); return Math.hypot(...c); } }
+        };
+      }
+      const Rc = r.int(2, 30), ans = 2 * I * Rc / 100 * B;
+      return {
+        prompt: `Un cable doblado en forma de semicircunferencia de radio $${Rc}$ cm lleva una corriente de $${I}$ A. Está en un plano perpendicular a un campo magnético uniforme de $${dec(B)}$ T. ¿Cuál es el módulo de la fuerza magnética total sobre la semicircunferencia (en N)?`,
+        answer: ans,
+        solution: [`Cada tramo $d\\vec l$ siente $dF = I\\,dl\\,B$, perpendicular a él ([[f2a-fuerza-conductor]]). Por simetría, las componentes paralelas al diámetro se cancelan.`,
+          `Sumando, la fuerza es la misma que sobre el diámetro recto que une los extremos: $F = I(2R)B \\approx ${nf(ans)}$ N. (En un campo uniforme, solo importan los extremos del cable.)`],
+        // otro camino: integración numérica de I dl × B sobre el arco
+        verify: { kind: "value", tol: 1e-8, fn: () => { const Rm = Rc / 100, Bv = [0, 0, B]; const c = [0, 1, 2].map(j => F.simpson(p => I * cross([-Rm * Math.sin(p), Rm * Math.cos(p), 0], Bv)[j], 0, Math.PI, 400)); return Math.hypot(...c); } }
+      };
+    }
+  };
+
+  T["f2a-torque-num"] = {
+    type: "numeric", concepts: ["f2a-fuerza-corriente"], difficulty: 3,
+    generate(r) {
+      const N = r.pick([1, 10, 20, 50, 100, 200]), a = r.int(2, 20), b = r.int(2, 20), I = r.int(1, 50) / 10, B = r.int(1, 10) / 10, ph = r.pick([0, 30, 45, 60, 90, 120, 150, 180]), ask = r.pick(["tau", "mu", "U"]);
+      const A = a * b / 1e4, mu = N * I * A, tau = mu * B * Math.sin(ph * Math.PI / 180), Uu = -mu * B * Math.cos(ph * Math.PI / 180);
+      const ans = { tau, mu, U: Uu }[ask];
+      if (ask === "tau" && Math.abs(tau) < 1e-12) return null;
+      return {
+        prompt: `Una bobina rectangular de $${N}$ ${N === 1 ? "vuelta" : "vueltas"}, de $${a}$ cm × $${b}$ cm, lleva una corriente de $${dec(I)}$ A. Está en un campo magnético uniforme de $${dec(B)}$ T, y la normal a su plano forma un ángulo de $${ph}°$ con el campo. ${{ tau: "¿Cuál es el módulo del torque magnético sobre la bobina (en N m)?", mu: "¿Cuál es el módulo de su momento magnético (en A m²)?", U: "¿Cuánto vale su energía potencial magnética $U = -\\vec\\mu\\cdot\\vec B$ (en J)?" }[ask]}`,
+        answer: ans,
+        solution: [`[[f2a-torque-espira|Momento magnético]]: $\\mu = NIA = ${N}\\cdot${dec(I)}\\cdot${nf(A)} \\approx ${nf(mu)}$ A m².`,
+          { tau: `$\\tau = \\mu B\\sin\\phi \\approx ${nf(tau)}$ N m: tiende a alinear $\\vec\\mu$ con $\\vec B$.`, mu: `Listo: $\\mu \\approx ${nf(mu)}$ A m².`, U: `$U = -\\mu B\\cos\\phi \\approx ${nf(Uu)}$ J (mínima con $\\vec\\mu$ alineado con $\\vec B$).` }[ask]],
+        // otro camino: fuerzas I L × B sobre los cuatro lados y suma de r × F; U integrando el torque desde 90°
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const tq = phd => {
+            const p = phd * Math.PI / 180, u = [-Math.sin(p), 0, Math.cos(p)], y = [0, 1, 0], Bv = [B, 0, 0], am = a / 100, bm = b / 100;
+            const P = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([s1, s2]) => u.map((c, j) => s1 * bm / 2 * c + s2 * am / 2 * y[j]));
+            let t = [0, 0, 0];
+            for (let i = 0; i < 4; i++) { const p1 = P[i], p2 = P[(i + 1) % 4], L = p2.map((c, j) => c - p1[j]), mid = p1.map((c, j) => (c + p2[j]) / 2), Fv = cross(L, Bv).map(c => N * I * c), ti = cross(mid, Fv); t = t.map((c, j) => c + ti[j]); }
+            return Math.hypot(...t);
+          };
+          if (ask === "tau") return tq(ph);
+          if (ask === "mu") return tq(90) / B;
+          // U(φ) − U(90°) = ∫ τ dφ' desde 90° (el torque se opone al giro que aleja μ de B)
+          return F.simpson(p => tq(p), 90, ph, 400) * Math.PI / 180;
+        } }
+      };
+    }
+  };
+
+  T["f2a-hall-num"] = {
+    type: "numeric", concepts: ["f2a-fuerza-corriente"], difficulty: 3,
+    generate(r) {
+      const mat = r.pick([{ n: "cobre", nn: 8.5e28, t: R`8{,}5\times10^{28}` }, { n: "plata", nn: 5.9e28, t: R`5{,}9\times10^{28}` }, { n: "un semiconductor", nn: 1e22, t: R`10^{22}` }]);
+      const semi = mat.nn < 1e25, I = r.int(1, 20) * (semi ? 1e-3 : 1), B = r.int(1, 20) / 10, tmm = r.pick([0.1, 0.2, 0.5, 1]), w = r.int(5, 30);
+      const VH = I * B / (mat.nn * F.qe * tmm / 1000), sc = semi ? 1e3 : 1e6, un = semi ? "mV" : "μV", ans = VH * sc;
+      return {
+        prompt: `Una cinta de ${mat.n} ($n = ${mat.t}$ portadores/m³) de $${w}$ mm de ancho y $${dec(tmm)}$ mm de espesor lleva una corriente de $${semi ? Math.round(I * 1e3) : I}$ ${semi ? "mA" : "A"} a lo largo. Un campo magnético de $${dec(B)}$ T la atraviesa perpendicular a su cara ancha. ¿Cuál es la tensión de Hall entre sus bordes (en ${un})? ($e = 1{,}602\\times10^{-19}$ C)`,
+        answer: ans,
+        solution: [`[[f2a-hall|Efecto Hall]]: los portadores se desvían hacia un borde hasta que el campo eléctrico que forman equilibra la fuerza magnética, $eE_H = ev_dB$.`,
+          `Con $v_d = \\frac{I}{neA}$ y $V_H = E_Hw$, el ancho se cancela: $V_H = \\frac{IB}{net} \\approx ${nf(VH)}$ V $\\approx ${nf(ans)}$ ${un}.`],
+        // otro camino: con esa tensión, la fuerza eléctrica sobre un portador equilibra la magnética (v_d desde I = n e v_d w t)
+        verify: { kind: "zero", fn: x => { const wm = w / 1000, tm = tmm / 1000, vd = I / (mat.nn * F.qe * wm * tm), EH = x / sc / wm; return (F.qe * EH - F.qe * vd * B) / (F.qe * vd * B); } }
+      };
+    }
+  };
+
+  T["f2a-mano-mc"] = {
+    type: "mc", concepts: ["f2a-lorentz"], difficulty: 2,
+    generate(r) {
+      const ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], nm = ["x", "y", "z"], i = r.int(0, 2), par = r.int(0, 5) === 0, j = par ? i : r.pick([0, 1, 2].filter(k => k !== i));
+      const sv = r.pick([1, -1]), sb = r.pick([1, -1]), sq = r.pick([1, -1]);
+      const v = ax[i].map(c => c * sv), B = ax[j].map(c => c * sb), Fv = cross(v, B).map(c => c * sq);
+      const lab = (k, s) => `$${s > 0 ? "+" : "-"}\\hat{${nm[k]}}$`;
+      const dirs = [0, 1, 2].flatMap(k => [lab(k, 1), lab(k, -1)]);
+      const k = Fv.findIndex(c => c !== 0), correct = k < 0 ? "La fuerza es nula" : lab(k, Fv[k]);
+      const wrong = r.shuffle([...dirs, "La fuerza es nula"].filter(o => o !== correct));
+      return {
+        prompt: `Una partícula con carga ${sq > 0 ? "positiva" : "negativa"} se mueve en la dirección ${lab(i, sv)} dentro de un campo magnético en la dirección ${lab(j, sb)}. ¿Hacia dónde apunta la fuerza magnética sobre ella?`,
+        ...H.mc(r, correct, [k < 0 ? null : lab(k, -Fv[k]), ...wrong], { text: true }),
+        solution: [`[[f2a-campo-magnetico|Fuerza de Lorentz]]: $\\vec F = q\\vec v\\times\\vec B$.`,
+          par ? `La velocidad es paralela (o antiparalela) al campo: el producto vectorial es cero.` : `$(${lab(i, sv).slice(1, -1)})\\times(${lab(j, sb).slice(1, -1)}) = ${lab(k, Fv[k] * sq).slice(1, -1)}$ (regla de la mano derecha${sq < 0 ? `), y como la carga es negativa, se invierte: ${correct}` : `): ${correct}`}.`],
+        // verificación: producto vectorial por componentes y comparación con la opción marcada como correcta
+        verify: { kind: "truth", target: true, fn: () => { const f = [v[1] * B[2] - v[2] * B[1], v[2] * B[0] - v[0] * B[2], v[0] * B[1] - v[1] * B[0]].map(c => sq * c), n = Math.hypot(...f); if (!n) return correct === "La fuerza es nula"; const kk = f.findIndex(c => Math.abs(c) > 0.5); return correct === lab(kk, f[kk]); } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-campo-magnetico": {
+      title: "Campo magnético y fuerza de Lorentz", aliases: ["campo magnético", "fuerza de Lorentz", "fuerza magnética", "tesla", "líneas de campo magnético"], concepts: ["f2a-lorentz"],
+      summary: "Una carga que se mueve en un campo magnético siente F⃗ = qv⃗ × B⃗: perpendicular a la velocidad y al campo, de módulo |q|vB sen θ. No hace trabajo. B se mide en teslas.",
+      def: [R`**Fuerza magnética** sobre una carga $q$ con velocidad $\vec v$: $\vec F = q\vec v\times\vec B$, de módulo $|q|vB\sin\theta$. Es nula si la carga está quieta o se mueve paralela al campo. Con campo eléctrico, la **fuerza de Lorentz** total es $\vec F = q(\vec E + \vec v\times\vec B)$.`,
+        R`**Unidad:** el tesla, $1$ T $= 1$ N/(A m). El campo terrestre es de unos $5\times10^{-5}$ T, y un imán de heladera, de unos $5$ mT.`,
+        R`**Líneas de campo magnético:** son cerradas (salen del polo norte de un imán y entran por el sur). No hay cargas magnéticas aisladas, así que el flujo de $\vec B$ por cualquier superficie cerrada es cero.`],
+      idea: [R`Como la fuerza es siempre perpendicular a la velocidad, puede doblar la trayectoria pero no acelerar ni frenar la partícula: no cambia su energía cinética.`],
+      demo: [R`**Paso 1 (no hace trabajo).** La potencia de una fuerza es $\vec F\cdot\vec v$. Acá $\vec F = q\vec v\times\vec B$ es perpendicular a $\vec v$ por ser un [[al-producto-vectorial|producto vectorial]], así que $\vec F\cdot\vec v = 0$.`,
+        R`**Paso 2.** Con potencia nula en todo instante, la energía cinética no cambia (teorema del trabajo y la energía): el módulo de la velocidad es constante. $\blacksquare$`],
+      examples: [{ q: R`Un protón a $10^6$ m/s, perpendicular a $0{,}5$ T.`, steps: [R`$F = 1{,}602\times10^{-19}\cdot10^6\cdot0{,}5 \approx 8\times10^{-14}$ N.`] }],
+      tips: [R`Regla de la mano derecha: los dedos en $\vec v$, se doblan hacia $\vec B$, y el pulgar da $\vec v\times\vec B$. Si la carga es negativa, la fuerza va al revés.`],
+      see: ["f2a-movimiento-carga", "f2a-fuerza-conductor", "al-producto-vectorial"]
+    },
+    "f2a-movimiento-carga": {
+      title: "Cargas en movimiento en un campo magnético", aliases: ["radio de giro", "frecuencia de ciclotrón", "ciclotrón", "selector de velocidades", "espectrómetro de masas"], concepts: ["f2a-lorentz"],
+      summary: "En un B uniforme, una carga con v perpendicular describe una circunferencia de radio r = mv/(|q|B) y período T = 2πm/(|q|B), independiente de v. Un selector deja pasar v = E/B.",
+      def: [R`**Movimiento circular:** con $\vec v\perp\vec B$ uniforme, $r = \frac{mv}{|q|B}$, $\omega = \frac{|q|B}{m}$ (frecuencia de ciclotrón) y $T = \frac{2\pi m}{|q|B}$. Si $\vec v$ tiene una componente paralela a $\vec B$, la trayectoria es una hélice.`,
+        R`**Selector de velocidades:** $\vec E$ y $\vec B$ perpendiculares entre sí y al haz; pasan sin desviarse las partículas con $v = \frac EB$.`,
+        R`**Espectrómetro de masas:** iones acelerados con una tensión $\Delta V$ entran en un campo $B$: $r = \frac1B\sqrt{\frac{2m\Delta V}{q}}$, así que cada masa cae en un lugar distinto.`],
+      idea: [R`Una partícula más rápida describe un círculo más grande, pero tarda lo mismo en recorrerlo: el período no depende de la rapidez. Por eso en un ciclotrón se puede acelerar con una tensión alterna de frecuencia fija.`],
+      demo: [R`**Paso 1.** La [[f2a-campo-magnetico|fuerza magnética]] tiene módulo constante $|q|vB$ (porque $v$ no cambia) y siempre es perpendicular a la velocidad, en el plano perpendicular a $\vec B$: es una fuerza centrípeta, y el movimiento es [[f1-circular|circular uniforme]].`,
+        R`**Paso 2.** Igualando con la segunda ley de Newton: $|q|vB = \frac{mv^2}{r}$, de donde $r = \frac{mv}{|q|B}$.`,
+        R`**Paso 3.** El período es $T = \frac{2\pi r}{v} = \frac{2\pi m}{|q|B}$: la $v$ se cancela.`,
+        R`**Paso 4 (selector).** La fuerza total es $q(\vec E + \vec v\times\vec B)$. Con los campos orientados para que las dos se opongan, es nula si $qE = qvB$, es decir, $v = \frac EB$. $\blacksquare$`],
+      examples: [{ q: R`Un electrón a $2\times10^6$ m/s en $1$ mT.`, steps: [R`$r = \frac{9{,}109\times10^{-31}\cdot2\times10^6}{1{,}602\times10^{-19}\cdot10^{-3}} \approx 1{,}14$ cm.`] }],
+      tips: [R`El sentido de giro depende del signo de la carga: protones y electrones en el mismo campo giran al revés.`],
+      see: ["f2a-campo-magnetico", "f1-circular", "f2a-energia-potencial"]
+    },
+    "f2a-fuerza-conductor": {
+      title: "Fuerza sobre un conductor con corriente", aliases: ["fuerza sobre un conductor", "fuerza sobre un cable"], concepts: ["f2a-fuerza-corriente"],
+      summary: "Un tramo recto de cable con corriente I en un B uniforme siente F⃗ = IL⃗ × B⃗. Para un cable cualquiera, dF⃗ = I dl⃗ × B⃗; en un campo uniforme solo importa el segmento que une sus extremos.",
+      def: [R`**Tramo recto:** $\vec F = I\vec L\times\vec B$, con $\vec L$ en el sentido de la corriente; de módulo $ILB\sin\theta$.`,
+        R`**Cable cualquiera:** $\vec F = I\int d\vec l\times\vec B$. Si $\vec B$ es uniforme, sale de la integral y $\int d\vec l$ es el vector que va de un extremo al otro: un cable curvo siente lo mismo que el recto que une sus extremos. Una espira cerrada, en un campo uniforme, tiene fuerza neta cero.`],
+      idea: [R`La corriente son cargas en movimiento, y cada una siente $q\vec v_d\times\vec B$. La fuerza sobre el cable es la suma de esas fuerzas, que los electrones le transmiten a la red.`],
+      demo: [R`**Paso 1.** En un tramo $dl$ de sección $A$ hay $nA\,dl$ portadores, cada uno con fuerza $q\vec v_d\times\vec B$.`,
+        R`**Paso 2.** La fuerza total sobre el tramo es $nA\,dl\,q\vec v_d\times\vec B$. Como $I = nqv_dA$ ([[f2a-corriente|corriente]]) y $\vec v_d$ apunta como la corriente, $nqA\,dl\,\vec v_d = I\,d\vec l$.`,
+        R`**Paso 3.** Queda $d\vec F = I\,d\vec l\times\vec B$, y para un tramo recto en un campo uniforme, $\vec F = I\vec L\times\vec B$. $\blacksquare$`],
+      examples: [{ q: R`$50$ cm de cable con $10$ A, perpendicular a $0{,}2$ T.`, steps: [R`$F = 10\cdot0{,}5\cdot0{,}2 = 1$ N.`] }],
+      tips: [R`Es la base de los parlantes y de los motores: una bobina con corriente en el campo de un imán.`],
+      see: ["f2a-campo-magnetico", "f2a-torque-espira", "f2a-corriente"]
+    },
+    "f2a-torque-espira": {
+      title: "Torque sobre una espira y momento magnético", aliases: ["momento magnético", "torque sobre una espira", "motor eléctrico", "dipolo magnético"], concepts: ["f2a-fuerza-corriente"],
+      summary: "Una espira de área A con corriente I tiene momento magnético μ = NIA (normal a su plano). En un campo uniforme siente τ⃗ = μ⃗ × B⃗ y tiene energía U = −μ⃗·B⃗.",
+      def: [R`**Momento magnético** de una bobina plana de $N$ vueltas: $\vec\mu = NIA\,\hat n$, con $\hat n$ normal al plano según la regla de la mano derecha con la corriente.`,
+        R`**En un campo uniforme:** fuerza neta nula, torque $\vec\tau = \vec\mu\times\vec B$ (módulo $\mu B\sin\phi$) y energía potencial $U = -\vec\mu\cdot\vec B = -\mu B\cos\phi$. El equilibrio estable es con $\vec\mu$ alineado con $\vec B$.`],
+      idea: [R`La espira se comporta como una brújula: tiende a girar hasta que su momento magnético apunte como el campo. Un motor de corriente continua invierte la corriente cada media vuelta para que nunca llegue al equilibrio y siga girando.`],
+      demo: [R`**Paso 1.** Espira rectangular de lados $a$ (paralelos al eje de giro) y $b$, con $\vec B$ perpendicular al eje y $\phi$ el ángulo entre $\hat n$ y $\vec B$. Sobre los lados $b$ las [[f2a-fuerza-conductor|fuerzas]] son iguales y opuestas sobre la misma recta: no hacen torque.`,
+        R`**Paso 2.** Sobre los lados $a$ las fuerzas valen $IaB$, opuestas, y forman un par. Su brazo, medido perpendicular a $\vec B$, es $b\sin\phi$.`,
+        R`**Paso 3.** El torque es $IaB\cdot b\sin\phi = IAB\sin\phi$, y con $N$ vueltas, $NIAB\sin\phi = \mu B\sin\phi$, que es el módulo de $\vec\mu\times\vec B$.`,
+        R`**Paso 4 (energía).** El trabajo para girarla desde $90°$ hasta $\phi$ contra el torque es $\int_{90°}^{\phi}\mu B\sin\phi'\,d\phi' = -\mu B\cos\phi$. Con $U(90°) = 0$, $U = -\vec\mu\cdot\vec B$. $\blacksquare$`],
+      examples: [{ q: R`Bobina de $100$ vueltas de $5\times4$ cm con $2$ A, en $0{,}5$ T a $90°$.`, steps: [R`$\mu = 100\cdot2\cdot0{,}002 = 0{,}4$ A m² y $\tau = 0{,}2$ N m.`] }],
+      tips: [R`Es la misma estructura que el [[f2a-campo-electrico|dipolo eléctrico]]: $\vec\tau = \vec p\times\vec E$ y $U = -\vec p\cdot\vec E$.`],
+      see: ["f2a-fuerza-conductor", "f2a-campo-electrico", "f1-torque"]
+    },
+    "f2a-hall": {
+      title: "Efecto Hall", aliases: ["efecto Hall", "tensión de Hall"], concepts: ["f2a-fuerza-corriente"],
+      summary: "En una cinta con corriente dentro de un campo B, los portadores se desvían hacia un borde y aparece una tensión V_H = IB/(nqt). Su signo dice el de los portadores, y su valor, cuántos hay.",
+      def: [R`**Efecto Hall:** en un conductor con corriente $I$ perpendicular a $\vec B$, aparece una diferencia de potencial transversal $V_H = \frac{IB}{nqt}$, donde $t$ es el espesor en la dirección de $\vec B$ y $n$ la densidad de portadores.`,
+        R`Sirve para medir campos magnéticos (sondas Hall) y para averiguar el signo y la densidad de los portadores de un material.`],
+      idea: [R`La fuerza magnética empuja los portadores hacia un costado; ahí se acumulan y crean un campo eléctrico que empuja al revés. Se llega al equilibrio cuando las dos fuerzas se compensan, como en un [[f2a-movimiento-carga|selector de velocidades]].`],
+      demo: [R`**Paso 1.** En el equilibrio, la fuerza eléctrica transversal compensa la magnética: $qE_H = qv_dB$, así que $E_H = v_dB$.`,
+        R`**Paso 2.** El campo es uniforme a lo ancho $w$ de la cinta: $V_H = E_Hw = v_dBw$.`,
+        R`**Paso 3.** Por la [[f2a-corriente|corriente]], $v_d = \frac{I}{nq\,wt}$. Reemplazando, el ancho se cancela: $V_H = \frac{IB}{nqt}$. $\blacksquare$`],
+      examples: [{ q: R`Cinta de cobre de $0{,}1$ mm de espesor, $10$ A y $1$ T.`, steps: [R`$V_H = \frac{10\cdot1}{8{,}5\times10^{28}\cdot1{,}602\times10^{-19}\cdot10^{-4}} \approx 7{,}3$ μV.`] }],
+      tips: [R`En los metales la tensión de Hall es diminuta porque $n$ es enorme; en los semiconductores es mucho mayor, y por eso las sondas se hacen con ellos.`],
+      see: ["f2a-fuerza-conductor", "f2a-movimiento-carga", "f2a-corriente"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-lorentz": { name: "Fuerza magnética sobre cargas" }, "f2a-fuerza-corriente": { name: "Fuerzas sobre corrientes" } },
+    templates: T,
+    units: [{
+      id: "f2a-magnetico-u", order: 6, program: "Unidad 6", title: "Campo magnético", icon: "target",
+      diagnostic: ["f2a-ciclotron-num", "f2a-fuerza-cable-num", "f2a-torque-num"],
+      lessons: [
+        { id: "f2a-magnetico-l1", title: "Cargas en un campo magnético", templates: ["f2a-mano-mc", "f2a-ciclotron-num", "f2a-selector-num"], theory: ["f2a-campo-magnetico", "f2a-movimiento-carga"],
+          intro: R`$\vec F = q\vec v\times\vec B$: dobla la trayectoria sin cambiar la rapidez.` },
+        { id: "f2a-magnetico-l2", title: "Corrientes en un campo magnético", templates: ["f2a-fuerza-cable-num", "f2a-torque-num", "f2a-hall-num"], theory: ["f2a-fuerza-conductor", "f2a-torque-espira", "f2a-hall"],
+          intro: R`$\vec F = I\vec L\times\vec B$ y $\vec\tau = \vec\mu\times\vec B$.` }
+      ]
+    }],
+    cards
+  });
+})();
