@@ -293,7 +293,80 @@
     }
   };
 
+  T["al-especial-mc"] = {
+    type: "mc", concepts: ["al-matrices"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["sim", "anti", "orto", "nada"]), n = r.pick([2, 3]);
+      let A;
+      if (kind === "sim") { A = rmat(r, n, n); for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) A[i][j] = A[j][i]; }
+      else if (kind === "anti") { A = rmat(r, n, n); for (let i = 0; i < n; i++) { A[i][i] = 0; for (let j = 0; j < i; j++) A[i][j] = -A[j][i]; } }
+      else if (kind === "orto") {
+        // permutación con signos (columnas ortonormales con entradas enteras)
+        const perm = r.shuffle([...Array(n).keys()]); A = Array.from({ length: n }, () => Array(n).fill(0)); perm.forEach((j, i) => { A[i][j] = r.pick([1, -1]); });
+        if (perm.every((j, i) => j === i) && A.every((row, i) => row[i] === 1)) return null;
+      } else { A = rmat(r, n, n); }
+      const At = transpose(A), AAt = mm(A, At);
+      const isSym = A.every((row, i) => row.every((x, j) => x === At[i][j])), isAnti = A.every((row, i) => row.every((x, j) => x === -At[i][j]));
+      const isOrto = AAt.every((row, i) => row.every((x, j) => x === (i === j ? 1 : 0)));
+      if (kind === "nada" && (isSym || isAnti || isOrto)) return null;
+      if ([isSym, isAnti, isOrto].filter(Boolean).length > 1) return null;
+      const lab = { sim: "Simétrica: $A^T = A$", anti: "Antisimétrica: $A^T = -A$", orto: "Ortogonal: $A^TA = I$", nada: "Ninguna de las tres" };
+      const correct = lab[kind];
+      return {
+        prompt: `¿Qué tipo de matriz es $A = ${M(A)}$?`,
+        ...H.mc(r, correct, Object.values(lab).filter(x => x !== correct), { text: true }),
+        solution: [`Se compara $A$ con su transpuesta $A^T = ${M(At)}$ y se calcula $AA^T = ${M(AAt)}$ ([[al-matrices-especiales]]).`,
+          { sim: "$A^T = A$: es simétrica (y no es ortogonal, porque $AA^T \\neq I$).", anti: "$A^T = -A$: es antisimétrica. Su diagonal tiene que ser nula.", orto: "$AA^T = I$: sus columnas son ortonormales, así que es ortogonal y $A^{-1} = A^T$.", nada: "Ni $A^T = A$, ni $A^T = -A$, ni $AA^T = I$." }[kind]],
+        // verificación: se clasifica de nuevo con normas de columnas, productos entre columnas y simetría entrada por entrada
+        verify: { kind: "truth", target: true, fn: () => {
+          const col = j => A.map(row => row[j]), dt = (u, v) => u.reduce((s, x, i) => s + x * v[i], 0);
+          const orto = [...Array(n).keys()].every(i => [...Array(n).keys()].every(j => dt(col(i), col(j)) === (i === j ? 1 : 0)));
+          const sym = A.every((row, i) => row.every((x, j) => x === A[j][i])), anti = A.every((row, i) => row.every((x, j) => x === -A[j][i]));
+          const got = sym ? "sim" : anti ? "anti" : orto ? "orto" : "nada";
+          return lab[got] === correct;
+        } }
+      };
+    }
+  };
+
+  T["al-ecmat-num"] = {
+    type: "numeric", concepts: ["al-inversa"], difficulty: 2,
+    generate(r) {
+      const A = rmat(r, 2, 2, -4, 4), d = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+      if (d === 0) return null;
+      const B = rmat(r, 2, 2, -5, 5), Ai = [[A[1][1], -A[0][1]], [-A[1][0], A[0][0]]], X = mm(Ai, B).map(row => row.map(x => x / d));
+      const i = r.int(0, 1), j = r.int(0, 1), side = r.bool() ? "izq" : "der";
+      // con side = der: X·A = B, X = B·A⁻¹
+      const Xd = mm(B, Ai).map(row => row.map(x => x / d)), XX = side === "izq" ? X : Xd, ans = XX[i][j];
+      const numer = side === "izq" ? mm(Ai, B)[i][j] : mm(B, Ai)[i][j];
+      return {
+        prompt: `Sean $A = ${M(A)}$ y $B = ${M(B)}$. Resolvé ${side === "izq" ? "$AX = B$" : "$XA = B$"} y calculá el elemento $x_{${i + 1}${j + 1}}$ de $X$.`,
+        answer: ans, answerTex: frac(numer, d),
+        solution: [`Como $\\det A = ${d} \\neq 0$, $A$ es [[al-inversa|inversible]] y $A^{-1} = \\frac{1}{${d}}${M(Ai)}$.`,
+          side === "izq" ? `Multiplicando a izquierda por $A^{-1}$: $X = A^{-1}B$ (el orden importa).` : `Multiplicando a derecha por $A^{-1}$: $X = BA^{-1}$ (no $A^{-1}B$).`,
+          `$x_{${i + 1}${j + 1}} = ${frac(numer, d)}$.`],
+        // verificación: la columna (o fila) de X resuelve el sistema correspondiente, comprobado por Gauss
+        verify: side === "izq" ? { kind: "solve", A, b: [B[0][j], B[1][j]], x: [X[0][j], X[1][j]] } : { kind: "solve", A: transpose(A), b: B[i], x: Xd[i] }
+      };
+    }
+  };
+
   const cards = {
+    "al-matrices-especiales": {
+      title: "Matrices simétricas, antisimétricas y ortogonales", aliases: ["matriz antisimétrica", "matrices antisimétricas", "matriz ortogonal", "matrices ortogonales", "ecuación matricial"], concepts: ["al-matrices"],
+      summary: "Simétrica: Aᵀ = A. Antisimétrica: Aᵀ = −A (diagonal nula). Ortogonal: AᵀA = I, o sea A⁻¹ = Aᵀ; conserva longitudes y su determinante es ±1. Toda matriz cuadrada es suma de una simétrica y una antisimétrica.",
+      def: [R`**Simétrica:** $A^T = A$ ($a_{ij} = a_{ji}$). **Antisimétrica:** $A^T = -A$; en particular $a_{ii} = -a_{ii}$, así que su diagonal es nula.`,
+        R`**Ortogonal:** $A^TA = I$, es decir, $A^{-1} = A^T$. Equivale a que sus columnas (y sus filas) sean una base ortonormal. Ejemplos: las rotaciones, las simetrías y las matrices de permutación.`,
+        R`**Ecuaciones matriciales:** $AX = B$ con $A$ inversible tiene solución única $X = A^{-1}B$; $XA = B$ tiene $X = BA^{-1}$. Como el producto no es conmutativo, hay que respetar el lado.`],
+      idea: [R`Una matriz ortogonal mueve el espacio como un cuerpo rígido: gira o refleja, pero no estira. Por eso deja igual las longitudes y los ángulos, y el volumen solo puede cambiar de signo.`],
+      demo: [R`**Paso 1 (descomposición).** Para $A$ cuadrada, $S = \frac{A + A^T}{2}$ cumple $S^T = \frac{A^T + A}{2} = S$, porque $(A^T)^T = A$. Del mismo modo $K = \frac{A - A^T}{2}$ cumple $K^T = -K$. Y sumando, $S + K = A$.`,
+        R`**Paso 2 (conserva longitudes).** Si $A^TA = I$, para todo $\vec x$: $\|A\vec x\|^2 = (A\vec x)^T(A\vec x) = \vec x^TA^TA\vec x = \vec x^T\vec x = \|\vec x\|^2$, usando $(XY)^T = Y^TX^T$.`,
+        R`**Paso 3 (determinante).** Tomando determinante en $A^TA = I$, y como $\det A^T = \det A$: $(\det A)^2 = 1$, así que $\det A = \pm1$.`,
+        R`**Paso 4 ($AX = B$).** Si $A$ es [[al-inversa|inversible]], multiplicando a izquierda por $A^{-1}$ los dos miembros: $A^{-1}AX = A^{-1}B$, o sea $X = A^{-1}B$. Y $X = A^{-1}B$ la cumple, porque $A(A^{-1}B) = B$: la solución existe y es única. $\blacksquare$`],
+      examples: [{ q: R`¿Es ortogonal $\begin{pmatrix}0 & -1\\1 & 0\end{pmatrix}$?`, steps: [R`Sus columnas $(0, 1)$ y $(-1, 0)$ tienen norma $1$ y son perpendiculares: sí, es la rotación de $90°$. Además es antisimétrica.`] }],
+      tips: [R`Para ver si es ortogonal no hace falta calcular la inversa: alcanza con mirar que las columnas tengan norma $1$ y sean perpendiculares de a pares.`],
+      see: ["al-matrices", "al-inversa", "al-producto-escalar"]
+    },
     "al-matrices": {
       title: "Matrices: tipos y operaciones", aliases: ["matriz", "matrices", "producto de matrices", "matriz transpuesta", "transpuesta", "matriz simétrica", "matriz diagonal", "matriz triangular"], concepts: ["al-matrices"],
       summary: "(AB)ᵢⱼ = fila i de A por columna j de B. El producto es asociativo pero no conmutativo.",
@@ -354,7 +427,9 @@
         { id: "al-det", title: "Determinantes", templates: ["al-det-num", "al-detprop-num"], theory: ["al-determinante"],
           intro: R`$\det(AB) = \det A\det B$, $\det(kA) = k^n\det A$, $\det A^T = \det A$. Triangular: producto de la diagonal.` },
         { id: "al-inversa", title: "Matriz inversa", templates: ["al-inversa-num", "al-gj-order"], theory: ["al-inversa", "al-determinante"],
-          intro: R`Existe $A^{-1}$ si y solo si $\det A \neq 0$. Gauss-Jordan: $[A \mid I] \to [I \mid A^{-1}]$.` }
+          intro: R`Existe $A^{-1}$ si y solo si $\det A \neq 0$. Gauss-Jordan: $[A \mid I] \to [I \mid A^{-1}]$.` },
+        { id: "al-especiales", title: "Matrices especiales y ecuaciones matriciales", templates: ["al-especial-mc", "al-ecmat-num"], theory: ["al-matrices-especiales"],
+          intro: R`Simétrica: $A^T = A$; antisimétrica: $A^T = -A$; ortogonal: $A^{-1} = A^T$. $AX = B \Rightarrow X = A^{-1}B$.` }
       ]
     }],
     cards
@@ -462,6 +537,29 @@
     }
   };
 
+  T["al-rango-num"] = {
+    type: "numeric", concepts: ["al-rouche"], difficulty: 2,
+    generate(r) {
+      // filas: unas independientes al azar y el resto combinaciones de ellas
+      const m = 3, n = 4, rk0 = r.int(1, 3), base = Array.from({ length: rk0 }, () => Array.from({ length: n }, () => r.int(-3, 3)));
+      const rows = base.slice();
+      while (rows.length < m) { const c = base.map(() => r.int(-2, 2)); rows.push(Array.from({ length: n }, (_, j) => base.reduce((s, b, k) => s + c[k] * b[j], 0))); }
+      const A = r.shuffle(rows);
+      if (A.some(row => row.every(x => x === 0)) && r.bool()) return null;
+      // rango por el mayor menor no nulo (otro método que la eliminación)
+      const choose = (arr, k) => (k === 0 ? [[]] : arr.flatMap((x, i) => choose(arr.slice(i + 1), k - 1).map(c => [x, ...c])));
+      let rk = 0;
+      for (let k = 3; k >= 1 && !rk; k--) for (const rs of choose([0, 1, 2], k)) for (const cs of choose([0, 1, 2, 3], k)) if (!rk && detL(rs.map(i => cs.map(j => A[i][j]))) !== 0) rk = k;
+      return {
+        prompt: `¿Cuál es el rango de la matriz $A = ${M(A)}$?`,
+        answer: rk,
+        solution: [`El [[al-rouche|rango]] es la cantidad de filas no nulas que quedan al escalonar (o el orden del mayor menor no nulo).`,
+          rk === 3 ? `Hay un menor de $3\\times3$ no nulo: el rango es $3$, el máximo posible.` : `Escalonando, ${3 - rk === 1 ? "una fila se anula: es combinación de las otras" : "dos filas se anulan: son múltiplos o combinaciones de la que queda"}. Rango $= ${rk}$.`],
+        verify: { kind: "rank", A }
+      };
+    }
+  };
+
   const cards = {
     "al-sistemas": {
       title: "Sistemas de ecuaciones lineales y eliminación de Gauss", aliases: ["sistema de ecuaciones", "sistemas de ecuaciones", "sistema lineal", "eliminación de Gauss", "matriz ampliada", "sistema homogéneo", "homogéneo", "forma escalonada"], concepts: ["al-sistemas"],
@@ -514,7 +612,7 @@
       id: "al-sistemas-u", order: 3, program: "Unidad III", title: "Sistemas de ecuaciones lineales", icon: "grid-3x3",
       diagnostic: ["al-sistema-num", "al-rouche-mc", "al-cramer-num"],
       lessons: [
-        { id: "al-gauss", title: "Eliminación de Gauss", templates: ["al-sistema-num", "al-homog-vf"], theory: ["al-sistemas"],
+        { id: "al-gauss", title: "Eliminación de Gauss", templates: ["al-sistema-num", "al-homog-vf", "al-rango-num"], theory: ["al-sistemas", "al-rouche"],
           intro: R`Las operaciones elementales de fila no cambian las soluciones. Se escalona $[A\mid b]$ y se resuelve hacia atrás.` },
         { id: "al-rouche", title: "Rouché-Frobenius y Cramer", templates: ["al-rouche-mc", "al-param-num", "al-cramer-num"], theory: ["al-rouche", "al-cramer"],
           intro: R`Compatible $\iff \operatorname{rg}A = \operatorname{rg}[A\mid b]$; determinado si además es igual a $n$. Cramer: $x_i = \frac{\det A_i}{\det A}$.` }
@@ -620,6 +718,46 @@
     }
   };
 
+  T["al-cambio-base-num"] = {
+    type: "numeric", concepts: ["al-base"], difficulty: 3,
+    generate(r) {
+      // bases B = {b1, b2} y B' = {c1, c2} de R²; dadas [v]_B, pedir una coordenada de [v]_B'
+      const b1 = [r.int(-3, 3), r.int(-3, 3)], b2 = [r.int(-3, 3), r.int(-3, 3)], c1 = [r.int(-3, 3), r.int(-3, 3)], c2 = [r.int(-3, 3), r.int(-3, 3)];
+      const dB = b1[0] * b2[1] - b2[0] * b1[1], dC = c1[0] * c2[1] - c2[0] * c1[1];
+      if (!dB || !dC) return null;
+      const a = [r.int(-3, 3), r.int(-3, 3)], v = [a[0] * b1[0] + a[1] * b2[0], a[0] * b1[1] + a[1] * b2[1]];
+      // coordenadas en B' por Cramer
+      const n1 = v[0] * c2[1] - c2[0] * v[1], n2 = c1[0] * v[1] - v[0] * c1[1], k = r.int(0, 1), ans = (k ? n2 : n1) / dC;
+      return {
+        prompt: `En $\\mathbb R^2$ se toman las bases $B = \\{${vec(b1)}, ${vec(b2)}\\}$ y $B' = \\{${vec(c1)}, ${vec(c2)}\\}$. Si $[\\vec v]_B = ${vec(a)}$, ¿cuánto vale la ${k ? "segunda" : "primera"} coordenada de $\\vec v$ en la base $B'$?`,
+        answer: ans, answerTex: frac(k ? n2 : n1, dC),
+        solution: [`Primero se arma el vector: $\\vec v = ${a[0]}\\,${vec(b1)} ${a[1] < 0 ? "-" : "+"} ${Math.abs(a[1])}\\,${vec(b2)} = ${vec(v)}$ ([[al-base|coordenadas]]).`,
+          `Después se resuelve $\\alpha\\,${vec(c1)} + \\beta\\,${vec(c2)} = ${vec(v)}$ (Cramer, con determinante $${dC}$): $\\alpha = ${frac(n1, dC)}$ y $\\beta = ${frac(n2, dC)}$.`,
+          `Es lo mismo que multiplicar por la matriz de cambio de base $P_{B'\\leftarrow B} = C^{-1}B$, con las bases en las columnas.`],
+        // verificación: con las coordenadas en B' se reconstruye el mismo vector
+        verify: { kind: "zero", fn: x => { const al = k ? n1 / dC : x, be = k ? x : n2 / dC; return [al * c1[0] + be * c2[0] - v[0], al * c1[1] + be * c2[1] - v[1]]; } }
+      };
+    }
+  };
+
+  T["al-coord-poly-num"] = {
+    type: "numeric", concepts: ["al-base"], difficulty: 2,
+    generate(r) {
+      // base {1, x − a, (x − a)²} de P₂ y p(x) = c0 + c1 x + c2 x²
+      const a = r.nz(-3, 3), c = [r.int(-5, 5), r.int(-5, 5), r.nz(-3, 3)], k = r.int(0, 2);
+      const coords = [c[0] + c[1] * a + c[2] * a * a, c[1] + 2 * c[2] * a, c[2]];
+      const xa = a > 0 ? `x - ${a}` : `x + ${-a}`;
+      return {
+        prompt: `En $P_2$ se toma la base $B = \\{1,\\ ${xa},\\ (${xa})^2\\}$. Si $p(x) = ${H.poly([[c[2], "x^{2}"], [c[1], "x"], [c[0], ""]])}$, ¿cuánto vale la coordenada de $p$ correspondiente a ${["$1$", `$${xa}$`, `$(${xa})^2$`][k]}?`,
+        answer: coords[k],
+        solution: [`Se busca $p(x) = \\alpha + \\beta(${xa}) + \\gamma(${xa})^2$ ([[al-base|coordenadas en una base]]). Comparando el coeficiente de $x^2$, $\\gamma = ${c[2]}$.`,
+          `Un atajo: son los coeficientes de Taylor en $${a}$: $\\alpha = p(${a}) = ${coords[0]}$, $\\beta = p'(${a}) = ${coords[1]}$ y $\\gamma = \\frac{p''}{2} = ${coords[2]}$.`],
+        // verificación: con las coordenadas se reconstruye p en varios puntos
+        verify: { kind: "zero", fn: x => { const cc = coords.slice(); cc[k] = x; return [-2, 0, 1, 3].map(t => cc[0] + cc[1] * (t - a) + cc[2] * (t - a) ** 2 - (c[0] + c[1] * t + c[2] * t * t)); } }
+      };
+    }
+  };
+
   const cards = {
     "al-espacio-vectorial": {
       title: "Espacios y subespacios vectoriales", aliases: ["espacio vectorial", "espacios vectoriales", "subespacio", "subespacios", "subespacio vectorial"], concepts: ["al-subespacio"],
@@ -678,7 +816,9 @@
         { id: "al-subespacios", title: "Subespacios", templates: ["al-subesp-vf", "al-base-vf"], theory: ["al-espacio-vectorial", "al-base"],
           intro: R`$W$ es subespacio si contiene a $\vec 0$ y es cerrado para la suma y el producto por escalares.` },
         { id: "al-bases", title: "Bases, dimensión y distancia", templates: ["al-dim-num", "al-coord-num", "al-dist-num"], theory: ["al-base", "al-euclideo"],
-          intro: R`Base = LI + genera. Dimensión del espacio generado = rango. $d(\vec u, \vec v) = \|\vec u - \vec v\|$.` }
+          intro: R`Base = LI + genera. Dimensión del espacio generado = rango. $d(\vec u, \vec v) = \|\vec u - \vec v\|$.` },
+        { id: "al-cambio-base", title: "Coordenadas y cambio de base", templates: ["al-cambio-base-num", "al-coord-poly-num"], theory: ["al-base"],
+          intro: R`Las coordenadas dependen de la base. Para pasar de una base a otra: armar el vector y resolver el sistema.` }
       ]
     }],
     cards
@@ -772,7 +912,59 @@
     }
   };
 
+  T["al-composicion-num"] = {
+    type: "numeric", concepts: ["al-matriz-tl"], difficulty: 2,
+    generate(r) {
+      // T: R² → R³ y S: R³ → R², con matrices enteras; pedir un elemento de [S∘T] o de [T∘S]
+      const Tm = Array.from({ length: 3 }, () => [r.int(-3, 3), r.int(-3, 3)]), Sm = Array.from({ length: 2 }, () => [r.int(-3, 3), r.int(-3, 3), r.int(-3, 3)]);
+      const which = r.pick(["ST", "TS"]), P = which === "ST" ? Sm.map(row => [0, 1].map(j => row.reduce((s, a, k) => s + a * Tm[k][j], 0))) : Tm.map(row => [0, 1, 2].map(j => row.reduce((s, a, k) => s + a * Sm[k][j], 0)));
+      const i = r.int(0, P.length - 1), j = r.int(0, P[0].length - 1);
+      const lin = (row, vars) => H.poly(row.map((a, t) => [a, vars[t]])) || "0";
+      const Tt = `T(x, y) = (${Tm.map(row => lin(row, ["x", "y"])).join(",\\ ")})`, St = `S(x, y, z) = (${Sm.map(row => lin(row, ["x", "y", "z"])).join(",\\ ")})`;
+      return {
+        prompt: `Sean $${Tt}$ y $${St}$. ¿Cuánto vale el elemento $(${i + 1}, ${j + 1})$ de la matriz estándar de ${which === "ST" ? "$S\\circ T$" : "$T\\circ S$"}?`,
+        answer: P[i][j],
+        solution: [`La matriz de una [[al-composicion|composición]] es el producto de las matrices, en el mismo orden: $[${which === "ST" ? "S\\circ T" : "T\\circ S"}] = ${which === "ST" ? "[S][T]" : "[T][S]"}$.`,
+          `$[T] = ${M(Tm)}$ y $[S] = ${M(Sm)}$, así que el producto es $${M(P)}$ y el elemento pedido vale $${P[i][j]}$.`],
+        // otro camino: se aplica la composición al vector canónico e_j y se toma la componente i
+        verify: { kind: "value", fn: () => { const T_ = v => Tm.map(row => row[0] * v[0] + row[1] * v[1]), S_ = v => Sm.map(row => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]); const e = Array(which === "ST" ? 2 : 3).fill(0); e[j] = 1; return (which === "ST" ? S_(T_(e)) : T_(S_(e)))[i]; } }
+      };
+    }
+  };
+
+  T["al-iso-vf"] = {
+    type: "tf", concepts: ["al-nucleo"], difficulty: 2,
+    generate(r) {
+      const a = r.int(-3, 3), b = r.int(-3, 3), k = r.nz(-3, 3), sing = r.bool(), c = sing ? k * a : r.int(-3, 3), d = sing ? k * b : r.int(-3, 3);
+      const det = a * d - b * c, truth = det !== 0;
+      if (!a && !b) return null;
+      const f = `T(x, y) = (${H.poly([[a, "x"], [b, "y"]]) || "0"},\\ ${H.poly([[c, "x"], [d, "y"]]) || "0"})`;
+      return {
+        prompt: `<b>Verdadero o falso:</b> la transformación $${f}$ es un isomorfismo de $\\mathbb R^2$ en $\\mathbb R^2$.`,
+        answer: truth,
+        explanation: `Un operador de $\\mathbb R^n$ es un isomorfismo si y solo si su matriz es inversible. Acá $\\det\\begin{pmatrix}${a} & ${b} \\\\ ${c} & ${d}\\end{pmatrix} = ${det}$, así que es ${truth ? "verdadero: es biyectiva y tiene inversa" : "falso: tiene núcleo no trivial (dos vectores distintos tienen la misma imagen)"}.`,
+        solution: [R`Ver [[al-composicion|isomorfismos]] y el [[al-nucleo-imagen|teorema de la dimensión]]: en dimensión finita, un operador es inyectivo si y solo si es sobreyectivo.`],
+        // otro camino: se busca un vector no nulo del núcleo (si la segunda fila es múltiplo de la primera, (b, −a) lo es)
+        verify: { kind: "truth", fn: () => { const v = [b, -a], Tv = [a * v[0] + b * v[1], c * v[0] + d * v[1]]; return !(Tv[0] === 0 && Tv[1] === 0); } }
+      };
+    }
+  };
+
   const cards = {
+    "al-composicion": {
+      title: "Composición, inversa e isomorfismos", aliases: ["composición de transformaciones", "isomorfismo", "isomorfismos", "transformación inversa"], concepts: ["al-matriz-tl"],
+      summary: "[S∘T] = [S][T]: componer es multiplicar las matrices, en el mismo orden. T es un isomorfismo si es biyectiva; un operador de ℝⁿ lo es si y solo si su matriz es inversible, y [T⁻¹] = [T]⁻¹.",
+      def: [R`**Composición:** si $T: V \to W$ y $S: W \to U$ son lineales, $S\circ T$ (primero $T$, después $S$) es lineal y su matriz estándar es $[S][T]$.`,
+        R`**Isomorfismo:** una transformación lineal biyectiva. Su inversa $T^{-1}$ también es lineal, y $[T^{-1}] = [T]^{-1}$. Dos espacios de dimensión finita son isomorfos si y solo si tienen la misma dimensión.`,
+        R`**Operadores de $\mathbb R^n$:** $T$ es un isomorfismo $\iff$ $\ker T = \{\vec 0\}$ $\iff$ $T$ es sobreyectiva $\iff$ $\det[T] \neq 0$.`],
+      idea: [R`La matriz de $T$ guarda en sus columnas a dónde van los vectores canónicos. Para componer, se le aplica $S$ a cada una de esas columnas, y eso es justamente multiplicar $[S]$ por $[T]$: el producto de matrices se define así para que esto funcione.`],
+      demo: [R`**Paso 1 (composición).** Para todo $\vec x$: $(S\circ T)(\vec x) = S(T(\vec x)) = [S]([T]\vec x) = ([S][T])\vec x$, por la asociatividad del producto de matrices. Como la matriz estándar es la única que cumple eso para todo $\vec x$, $[S\circ T] = [S][T]$.`,
+        R`**Paso 2 (inversa).** Si $T$ es biyectiva, $T\circ T^{-1} = \text{id}$. Por el paso 1, $[T][T^{-1}] = I$, así que $[T^{-1}] = [T]^{-1}$.`,
+        R`**Paso 3 (inyectiva ⟺ sobreyectiva).** Para un operador de $\mathbb R^n$, el [[al-nucleo-imagen|teorema de la dimensión]] da $\dim\ker T + \dim\operatorname{Im}T = n$. El núcleo es $\{\vec 0\}$ (inyectiva) si y solo si la imagen tiene dimensión $n$, o sea, es todo $\mathbb R^n$ (sobreyectiva). $\blacksquare$`],
+      examples: [{ q: R`$T(x, y) = (x + y, x - y)$. ¿Es un isomorfismo? ¿Cuánto vale $T^{-1}$?`, steps: [R`$\det\begin{pmatrix}1 & 1\\1 & -1\end{pmatrix} = -2 \neq 0$: sí. $[T]^{-1} = \frac12\begin{pmatrix}1 & 1\\1 & -1\end{pmatrix}$, así que $T^{-1}(u, v) = \left(\frac{u + v}2, \frac{u - v}2\right)$.`] }],
+      tips: [R`$S\circ T$ se lee de derecha a izquierda: primero $T$. Y $[S][T]$ solo tiene sentido si las dimensiones encajan (las columnas de $[S]$ tienen que ser tantas como las filas de $[T]$).`],
+      see: ["al-matriz-asociada", "al-nucleo-imagen", "al-inversa"]
+    },
     "al-transformacion": {
       title: "Transformaciones lineales", aliases: ["transformación lineal", "transformaciones lineales", "aplicación lineal"], concepts: ["al-tl"],
       summary: "T es lineal si T(u + v) = T(u) + T(v) y T(αu) = αT(u). Toda T lineal entre ℝⁿ y ℝᵐ es multiplicar por una matriz.",
@@ -832,7 +1024,9 @@
         { id: "al-tl", title: "Linealidad y matriz asociada", templates: ["al-tl-vf", "al-matriz-tl-num"], theory: ["al-transformacion", "al-matriz-asociada"],
           intro: R`$T$ lineal: respeta sumas y productos por escalares. La columna $j$ de su matriz es $T(\vec e_j)$.` },
         { id: "al-nucleo", title: "Núcleo, imagen y dimensión", templates: ["al-dimteo-mc", "al-nucleo-num"], theory: ["al-nucleo-imagen"],
-          intro: R`$\dim N(T) + \dim\operatorname{Im}(T) = \dim(\text{dominio})$, y $\dim\operatorname{Im}(T) = \operatorname{rg}A$.` }
+          intro: R`$\dim N(T) + \dim\operatorname{Im}(T) = \dim(\text{dominio})$, y $\dim\operatorname{Im}(T) = \operatorname{rg}A$.` },
+        { id: "al-composicion", title: "Composición e isomorfismos", templates: ["al-composicion-num", "al-iso-vf"], theory: ["al-composicion"],
+          intro: R`$[S\circ T] = [S][T]$; $T$ es isomorfismo si y solo si $[T]$ es inversible.` }
       ]
     }],
     cards
@@ -927,7 +1121,72 @@
     }
   };
 
+  T["al-polcar-num"] = {
+    type: "numeric", concepts: ["al-autovalores"], difficulty: 2,
+    generate(r) {
+      // p(λ) = det(A − λI) = −λ³ + tr(A)λ² − (suma de menores principales)λ + det A
+      const A = Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => r.int(-3, 3))), ask = r.pick(["tr", "m2", "det"]);
+      const tr = A[0][0] + A[1][1] + A[2][2], m2 = A[0][0] * A[1][1] - A[0][1] * A[1][0] + A[0][0] * A[2][2] - A[0][2] * A[2][0] + A[1][1] * A[2][2] - A[1][2] * A[2][1];
+      const det = A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) + A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
+      const ans = { tr, m2: -m2, det }[ask];
+      return {
+        prompt: `Para $A = ${M(A)}$, el polinomio característico es $p(\\lambda) = \\det(A - \\lambda I) = -\\lambda^3 + a\\lambda^2 + b\\lambda + c$. ¿Cuánto vale ${{ tr: "$a$", m2: "$b$", det: "$c$" }[ask]}?`,
+        answer: ans,
+        solution: [`Desarrollando $\\det(A - \\lambda I)$ ([[al-multiplicidades]]): $a = \\operatorname{tr}A$ (la suma de los autovalores), $b = -$ (suma de los menores principales de $2\\times2$) y $c = \\det A$ (el producto de los autovalores).`,
+          { tr: `$a = ${A[0][0]} ${A[1][1] < 0 ? "-" : "+"} ${Math.abs(A[1][1])} ${A[2][2] < 0 ? "-" : "+"} ${Math.abs(A[2][2])} = ${tr}$.`, m2: `Los tres menores principales suman $${m2}$, así que $b = ${-m2}$.`, det: `$c = p(0) = \\det A = ${det}$.` }[ask]],
+        // otro camino: se evalúa det(A − λI) por Gauss en tres valores de λ y se recupera el coeficiente por diferencias
+        verify: { kind: "value", fn: () => {
+          const gdet = B0 => { const B = B0.map(row => row.slice()); let s = 1; for (let c = 0; c < 3; c++) { let p = c; for (let i = c + 1; i < 3; i++) if (Math.abs(B[i][c]) > Math.abs(B[p][c])) p = i; if (Math.abs(B[p][c]) < 1e-12) return 0; if (p !== c) { [B[c], B[p]] = [B[p], B[c]]; s = -s; } for (let i = c + 1; i < 3; i++) { const f = B[i][c] / B[c][c]; for (let j = c; j < 3; j++) B[i][j] -= f * B[c][j]; } s *= B[c][c]; } return s; };
+          const p = l => gdet(A.map((row, i) => row.map((x, j) => x - (i === j ? l : 0)))), [p0, p1, p2] = [0, 1, 2].map(p);
+          // p(λ) = −λ³ + aλ² + bλ + c: con p(0), p(1) y p(2) se despejan c, a y b
+          const c = p0, u = p1 - c + 1, w = (p2 - c + 8) / 2; // u = a + b, w = 2a + b
+          const a = w - u, b = u - a;
+          return { tr: a, m2: b, det: c }[ask];
+        } }
+      };
+    }
+  };
+
+  T["al-multiplicidad-mc"] = {
+    type: "mc", concepts: ["al-diagonalizacion"], difficulty: 3,
+    generate(r) {
+      // triangular superior 3×3 con un autovalor doble; diagonalizable según el rango de A − λI
+      const l = r.int(-3, 3), m = r.int(-3, 3), x = r.int(-2, 2), y = r.int(-2, 2), z = r.int(-2, 2);
+      if (l === m) return null;
+      const A = [[l, x, y], [0, l, z], [0, 0, m]];
+      // A − λI tiene rango 1 (multiplicidad geométrica 2) si x = 0 y la tercera columna es combinación de las otras
+      const B = A.map((row, i) => row.map((v, j) => v - (i === j ? l : 0)));
+      const rk = (() => { const nz = B.flat().some(v => v !== 0); if (!nz) return 0; const r1 = [B[0], B[1], B[2]]; const det2 = (a, b, c, d) => a * d - b * c; let two = false; for (let i = 0; i < 3; i++) for (let k = i + 1; k < 3; k++) for (let j = 0; j < 3; j++) for (let q = j + 1; q < 3; q++) if (det2(r1[i][j], r1[i][q], r1[k][j], r1[k][q]) !== 0) two = true; return two ? 2 : 1; })();
+      const mg = 3 - rk, diag = mg === 2;
+      const opts = { yes: `Sí: el autovalor $${l}$ tiene multiplicidad algebraica $2$ y geométrica $2$`, no: `No: el autovalor $${l}$ tiene multiplicidad algebraica $2$ pero geométrica $1$`, three: `Sí, porque tiene tres autovalores distintos`, never: `No, porque una matriz con un autovalor repetido nunca es diagonalizable` };
+      const correct = diag ? opts.yes : opts.no;
+      return {
+        prompt: `¿Es diagonalizable $A = ${M(A)}$?`,
+        ...H.mc(r, correct, Object.values(opts).filter(o => o !== correct), { text: true }),
+        solution: [`Es triangular: sus autovalores son los de la diagonal, $${l}$ (doble) y $${m}$ ([[al-multiplicidades]]).`,
+          `La multiplicidad geométrica de $${l}$ es $3 - \\operatorname{rg}(A - ${H.par(l)}I) = 3 - ${rk} = ${mg}$. ${diag ? "Coincide con la algebraica: hay una base de autovectores y $A$ es diagonalizable." : "Es menor que la algebraica: faltan autovectores y $A$ no es diagonalizable."}`],
+        // verificación: dimensión del núcleo de A − λI por Gauss (kind nullity) comparada con la respuesta
+        verify: { kind: "truth", target: true, fn: () => { const C = B.map(row => row.slice()); let rank = 0; const used = [false, false, false]; for (let c = 0; c < 3; c++) { const p = [0, 1, 2].find(i => !used[i] && Math.abs(C[i][c]) > 1e-12); if (p === undefined) continue; used[p] = true; rank++; for (let i = 0; i < 3; i++) if (i !== p) { const f = C[i][c] / C[p][c]; for (let j = 0; j < 3; j++) C[i][j] -= f * C[p][j]; } } return (3 - rank === 2) === diag; } }
+      };
+    }
+  };
+
   const cards = {
+    "al-multiplicidades": {
+      title: "Polinomio característico y multiplicidades", aliases: ["multiplicidad algebraica", "multiplicidad geométrica", "traza de una matriz"], concepts: ["al-diagonalizacion"],
+      summary: "La suma de los autovalores es la traza y su producto, el determinante. Cada autovalor tiene multiplicidad algebraica (como raíz de p) y geométrica (dimensión de su autoespacio), con 1 ≤ geométrica ≤ algebraica. A es diagonalizable si y solo si coinciden para todos.",
+      def: [R`**Multiplicidad algebraica** de $\lambda$: cuántas veces es raíz del polinomio característico $p(\lambda) = \det(A - \lambda I)$. **Multiplicidad geométrica:** $\dim\ker(A - \lambda I) = n - \operatorname{rg}(A - \lambda I)$, la cantidad de autovectores independientes que tiene.`,
+        R`**Relación:** $1 \le m_g(\lambda) \le m_a(\lambda)$. $A$ ($n\times n$) es diagonalizable si y solo si $m_g = m_a$ para cada autovalor (con autovalores reales), es decir, si hay una base de autovectores. Con $n$ autovalores distintos siempre lo es.`,
+        R`**Traza y determinante:** $\operatorname{tr}A = a_{11} + \cdots + a_{nn} = \lambda_1 + \cdots + \lambda_n$ y $\det A = \lambda_1\cdots\lambda_n$ (contando multiplicidades).`],
+      idea: [R`Un autovalor doble «promete» dos direcciones invariantes, pero no siempre las cumple: en $\begin{pmatrix}2 & 1\\0 & 2\end{pmatrix}$ el autovalor $2$ es doble y, sin embargo, solo el eje $x$ es invariante. Esa matriz corre los puntos de costado (un corte) y no se puede diagonalizar.`],
+      demo: [R`**Paso 1 (traza y determinante).** El polinomio característico factorizado es $p(\lambda) = (\lambda_1 - \lambda)\cdots(\lambda_n - \lambda)$. Evaluando en $\lambda = 0$: $p(0) = \det A = \lambda_1\cdots\lambda_n$.`,
+        R`**Paso 2.** En el desarrollo de $\det(A - \lambda I)$, el término en $\lambda^{n-1}$ solo sale del producto de la diagonal $(a_{11} - \lambda)\cdots(a_{nn} - \lambda)$, porque cualquier otro término de Laplace omite al menos dos elementos de la diagonal. Su coeficiente es $(-1)^{n-1}(a_{11} + \cdots + a_{nn})$. En la forma factorizada es $(-1)^{n-1}(\lambda_1 + \cdots + \lambda_n)$. Igualando, $\operatorname{tr}A = \sum\lambda_i$.`,
+        R`**Paso 3 ($m_g \le m_a$).** Si $\lambda_0$ tiene $k$ autovectores independientes, se completan a una base. En ella, la matriz de $A$ tiene la forma $\begin{pmatrix}\lambda_0I_k & *\\0 & C\end{pmatrix}$, que es [[al-diagonalizacion|semejante]] a $A$ y tiene el mismo polinomio característico: $(\lambda_0 - \lambda)^k\det(C - \lambda I)$. Así $\lambda_0$ es raíz al menos $k$ veces: $m_a \ge k = m_g$.`,
+        R`**Paso 4 (criterio).** $A$ es diagonalizable si y solo si hay $n$ autovectores independientes. Los autovectores de autovalores distintos son independientes, así que el máximo que se consigue es $\sum m_g$. Como $\sum m_a = n$ y $m_g \le m_a$, se llega a $n$ solo si $m_g = m_a$ para todos. $\blacksquare$`],
+      examples: [{ q: R`$A = \begin{pmatrix}2 & 1\\0 & 2\end{pmatrix}$.`, steps: [R`$\lambda = 2$ es doble, pero $A - 2I = \begin{pmatrix}0 & 1\\0 & 0\end{pmatrix}$ tiene rango $1$: $m_g = 1 < 2$. No es diagonalizable.`] }],
+      tips: [R`Para una matriz triangular, los autovalores son los elementos de la diagonal: no hace falta calcular el polinomio. Lo que hay que mirar es el rango de $A - \lambda I$ para los repetidos.`],
+      see: ["al-autovalores", "al-diagonalizacion", "al-nucleo-imagen"]
+    },
     "al-autovalores": {
       title: "Autovalores y autovectores", aliases: ["autovalor", "autovalores", "autovector", "autovectores", "valor propio", "vector propio", "polinomio característico"], concepts: ["al-autovalores"],
       summary: "A v = λ v con v ≠ 0. Los autovalores son las raíces de det(A − λI) = 0.",
@@ -985,6 +1244,8 @@
       lessons: [
         { id: "al-autovalores", title: "Autovalores y autovectores", templates: ["al-eig-num", "al-eigvec-mc"], theory: ["al-autovalores"],
           intro: R`$A\vec v = \lambda\vec v$. Los $\lambda$ son raíces de $\det(A - \lambda I) = 0$; en $2\times2$, $\lambda^2 - \operatorname{tr}A\,\lambda + \det A$.` },
+        { id: "al-multiplicidades", title: "Polinomio característico y multiplicidades", templates: ["al-polcar-num", "al-multiplicidad-mc"], theory: ["al-multiplicidades"],
+          intro: R`$\operatorname{tr}A = \sum\lambda_i$, $\det A = \prod\lambda_i$. Diagonalizable si $m_g = m_a$ para cada autovalor.` },
         { id: "al-diagonalizacion", title: "Diagonalización y Gram-Schmidt", templates: ["al-diag-vf", "al-gs-num"], theory: ["al-diagonalizacion", "al-gram-schmidt"],
           intro: R`Diagonalizable si y solo si hay $n$ autovectores LI. Las simétricas siempre lo son, con base ortonormal (Gram-Schmidt).` }
       ]

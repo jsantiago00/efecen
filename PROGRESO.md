@@ -9,7 +9,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | Paso | Materia | Estado | Plantillas | Fichas |
 |---|---|---|---|---|
 | 1 | M101 Cálculo I | **completa**: las 5 unidades del programa (7 unidades en la app) | 105 | 64 |
-| 2 | M104 Introducción al Álgebra Lineal | **completa**: las 6 unidades del programa | 29 | 18 |
+| 2 | M104 Introducción al Álgebra Lineal | **completa**: las 6 unidades del programa (repasada el 21/10) | 39 | 21 |
 | 3 | F101 Física General I | **completa**: unidad transversal y 10 unidades | 62 | 34 |
 | 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción) | 35 | 16 |
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
@@ -132,6 +132,17 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - la alterna: valores eficaces promediando $v^2$ numéricamente; las reactancias derivando o integrando la tensión; el RLC simulado en el tiempo (RK4) hasta el régimen, midiendo amplitud, potencia media y desfase; la resonancia y el factor $Q$, buscando el máximo y los puntos de media potencia.
 - **Notación científica en las respuestas:** el campo de respuesta acepta `1,6e-19`, `1,6E-19` y `1,6×10^-19`, y hay una tecla «×10^». La vista previa y la respuesta correcta se muestran en notación científica cuando el número es muy chico o muy grande. «2e» sola sigue siendo 2·e, y «2e-1» es 2e − 1 (para no romper Cálculo).
 - **Test nuevo:** avisa si queda un comando de TeX o una coma `{,}` fuera de `$…$`, y ahora también se valida con KaTeX el texto de las figuras (antes no se chequeaba).
+
+## Repaso de los dos primeros años (desde el 21/10)
+
+Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3.º y 4.º. Primero se sumaron figuras a todas las materias (ver «Figuras interactivas»). Después se revisa cada materia buscando temas que se evalúan pero no se practican, empezando por las más chicas.
+
+- **M104 (21/10).** No se pudo bajar el programa: la red de la sesión no llega a fcen.uncuyo.edu.ar y no está en el Drive. Se usaron los temas de los parciales y finales analizados en `docs/parciales/m104.md`. Se agregaron 10 plantillas y 3 fichas, en cuatro lecciones nuevas y una ampliada:
+  - **Matrices especiales y ecuaciones matriciales:** clasificar una matriz (simétrica, antisimétrica, ortogonal) y resolver $AX = B$ o $XA = B$. Ficha nueva con la descomposición simétrica + antisimétrica, y la demo de que las ortogonales conservan normas y tienen $\det = \pm1$.
+  - **Rango** (en la lección de Gauss), calculado con el mayor menor no nulo y verificado por eliminación.
+  - **Coordenadas y cambio de base:** de una base a otra en $\mathbb R^2$ y coordenadas de un polinomio en la base $\{1, x - a, (x - a)^2\}$.
+  - **Composición e isomorfismos:** elemento de la matriz de $S\circ T$ (verificado aplicando la composición a los canónicos) y V/F de isomorfismo. Ficha nueva con $[S\circ T] = [S][T]$ y $[T^{-1}] = [T]^{-1}$.
+  - **Polinomio característico y multiplicidades:** coeficientes del polinomio (traza, menores principales, determinante; verificado evaluando $\det(A - \lambda I)$ por Gauss) y si una triangular con un autovalor doble es diagonalizable. Ficha nueva con $m_g \le m_a$ y el criterio de diagonalización.
 
 ## Pizarra (tablets con lápiz)
 
