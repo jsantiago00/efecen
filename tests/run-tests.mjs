@@ -29,7 +29,8 @@ const ok = (cond, where, msg) => { checks++; if (!cond) fail(where, msg); };
 // ---------- 1. parser numérico ----------
 const P = [["3/4", 0.75], ["-2,5", -2.5], ["pi/2", Math.PI / 2], ["π/6", Math.PI / 6], ["sqrt(3)", Math.sqrt(3)], ["√3/2", Math.sqrt(3) / 2],
   ["2pi", 2 * Math.PI], ["e^2", Math.E ** 2], ["-2^2", -4], ["2^-1", 0.5], ["3sqrt(2)", 3 * Math.sqrt(2)], ["(1+2)*3", 9],
-  ["sin(pi/6)", 0.5], ["ln(e)", 1], ["1.5e", 1.5 * Math.E], ["sqrt(2", Math.SQRT2], ["4 / 3", 4 / 3], ["", NaN], ["abc", NaN], ["2+", NaN], ["1/0", Infinity]];
+  ["sin(pi/6)", 0.5], ["ln(e)", 1], ["1.5e", 1.5 * Math.E], ["sqrt(2", Math.SQRT2], ["4 / 3", 4 / 3],
+  ["1,3e7", 1.3e7], ["1.3E-5", 1.3e-5], ["1,3 x 10^7", 1.3e7], ["2,5×10^-3", 2.5e-3], ["2e-1", 2 * Math.E - 1], ["e2", 2 * Math.E], ["", NaN], ["abc", NaN], ["2+", NaN], ["1/0", Infinity]];
 for (const [s, v] of P) {
   const got = E.parseNum(s);
   ok(Number.isNaN(v) ? Number.isNaN(got) : Math.abs(got - v) < 1e-12 || got === v, "parseNum", `"${s}" -> ${got}, esperaba ${v}`);
@@ -62,6 +63,9 @@ function checkTex(where, s) {
   if (/\[\[[a-z0-9-]+\|[^\]]*\$/.test(String(s))) fail(where, "link con LaTeX en el texto: " + String(s).match(/\[\[[^\]]*\]\]/)[0]);
   // los links [[id]] de ejercicios y apuntes tienen que apuntar a fichas existentes
   for (const m of String(s).matchAll(/\[\[([a-z0-9-]+)(?:\|[^\]]+)?\]\]/g)) { checks++; if (!E.cards[m[1]]) fail(where, `link roto [[${m[1]}]]`); }
+  // comandos de TeX sueltos, fuera de $…$ (se verían crudos), y llaves de coma decimal fuera de TeX
+  const bare = String(s).replace(/\$\$[^$]+\$\$|\$[^$]+\$/g, "");
+  if (/\\[a-zA-Z]+|\{,\}/.test(bare)) fail(where, `TeX fuera de $…$: ${bare.match(/.{0,30}(\\[a-zA-Z]+|\{,\}).{0,30}/)[0]}`);
   // signos dobles o restos de JS en el texto
   if (/\+ -|- -|undefined|NaN|\[object/.test(s)) fail(where, `texto sospechoso: ${s.slice(0, 140)}`);
 }
@@ -351,7 +355,7 @@ function checkViz(w, v) {
   ok(typeof v.draw === "function", w, "viz sin draw");
   for (const sl of v.sliders || []) {
     ok(sl.k && sl.label && sl.min < sl.max && sl.v >= sl.min && sl.v <= sl.max, w, `deslizador inválido: ${sl.k}`);
-    checkTex(w + " deslizador", sl.label);
+    checkTex(w + " deslizador", `$${sl.label}$`);
   }
   if (v.play) ok(v.play.k && v.play.max > 0, w, "animación inválida");
   const mock = { W: 400, H: 220, xr: v.xr || [-5, 5], yr: v.yr || [-5, 5], C: {} };
@@ -366,7 +370,7 @@ function checkViz(w, v) {
   for (const p of combos) {
     let out;
     try { out = v.draw(mock, p); } catch (e) { fail(w, "viz: excepción " + e.message + " con " + JSON.stringify(p)); continue; }
-    if (typeof out === "string") { checkTex(w + " viz", out); ok(!/undefined|NaN|Infinity/.test(out), w, "viz: texto con NaN: " + out); }
+    if (typeof out === "string") { checkTex(w + " viz", out.split("\\qquad").map(p => `$${p.trim()}$`).join(" ")); ok(!/undefined|NaN|Infinity/.test(out), w, "viz: texto con NaN: " + out); }
   }
   ok(bad === 0, w, `viz: ${bad} coordenadas no finitas`);
 }

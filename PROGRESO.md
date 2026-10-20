@@ -15,7 +15,8 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
-| 8+ | F102A, … | pendiente: aparecen en la carrera como "Próximamente" | — | — |
+| 8 | F102A Física General II A | **en curso**: unidades 1 (carga y campo) y 2 (potencial) de 9 | 13 | 10 |
+| 9+ | 3.º y 4.º año | pendiente: aparecen en la carrera como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
@@ -81,6 +82,20 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - máxima verosimilitud y mínimos cuadrados, optimizando numéricamente;
   - el sesgo de $S^2$ promediando sobre todas las muestras posibles.
 - **Alias que chocaban:** «regla del producto» (es de derivadas, en M101) y «exponencial» (M101). M105 enlaza a la ficha de errores de F101 para «promedio» y «campana de Gauss», y a la de Cauchy-Schwarz de M104.
+
+## F102A Física General II A (en curso, desde el 20/10)
+
+- **Archivo:** `content/f102a-fisica2a.js`, con prefijo `f2a-`. El primer bloque registra la materia y una biblioteca compartida, `E.f2a`: las constantes ($k$, $\varepsilon_0$, $\mu_0$, $e$, $m_e$, $m_p$), `nf` (número para TeX, en notación científica si es muy chico o muy grande), Simpson, RK4 para sistemas, Gauss para sistemas lineales, sección áurea, y el campo y el potencial de cargas puntuales en el plano.
+- **Hechas:** U1 Carga y campo eléctrico (Coulomb, campo, distribuciones continuas, Gauss, conductores) y U2 Potencial eléctrico (energía potencial, potencial, gradiente, equipotenciales).
+- **Verificación independiente:**
+  - las fuerzas, como $-dU/dx$, y el campo, como $-\nabla V$, con derivadas numéricas;
+  - el campo de varillas, anillos, discos y esferas, integrando Coulomb numéricamente (en la esfera, cáscara por cáscara, con el ángulo reparametrizado para resolver el pico cerca de la carga);
+  - el potencial, con la integral de línea del campo hasta el infinito, o sumando $k\,dq/r$ sobre la carga;
+  - la energía de un sistema, armándolo carga por carga;
+  - las distancias mínimas y las rapideces, integrando el movimiento con RK4.
+- **Notación científica en las respuestas:** el campo de respuesta acepta `1,6e-19`, `1,6E-19` y `1,6×10^-19`, y hay una tecla «×10^». La vista previa y la respuesta correcta se muestran en notación científica cuando el número es muy chico o muy grande. «2e» sola sigue siendo 2·e, y «2e-1» es 2e − 1 (para no romper Cálculo).
+- **Test nuevo:** avisa si queda un comando de TeX o una coma `{,}` fuera de `$…$`, y ahora también se valida con KaTeX el texto de las figuras (antes no se chequeaba).
+- **Faltan:** U3 Capacitancia, U4 Corriente y resistencia, U5 Circuitos de CC, U6 Campo magnético, U7 Fuentes de campo magnético, U8 Inducción y U9 Corriente alterna; después, las figuras y los parciales.
 
 ## Pizarra (tablets con lápiz)
 
@@ -204,6 +219,7 @@ Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Fí
 - **M102 Cálculo II:** programa oficial 2026 (prof. Fernanda Massut), en la carpeta de programas 2026 de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `1fk1ekCbqvSeZW7QsuRLCluEq4qAS84jW`).
 - **M106 Geometría Analítica:** programa oficial 2026 (prof. Silvia Raichman), Drive, id `1zJG9qufZgWfBU6f1gS-BFlFjg1Yy7PVN`. 6 unidades: vectores, planos y rectas, cónicas, superficies, coordenadas polares/cilíndricas/esféricas y ecuación general de segundo grado.
 - **M105 Probabilidad y Estadística:** no se encontró el programa. Se usó un temario estándar de un primer curso, en 8 unidades: estadística descriptiva, probabilidad, variables discretas, variables continuas, conjuntas y distribuciones muestrales, estimación, pruebas de hipótesis (con χ² y ANOVA) y regresión y correlación. Se contrastó con los temas del final de febrero de 2021 que está en Apunteca.
+- **F102A Física General II A:** programa oficial 2026 (prof. Rubén Santos), Drive, id `1BxA2eBt5T1-dD9DsLp7OTR9daGUVkvwi`. 9 unidades: carga y campo eléctrico, potencial, capacitancia y dieléctricos, corriente y resistencia, circuitos de CC, campo magnético, fuentes de campo magnético, inducción y corriente alterna.
 - **F102B Física General II B:** programa oficial 2026, en la carpeta de programas 2026 de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `16hZ72EbvPHfhWjXEY54p2Vi6ThuxTNvt`).
 - **Plan de estudios y trayecto sugerido:** el que indicó el usuario, consistente con la [distribución curricular](https://fcen.uncuyo.edu.ar/distribucion-curricular) de la facultad.
 

@@ -30,7 +30,7 @@
         ] },
         { n: 2, subjects: [
           { code: "M105", title: "Probabilidad y Estadística", course: "m105", step: 7 },
-          { code: "F102A", title: "Física General II A", step: 8 }
+          { code: "F102A", title: "Física General II A", course: "f102a", step: 8 }
         ] }
       ] },
       { n: 3, semesters: [
