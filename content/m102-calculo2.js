@@ -1050,6 +1050,26 @@
     }
   };
 
+  T["c2-diferencial-num"] = {
+    type: "numeric", concepts: ["c2-gradiente"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["cilindro", "cono", "caja"]);
+      const a = r.int(2, 10), b = r.int(2, 10), c0 = r.int(2, 10), da = r.int(1, 5) / 100 * r.pick([1, -1]), db = r.int(1, 5) / 100 * r.pick([1, -1]);
+      const f = { cilindro: (x, y) => Math.PI * x * x * y, cono: (x, y) => Math.PI * x * x * y / 3, caja: (x, y) => x * y * c0 }[kind];
+      const fx = { cilindro: 2 * Math.PI * a * b, cono: 2 * Math.PI * a * b / 3, caja: b * c0 }[kind], fy = { cilindro: Math.PI * a * a, cono: Math.PI * a * a / 3, caja: a * c0 }[kind];
+      const dV = fx * da + fy * db, dec = x => String(x).replace(".", "{,}");
+      const desc = { cilindro: [`un cilindro de radio $r = ${a}$ cm y altura $h = ${b}$ cm`, "r", "h", "V = \\pi r^2h"], cono: [`un cono de radio $r = ${a}$ cm y altura $h = ${b}$ cm`, "r", "h", "V = \\frac13\\pi r^2h"], caja: [`una caja de base $x = ${a}$ cm por $y = ${b}$ cm y altura fija $${c0}$ cm`, "x", "y", `V = ${c0}xy`] }[kind];
+      return {
+        prompt: `Para ${desc[0]}, ${desc[1]} cambia en $${dec(da)}$ cm y ${desc[2]} en $${dec(db)}$ cm. Usando el diferencial total, ¿cuánto cambia aproximadamente el volumen (en cm³)?`,
+        answer: dV,
+        solution: [`[[c2-gradiente|Diferencial total]]: con $${desc[3]}$, $dV = V_{${desc[1]}}\\,d${desc[1]} + V_{${desc[2]}}\\,d${desc[2]}$.`,
+          `$V_{${desc[1]}} \\approx ${nd(fx)}$ y $V_{${desc[2]}} \\approx ${nd(fy)}$, así que $dV \\approx ${nd(fx)}\\cdot(${dec(da)}) + ${nd(fy)}\\cdot(${dec(db)}) \\approx ${nd(dV)}$ cm³.`],
+        // otro camino: derivadas parciales por diferencias centradas
+        verify: { kind: "value", tol: 1e-7, fn: () => { const h = 1e-5, Fx = (f(a + h, b) - f(a - h, b)) / (2 * h), Fy = (f(a, b + h) - f(a, b - h)) / (2 * h); return Fx * da + Fy * db; } }
+      };
+    }
+  };
+
   const cards = {
     "c2-varias": {
       title: "Funciones de varias variables: límites y continuidad", aliases: ["funciones de varias variables", "función de varias variables", "función de dos variables", "curvas de nivel", "curva de nivel", "límite doble", "límites dobles"], concepts: ["c2-varias"],
@@ -1139,7 +1159,7 @@
       lessons: [
         { id: "c2-parciales", title: "Límites y derivadas parciales", templates: ["c2-limite-vf", "c2-parcial-num", "c2-cadena-num"], theory: ["c2-varias", "c2-parciales"],
           intro: R`$f_x$: derivar con $y$ fija. Regla de la cadena: $\frac{dz}{dt} = z_xx' + z_yy'$.` },
-        { id: "c2-gradiente", title: "Gradiente y plano tangente", templates: ["c2-direccional-num", "c2-gradiente-num", "c2-plano-tangente-num"], theory: ["c2-gradiente"],
+        { id: "c2-gradiente", title: "Gradiente y plano tangente", templates: ["c2-direccional-num", "c2-gradiente-num", "c2-plano-tangente-num", "c2-diferencial-num"], theory: ["c2-gradiente"],
           intro: R`$D_{\vec u}f = \nabla f\cdot\vec u$; el máximo crecimiento es $|\nabla f|$.` },
         { id: "c2-extremos", title: "Extremos y Lagrange", templates: ["c2-extremos-mc", "c2-lagrange-num"], theory: ["c2-extremos", "c2-lagrange"],
           intro: R`Puntos críticos con $\nabla f = \vec 0$ y el criterio $D = f_{xx}f_{yy} - f_{xy}^2$. Con restricción: $\nabla f = \lambda\nabla g$.` }
@@ -1296,7 +1316,91 @@
     }
   };
 
+  T["c2-area-sup-num"] = {
+    type: "numeric", concepts: ["c2-dobles"], difficulty: 3,
+    generate(r) {
+      const kind = r.pick(["plano", "paraboloide", "esfera", "cono"]);
+      let prompt, ans, sol, fnv;
+      if (kind === "plano") {
+        const a = r.int(-3, 3), b = r.int(-3, 3), c = r.int(1, 5), L1 = r.int(1, 4), L2 = r.int(1, 4), k = Math.sqrt(1 + a * a + b * b);
+        prompt = `Calculá el área de la parte del plano $z = ${H.poly([[a, "x"], [b, "y"], [c, ""]])}$ que está sobre el rectángulo $[0, ${L1}]\\times[0, ${L2}]$.`;
+        ans = k * L1 * L2;
+        sol = `Para $z = f(x, y)$, $dS = \\sqrt{1 + f_x^2 + f_y^2}\\,dA = \\sqrt{1 + ${a * a} + ${b * b}}\\,dA$, constante. Área $= \\sqrt{${1 + a * a + b * b}}\\cdot${L1 * L2} \\approx ${nd(ans)}$.`;
+        // otro camino: parametrización r(u, v) = (u, v, au + bv + c) y |r_u × r_v| integrado numéricamente
+        fnv = () => simp(u => simp(v => Math.hypot(-a, -b, 1), 0, L2, 20), 0, L1, 20);
+      } else if (kind === "paraboloide") {
+        const Rr = r.int(1, 3);
+        prompt = `Calculá el área de la parte del paraboloide $z = x^2 + y^2$ que está debajo del plano $z = ${Rr * Rr}$.`;
+        ans = Math.PI / 6 * ((1 + 4 * Rr * Rr) ** 1.5 - 1);
+        sol = `$dS = \\sqrt{1 + 4x^2 + 4y^2}\\,dA$. En polares, sobre el disco de radio $${Rr}$: $\\int_0^{2\\pi}\\!\\int_0^{${Rr}}\\sqrt{1 + 4r^2}\\,r\\,dr\\,d\\theta = \\frac\\pi6\\left[(1 + 4\\cdot${Rr * Rr})^{3/2} - 1\\right] \\approx ${nd(ans)}$.`;
+        // otro camino: integral doble en cartesianas sobre el disco
+        fnv = () => diskCart((x, y) => Math.sqrt(1 + 4 * x * x + 4 * y * y), Rr, 200);
+      } else if (kind === "esfera") {
+        const Rr = r.int(1, 5), h = r.int(1, 2 * Rr - 1);
+        prompt = `Calculá el área del casquete de la esfera $x^2 + y^2 + z^2 = ${Rr * Rr}$ que está por encima del plano $z = ${Rr - h}$.`;
+        ans = 2 * Math.PI * Rr * h;
+        sol = `Con la parametrización esférica, $dS = R^2\\sin\\varphi\\,d\\varphi\\,d\\theta$. El casquete va de $\\varphi = 0$ a $\\varphi_0$ con $\\cos\\varphi_0 = \\frac{${Rr - h}}{${Rr}}$: área $= 2\\pi R^2(1 - \\cos\\varphi_0) = 2\\pi Rh \\approx ${nd(ans)}$, con $h = ${h}$ la altura del casquete.`;
+        // otro camino: como gráfico z = √(R² − x² − y²) sobre un disco (para h ≤ R) o sumando bandas de altura dz
+        fnv = () => simp(z => 2 * Math.PI * Math.sqrt(Rr * Rr - z * z) * Math.hypot(1, z / Math.sqrt(Math.max(1e-300, Rr * Rr - z * z))), Rr - h, Rr * (1 - 1e-9), 4000);
+      } else {
+        const Rr = r.int(1, 4), Hh = r.int(1, 6);
+        prompt = `Calculá el área lateral del cono $z = \\frac{${Hh}}{${Rr}}\\sqrt{x^2 + y^2}$ entre $z = 0$ y $z = ${Hh}$.`;
+        ans = Math.PI * Rr * Math.hypot(Rr, Hh);
+        sol = `$z = k\\sqrt{x^2 + y^2}$ con $k = \\frac{${Hh}}{${Rr}}$: $f_x^2 + f_y^2 = k^2$, así que $dS = \\sqrt{1 + k^2}\\,dA$ sobre el disco de radio $${Rr}$. Área $= \\pi R^2\\sqrt{1 + k^2} = \\pi R\\sqrt{R^2 + H^2} \\approx ${nd(ans)}$.`;
+        // otro camino: parametrización (r cos θ, r sen θ, k r) y |r_r × r_θ| integrado numéricamente
+        fnv = () => simp(t => simp(rr => { const k = Hh / Rr, ru = [Math.cos(t), Math.sin(t), k], rv = [-rr * Math.sin(t), rr * Math.cos(t), 0]; return Math.hypot(ru[1] * rv[2] - ru[2] * rv[1], ru[2] * rv[0] - ru[0] * rv[2], ru[0] * rv[1] - ru[1] * rv[0]); }, 0, Rr, 40), 0, 2 * Math.PI, 40);
+      }
+      return {
+        prompt, answer: ans,
+        solution: [`[[c2-superficies-param|Área de una superficie]]: $A = \\iint_D\\|\\vec r_u\\times\\vec r_v\\|\\,du\\,dv$.`, sol],
+        verify: { kind: "value", tol: 1e-4, fn: fnv }
+      };
+    }
+  };
+  T["c2-area-sup-num"].testN = 100;
+
+  T["c2-param-sup-mc"] = {
+    type: "mc", concepts: ["c2-dobles"], difficulty: 2,
+    generate(r) {
+      const a = r.int(1, 4), b = r.int(1, 4);
+      const cases = [
+        { p: `(${a}\\cos u,\\ ${a}\\sin u,\\ v)`, n: `El cilindro $x^2 + y^2 = ${a * a}$`, F: (u, v) => [a * Math.cos(u), a * Math.sin(u), v], G: ([x, y]) => x * x + y * y - a * a },
+        { p: `(${a}\\sin u\\cos v,\\ ${a}\\sin u\\sin v,\\ ${a}\\cos u)`, n: `La esfera $x^2 + y^2 + z^2 = ${a * a}$`, F: (u, v) => [a * Math.sin(u) * Math.cos(v), a * Math.sin(u) * Math.sin(v), a * Math.cos(u)], G: ([x, y, z]) => x * x + y * y + z * z - a * a },
+        { p: `(u\\cos v,\\ u\\sin v,\\ ${b}u)`, n: `El cono $z^2 = ${b * b}(x^2 + y^2)$`, F: (u, v) => [u * Math.cos(v), u * Math.sin(v), b * u], G: ([x, y, z]) => z * z - b * b * (x * x + y * y) },
+        { p: `(u,\\ v,\\ u^2 + v^2)`, n: `El paraboloide $z = x^2 + y^2$`, F: (u, v) => [u, v, u * u + v * v], G: ([x, y, z]) => z - x * x - y * y },
+        { p: `(u,\\ v,\\ ${a}u + ${b}v)`, n: `El plano $z = ${a}x + ${b}y$`, F: (u, v) => [u, v, a * u + b * v], G: ([x, y, z]) => z - a * x - b * y }
+      ];
+      const k = r.int(0, cases.length - 1), c = cases[k], correct = c.n;
+      return {
+        prompt: `¿Qué superficie describe la parametrización $\\vec r(u, v) = ${c.p}$?`,
+        ...H.mc(r, correct, cases.filter((_, i) => i !== k).map(x => x.n), { text: true }),
+        solution: [`Se elimina el parámetro para obtener una ecuación en $x$, $y$, $z$ ([[c2-superficies-param|superficies paramétricas]]).`, `Resulta: ${correct}.`],
+        // verificación: los puntos de la parametrización satisfacen la ecuación implícita de la opción correcta y no las de las otras
+        verify: { kind: "truth", target: true, fn: () => {
+          const pts = [[0.3, 0.7], [1.1, 2.0], [2.2, 4.1], [0.9, 5.5]].map(([u, v]) => c.F(u, v));
+          const sat = cc => pts.every(P => Math.abs(cc.G(P)) < 1e-9 * Math.max(1, ...P.map(Math.abs)) ** 2);
+          return sat(c) && cases.filter((_, i) => i !== k).every(o => !sat(o));
+        } }
+      };
+    }
+  };
+
   const cards = {
+    "c2-superficies-param": {
+      title: "Superficies paramétricas y área de una superficie", aliases: ["superficie paramétrica", "superficies paramétricas", "área de una superficie", "elemento de área"], concepts: ["c2-dobles"],
+      summary: "Una superficie se describe con r⃗(u, v). El vector r⃗_u × r⃗_v es normal y su módulo mide cuánto se estira el área: A = ∬ ‖r⃗_u × r⃗_v‖ du dv. Para z = f(x, y), dS = √(1 + f_x² + f_y²) dA.",
+      def: [R`**Superficie paramétrica:** $\vec r(u, v) = (x(u, v), y(u, v), z(u, v))$ con $(u, v)$ en una región $D$. Los vectores $\vec r_u$ y $\vec r_v$ son tangentes, y $\vec r_u\times\vec r_v$ es **normal** a la superficie.`,
+        R`**Área:** $A = \iint_D\|\vec r_u\times\vec r_v\|\,du\,dv$. **Gráfico** $z = f(x, y)$: $\|\vec r_x\times\vec r_y\| = \sqrt{1 + f_x^2 + f_y^2}$. **Esfera** de radio $R$ en esféricas: $\|\vec r_\varphi\times\vec r_\theta\| = R^2\sin\varphi$.`,
+        R`**Integral de superficie** de una función: $\iint_S g\,dS = \iint_D g(\vec r(u, v))\,\|\vec r_u\times\vec r_v\|\,du\,dv$; con $g = 1$ da el área.`],
+      idea: [R`Un rectangulito $du\times dv$ del plano de parámetros se transforma en un paralelogramito sobre la superficie, de lados $\vec r_u\,du$ y $\vec r_v\,dv$. Su área es el módulo del [[al-producto-vectorial|producto vectorial]]: es el mismo papel que cumple el [[c2-jacobiano|jacobiano]] en un cambio de variables.`],
+      demo: [R`**Paso 1.** Cerca de $(u, v)$, por la aproximación lineal, $\vec r(u + du, v) \approx \vec r + \vec r_u\,du$ y $\vec r(u, v + dv) \approx \vec r + \vec r_v\,dv$: el rectangulito de parámetros va a un paralelogramo de lados $\vec r_u\,du$ y $\vec r_v\,dv$.`,
+        R`**Paso 2.** El área de un paralelogramo es el módulo del producto vectorial de sus lados: $dS = \|\vec r_u\times\vec r_v\|\,du\,dv$. Sumando todos los pedacitos (integral doble) sale $A$.`,
+        R`**Paso 3 (gráfico).** Con $\vec r(x, y) = (x, y, f(x, y))$: $\vec r_x = (1, 0, f_x)$ y $\vec r_y = (0, 1, f_y)$, así que $\vec r_x\times\vec r_y = (-f_x, -f_y, 1)$ y su módulo es $\sqrt{1 + f_x^2 + f_y^2}$.`,
+        R`**Paso 4 (esfera).** Con $\vec r = R(\sin\varphi\cos\theta, \sin\varphi\sin\theta, \cos\varphi)$, el producto $\vec r_\varphi\times\vec r_\theta = R^2\sin\varphi\,(\sin\varphi\cos\theta, \sin\varphi\sin\theta, \cos\varphi)$ es radial, de módulo $R^2\sin\varphi$. Integrando en $\theta \in [0, 2\pi]$ y $\varphi \in [0, \pi]$ queda $4\pi R^2$. $\blacksquare$`],
+      examples: [{ q: R`Área del casquete de una esfera de radio $R$ y altura $h$.`, steps: [R`$\int_0^{2\pi}\!\int_0^{\varphi_0}R^2\sin\varphi\,d\varphi\,d\theta = 2\pi R^2(1 - \cos\varphi_0) = 2\pi Rh$: proporcional a la altura (resultado de Arquímedes).`] }],
+      tips: [R`El factor $\sqrt{1 + f_x^2 + f_y^2} \ge 1$: la superficie inclinada tiene más área que su sombra en el plano $xy$. Si $f$ es constante, son iguales.`],
+      see: ["c2-dobles", "c2-jacobiano", "c2-flujo"]
+    },
     "c2-dobles": {
       title: "Integrales dobles", aliases: ["integral doble", "integrales dobles", "integral iterada", "integrales iteradas", "teorema de Fubini", "Fubini", "cambio del orden de integración", "región de tipo I", "región de tipo II"], concepts: ["c2-dobles"],
       summary: "∬_D f dA suma f sobre una región plana. Se calcula como dos integrales simples (Fubini), con límites que describen la región.",
@@ -1355,7 +1459,9 @@
         { id: "c2-dobles", title: "Integrales dobles", templates: ["c2-iterada-num", "c2-region-num", "c2-orden-vf"], theory: ["c2-dobles"],
           intro: R`Fubini: dos integrales simples, con límites que describen la región.` },
         { id: "c2-cambio-var", title: "Polares, triples y jacobianos", templates: ["c2-jacobiano-num", "c2-polar-int-num", "c2-triple-num"], theory: ["c2-jacobiano", "c2-triples"],
-          intro: R`$dA = r\,dr\,d\theta$; $dV = r\,dr\,d\theta\,dz$ o $\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta$.` }
+          intro: R`$dA = r\,dr\,d\theta$; $dV = r\,dr\,d\theta\,dz$ o $\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta$.` },
+        { id: "c2-area-superficie", title: "Superficies paramétricas y área", templates: ["c2-area-sup-num", "c2-param-sup-mc"], theory: ["c2-superficies-param"],
+          intro: R`$A = \iint_D\|\vec r_u\times\vec r_v\|\,du\,dv$; para $z = f(x, y)$, $dS = \sqrt{1 + f_x^2 + f_y^2}\,dA$.` }
       ]
     }],
     cards
@@ -1497,6 +1603,25 @@
     }
   };
 
+  T["c2-stokes-num"] = {
+    type: "numeric", concepts: ["c2-flujo"], difficulty: 3,
+    generate(r) {
+      // F = (a y + p z, b x + q z, c x + s y) sobre la circunferencia x² + y² = R², z = h, recorrida en sentido antihorario visto desde arriba
+      const a = r.int(-3, 3), b = r.int(-3, 3), p = r.int(-2, 2), q = r.int(-2, 2), c = r.int(-2, 2), s = r.int(-2, 2), Rr = r.int(1, 4), h = r.int(-2, 3);
+      const rotz = b - a, ans = rotz * Math.PI * Rr * Rr;
+      if (rotz === 0) return null;
+      const comp = (k, v1, k2, v2) => H.poly([[k, v1], [k2, v2]]) || "0";
+      return {
+        prompt: `Sea $\\vec F = \\left(${comp(a, "y", p, "z")},\\ ${comp(b, "x", q, "z")},\\ ${comp(c, "x", s, "y")}\\right)$ y $C$ la circunferencia $x^2 + y^2 = ${Rr * Rr}$ en el plano $z = ${h}$, recorrida en sentido antihorario vista desde arriba. Calculá la circulación $\\oint_C\\vec F\\cdot d\\vec r$ usando el teorema de Stokes.`,
+        answer: ans,
+        solution: [`[[c2-flujo|Stokes]]: $\\oint_C\\vec F\\cdot d\\vec r = \\iint_S(\\nabla\\times\\vec F)\\cdot\\vec n\\,dS$, con $S$ el disco que encierra $C$ y $\\vec n = \\vec k$ (por el sentido de recorrido).`,
+          `$(\\nabla\\times\\vec F)\\cdot\\vec k = Q_x - P_y = ${b} - ${H.par(a)} = ${rotz}$, constante. Entonces la circulación es $${rotz}\\cdot\\pi\\cdot${Rr * Rr} \\approx ${nd(ans)}$.`],
+        // otro camino: integral de línea directa con la parametrización (R cos t, R sen t, h)
+        verify: { kind: "value", tol: 1e-8, fn: () => simp(t => { const x = Rr * Math.cos(t), y = Rr * Math.sin(t), z = h, dx = -Rr * Math.sin(t), dy = Rr * Math.cos(t); return (a * y + p * z) * dx + (b * x + q * z) * dy + (c * x + s * y) * 0; }, 0, 2 * Math.PI, 400) }
+      };
+    }
+  };
+
   const cards = {
     "c2-campos": {
       title: "Campos vectoriales y campos conservativos", aliases: ["campo vectorial", "campos vectoriales", "campo conservativo", "campos conservativos", "función potencial", "independencia de la trayectoria", "teorema fundamental para integrales de línea"], concepts: ["c2-campos"],
@@ -1573,7 +1698,7 @@
       lessons: [
         { id: "c2-linea", title: "Integrales de línea y campos conservativos", templates: ["c2-trabajo-num", "c2-conservativo-vf", "c2-potencial-num"], theory: ["c2-linea", "c2-campos"],
           intro: R`$\int_C\vec F\cdot d\vec r = \int\vec F(\vec r(t))\cdot\vec r\,'(t)\,dt$. Si $\vec F = \nabla\varphi$, da $\varphi(B) - \varphi(A)$.` },
-        { id: "c2-teoremas", title: "Green, Gauss y Stokes", templates: ["c2-green-num", "c2-rot-num", "c2-divergencia-num"], theory: ["c2-green", "c2-flujo"],
+        { id: "c2-teoremas", title: "Green, Gauss y Stokes", templates: ["c2-green-num", "c2-rot-num", "c2-divergencia-num", "c2-stokes-num"], theory: ["c2-green", "c2-flujo"],
           intro: R`Green: $\oint P\,dx + Q\,dy = \iint(Q_x - P_y)\,dA$. Gauss: flujo saliente $= \iiint\nabla\cdot\vec F\,dV$.` }
       ]
     }],

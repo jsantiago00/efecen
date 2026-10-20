@@ -12,7 +12,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 2 | M104 Introducción al Álgebra Lineal | **completa**: las 6 unidades del programa (repasada el 21/10) | 39 | 21 |
 | 3 | F101 Física General I | **completa**: unidad transversal y 10 unidades | 62 | 34 |
 | 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción; repasada el 21/10) | 42 | 20 |
-| 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
+| 5 | M102 Cálculo II | **completa**: las 8 unidades del programa (repasada el 21/10) | 52 | 26 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna) | 51 | 42 |
@@ -149,6 +149,11 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
   - **Ondas estacionarias, energía y Doppler** (lección nueva en la U5): armónicos de cuerdas y tubos (verificados buscando las raíces de las condiciones de borde), potencia de una onda en una cuerda (promediando $-F\,y_x\,y_t$) y efecto Doppler (siguiendo dos crestas hasta el observador). Ficha nueva de Doppler.
   - **Refracción en una superficie esférica** (en la lección de lentes): pecera, varilla de vidrio y profundidad aparente, verificadas trazando dos rayos con Snell exacta. Ficha nueva con la demo paraxial.
   - **Criterio de Rayleigh** (en la lección de la rendija), verificado con el primer cero de $\sin$ y de $J_1$. Ficha nueva.
+
+- **M102 (21/10).** Se comparó con el programa 2026. Faltaban superficies paramétricas y área de una superficie (U6.4 y U7.5), Stokes como ejercicio y los diferenciales (U5.10). Se agregaron 4 plantillas y 1 ficha:
+  - **Superficies paramétricas y área** (lección nueva en la U6): área de planos, paraboloides, casquetes esféricos y conos (verificada integrando $\|\vec r_u\times\vec r_v\|$ con otra parametrización), y reconocer la superficie de una parametrización (verificado con la ecuación implícita). Ficha nueva con la demo de $dS$.
+  - **Stokes** (en la lección de teoremas): circulación por una circunferencia con el rotor, verificada con la integral de línea directa.
+  - **Diferencial total** (en la lección del gradiente): cambio aproximado de un volumen, verificado con derivadas numéricas.
 
 ## Pizarra (tablets con lápiz)
 
