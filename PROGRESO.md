@@ -11,7 +11,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 1 | M101 Cálculo I | **completa**: las 5 unidades del programa (7 unidades en la app) | 105 | 64 |
 | 2 | M104 Introducción al Álgebra Lineal | **completa**: las 6 unidades del programa (repasada el 21/10) | 39 | 21 |
 | 3 | F101 Física General I | **completa**: unidad transversal y 10 unidades | 62 | 34 |
-| 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción) | 35 | 16 |
+| 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción; repasada el 21/10) | 42 | 20 |
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
@@ -143,6 +143,12 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
   - **Coordenadas y cambio de base:** de una base a otra en $\mathbb R^2$ y coordenadas de un polinomio en la base $\{1, x - a, (x - a)^2\}$.
   - **Composición e isomorfismos:** elemento de la matriz de $S\circ T$ (verificado aplicando la composición a los canónicos) y V/F de isomorfismo. Ficha nueva con $[S\circ T] = [S][T]$ y $[T^{-1}] = [T]^{-1}$.
   - **Polinomio característico y multiplicidades:** coeficientes del polinomio (traza, menores principales, determinante; verificado evaluando $\det(A - \lambda I)$ por Gauss) y si una triangular con un autovalor doble es diagonalizable. Ficha nueva con $m_g \le m_a$ y el criterio de diagonalización.
+
+- **F102B (21/10).** Se comparó con el programa 2026. Se agregaron 7 plantillas y 4 fichas:
+  - **Motores, heladeras y bombas de calor** (lección nueva en la U4): ciclo de Otto (verificado armando el ciclo con temperaturas) y balances de refrigeradores y bombas de calor. Ficha nueva con la demo de la eficiencia del Otto.
+  - **Ondas estacionarias, energía y Doppler** (lección nueva en la U5): armónicos de cuerdas y tubos (verificados buscando las raíces de las condiciones de borde), potencia de una onda en una cuerda (promediando $-F\,y_x\,y_t$) y efecto Doppler (siguiendo dos crestas hasta el observador). Ficha nueva de Doppler.
+  - **Refracción en una superficie esférica** (en la lección de lentes): pecera, varilla de vidrio y profundidad aparente, verificadas trazando dos rayos con Snell exacta. Ficha nueva con la demo paraxial.
+  - **Criterio de Rayleigh** (en la lección de la rendija), verificado con el primer cero de $\sin$ y de $J_1$. Ficha nueva.
 
 ## Pizarra (tablets con lápiz)
 

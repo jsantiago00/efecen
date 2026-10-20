@@ -533,7 +533,59 @@
     }
   };
 
+  T["f2b-otto-num"] = {
+    type: "numeric", concepts: ["f2b-segunda-ley"], difficulty: 3,
+    generate(r) {
+      const rc = r.pick([6, 7, 8, 9, 10, 11, 12]), gam = r.pick([1.4, 1.35, 1.3]), Qh = r.int(5, 40) * 100, ask = r.pick(["e", "W"]);
+      const e = 1 - rc ** (1 - gam), ans = ask === "e" ? 100 * e : e * Qh;
+      return {
+        prompt: `Un motor de nafta se modela con un ciclo de Otto de relación de compresión $r = ${rc}$, con un gas de $\\gamma = ${String(gam).replace(".", "{,}")}$. ${ask === "e" ? "¿Cuál es su eficiencia teórica (en %)?" : `Si en cada ciclo recibe $${Qh}$ J en la combustión, ¿cuánto trabajo hace por ciclo (en J)?`}`,
+        answer: ans,
+        solution: [`[[f2b-motores|Ciclo de Otto]]: dos adiabáticas y dos isocóricas. Su eficiencia solo depende de la relación de compresión: $e = 1 - \\frac{1}{r^{\\gamma - 1}}$.`,
+          `$e = 1 - ${rc}^{-${num(gam - 1, 2)}} \\approx ${num(100 * e, 4)}\\%$${ask === "W" ? `, así que $W = eQ_H \\approx ${num(ans, 4)}$ J` : ""}.`],
+        // otro camino: se arma el ciclo con temperaturas (nR = 1) y se suman los calores de las isocóricas
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const Ta = 300, Tb = Ta * rc ** (gam - 1), Tc = Tb * 3, Td = Tc / rc ** (gam - 1), Cv = 1 / (gam - 1);
+          const Qin = Cv * (Tc - Tb), Qout = Cv * (Td - Ta), ee = 1 - Qout / Qin;
+          return ask === "e" ? 100 * ee : ee * Qh;
+        } }
+      };
+    }
+  };
+
+  T["f2b-refri-num"] = {
+    type: "numeric", concepts: ["f2b-segunda-ley"], difficulty: 2,
+    generate(r) {
+      const bomba = r.bool(), W = r.int(2, 20) * 50, cop = r.int(20, 60) / 10, ask = r.pick(["Q", "COP"]);
+      const Qc = bomba ? (cop - 1) * W : cop * W, Qh = Qc + W;
+      return {
+        prompt: bomba ? (ask === "Q" ? `Una bomba de calor con un COP de calefacción de $${String(cop).replace(".", "{,}")}$ consume $${W}$ J de trabajo eléctrico. ¿Cuánto calor (en J) entrega dentro de la casa?` : `Una bomba de calor entrega $${Qh}$ J dentro de una casa consumiendo $${W}$ J de trabajo. ¿Cuál es su COP de calefacción?`)
+          : (ask === "Q" ? `Una heladera con un COP de $${String(cop).replace(".", "{,}")}$ consume $${W}$ J de trabajo. ¿Cuánto calor (en J) saca del interior?` : `Una heladera saca $${Qc}$ J del interior consumiendo $${W}$ J de trabajo. ¿Cuánto calor (en J) le entrega a la cocina?`),
+        answer: bomba ? (ask === "Q" ? Qh : Qh / W) : (ask === "Q" ? Qc : Qh),
+        solution: [`[[f2b-motores|Refrigeradores y bombas de calor]]: por la primera ley, el calor entregado al ambiente caliente es $Q_H = Q_C + W$.`,
+          bomba ? `Para calefaccionar interesa $Q_H$: $\\text{COP}_{cal} = \\frac{Q_H}{W}$. ${ask === "Q" ? `$Q_H = ${String(cop).replace(".", "{,}")}\\cdot${W} = ${num(Qh, 4)}$ J.` : `$\\text{COP} = \\frac{${Qh}}{${W}} = ${num(Qh / W, 4)}$.`}`
+            : (ask === "Q" ? `En una heladera interesa $Q_C$: $\\text{COP} = \\frac{Q_C}{W}$, así que $Q_C = ${num(Qc, 4)}$ J.` : `$Q_H = Q_C + W = ${Qc} + ${W} = ${Qh}$ J: la cocina recibe más calor del que se saca de adentro.`)],
+        // otro camino: balance de energía del ciclo (la energía interna no cambia en un ciclo)
+        verify: { kind: "zero", fn: x => { if (bomba) return ask === "Q" ? [(x - (Qc + W)) / W] : [(x * W - (Qc + W)) / W]; return ask === "Q" ? [(x - cop * W) / W] : [(x - Qc - W) / W]; } }
+      };
+    }
+  };
+
   const cards = {
+    "f2b-motores": {
+      title: "Motores de combustión, refrigeradores y bombas de calor", aliases: ["ciclo de Otto", "motor de combustión interna", "bomba de calor", "relación de compresión"], concepts: ["f2b-segunda-ley"],
+      summary: "Ciclo de Otto: e = 1 − 1/r^(γ−1), con r la relación de compresión. Refrigerador: COP = Q_C/W. Bomba de calor: COP = Q_H/W = 1 + Q_C/W, siempre mayor que 1.",
+      def: [R`**Ciclo de Otto** (motor de nafta idealizado): compresión adiabática de $V_1$ a $V_2$, combustión a volumen constante, expansión adiabática y escape a volumen constante. Con $r = \frac{V_1}{V_2}$, la **relación de compresión**, la eficiencia es $e = 1 - \frac{1}{r^{\gamma - 1}}$.`,
+        R`**Refrigerador:** con un trabajo $W$ saca $Q_C$ de lo frío y entrega $Q_H = Q_C + W$ a lo caliente; $\text{COP} = \frac{Q_C}{W}$. **Bomba de calor:** la misma máquina, usada para calentar; $\text{COP}_{cal} = \frac{Q_H}{W} = 1 + \frac{Q_C}{W}$.`],
+      idea: [R`Una bomba de calor no «fabrica» calor: lo mueve desde afuera, que está frío, hacia adentro. Por eso entrega más energía térmica que la eléctrica que consume, y calefacciona mejor que una estufa eléctrica, que convierte $W$ en $W$ de calor.`],
+      demo: [R`**Paso 1 (calores del Otto).** Solo hay intercambio de calor en las isocóricas: entra $Q_H = nC_V(T_c - T_b)$ en la combustión y sale $Q_C = nC_V(T_d - T_a)$ en el escape. En las adiabáticas $Q = 0$.`,
+        R`**Paso 2.** En una adiabática del gas ideal, $TV^{\gamma - 1}$ es constante. La compresión ($a \to b$) y la expansión ($c \to d$) van entre los mismos volúmenes, así que $T_b = T_ar^{\gamma - 1}$ y $T_c = T_dr^{\gamma - 1}$.`,
+        R`**Paso 3.** Restando, $T_c - T_b = r^{\gamma - 1}(T_d - T_a)$. Entonces $\frac{Q_C}{Q_H} = \frac{T_d - T_a}{T_c - T_b} = \frac{1}{r^{\gamma - 1}}$, y $e = 1 - \frac{Q_C}{Q_H} = 1 - \frac{1}{r^{\gamma - 1}}$.`,
+        R`**Paso 4 (bomba de calor).** En un ciclo $\Delta U = 0$, así que por la primera ley $Q_H = Q_C + W$, y $\frac{Q_H}{W} = 1 + \frac{Q_C}{W} > 1$. $\blacksquare$`],
+      examples: [{ q: R`Otto con $r = 8$ y $\gamma = 1{,}4$.`, steps: [R`$e = 1 - 8^{-0{,}4} \approx 0{,}56$. Los motores reales rinden bastante menos (rozamiento, combustión no instantánea, pérdidas de calor).`] }],
+      tips: [R`Subir la relación de compresión mejora la eficiencia, pero el límite lo pone el autoencendido de la mezcla (el «pistoneo»); por eso los diésel, que no tienen ese problema, usan $r$ más altas.`],
+      see: ["f2b-segunda-ley", "f2b-procesos", "f2b-primera-ley"]
+    },
     "f2b-segunda-ley": {
       title: "Segunda ley: máquinas térmicas, refrigeradores y Carnot", aliases: ["segunda ley de la termodinámica", "máquina térmica", "máquinas térmicas", "ciclo de Carnot", "Carnot", "refrigerador", "eficiencia térmica", "coeficiente de rendimiento"], concepts: ["f2b-segunda-ley"],
       summary: "No se puede convertir todo el calor en trabajo. Entre T_H y T_C: e ≤ 1 − T_C/T_H (Carnot).",
@@ -578,6 +630,8 @@
       lessons: [
         { id: "f2b-maquinas", title: "Máquinas térmicas y Carnot", templates: ["f2b-maquina-num", "f2b-carnot-num", "f2b-segunda-vf"], theory: ["f2b-segunda-ley"],
           intro: R`$e = \frac{W}{Q_H} \le 1 - \frac{T_C}{T_H}$, con temperaturas en kelvin.` },
+        { id: "f2b-motores", title: "Motores, heladeras y bombas de calor", templates: ["f2b-otto-num", "f2b-refri-num"], theory: ["f2b-motores"],
+          intro: R`Otto: $e = 1 - r^{1 - \gamma}$. Refrigerador: $\text{COP} = \frac{Q_C}{W}$; bomba de calor: $\frac{Q_H}{W} = 1 + \text{COP}$.` },
         { id: "f2b-entropia", title: "Entropía", templates: ["f2b-entropia-num"], theory: ["f2b-entropia", "f2b-segunda-ley"],
           intro: R`$\Delta S = \int\frac{dQ_{rev}}{T}$. En un sistema aislado, la entropía no disminuye.` }
       ]
@@ -700,7 +754,83 @@
     }
   };
 
+  T["f2b-armonicos-num"] = {
+    type: "numeric", concepts: ["f2b-ondas"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["cuerda", "abierto", "cerrado"]), n0 = r.int(1, 4), v = kind === "cuerda" ? r.int(10, 60) * 10 : 344, L = r.int(20, 150) / 100;
+      // en un tubo cerrado en un extremo solo existen los armónicos impares
+      const n = kind === "cerrado" ? 2 * n0 - 1 : n0, f = kind === "cerrado" ? n * v / (4 * L) : n * v / (2 * L);
+      const ord = ["fundamental", "segundo", "tercero", "cuarto", "quinto", "sexto", "séptimo"][n - 1];
+      return {
+        prompt: `${{ cuerda: `Una cuerda de $${String(L).replace(".", "{,}")}$ m, fija en los dos extremos, transmite ondas a $${v}$ m/s.`, abierto: `Un tubo de $${String(L).replace(".", "{,}")}$ m está abierto en los dos extremos (sonido a $344$ m/s).`, cerrado: `Un tubo de $${String(L).replace(".", "{,}")}$ m está cerrado en un extremo y abierto en el otro (sonido a $344$ m/s).` }[kind]} ¿Cuál es la frecuencia ${kind === "cerrado" ? (n0 === 1 ? "del modo fundamental" : `del ${["", "segundo", "tercer", "cuarto"][n0 - 1]} modo posible, contando el fundamental`) : n === 1 ? "del modo fundamental" : `del ${ord} armónico`} (en Hz)?`,
+        answer: f,
+        solution: [kind === "cerrado" ? `En un tubo cerrado en un extremo hay un nodo de desplazamiento en el extremo cerrado y un antinodo en el abierto: entran $\\frac14, \\frac34, \\frac54, \\ldots$ longitudes de onda. Solo hay armónicos impares: $f_n = \\frac{nv}{4L}$, $n = 1, 3, 5, \\ldots$ ([[f2b-ondas|ondas estacionarias]]).`
+          : `Con ${kind === "cuerda" ? "nodos" : "antinodos de desplazamiento"} en los dos extremos entran $n$ medias longitudes de onda: $\\lambda_n = \\frac{2L}{n}$ y $f_n = \\frac{nv}{2L}$ ([[f2b-ondas|ondas estacionarias]]).`,
+          `Con $n = ${n}$: $f = ${num(f, 5)}$ Hz.`],
+        // otro camino: se busca numéricamente la frecuencia que cumple las condiciones de borde (raíces de sen o cos de kL)
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const g = kind === "cerrado" ? kk => Math.cos(kk * L) : kk => Math.sin(kk * L), roots = [];
+          for (let k = 1e-6, prev = g(k), h = 0.001; roots.length < n && k < 1e4; k += h) { const cur = g(k + h); if (prev * cur < 0) { let a = k, b = k + h; for (let i = 0; i < 60; i++) { const m = (a + b) / 2; if (g(a) * g(m) <= 0) b = m; else a = m; } roots.push((a + b) / 2); } prev = cur; }
+          const kn = roots[kind === "cerrado" ? n0 - 1 : n - 1];
+          return kn * v / (2 * Math.PI);
+        } }
+      };
+    }
+  };
+  T["f2b-armonicos-num"].testN = 100;
+
+  T["f2b-potencia-onda-num"] = {
+    type: "numeric", concepts: ["f2b-ondas"], difficulty: 3,
+    generate(r) {
+      const mu = r.int(1, 20) / 1000, F = r.int(10, 200), A = r.int(1, 20) / 1000, f = r.int(10, 200), v = Math.sqrt(F / mu), w = 2 * Math.PI * f;
+      const P = 0.5 * mu * w * w * A * A * v;
+      return {
+        prompt: `Una cuerda de densidad lineal $${mu * 1000}$ g/m está tensa con $${F}$ N. Por ella viaja una onda senoidal de amplitud $${A * 1000}$ mm y frecuencia $${f}$ Hz. ¿Qué potencia media transporta (en W)?`,
+        answer: P,
+        solution: [`Rapidez: $v = \\sqrt{\\frac F\\mu} \\approx ${num(v, 4)}$ m/s ([[f2b-ondas]]).`,
+          `Potencia media: $\\bar P = \\frac12\\mu\\omega^2A^2v$, con $\\omega = 2\\pi f$: $\\bar P \\approx ${num(P, 4)}$ W. Crece con el cuadrado de la amplitud y de la frecuencia.`],
+        // otro camino: promedio numérico de la potencia instantánea −F (∂y/∂x)(∂y/∂t) en un punto, durante un período
+        verify: { kind: "value", tol: 1e-6, fn: () => { const k = w / v, Tp = 1 / f, pw = t => { const dydx = A * k * Math.cos(-w * t), dydt = -A * w * Math.cos(-w * t); return -F * dydx * dydt; }; let s = 0; const N = 2000; for (let i = 0; i < N; i++) s += pw((i + 0.5) * Tp / N); return s / N; } }
+      };
+    }
+  };
+
+  T["f2b-doppler-num"] = {
+    type: "numeric", concepts: ["f2b-sonido"], difficulty: 2,
+    generate(r) {
+      const f0 = r.int(20, 100) * 10, vs = r.int(0, 40), vo = r.int(0, 30), acercaS = r.bool(), acercaO = r.bool(), v = 344;
+      if (!vs && !vo) return null;
+      const fo = f0 * (v + (acercaO ? vo : -vo)) / (v - (acercaS ? vs : -vs));
+      const mov = (x, ac, quieto) => (x ? `se ${ac ? "acerca" : "aleja"} a $${x}$ m/s` : `está ${quieto}`);
+      return {
+        prompt: `Una fuente emite sonido de $${f0}$ Hz. La fuente ${mov(vs, acercaS, "quieta")} y el observador ${mov(vo, acercaO, "quieto")}, sobre la recta que los une (el aire está quieto; sonido a $344$ m/s). ¿Qué frecuencia percibe el observador (en Hz)?`,
+        answer: fo,
+        solution: [`[[f2b-doppler|Efecto Doppler]]: $f' = f\\,\\frac{v \\pm v_o}{v \\mp v_s}$, con los signos de arriba cuando se acercan.`,
+          `$f' = ${f0}\\cdot\\frac{344 ${acercaO ? "+" : "-"} ${vo}}{344 ${acercaS ? "-" : "+"} ${vs}} \\approx ${num(fo, 5)}$ Hz (${fo > f0 ? "más agudo" : "más grave"}).`],
+        // otro camino: se siguen dos crestas consecutivas y se mide cuánto tardan en llegar al observador
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          // fuente en x = 0 en t = 0; observador inicialmente en x = D; acercarse = moverse hacia el otro
+          const D = 1000, us = acercaS ? vs : -vs, uo = acercaO ? -vo : vo, T0 = 1 / f0;
+          const arrive = te => { const xs = us * te; return (D - xs + v * te) / (v - uo); }; // la cresta sale en te desde xs y alcanza al observador en x = D + uo·t
+          return 1 / (arrive(T0) - arrive(0));
+        } }
+      };
+    }
+  };
+
   const cards = {
+    "f2b-doppler": {
+      title: "Efecto Doppler", aliases: ["efecto Doppler", "Doppler"], concepts: ["f2b-sonido"],
+      summary: "Si la fuente y el observador se acercan, se oye más agudo; si se alejan, más grave: f' = f (v ± v_o)/(v ∓ v_s), con los signos de arriba al acercarse.",
+      def: [R`**Efecto Doppler:** cambio de la frecuencia percibida por el movimiento relativo entre la fuente y el observador. Con el medio quieto y movimiento sobre la recta que los une: $$f' = f\,\frac{v \pm v_o}{v \mp v_s},$$ donde $v$ es la rapidez del sonido, $v_o$ la del observador y $v_s$ la de la fuente; los signos de arriba corresponden a acercarse.`],
+      idea: [R`Una fuente que avanza «persigue» a sus propias crestas: las de adelante quedan más apretadas (longitud de onda menor) y las de atrás más separadas. Un observador que avanza hacia la fuente se encuentra con las crestas más seguido. Las dos cosas suben la frecuencia, pero por razones distintas, y por eso la fórmula no es simétrica.`],
+      demo: [R`**Paso 1 (fuente en movimiento).** En un período $T$ la fuente emite una cresta y avanza $v_sT$ hacia el observador, mientras la cresta anterior avanzó $vT$. La distancia entre crestas delante de la fuente es $\lambda' = (v - v_s)T$.`,
+        R`**Paso 2 (observador en movimiento).** Las crestas se mueven a $v$ y el observador va hacia ellas a $v_o$: respecto de él, se acercan a $v + v_o$. Las encuentra con frecuencia $f' = \frac{v + v_o}{\lambda'}$.`,
+        R`**Paso 3.** Reemplazando $\lambda' = \frac{v - v_s}{f}$: $f' = f\,\frac{v + v_o}{v - v_s}$. Para alejarse se cambian los signos de $v_o$ y $v_s$. $\blacksquare$`],
+      examples: [{ q: R`Una ambulancia con sirena de $700$ Hz se acerca a $25$ m/s a un peatón quieto.`, steps: [R`$f' = 700\cdot\frac{344}{344 - 25} \approx 755$ Hz; cuando ya pasó y se aleja, $700\cdot\frac{344}{369} \approx 653$ Hz.`] }],
+      tips: [R`Para no confundirse con los signos: acercarse siempre sube la frecuencia. Elegí el signo de cada término para que pase eso.`],
+      see: ["f2b-sonido", "f2b-ondas"]
+    },
     "f2b-ondas": {
       title: "Ondas mecánicas", aliases: ["onda", "ondas", "longitud de onda", "número de onda", "ondas transversales", "ondas longitudinales", "rapidez de una onda", "ondas estacionarias", "armónicos", "modo fundamental", "onda armónica"], concepts: ["f2b-ondas"],
       summary: "Una onda transporta energía sin transportar materia. y = A sen(kx − ωt), con v = ω/k = λf. En una cuerda, v = √(F/μ).",
@@ -763,6 +893,8 @@
       lessons: [
         { id: "f2b-ondas", title: "Ondas en cuerdas", templates: ["f2b-onda-num", "f2b-cuerda-num", "f2b-ondas-vf"], theory: ["f2b-ondas"],
           intro: R`$y = A\sin(kx - \omega t)$, $v = \lambda f$. En una cuerda, $v = \sqrt{F/\mu}$ y $f_n = \frac{nv}{2L}$.` },
+        { id: "f2b-estacionarias", title: "Ondas estacionarias, energía y Doppler", templates: ["f2b-armonicos-num", "f2b-potencia-onda-num", "f2b-doppler-num"], theory: ["f2b-ondas", "f2b-doppler"],
+          intro: R`Cuerda o tubo abierto: $f_n = \frac{nv}{2L}$; cerrado en un extremo: $\frac{nv}{4L}$ con $n$ impar. Doppler: $f' = f\frac{v \pm v_o}{v \mp v_s}$.` },
         { id: "f2b-sonido-em", title: "Sonido y ondas electromagnéticas", templates: ["f2b-sonido-num", "f2b-em-num"], theory: ["f2b-sonido", "f2b-em"],
           intro: R`Sonido: $\beta = 10\log\frac{I}{I_0}$. Luz: $c = \lambda f$ e $I = \frac12c\varepsilon_0E_0^2$.` }
       ]
@@ -842,7 +974,63 @@
     }
   };
 
+  T["f2b-dioptrio-num"] = {
+    type: "numeric", concepts: ["f2b-lentes"], difficulty: 3,
+    generate(r) {
+      // superficie esférica entre n1 (objeto) y n2; R > 0 si el centro está del lado de la luz saliente
+      const caso = r.pick(["pez", "varilla", "plano"]);
+      let n1, n2, Rc, s;
+      if (caso === "pez") { n1 = 1.33; n2 = 1; Rc = -r.int(10, 30); s = r.int(5, -Rc - 1); }        // pecera esférica: el objeto adentro
+      else if (caso === "varilla") { n1 = 1; n2 = r.pick([1.5, 1.6]); Rc = r.int(2, 10); s = r.int(10, 60); } // extremo convexo de una varilla de vidrio
+      else { n1 = 1.33; n2 = 1; Rc = Infinity; s = r.int(20, 200); }                                       // superficie plana del agua
+      const sp = n2 / ((n2 - n1) / Rc - n1 / s), m = -(n1 * sp) / (n2 * s);
+      if (!isFinite(sp) || Math.abs(sp) > 500) return null;   // objeto en el foco: imagen en el infinito
+      const dec = x => String(x).replace(".", "{,}");
+      return {
+        prompt: { pez: `Un pez está a $${s}$ cm de la pared de una pecera esférica de radio $${-Rc}$ cm, sobre el diámetro que pasa por el ojo de un observador afuera ($n_{agua} = 1{,}33$; despreciá el vidrio). ¿A qué distancia de la pared ve el observador al pez (en cm, positivo si la imagen queda del lado del agua)?`,
+          varilla: `El extremo de una varilla de vidrio ($n = ${dec(n2)}$) está pulido en forma de casquete convexo de radio $${Rc}$ cm. Un objeto en el aire está a $${s}$ cm del extremo, sobre el eje. ¿Dónde se forma la imagen (en cm, medida desde el extremo; positiva si es dentro del vidrio)?`,
+          plano: `Una moneda está en el fondo de una pileta de $${s}$ cm de profundidad. Mirando casi verticalmente desde arriba, ¿a qué profundidad parece estar (en cm)? ($n_{agua} = 1{,}33$)` }[caso],
+        answer: caso === "varilla" ? sp : -sp,
+        solution: [`[[f2b-dioptrio|Refracción en una superficie esférica]]: $\\frac{n_1}{s} + \\frac{n_2}{s'} = \\frac{n_2 - n_1}{R}$, con $R > 0$ si el centro está del lado al que va la luz, y $s' > 0$ si la imagen es real (del lado de salida).`,
+          caso === "plano" ? `Con $R \\to \\infty$: $s' = -\\frac{n_2}{n_1}s = -\\frac{${s}}{1{,}33} \\approx ${num(sp, 4)}$ cm. La imagen es virtual y está más arriba: la pileta parece menos profunda.`
+            : `$\\frac{${dec(n1)}}{${s}} + \\frac{${dec(n2)}}{s'} = \\frac{${dec(n2)} - ${dec(n1)}}{${Rc}}$, de donde $s' \\approx ${num(sp, 4)}$ cm (${sp > 0 ? "imagen real" : "imagen virtual, del lado del objeto"}); aumento $m = -\\frac{n_1s'}{n_2s} \\approx ${num(m, 3)}$.`],
+        // otro camino: se trazan dos rayos casi paraxiales con la ley de Snell exacta y se intersecan
+        verify: { kind: "value", tol: 1e-4, fn: () => {
+          // eje x, vértice de la superficie en x = 0, objeto en x = −s; superficie: círculo de centro (Rc, 0) (o plano x = 0)
+          const trace = h => {
+            const th = Math.atan(h / s), d = [Math.cos(th), Math.sin(th)];
+            let P, nrm;
+            if (!isFinite(Rc)) { const t = s / d[0]; P = [-s + t * d[0], t * d[1]]; nrm = [1, 0]; }
+            else { const C = [Rc, 0], o = [-s - C[0], 0], b = o[0] * d[0] + o[1] * d[1], c0 = o[0] ** 2 + o[1] ** 2 - Rc * Rc, disc = Math.sqrt(b * b - c0), t = Rc > 0 ? -b - disc : -b + disc; P = [-s + t * d[0], t * d[1]]; const nn = [P[0] - C[0], P[1] - C[1]], L = Math.hypot(...nn); nrm = nn.map(x => (Rc > 0 ? -x : x) / L); }
+            // Snell vectorial: n1 (d × n) = n2 (d' × n)
+            const ci = -(d[0] * -nrm[0] + d[1] * -nrm[1]), eta = n1 / n2, nI = [-nrm[0], -nrm[1]], cosi = -(d[0] * nI[0] + d[1] * nI[1]), k = 1 - eta * eta * (1 - cosi * cosi), dp = d.map((x, i) => eta * x + (eta * cosi - Math.sqrt(k)) * nI[i]);
+            void ci;
+            return { P, dp };
+          };
+          const a = trace(1e-4), b = trace(2e-4);
+          // intersección (real o virtual) de los dos rayos refractados
+          const det = a.dp[0] * -b.dp[1] + a.dp[1] * b.dp[0], dx = b.P[0] - a.P[0], dy = b.P[1] - a.P[1], t = (dx * -b.dp[1] + dy * b.dp[0]) / det, X = a.P[0] + t * a.dp[0];
+          return caso === "varilla" ? X : -X;
+        } }
+      };
+    }
+  };
+
   const cards = {
+    "f2b-dioptrio": {
+      title: "Refracción en una superficie esférica", aliases: ["dioptrio", "dioptrio esférico", "profundidad aparente", "superficie refractora"], concepts: ["f2b-lentes"],
+      summary: "n₁/s + n₂/s' = (n₂ − n₁)/R para rayos cercanos al eje. Con una superficie plana (R → ∞), s' = −(n₂/n₁)s: el fondo de una pileta parece más cerca.",
+      def: [R`**Dioptrio esférico:** superficie esférica de radio $R$ que separa dos medios de índices $n_1$ (donde está el objeto) y $n_2$. Para rayos paraxiales, $$\frac{n_1}{s} + \frac{n_2}{s'} = \frac{n_2 - n_1}{R}.$$ Convención: $s > 0$ si el objeto está del lado de entrada, $s' > 0$ si la imagen está del lado de salida (real), y $R > 0$ si el centro de curvatura está del lado de salida.`,
+        R`**Aumento lateral:** $m = -\frac{n_1s'}{n_2s}$. **Superficie plana:** $s' = -\frac{n_2}{n_1}s$ (imagen virtual): es la **profundidad aparente**.`],
+      idea: [R`Es el bloque con el que se arma todo lo demás: una lente delgada son dos dioptrios seguidos, y de ahí sale la fórmula del fabricante de lentes. El ojo también es, en buena parte, un dioptrio: la córnea hace casi todo el trabajo de enfocar.`],
+      demo: [R`**Paso 1.** Un rayo sale del objeto $O$ (en el eje, a distancia $s$) con ángulo $\alpha$, llega a la superficie a una altura $h$ y, refractado, cruza el eje en $I$ (a distancia $s'$) con ángulo $\beta$. La normal en ese punto pasa por el centro $C$ y forma con el eje un ángulo $\phi$.`,
+        R`**Paso 2.** Para rayos paraxiales los ángulos son chicos y se aproximan por sus tangentes: $\alpha \approx \frac hs$, $\beta \approx \frac h{s'}$, $\phi \approx \frac hR$.`,
+        R`**Paso 3.** En el triángulo $O$-punto-$C$, el ángulo exterior en el punto de incidencia es el de incidencia: $\theta_1 = \alpha + \phi$. En el triángulo con $I$: $\phi = \theta_2 + \beta$, o sea $\theta_2 = \phi - \beta$.`,
+        R`**Paso 4.** La [[f2b-optica|ley de Snell]] con ángulos chicos es $n_1\theta_1 = n_2\theta_2$: $n_1(\alpha + \phi) = n_2(\phi - \beta)$. Reemplazando las aproximaciones y dividiendo por $h$ (que se cancela: todos los rayos paraxiales van al mismo punto), $\frac{n_1}{s} + \frac{n_2}{s'} = \frac{n_2 - n_1}{R}$. $\blacksquare$`],
+      examples: [{ q: R`Una moneda a $1$ m de profundidad en el agua, vista desde arriba.`, steps: [R`$s' = -\frac{1}{1{,}33}\cdot1 \approx -0{,}75$ m: parece estar a $75$ cm.`] }],
+      tips: [R`Antes de reemplazar, dibujá hacia dónde va la luz: los signos de $s'$ y de $R$ se definen respecto de ese sentido.`],
+      see: ["f2b-optica", "f2b-lentes"]
+    },
     "f2b-optica": {
       title: "Reflexión, refracción y ley de Snell", aliases: ["ley de Snell", "Snell", "refracción", "índice de refracción", "reflexión total interna", "ángulo crítico", "reflexión de la luz"], concepts: ["f2b-optica"],
       summary: "Reflexión: ángulo de incidencia = de reflexión. Refracción: n₁ sen θ₁ = n₂ sen θ₂. Si n₁ > n₂ y θ₁ > θc, reflexión total.",
@@ -886,7 +1074,7 @@
       lessons: [
         { id: "f2b-snell", title: "Reflexión y refracción", templates: ["f2b-snell-num", "f2b-critico-num"], theory: ["f2b-optica"],
           intro: R`$n_1\sin\theta_1 = n_2\sin\theta_2$. Reflexión total si $\sin\theta_1 > \frac{n_2}{n_1}$.` },
-        { id: "f2b-lentes", title: "Espejos y lentes", templates: ["f2b-optica-vf", "f2b-lente-num"], theory: ["f2b-lentes"],
+        { id: "f2b-lentes", title: "Espejos y lentes", templates: ["f2b-optica-vf", "f2b-lente-num", "f2b-dioptrio-num"], theory: ["f2b-lentes", "f2b-dioptrio"],
           intro: R`$\frac1{d_o} + \frac1{d_i} = \frac1f$ y $m = -\frac{d_i}{d_o}$.` }
       ]
     }],
@@ -1080,7 +1268,46 @@
     }
   };
 
+  T["f2b-rayleigh-num"] = {
+    type: "numeric", concepts: ["f2b-difraccion"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["ojo", "telescopio", "rendija"]), lam = r.int(40, 70) * 10, ask = r.pick(["ang", "dist"]);
+      const D = { ojo: r.int(2, 8) / 1000, telescopio: r.int(5, 100) / 100, rendija: r.int(10, 200) * 1e-6 }[kind], L = { ojo: r.int(5, 100), telescopio: r.int(1, 40) * 10, rendija: r.int(1, 5) }[kind];
+      const k = kind === "rendija" ? 1 : 1.22, th = k * lam * 1e-9 / D, Lm = kind === "telescopio" ? L * 1e3 : L, dist = th * Lm, dshow = kind === "telescopio" ? dist : dist * 1000;
+      const what = { ojo: `una pupila de $${D * 1000}$ mm`, telescopio: `un telescopio de $${Math.round(D * 100)}$ cm de diámetro`, rendija: `una rendija de $${Math.round(D * 1e6)}$ μm de ancho` }[kind];
+      return {
+        prompt: `Con luz de $${lam}$ nm y ${what}, ${ask === "ang" ? "¿cuál es la mínima separación angular entre dos fuentes puntuales para distinguirlas, según el criterio de Rayleigh (en μrad)?" : `¿a qué distancia mínima tienen que estar dos fuentes puntuales ubicadas a $${L}$ ${kind === "telescopio" ? "km" : "m"} para distinguirlas (en ${kind === "telescopio" ? "m" : "mm"})?`}`,
+        answer: ask === "ang" ? th * 1e6 : dshow,
+        solution: [`[[f2b-resolucion|Criterio de Rayleigh]]: dos imágenes se distinguen apenas cuando el máximo de una cae sobre el primer mínimo de la otra: $\\theta_{min} = ${kind === "rendija" ? "\\frac\\lambda a" : "1{,}22\\frac\\lambda D"}$${kind === "rendija" ? "" : " (abertura circular)"}.`,
+          `$\\theta_{min} \\approx ${num(th * 1e6, 4)}$ μrad${ask === "dist" ? `, y la separación mínima es $\\theta_{min}L \\approx ${num(dshow, 4)}$ ${kind === "telescopio" ? "m" : "mm"}` : ""}.`],
+        // otro camino: primer cero de la figura de difracción, buscado numéricamente (sen²(β)/β² para la rendija, [2J₁(x)/x]² para el círculo);
+        // la tolerancia cubre el redondeo 1,22 del factor y la aproximación de ángulo chico
+        verify: { kind: "value", tol: 2e-3, fn: () => {
+          const simp = (f, a0, b0, n) => { const h = (b0 - a0) / n; let t = f(a0) + f(b0); for (let i = 1; i < n; i++) t += f(a0 + i * h) * (i % 2 ? 4 : 2); return t * h / 3; };
+          const J1 = x => simp(t => Math.cos(t - x * Math.sin(t)), 0, Math.PI, 400) / Math.PI;
+          const g = kind === "rendija" ? x => Math.sin(x) : x => J1(x);
+          let a = 2.5, b = 4.5; for (let i = 0; i < 80; i++) { const m = (a + b) / 2; if (g(a) * g(m) <= 0) b = m; else a = m; }
+          const x0 = (a + b) / 2, s = x0 * lam * 1e-9 / (Math.PI * D), t = Math.asin(s);
+          return ask === "ang" ? t * 1e6 : t * Lm * (kind === "telescopio" ? 1 : 1000);
+        } }
+      };
+    }
+  };
+
   const cards = {
+    "f2b-resolucion": {
+      title: "Poder de resolución y criterio de Rayleigh", aliases: ["criterio de Rayleigh", "poder de resolución", "resolución angular"], concepts: ["f2b-difraccion"],
+      summary: "Por la difracción, dos fuentes puntuales se distinguen solo si su separación angular supera θ = λ/a (rendija) o θ = 1,22 λ/D (abertura circular).",
+      def: [R`**Criterio de Rayleigh:** dos fuentes puntuales están apenas resueltas cuando el máximo central de la imagen de una cae sobre el primer mínimo de la otra.`,
+        R`**Rendija de ancho $a$:** $\theta_{min} \approx \frac{\lambda}{a}$. **Abertura circular de diámetro $D$** (ojo, telescopio, cámara): $\theta_{min} \approx 1{,}22\,\frac{\lambda}{D}$. A distancia $L$, la mínima separación distinguible es $\theta_{min}L$.`],
+      idea: [R`Ningún instrumento forma imágenes puntuales: cada punto se vuelve una manchita de difracción, más chica cuanto más grande es la abertura y más corta la longitud de onda. Por eso los telescopios son enormes y los microscopios electrónicos (con $\lambda$ diminuta) ven mucho más detalle que los ópticos.`],
+      demo: [R`**Paso 1 (rendija).** La [[f2b-difraccion|difracción de una rendija]] tiene su primer mínimo donde $a\sin\theta = \lambda$: los rayos de la mitad superior cancelan a los de la inferior de a pares.`,
+        R`**Paso 2.** Si una segunda fuente está desplazada un ángulo $\Delta\theta$, su patrón es el mismo corrido $\Delta\theta$. Según Rayleigh, se distinguen cuando el máximo de una cae en el primer mínimo de la otra: $\Delta\theta = \theta_1$, con $\sin\theta_1 = \frac\lambda a$, y para ángulos chicos $\theta_{min} \approx \frac\lambda a$.`,
+        R`**Paso 3 (abertura circular).** Para un círculo hay que sumar las contribuciones de toda la abertura, no de una franja; el resultado es la función de Bessel $J_1$, y el primer cero de la intensidad está en $\sin\theta = \frac{3{,}832}{\pi}\frac\lambda D \approx 1{,}22\frac\lambda D$. Ese número no sale con cuentas elementales: es el primer cero de $J_1$. $\blacksquare$`],
+      examples: [{ q: R`Pupila de $5$ mm con luz de $550$ nm.`, steps: [R`$\theta_{min} = 1{,}22\cdot\frac{550\times10^{-9}}{5\times10^{-3}} \approx 1{,}3\times10^{-4}$ rad: a $10$ m se distinguen puntos separados $1{,}3$ mm.`] }],
+      tips: [R`El criterio es una convención razonable, no una ley: con buen contraste se puede «resolver» un poco por debajo.`],
+      see: ["f2b-difraccion", "f2b-lentes"]
+    },
     "f2b-difraccion": {
       title: "Difracción: rendija, red y rayos X", aliases: ["difracción", "rendija simple", "red de difracción", "ley de Bragg", "Bragg", "difracción de Fraunhofer", "difracción de Fresnel"], concepts: ["f2b-difraccion"],
       summary: "Rendija de ancho a: mínimos en a sen θ = mλ. Red: máximos en d sen θ = mλ. Cristales: 2d sen θ = mλ (Bragg).",
@@ -1108,7 +1335,7 @@
       id: "f2b-difraccion-u", order: 8, program: "Unidad 8", title: "Difracción", icon: "sparkles",
       diagnostic: ["f2b-rendija-num", "f2b-red-num", "f2b-bragg-num"],
       lessons: [
-        { id: "f2b-rendija", title: "Rendija simple", templates: ["f2b-difr-vf", "f2b-rendija-num"], theory: ["f2b-difraccion"],
+        { id: "f2b-rendija", title: "Rendija simple", templates: ["f2b-difr-vf", "f2b-rendija-num", "f2b-rayleigh-num"], theory: ["f2b-difraccion", "f2b-resolucion"],
           intro: R`Mínimos en $a\sin\theta = m\lambda$. Rendija más angosta, máximo central más ancho.` },
         { id: "f2b-redes", title: "Redes y rayos X", templates: ["f2b-red-num", "f2b-bragg-num"], theory: ["f2b-difraccion"],
           intro: R`Red: $d\sin\theta = m\lambda$. Bragg: $2d\sin\theta = m\lambda$.` }
