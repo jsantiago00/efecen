@@ -72,6 +72,13 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - el flujo y la fem de un generador;
   - los fasores de un RLC serie;
   - la curva de resonancia según $Q$.
+- **M104** (`content/m104-figuras.js`), 8 figuras en el plano:
+  - combinación lineal (regla del paralelogramo) y producto escalar con la proyección;
+  - el determinante como área orientada de las columnas;
+  - una transformación lineal que deforma la cuadrícula, animada desde la identidad;
+  - un sistema de 2 × 2 como dos rectas (se cortan, son paralelas o coinciden);
+  - autovectores: $A\vec x$ contra $\vec x$ dando la vuelta, y las potencias $A^n\vec x$ que se alinean con el autovector dominante;
+  - Gram-Schmidt, restando la proyección paso a paso.
 - **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
 - **Próximo:** sumar figuras al resto de las materias.
 
