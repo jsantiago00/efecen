@@ -83,6 +83,11 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - isotermas del gas ideal; isotérmica contra adiabática, con el trabajo; ciclo de Carnot y su rendimiento; distribución de Maxwell;
   - onda viajera (la forma avanza, la partícula oscila) y armónicos de una onda estacionaria;
   - refracción y reflexión total; lente delgada con los rayos principales; doble rendija con la envolvente de difracción.
+- **M102** (`content/m102-figuras.js`), 8 figuras:
+  - curvas de Lissajous con el vector velocidad y curvas polares (rosas, cardioide, caracoles) dibujándose;
+  - polinomios de Taylor de $\sin x$, $e^x$ y $\ln(1 + x)$ (con su radio de convergencia) y la serie de Fourier de una cuadrada (Gibbs);
+  - la circunferencia osculatriz; curvas de nivel con el gradiente; multiplicadores de Lagrange sobre una circunferencia;
+  - el campo de pendientes de la ecuación logística con su solución.
 - **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
 - **Próximo:** sumar figuras al resto de las materias.
 
