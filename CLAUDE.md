@@ -22,7 +22,7 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. F102A: figuras y parciales simulados (el contenido de las 9 unidades ya está).
+1. F102A: parciales simulados (el contenido de las 9 unidades y las figuras ya están).
 2. 3.º y 4.º año.
 
 Las evaluaciones de las otras siete materias completas ya están hechas.

@@ -64,8 +64,16 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - el péndulo, con las barras de energía;
   - un choque en una dimensión con coeficiente de restitución;
   - los tres regímenes del oscilador amortiguado.
+- **F102A** (`content/f102a-figuras.js`), 8 figuras:
+  - las líneas de campo de dos cargas (se integran desde las positivas) y sus curvas equipotenciales (marching squares);
+  - una carga girando en un campo magnético, con la velocidad y la fuerza;
+  - la carga y la corriente de un RC;
+  - la barra sobre rieles, con el área, el flujo y la corriente inducida;
+  - el flujo y la fem de un generador;
+  - los fasores de un RLC serie;
+  - la curva de resonancia según $Q$.
 - **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
-- **Próximo:** sumar figuras al resto de las materias, a medida que se escriben (empezando por F102A).
+- **Próximo:** sumar figuras al resto de las materias.
 
 ## M105 Probabilidad y Estadística (20/10)
 
@@ -103,7 +111,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - la alterna: valores eficaces promediando $v^2$ numéricamente; las reactancias derivando o integrando la tensión; el RLC simulado en el tiempo (RK4) hasta el régimen, midiendo amplitud, potencia media y desfase; la resonancia y el factor $Q$, buscando el máximo y los puntos de media potencia.
 - **Notación científica en las respuestas:** el campo de respuesta acepta `1,6e-19`, `1,6E-19` y `1,6×10^-19`, y hay una tecla «×10^». La vista previa y la respuesta correcta se muestran en notación científica cuando el número es muy chico o muy grande. «2e» sola sigue siendo 2·e, y «2e-1» es 2e − 1 (para no romper Cálculo).
 - **Test nuevo:** avisa si queda un comando de TeX o una coma `{,}` fuera de `$…$`, y ahora también se valida con KaTeX el texto de las figuras (antes no se chequeaba).
-- **Faltan:** las figuras interactivas y los parciales simulados.
+- **Faltan:** los parciales simulados.
 
 ## Pizarra (tablets con lápiz)
 
@@ -214,7 +222,7 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **F102A:** figuras interactivas y parciales simulados (desde Apunteca).
+1. **F102A:** parciales simulados (desde Apunteca).
 2. **3.º y 4.º año.**
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
