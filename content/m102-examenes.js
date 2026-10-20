@@ -343,7 +343,7 @@
       let f, tex, pts;
       if (r.bool()) {
         const k = r.nz(-3, 3);
-        f = (x, y) => x ** 3 + y ** 3 - 3 * k * x * y; tex = `x^3 + y^3 ${H.sg(-3 * k)}xy`;
+        f = (x, y) => x ** 3 + y ** 3 - 3 * k * x * y; tex = `x^3 + y^3${H.sg(-3 * k)}xy`;
         pts = [{ p: [0, 0], fxx: 0, fyy: 0, fxy: -3 * k, kind: "silla" }, { p: [k, k], fxx: 6 * k, fyy: 6 * k, fxy: -3 * k, kind: k > 0 ? "mínimo" : "máximo" }];
       } else {
         const p = r.int(1, 3), q = r.int(-3, 3), s = r.nz(-3, 3);

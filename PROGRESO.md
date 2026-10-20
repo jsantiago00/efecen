@@ -14,7 +14,8 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción) | 35 | 16 |
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
-| 7+ | M105, F102A, … | pendiente: aparecen en la carrera como "Próximamente" | — | — |
+| 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
+| 8+ | F102A, … | pendiente: aparecen en la carrera como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
@@ -36,6 +37,22 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Cálculo II:** las cónicas y cuádricas se clasifican evaluando la ecuación lejos del origen y en planos de corte (sin mirar los signos de la fórmula); los coeficientes de Taylor se recalculan con la fórmula integral de Cauchy en el plano complejo; las longitudes de curvas, con poligonales; las áreas polares, con la fórmula del zapatero.
 - **Corridas rápidas:** con menos de 10 instancias por plantilla se saltea el chequeo de variedad (antes daba fallas falsas).
 - **Óptica y ondas:** las lentes se verifican trazando rayos con matrices ABCD; las ondas estacionarias, simulando la cuerda con diferencias finitas; la doble rendija, con la diferencia de caminos exacta (sin aproximar ángulos chicos).
+
+## M105 Probabilidad y Estadística (20/10)
+
+- **Archivo:** `content/m105-probabilidad.js`, con prefijo `pe-`. El primer bloque registra la materia y una biblioteca estadística compartida, `E.pye`:
+  - $\Phi$ por su serie de Taylor;
+  - gamma y beta incompletas regularizadas, de donde salen las distribuciones χ², t y F;
+  - cuantiles por bisección;
+  - combinatoria, estadísticos de una muestra y formato de números (`nf` para TeX, `nt` para texto común).
+- **Unidades:** 8, con 46 plantillas y 31 fichas, todas las fórmulas con su demostración paso a paso.
+- **Verificación independiente:**
+  - probabilidades por enumeración exhaustiva (dados, subconjuntos, permutaciones) y por poblaciones construidas a partir de las tablas;
+  - la binomial por convolución de Bernoulli, la Poisson con la gamma incompleta;
+  - densidades, colas y cuantiles integrando la densidad con Simpson, sin las funciones incompletas;
+  - máxima verosimilitud y mínimos cuadrados, optimizando numéricamente;
+  - el sesgo de $S^2$ promediando sobre todas las muestras posibles.
+- **Alias que chocaban:** «regla del producto» (es de derivadas, en M101) y «exponencial» (M101). M105 enlaza a la ficha de errores de F101 para «promedio» y «campana de Gauss», y a la de Cauchy-Schwarz de M104.
 
 ## Pizarra (tablets con lápiz)
 
@@ -145,9 +162,9 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **M105 Probabilidad y Estadística:** no encontré el programa; habría que usar un temario estándar. En Apunteca hay parciales y finales (`Matemáticas/Probabilidad y Estadística`).
-2. **F102A Física General II A** (programa 2026, Ruben Santos, 2.º semestre, id `1BxA2eBt5T1-dD9DsLp7OTR9daGUVkvwi`).
-3. **3.º y 4.º año.**
+1. **F102A Física General II A** (programa 2026, Ruben Santos, 2.º semestre, id `1BxA2eBt5T1-dD9DsLp7OTR9daGUVkvwi`).
+2. **3.º y 4.º año.**
+3. **Evaluaciones de M105:** en Apunteca hay un final de 2021 (práctico con una base de datos: muestreo estratificado, descriptiva, intervalos para la media y la varianza, correlación, regresión y ANOVA) y un informe; falta armar los parciales simulados.
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 
@@ -158,6 +175,7 @@ Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Fí
 - **F101 Física General I:** [programa 2021](https://fcen.uncuyo.edu.ar/upload/fisica-general-i-2021.pdf).
 - **M102 Cálculo II:** programa oficial 2026 (prof. Fernanda Massut), en la carpeta de programas 2026 de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `1fk1ekCbqvSeZW7QsuRLCluEq4qAS84jW`).
 - **M106 Geometría Analítica:** programa oficial 2026 (prof. Silvia Raichman), Drive, id `1zJG9qufZgWfBU6f1gS-BFlFjg1Yy7PVN`. 6 unidades: vectores, planos y rectas, cónicas, superficies, coordenadas polares/cilíndricas/esféricas y ecuación general de segundo grado.
+- **M105 Probabilidad y Estadística:** no se encontró el programa. Se usó un temario estándar de un primer curso, en 8 unidades: estadística descriptiva, probabilidad, variables discretas, variables continuas, conjuntas y distribuciones muestrales, estimación, pruebas de hipótesis (con χ² y ANOVA) y regresión y correlación. Se contrastó con los temas del final de febrero de 2021 que está en Apunteca.
 - **F102B Física General II B:** programa oficial 2026, en la carpeta de programas 2026 de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `16hZ72EbvPHfhWjXEY54p2Vi6ThuxTNvt`).
 - **Plan de estudios y trayecto sugerido:** el que indicó el usuario, consistente con la [distribución curricular](https://fcen.uncuyo.edu.ar/distribucion-curricular) de la facultad.
 

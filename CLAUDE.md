@@ -22,11 +22,10 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. M105 Probabilidad y Estadística. No hay programa: usá un temario estándar y anotalo.
-2. F102A Física General II A (programa 2026).
-3. 3.º y 4.º año.
+1. F102A Física General II A (programa 2026).
+2. 3.º y 4.º año.
 
-Las evaluaciones de las seis materias completas ya están hechas.
+Las evaluaciones de M101, M104, F101, F102B, M102 y M106 ya están hechas; faltan las de M105.
 
 ## Estructura
 
@@ -34,7 +33,7 @@ Las evaluaciones de las seis materias completas ya están hechas.
 |---|---|
 | `index.html` | Todo el motor (`<script id="engine">`) y la UI (`<script id="app-script">`), más el CSS. |
 | `content/carrera.js` | La carrera: años → semestres → materias, con `code`, `title`, `course` (si ya tiene contenido) y `step` (orden sugerido). |
-| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
+| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
 | `board.js` | Pizarra para escribir con lápiz en tablets (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. |
 | `content/<código>-examenes.js` | Parciales y finales simulados de la materia (`E.registerExams`). El análisis de los originales está en `docs/parciales/`. |
@@ -43,7 +42,7 @@ Las evaluaciones de las seis materias completas ya están hechas.
 | `PROGRESO.md` | Bitácora del proyecto. |
 | `firestore.rules`, `firebase.json`, `.firebaserc` | Reglas de Firestore (proyecto `efecen-46bfd`). |
 
-Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II y M106 Geometría Analítica.
+Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica y M105 Probabilidad y Estadística.
 
 ## Cómo se arma una materia
 
@@ -67,7 +66,7 @@ Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101
 })();
 ```
 
-- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106). Para M101 no hay prefijo: sus ids vienen del MVP.
+- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106), `pe-` (M105; su primer bloque define la biblioteca estadística `E.pye`). Para M101 no hay prefijo: sus ids vienen del MVP.
 - **Requisitos por unidad** (los chequean los tests):
   - al menos 4 plantillas de al menos 2 tipos;
   - teoría con hipervínculos;

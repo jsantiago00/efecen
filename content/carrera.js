@@ -29,7 +29,7 @@
           { code: "M106", title: "Geometría Analítica", course: "m106", step: 6 }
         ] },
         { n: 2, subjects: [
-          { code: "M105", title: "Probabilidad y Estadística", step: 7 },
+          { code: "M105", title: "Probabilidad y Estadística", course: "m105", step: 7 },
           { code: "F102A", title: "Física General II A", step: 8 }
         ] }
       ] },

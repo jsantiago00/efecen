@@ -101,7 +101,7 @@
           { text: `a) ${names.map(k => `$T_${k} = ${nf(H, c.Tof(c.pts[k]), 1)}$ K`).join(", ")}.`, w: 1 },
           { text: `b) $Q_{total} = ${nf(H, c.Wn, 1)}$ J: ${c.Wn > 0 ? "entra" : "sale"} calor neto (absorbe $${nf(H, c.Qin, 1)}$ J y cede $${nf(H, -c.Qout, 1)}$ J).`, w: 1 },
           { text: `c) $W_{total} = ${nf(H, c.Wn, 1)}$ J: ${c.Wn > 0 ? "el gas hace trabajo sobre el entorno" : "el entorno hace trabajo sobre el gas"}.`, w: 1 },
-          { text: c.engine ? `d) Es una máquina (ciclo horario): $e = \\frac{W}{Q_{abs}} = ${nf(H, eff, 4)}$ (${nf(H, eff * 100, 2)} %).` : `d) Es un refrigerador (ciclo antihorario): $K = \\frac{Q_{abs}}{|W|} = ${nf(H, cop, 3)}$.`, w: 1 }
+          { text: c.engine ? `d) Es una máquina (ciclo horario): $e = \\frac{W}{Q_{abs}} = ${nf(H, eff, 4)}$ ($${nf(H, eff * 100, 2)}\\,\\%$).` : `d) Es un refrigerador (ciclo antihorario): $K = \\frac{Q_{abs}}{|W|} = ${nf(H, cop, 3)}$.`, w: 1 }
         ],
         solution: [
           `a) Con $T = \\frac{PV}{nR}$: ${names.map(k => `$T_${k} = \\frac{${nf(H, c.pts[k][1], 0)}\\cdot${nf(H, c.pts[k][0], 3)}}{${nf(H, c.n)}\\cdot 8{,}314} \\approx ${nf(H, c.Tof(c.pts[k]), 1)}$ K`).join("; ")}.`,

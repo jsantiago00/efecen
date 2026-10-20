@@ -557,7 +557,7 @@
         solution: [`[[c2-series-potencias|Radio de convergencia]] por el [[criterios-series|criterio del cociente]]: la serie converge si $\\lim\\left|\\frac{a_{n+1}}{a_n}\\right| < 1$.`,
           v === "fact" ? `$\\frac{(n+1)!/(n+1)^{n+1}}{n!/n^n}|x - x_0| = \\left(\\frac{n}{n+1}\\right)^n|x - x_0| \\to \\frac{|x - x_0|}{e}$: $R = e$.`
             : v === "x2n" ? `El cociente tiende a $\\frac{|x - x_0|^2}{${k}}$, que es menor que $1$ si $|x - x_0| < \\sqrt{${k}}$: $R = ${nd(Rr)}$.`
-              : `El cociente tiende a ${v === "np/kn" ? `$\\frac{|x - x_0|}{${k}}$: $R = ${k}$` : `$${k}|x - x_0|$: $R = ${H.frac(1, k)}$`} ${p > 0 ? ` (la potencia $n^{${p}}$ no cambia el radio)` : ""}.`,
+              : `El cociente tiende a ${v === "np/kn" ? `$\\frac{|x - x_0|}{${k}}$: $R = ${k}$` : `$${k}|x - x_0|$: $R = ${H.frac(1, k)}$`}${p > 0 ? ` (la potencia $n^{${p}}$ no cambia el radio)` : ""}.`,
           ask === "R" ? `$R \\approx ${nd(Rr)}$.` : `El centro es $${x0}$: el intervalo va de $${x0} - R$ a $${x0} + R \\approx ${nd(ans)}$ (los extremos se estudian aparte).`],
         // verificación: cociente de coeficientes consecutivos calculado numéricamente con n muy grande
         verify: { kind: "value", tol: 1e-5, fn: () => { const n = 1e6, Rn = Math.exp((logc(n) - logc(n + 1)) / m); return ask === "R" ? Rn : x0 + Rn; } }
@@ -1207,12 +1207,12 @@
       else { const a = Rr, b = Rr + r.int(1, 2); f = (x) => x * x; ans = Math.PI * (b ** 4 - a ** 4) / 4; tex = `\\iint_D x^2\\,dA`; sol = `$\\int_0^{2\\pi}\\int_{${a}}^{${b}} r^2\\cos^2\\theta\\cdot r\\,dr\\,d\\theta = \\pi\\cdot\\frac{${b ** 4} - ${a ** 4}}{4}$`;
         verifyFn = () => diskCart(f, b) - diskCart(f, a);
         return { prompt: `Sea $D$ el anillo $${a * a} \\le x^2 + y^2 \\le ${b * b}$. Calculá $\\displaystyle ${tex}$.`, answer: ans,
-          solution: [`[[c2-jacobiano|En polares]] $dA = r\\,dr\\,d\\theta$ y el anillo es $${a} \\le r \\le ${b}$.`, `${sol} \\approx ${nd(ans)}$.`], verify: { kind: "value", tol: 1e-5, fn: verifyFn } };
+          solution: [`[[c2-jacobiano|En polares]] $dA = r\\,dr\\,d\\theta$ y el anillo es $${a} \\le r \\le ${b}$.`, `${sol.slice(0, -1)} \\approx ${nd(ans)}$.`], verify: { kind: "value", tol: 1e-5, fn: verifyFn } };
       }
       return {
         prompt: `Sea $D$ el disco $x^2 + y^2 \\le ${Rr * Rr}$. Calculá $\\displaystyle ${tex}$.`,
         answer: ans,
-        solution: [`[[c2-jacobiano|En polares]] el disco es $0 \\le r \\le ${Rr}$, $0 \\le \\theta \\le 2\\pi$, y $dA = r\\,dr\\,d\\theta$ (¡no te olvides la $r$!).`, `${sol} \\approx ${nd(ans)}$.`],
+        solution: [`[[c2-jacobiano|En polares]] el disco es $0 \\le r \\le ${Rr}$, $0 \\le \\theta \\le 2\\pi$, y $dA = r\\,dr\\,d\\theta$ (¡no te olvides la $r$!).`, `${sol.slice(0, -1)} \\approx ${nd(ans)}$.`],
         // verificación: la misma integral en cartesianas
         verify: { kind: "value", tol: v === "r" ? 1e-4 : 1e-5, fn: () => diskCart(f, Rr) }
       };
