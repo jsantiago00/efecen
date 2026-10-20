@@ -81,6 +81,11 @@ Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101
   - los `aliases` se auto-enlazan y tienen que ser **únicos entre todas las materias** (el test avisa qué alias choca; sacalo de la ficha nueva);
   - **no pongas LaTeX dentro del texto de un link**;
   - no enlaces a fichas que todavía no existen (el test falla): agregá el link cuando la ficha exista.
+- **Figuras interactivas** (pedido del usuario, 20/10): van en `content/<código>-figuras.js` con `E.addFigures(cid, { "id-ficha": [{ viz, caption }] })` y quedan al final de «La idea».
+  - Un `viz` es `{ xr, yr, equal, h, sliders: [{ k, label, min, max, step, v }], play: { k, max, speed, loop }, draw(g, p) }`.
+  - `draw` dibuja con el lápiz `g` en coordenadas del mundo (sus métodos están en `E.VIZ_API`) y devuelve una línea de TeX, sin `$`; los tramos separados por `\qquad` pueden bajar de renglón.
+  - La suite la dibuja con un lápiz falso en los extremos de cada deslizador y en varios instantes de la animación.
+  - Conviene mirarla en Chromium: Playwright está instalado, así que se pueden sacar capturas.
 - **Demostraciones:** toda ficha que enuncie una fórmula o un teorema lleva `demo`: de dónde sale, paso a paso (pedido del usuario). Solo las definiciones, recetas y postulados pueden ir sin ella. Escribila como **pasos numerados** («**Paso 1.** …»), uno por idea, y justificá cada paso con palabras: qué propiedad se usa y por qué. No encadenes cuentas sin explicar (pedido del usuario, 15/10). La «idea» explica la intuición, sin repetir la demo.
 - **Física:** g = 9,8 m/s², aclarado en cada enunciado.
 - **Contenido 100 % original.** De los programas oficiales solo se toma la lista de temas.

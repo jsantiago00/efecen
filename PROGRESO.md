@@ -38,6 +38,34 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **Corridas rápidas:** con menos de 10 instancias por plantilla se saltea el chequeo de variedad (antes daba fallas falsas).
 - **Óptica y ondas:** las lentes se verifican trazando rayos con matrices ABCD; las ondas estacionarias, simulando la cuerda con diferencias finitas; la doble rendija, con la diferencia de caminos exacta (sin aproximar ángulos chicos).
 
+## Figuras interactivas en los apuntes (20/10)
+
+- **Pedido del usuario:** ejemplos visuales para entender mejor los conceptos. Ya había gráficos estáticos (24 en M101, 4 en F101); ahora las fichas pueden tener **figuras interactivas**, con deslizadores, animación con «Reproducir» y una lectura de valores que se actualiza.
+- **Motor** (`index.html`):
+  - el bloque `viz`, dibujado en canvas con el lápiz `g`: ejes, grilla, funciones, curvas, flechas, puntos, círculos, rectángulos, polígonos y texto, en coordenadas del mundo, con la opción `equal` para la geometría de la física;
+  - `E.addFigures` las agrega a fichas que ya existen;
+  - la animación se corta sola al salir de la ficha.
+- **M101** (`content/m101-figuras.js`), 8 figuras:
+  - la secante que tiende a la tangente;
+  - las sumas de Riemann, con tres reglas;
+  - las transformaciones $a\,f(x - h) + k$;
+  - el teorema del valor medio;
+  - la función inversa reflejada en $y = x$;
+  - la definición ε-δ del límite;
+  - las sumas parciales de una serie geométrica;
+  - el signo de $f'$ junto con el gráfico de $f$.
+- **F101** (`content/f101-figuras.js`), 8 figuras, casi todas animadas:
+  - el tiro oblicuo, con las componentes de la velocidad;
+  - $x(t)$ y $v(t)$ en el MRUV;
+  - el movimiento circular, con $v$ y $a_c$;
+  - el plano inclinado con rozamiento y su diagrama de fuerzas;
+  - el MAS como proyección de un fasor, con el resorte;
+  - el péndulo, con las barras de energía;
+  - un choque en una dimensión con coeficiente de restitución;
+  - los tres regímenes del oscilador amortiguado.
+- **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
+- **Próximo:** sumar figuras al resto de las materias, a medida que se escriben (empezando por F102A).
+
 ## M105 Probabilidad y Estadística (20/10)
 
 - **Archivo:** `content/m105-probabilidad.js`, con prefijo `pe-`. El primer bloque registra la materia y una biblioteca estadística compartida, `E.pye`:

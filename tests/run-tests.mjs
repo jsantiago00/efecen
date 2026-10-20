@@ -345,6 +345,31 @@ function checkTheoryText(where, s) {
   // un link no puede quedar adentro del LaTeX
   for (const m of texOf(s)) ok(!m.includes("[["), where, `link dentro de LaTeX: ${m.slice(0, 60)}`);
 }
+// figuras interactivas: se dibujan con un lápiz falso que exige coordenadas finitas, en los extremos y el
+// medio de cada deslizador y en varios instantes de la animación
+function checkViz(w, v) {
+  ok(typeof v.draw === "function", w, "viz sin draw");
+  for (const sl of v.sliders || []) {
+    ok(sl.k && sl.label && sl.min < sl.max && sl.v >= sl.min && sl.v <= sl.max, w, `deslizador inválido: ${sl.k}`);
+    checkTex(w + " deslizador", sl.label);
+  }
+  if (v.play) ok(v.play.k && v.play.max > 0, w, "animación inválida");
+  const mock = { W: 400, H: 220, xr: v.xr || [-5, 5], yr: v.yr || [-5, 5], C: {} };
+  let bad = 0;
+  for (const m of E.VIZ_API) mock[m] = (...args) => { for (const a of args.flat(2)) if (typeof a === "number" && !Number.isFinite(a)) bad++; if (m === "fn") for (const t of [0.1, 0.7]) args[0]((mock.xr[0] + mock.xr[1]) * t); return m === "px" ? 0.02 * args[0] : undefined; };
+  const base = {};
+  for (const sl of v.sliders || []) base[sl.k] = sl.v;
+  if (v.play && base[v.play.k] == null) base[v.play.k] = 0;
+  const combos = [base];
+  for (const sl of v.sliders || []) for (const x of [sl.min, sl.max, (sl.min + sl.max) / 2]) combos.push({ ...base, [sl.k]: x });
+  if (v.play) for (const t of [0.13, 0.5, 0.97]) combos.push({ ...base, [v.play.k]: t * v.play.max });
+  for (const p of combos) {
+    let out;
+    try { out = v.draw(mock, p); } catch (e) { fail(w, "viz: excepción " + e.message + " con " + JSON.stringify(p)); continue; }
+    if (typeof out === "string") { checkTex(w + " viz", out); ok(!/undefined|NaN|Infinity/.test(out), w, "viz: texto con NaN: " + out); }
+  }
+  ok(bad === 0, w, `viz: ${bad} coordenadas no finitas`);
+}
 const allAliases = new Map();
 for (const cid of E.courseOrder) {
   const c = E.courses[cid];
@@ -368,7 +393,8 @@ for (const cid of E.courseOrder) {
       else {
         if (b.caption) checkTheoryText(`${w} ${sec} caption`, b.caption);
         if (b.graph) for (const f of [...(b.graph.fns || []), ...(b.graph.pieces || []).map(p => p.f)]) ok(typeof f(0.5) === "number", w, "gráfico no evaluable");
-        ok(b.graph || b.svg, w, "bloque sin contenido");
+        if (b.viz) checkViz(`${w} ${sec}`, b.viz);
+        ok(b.graph || b.svg || b.viz, w, "bloque sin contenido");
       }
     }
     for (const ex of card.examples || []) { checkTheoryText(`${w} ejemplo`, ex.q); ex.steps.forEach(st => checkTheoryText(`${w} ejemplo`, st)); }

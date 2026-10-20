@@ -433,6 +433,14 @@ body.learn-open { overflow: hidden; }
 .para { line-height: 1.6; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .para::-webkit-scrollbar { display: none; }
 figure { margin: 4px 0; }
+.viz { max-width: 420px; margin: 0 auto; }
+.viz-cv { width: 100%; display: block; background: var(--card); border: 2px solid var(--line); border-radius: 14px; touch-action: pan-y; }
+.viz-read { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 18px; font-size: .92rem; min-height: 1.4em; margin: 6px 0 2px; }
+.viz-ctl { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.viz-sl { display: grid; grid-template-columns: minmax(64px, auto) 1fr 44px; align-items: center; gap: 8px; font-size: .9rem; }
+.viz-sl input { width: 100%; accent-color: var(--primary); }
+.viz-val { text-align: right; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; }
+.viz-play { align-self: center; }
 figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-top: 6px; }
 .fig { display: block; width: 100%; max-width: 320px; margin: 0 auto; color: var(--ink); }
 .graph.fig-graph { height: 200px; }
@@ -613,6 +621,8 @@ body.board-split .nav { padding-bottom: 0; }
   E.newSeed = () => (Math.random() * 4294967296) >>> 0;
 
   // ---------- Helpers para escribir LaTeX ----------
+  // métodos del lápiz `g` de las figuras interactivas (bloques `viz` de los apuntes; los dibuja la UI)
+  E.VIZ_API = ["grid", "axes", "fn", "curve", "line", "arrow", "dot", "circle", "rect", "poly", "text", "px"];
   const H = E.H = {};
   H.gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
   // fracción reducida en LaTeX
@@ -826,6 +836,15 @@ body.board-split .nav { padding-bottom: 0; }
     Object.assign(c.theory.lessons, ext.lessons || {});
     E._termRe = null;
     indexCourse(c);
+  };
+  // figuras interactivas para fichas que ya existen: { "id-ficha": [bloque, …] }. Cada bloque va al final de la
+  // sección `sec` (por defecto «La idea»).
+  E.addFigures = function (cid, figs) {
+    for (const [id, list] of Object.entries(figs)) {
+      const card = E.cards[id];
+      if (!card || card.course !== cid) throw new Error(`Ficha inexistente en ${cid}: ${id}`);
+      for (const b of list) { const sec = b.sec || "idea"; (card[sec] = card[sec] || []).push(b); }
+    }
   };
   // compatibilidad con el formato anterior de apuntes
   E.registerTheory = (cid, th) => E.extendCourse(cid, { cards: th.cards, lessons: th.lessons });
@@ -1071,6 +1090,9 @@ body.board-split .nav { padding-bottom: 0; }
 <script src="content/m102-calculo2.js"></script>
 <script src="content/m106-geometria-analitica.js"></script>
 <script src="content/m105-probabilidad.js"></script>
+<!-- figuras interactivas de los apuntes -->
+<script src="content/m101-figuras.js"></script>
+<script src="content/f101-figuras.js"></script>
 <!-- evaluaciones (parciales y finales simulados) -->
 <script src="content/m101-examenes.js"></script>
 <script src="content/m104-examenes.js"></script>
@@ -1091,7 +1113,7 @@ body.board-split .nav { padding-bottom: 0; }
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const app = $("#app");
   let S = E.store.load();
-  const ui = { route: "home", params: {}, session: null, summary: null, graphs: new Map() };
+  const ui = { route: "home", params: {}, session: null, summary: null, graphs: new Map(), viz: new Map() };
   const save = () => { const okSave = E.store.save(S); if (E.sync) E.sync.changed(); return okSave; };
   const today = () => E.today();
   // ganchos para la sincronización con la nube (sync.js): leer el estado, reemplazarlo tras combinar y refrescar
@@ -1400,6 +1422,7 @@ body.board-split .nav { padding-bottom: 0; }
       const spec = ui.graphs.get(cv.dataset.g);
       if (spec) drawGraph(cv, spec);
     }
+    initViz(root);
   }
   function drawGraph(cv, g) {
     const dpr = window.devicePixelRatio || 1;
@@ -1467,6 +1490,91 @@ body.board-split .nav { padding-bottom: 0; }
       ctx.fillStyle = pt.open ? col("--card") : col("--primary");
       ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = col("--primary"); ctx.stroke();
     }
+  }
+  // ---------- figuras interactivas de los apuntes (bloques `viz`) ----------
+  // { viz: { xr, yr, equal, h, sliders: [{ k, label, min, max, step, v }], play: { k, max, speed, loop },
+  //          draw(g, p) → texto opcional (TeX) que se muestra debajo }, caption }
+  // `g` dibuja en coordenadas del mundo; la lista de sus métodos es E.VIZ_API (la usan los tests).
+  let vid = 0;
+  const vfmt = (x, st) => { const d = st < 0.01 ? 3 : st < 0.1 ? 2 : st < 1 ? 1 : 0; return (+x.toFixed(d)).toString().replace(".", ","); };
+  function vizHtml(spec) {
+    const id = "v" + (++vid), p = {};
+    for (const sl of spec.sliders || []) p[sl.k] = sl.v;
+    if (spec.play && p[spec.play.k] == null) p[spec.play.k] = 0;
+    ui.viz.set(id, { spec, p, playing: false });
+    const sliders = (spec.sliders || []).map(sl => `<label class="viz-sl"><span class="viz-lab">${tex(`$${sl.label}$`)}</span>
+      <input type="range" min="${sl.min}" max="${sl.max}" step="${sl.step || (sl.max - sl.min) / 100}" value="${sl.v}" data-vk="${sl.k}" aria-label="${esc(sl.k)}">
+      <span class="viz-val" data-vv="${sl.k}">${vfmt(sl.v, sl.step || 1)}</span></label>`).join("");
+    const play = spec.play ? `<button class="btn sm ghost viz-play" type="button">${icon("play")}<span>Reproducir</span></button>` : "";
+    return `<div class="viz" data-v="${id}"><canvas class="viz-cv" style="height:${spec.h || 220}px" role="img" aria-label="Figura interactiva"></canvas>
+      <div class="viz-read"></div>${sliders || play ? `<div class="viz-ctl">${sliders}${play}</div>` : ""}</div>`;
+  }
+  function initViz(root = app) {
+    for (const el of $$(".viz[data-v]", root)) {
+      const st = ui.viz.get(el.dataset.v);
+      if (!st) continue;
+      if (!el.dataset.bound) {
+        el.dataset.bound = "1";
+        for (const inp of $$("input[data-vk]", el)) inp.addEventListener("input", () => {
+          const sl = st.spec.sliders.find(x => x.k === inp.dataset.vk);
+          st.p[sl.k] = +inp.value;
+          const out = el.querySelector(`[data-vv="${sl.k}"]`); if (out) out.textContent = vfmt(+inp.value, sl.step || 1);
+          drawViz(el, st);
+        });
+        const pb = el.querySelector(".viz-play");
+        if (pb) pb.addEventListener("click", () => {
+          st.playing = !st.playing;
+          pb.querySelector("span").textContent = st.playing ? "Pausa" : "Reproducir";
+          const pl = st.spec.play;
+          if (st.playing && st.p[pl.k] >= pl.max) st.p[pl.k] = 0;
+          let last = performance.now();
+          const step = now => {
+            if (!st.playing || !el.isConnected) { st.playing = false; return; }
+            st.p[pl.k] += (pl.speed || 1) * Math.min(0.05, (now - last) / 1000); last = now;
+            if (st.p[pl.k] >= pl.max) { if (pl.loop) st.p[pl.k] = 0; else { st.p[pl.k] = pl.max; st.playing = false; pb.querySelector("span").textContent = "Reproducir"; } }
+            const inp = el.querySelector(`input[data-vk="${pl.k}"]`); if (inp) { inp.value = st.p[pl.k]; const out = el.querySelector(`[data-vv="${pl.k}"]`); if (out) out.textContent = vfmt(st.p[pl.k], +inp.step || 1); }
+            drawViz(el, st);
+            if (st.playing) requestAnimationFrame(step);
+          };
+          if (st.playing) requestAnimationFrame(step);
+        });
+      }
+      drawViz(el, st);
+    }
+  }
+  function drawViz(el, st) {
+    const cv = el.querySelector("canvas"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    cv.width = w * dpr; cv.height = h * dpr;
+    const ctx = cv.getContext("2d"), spec = st.spec;
+    ctx.scale(dpr, dpr);
+    const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+    const C = { p: col("--primary"), f: col("--fire"), ok: col("--ok"), bad: col("--bad"), muted: col("--muted"), ink: col("--ink"), line: col("--line"), gold: col("--gold-d"), card: col("--card") };
+    let [x0, x1] = spec.xr || [-5, 5], [y0, y1] = spec.yr || [-5, 5];
+    // con `equal`, una unidad mide lo mismo en los dos ejes (para la geometría de la física)
+    if (spec.equal) { const sx = w / (x1 - x0), sy = h / (y1 - y0); if (sx > sy) { const c = (x0 + x1) / 2, half = w / sy / 2; x0 = c - half; x1 = c + half; } else { const c = (y0 + y1) / 2, half = h / sx / 2; y0 = c - half; y1 = c + half; } }
+    const X = x => (x - x0) / (x1 - x0) * w, Y = y => h - (y - y0) / (y1 - y0) * h;
+    const cc = c => C[c] || c || C.p;
+    const stroke = (o = {}) => { ctx.strokeStyle = cc(o.c); ctx.lineWidth = o.w || 2.5; ctx.setLineDash(o.dash ? [6, 5] : []); ctx.lineCap = "round"; ctx.lineJoin = "round"; };
+    const fill = (o = {}) => { ctx.globalAlpha = o.alpha ?? 0.25; ctx.fillStyle = cc(o.fill === true ? o.c : o.fill); ctx.fill(); ctx.globalAlpha = 1; };
+    const g = {
+      W: w, H: h, xr: [x0, x1], yr: [y0, y1], C,
+      px: n => n * (x1 - x0) / w,
+      grid(stepX = 1, stepY = stepX) { ctx.lineWidth = 1; ctx.strokeStyle = C.line; ctx.setLineDash([]); ctx.beginPath(); for (let x = Math.ceil(x0 / stepX) * stepX; x <= x1; x += stepX) { ctx.moveTo(X(x) + .5, 0); ctx.lineTo(X(x) + .5, h); } for (let y = Math.ceil(y0 / stepY) * stepY; y <= y1; y += stepY) { ctx.moveTo(0, Y(y) + .5); ctx.lineTo(w, Y(y) + .5); } ctx.stroke(); },
+      axes() { ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.beginPath(); if (y0 <= 0 && y1 >= 0) { ctx.moveTo(0, Y(0)); ctx.lineTo(w, Y(0)); } if (x0 <= 0 && x1 >= 0) { ctx.moveTo(X(0), 0); ctx.lineTo(X(0), h); } ctx.stroke(); },
+      fn(f, o = {}) { stroke(o); const a = o.from ?? x0, b = o.to ?? x1, N = 300, span = y1 - y0; ctx.beginPath(); let pen = false, prev = null; for (let i = 0; i <= N; i++) { const x = a + (b - a) * i / N, y = f(x); if (!isFinite(y) || Math.abs(y - (y0 + y1) / 2) > span * 4 || (prev !== null && Math.abs(y - prev) > span)) { pen = false; prev = isFinite(y) ? y : null; continue; } if (pen) ctx.lineTo(X(x), Y(y)); else { ctx.moveTo(X(x), Y(y)); pen = true; } prev = y; } ctx.stroke(); },
+      curve(pts, o = {}) { stroke(o); ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.stroke(); },
+      line(xa, ya, xb, yb, o = {}) { stroke(o); ctx.beginPath(); ctx.moveTo(X(xa), Y(ya)); ctx.lineTo(X(xb), Y(yb)); ctx.stroke(); },
+      arrow(xa, ya, xb, yb, o = {}) { stroke(o); const ax = X(xa), ay = Y(ya), bx = X(xb), by = Y(yb), L = Math.hypot(bx - ax, by - ay); if (L < 1) return; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); const hd = Math.min(10, L / 2), an = Math.atan2(by - ay, bx - ax); ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx - hd * Math.cos(an - 0.45), by - hd * Math.sin(an - 0.45)); ctx.lineTo(bx - hd * Math.cos(an + 0.45), by - hd * Math.sin(an + 0.45)); ctx.closePath(); ctx.fillStyle = cc(o.c); ctx.fill(); },
+      dot(x, y, o = {}) { ctx.setLineDash([]); ctx.beginPath(); ctx.arc(X(x), Y(y), o.r || 5, 0, Math.PI * 2); ctx.fillStyle = o.open ? C.card : cc(o.c); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = cc(o.c); ctx.stroke(); },
+      circle(x, y, R, o = {}) { stroke(o); ctx.beginPath(); ctx.arc(X(x), Y(y), Math.abs(X(x + R) - X(x)), 0, Math.PI * 2); if (o.fill) fill(o); ctx.stroke(); },
+      rect(x, y, wd, ht, o = {}) { stroke(o); ctx.beginPath(); ctx.rect(X(x), Y(y + ht), X(x + wd) - X(x), Y(y) - Y(y + ht)); if (o.fill) fill(o); if (!o.noStroke) ctx.stroke(); },
+      poly(pts, o = {}) { stroke(o); ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.closePath(); if (o.fill) fill(o); if (!o.noStroke) ctx.stroke(); },
+      text(str, x, y, o = {}) { ctx.fillStyle = cc(o.c || "ink"); ctx.font = `${o.bold === false ? 600 : 800} ${o.size || 12}px Nunito, sans-serif`; ctx.textAlign = o.align || "center"; ctx.textBaseline = o.base || "middle"; ctx.fillText(str, X(x) + (o.dx || 0), Y(y) + (o.dy || 0)); }
+    };
+    const out = spec.draw(g, st.p);
+    const rd = el.querySelector(".viz-read");
+    if (typeof out === "string" && out !== st.read) { st.read = out; rd.innerHTML = out.split("\\qquad").map(part => `<span>${tex(`$${part.trim()}$`)}</span>`).join(""); }
   }
   let rT;
   window.addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(() => drawGraphs(), 120); });
@@ -1832,6 +1940,8 @@ body.board-split .nav { padding-bottom: 0; }
   });
   function render() {
     ui.graphs.clear();
+    for (const st of ui.viz.values()) st.playing = false;
+    ui.viz.clear();
     if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
@@ -2621,7 +2731,8 @@ body.board-split .nav { padding-bottom: 0; }
   }
   const block = (b, eq) => typeof b === "string" ? `<div class="para">${tex(b, { eq })}</div>`
     : b.graph ? `<figure>${graphHtml(b.graph, "fig-graph")}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>`
-    : b.svg ? `<figure>${b.svg}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>` : "";
+    : b.svg ? `<figure>${b.svg}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>`
+    : b.viz ? `<figure>${vizHtml(b.viz)}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>` : "";
   const lsec = (title, ic, inner, open) => inner
     ? `<details class="lsec" ${open ? "open" : ""}><summary>${icon(ic)}<span class="grow">${title}</span>${icon("chevron-right", "chev")}</summary><div class="lsec-body">${inner}</div></details>` : "";
   function cardHtml(card) {
