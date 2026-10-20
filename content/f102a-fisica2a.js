@@ -193,6 +193,7 @@
     }
   };
   T["f2a-gauss-num"].testN = 60;
+  T["f2a-anillo-num"].testN = 100;
 
   const cards = {
     "f2a-carga": {
