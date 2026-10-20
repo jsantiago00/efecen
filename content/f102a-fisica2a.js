@@ -12,7 +12,8 @@
   E.registerCourse({ id: "f102a", code: "F102A", title: "Física General II A", icon: "zap" });
   // constantes y ayudas compartidas por las unidades (E.f2a)
   const F = E.f2a = {
-    k: 8.988e9, e0: 8.854e-12, mu0: 4 * Math.PI * 1e-7, qe: 1.602e-19, me: 9.109e-31, mp: 1.673e-27,
+    // k = 1/(4πε₀) exacto, para que las fórmulas con k y con ε₀ coincidan
+    k: 1 / (4 * Math.PI * 8.854e-12), e0: 8.854e-12, mu0: 4 * Math.PI * 1e-7, qe: 1.602e-19, me: 9.109e-31, mp: 1.673e-27,
     // número con coma para TeX; notación científica si es muy chico o muy grande
     nf: (x, d = 3) => {
       if (x === 0 || !isFinite(x)) return "0";
@@ -507,6 +508,210 @@
           intro: R`$U = \frac{kq_1q_2}{r}$ y $V = \frac{kq}{r}$: escalares, que se suman con su signo.` },
         { id: "f2a-potencial-l2", title: "Del potencial al campo", templates: ["f2a-gradiente-num", "f2a-esfera-pot-num", "f2a-medio-tf"], theory: ["f2a-gradiente-potencial", "f2a-equipotenciales"],
           intro: R`$\vec E = -\nabla V$: el campo apunta cuesta abajo en el potencial.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 3 · CAPACITANCIA Y DIELÉCTRICOS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const EPS = R`\varepsilon_0 = 8{,}854\times10^{-12}\ \text{F/m}`;
+  const dec = v => String(v).replace(".", "{,}");
+  // campo de un plano «infinito» por otro camino: disco enorme sumando anillos (s = z·tan u)
+  const planeE = sg => F.simpson(u => 2 * Math.PI * F.k * sg * Math.sin(u), 0, Math.atan(1e6), 2000);
+
+  T["f2a-placas-num"] = {
+    type: "numeric", concepts: ["f2a-capacitancia"], difficulty: 2,
+    generate(r) {
+      const A = r.int(2, 40) * 10, dmm = r.pick([0.5, 1, 1.5, 2, 3, 4, 5]), V = r.int(1, 30) * 10, ask = r.pick(["C", "Q", "E"]);
+      const Am = A * 1e-4, d = dmm / 1000, C = F.e0 * Am / d, Q = C * V;
+      const ans = { C: C * 1e12, Q: Q * 1e9, E: V / d }[ask];
+      return {
+        prompt: `Un capacitor de placas paralelas tiene placas de $${A}$ cm² separadas $${dec(dmm)}$ mm, con aire entre ellas, y se conecta a una batería de $${V}$ V. ${{ C: "¿Cuál es su capacitancia (en pF)?", Q: "¿Qué carga adquiere cada placa (en nC, en valor absoluto)?", E: "¿Cuánto vale el campo eléctrico entre las placas (en V/m)?" }[ask]} ($${EPS}$)`,
+        answer: ans,
+        solution: [`Para placas paralelas, la [[f2a-capacitancia|capacitancia]] es $C = \\frac{\\varepsilon_0A}{d} = \\frac{8{,}854\\times10^{-12}\\cdot${nf(Am)}}{${nf(d)}} \\approx ${nf(C * 1e12)}$ pF.`,
+          { C: `Listo: $C \\approx ${nf(ans)}$ pF.`, Q: `$Q = CV \\approx ${nf(C * 1e12)}\\ \\text{pF}\\cdot${V}\\ \\text{V} \\approx ${nf(ans)}$ nC.`, E: `El campo es uniforme: $E = \\frac{V}{d} = \\frac{${V}}{${nf(d)}} \\approx ${nf(ans)}$ V/m (no depende del área).` }[ask]],
+        // otro camino: Q = CV con C a partir del campo de dos planos, cada uno sumado numéricamente como un disco enorme
+        verify: { kind: "value", tol: 1e-5, fn: () => { const e1 = planeE(1), Cn = Am / (2 * e1 * d); return { C: Cn * 1e12, Q: Cn * V * 1e9, E: 2 * e1 * Cn * V / Am }[ask]; } }
+      };
+    }
+  };
+
+  T["f2a-red-num"] = {
+    type: "numeric", concepts: ["f2a-capacitancia"], difficulty: 3,
+    generate(r) {
+      const c = [r.int(1, 12), r.int(1, 12), r.int(1, 12)], V = r.int(2, 24), cfg = r.pick(["s-p", "p-s"]), ask = r.pick(["Ceq", "Q1", "V2", "Q3"]);
+      // s-p: C1 en serie con (C2 ∥ C3); p-s: (C1 en serie con C2) ∥ C3
+      let Ceq, q, v;
+      if (cfg === "s-p") { const p = c[1] + c[2]; Ceq = c[0] * p / (c[0] + p); const Q = Ceq * V, Vp = Q / p; q = [Q, c[1] * Vp, c[2] * Vp]; v = [Q / c[0], Vp, Vp]; }
+      else { const s = c[0] * c[1] / (c[0] + c[1]); Ceq = s + c[2]; const Qs = s * V; q = [Qs, Qs, c[2] * V]; v = [Qs / c[0], Qs / c[1], V]; }
+      const ans = { Ceq, Q1: q[0], V2: v[1], Q3: q[2] }[ask];
+      return {
+        prompt: `Tres capacitores, $C_1 = ${c[0]}$ μF, $C_2 = ${c[1]}$ μF y $C_3 = ${c[2]}$ μF, se conectan ${cfg === "s-p" ? "así: $C_2$ y $C_3$ en paralelo, y ese par en serie con $C_1$" : "así: $C_1$ y $C_2$ en serie, y ese par en paralelo con $C_3$"}. El conjunto se conecta a una batería de $${V}$ V. ${{ Ceq: "¿Cuál es la capacitancia equivalente (en μF)?", Q1: "¿Qué carga tiene $C_1$ (en μC)?", V2: "¿Qué diferencia de potencial hay en $C_2$ (en V)?", Q3: "¿Qué carga tiene $C_3$ (en μC)?" }[ask]}`,
+        answer: ans,
+        solution: [`En [[f2a-asociacion-capacitores|paralelo]] las capacitancias se suman; en serie se suman las inversas.`,
+          cfg === "s-p" ? `$C_{23} = ${c[1] + c[2]}$ μF y $C_{eq} = \\frac{C_1C_{23}}{C_1 + C_{23}} = ${H.frac(c[0] * (c[1] + c[2]), c[0] + c[1] + c[2])} \\approx ${nf(Ceq)}$ μF. La carga total, $Q = C_{eq}V \\approx ${nf(Ceq * V)}$ μC, es la de $C_1$, y el par en paralelo queda a $\\frac{Q}{C_{23}} \\approx ${nf(v[1])}$ V.`
+            : `$C_{12} = \\frac{C_1C_2}{C_1 + C_2} = ${H.frac(c[0] * c[1], c[0] + c[1])}$ μF y $C_{eq} = C_{12} + C_3 \\approx ${nf(Ceq)}$ μF. La rama en serie tiene carga $C_{12}V \\approx ${nf(q[0])}$ μC (la misma en $C_1$ y $C_2$), y $C_3$ está a $${V}$ V.`,
+          `Resultado: $${nf(ans)}$ ${ask === "Ceq" ? "μF" : ask === "V2" ? "V" : "μC"}.`],
+        // otro camino: potencial del nodo intermedio por conservación de la carga (sistema lineal), sin fórmulas de serie y paralelo
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          if (cfg === "s-p") {
+            const [vn] = F.solve([[c[0] + c[1] + c[2]]], [c[0] * V]), Q1 = c[0] * (V - vn), Qt = Q1;
+            return { Ceq: Qt / V, Q1, V2: vn, Q3: c[2] * vn }[ask];
+          }
+          const [vn] = F.solve([[c[0] + c[1]]], [c[0] * V]), Q1 = c[0] * (V - vn), Q3 = c[2] * V;
+          return { Ceq: (Q1 + Q3) / V, Q1, V2: vn, Q3 }[ask];
+        } }
+      };
+    }
+  };
+
+  T["f2a-geometria-num"] = {
+    type: "numeric", concepts: ["f2a-capacitancia"], difficulty: 3,
+    generate(r) {
+      const sph = r.bool(), a = r.int(1, 10), b = a + r.int(1, 10), L = r.int(1, 20) * 10, V = r.int(1, 20) * 10, ask = r.pick(["C", "U"]);
+      const am = a / 100, bm = b / 100, C = sph ? 4 * Math.PI * F.e0 * am * bm / (bm - am) : 2 * Math.PI * F.e0 * (L / 100) / Math.log(bm / am), U = C * V * V / 2;
+      return {
+        prompt: `${sph ? `Un capacitor esférico está formado por dos cáscaras conductoras concéntricas de radios $${a}$ cm y $${b}$ cm` : `Un capacitor cilíndrico de $${L}$ cm de largo está formado por un conductor de radio $${a}$ cm rodeado por una cáscara coaxial de radio $${b}$ cm`}, con vacío entre ellas, y se conecta a $${V}$ V. ${ask === "C" ? "¿Cuál es su capacitancia (en pF)?" : "¿Cuánta energía almacena (en J)?"} ($${EPS}$${sph ? "" : "; despreciá los efectos de borde"})`,
+        answer: ask === "C" ? C * 1e12 : U,
+        solution: [sph ? `Con carga $Q$, entre las cáscaras $E = \\frac{kQ}{r^2}$ y $V = kQ\\left(\\frac1a - \\frac1b\\right)$, así que $C = \\frac{Q}{V} = \\frac{4\\pi\\varepsilon_0ab}{b - a}$ ([[f2a-capacitancia]]).`
+          : `Con carga $\\lambda$ por unidad de largo, entre los conductores $E = \\frac{\\lambda}{2\\pi\\varepsilon_0r}$ y $V = \\frac{\\lambda}{2\\pi\\varepsilon_0}\\ln\\frac ba$, así que $C = \\frac{2\\pi\\varepsilon_0L}{\\ln(b/a)}$ ([[f2a-capacitancia]]).`,
+          `$C \\approx ${nf(C * 1e12)}$ pF.`, ...(ask === "U" ? [`[[f2a-energia-capacitor|Energía]]: $U = \\frac12CV^2 \\approx ${nf(U)}$ J.`] : [])],
+        // otro camino: V por integración numérica del campo de Gauss con carga unitaria; U integrando la densidad de energía
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const Ef = sph ? s => F.k / (s * s) : s => 2 * F.k / (L / 100) / s, Vn = F.simpson(Ef, am, bm, 2000), Cn = 1 / Vn, Q = Cn * V;
+          if (ask === "C") return Cn * 1e12;
+          return F.simpson(s => 0.5 * F.e0 * (Q * Ef(s)) ** 2 * (sph ? 4 * Math.PI * s * s : 2 * Math.PI * s * L / 100), am, bm, 2000);
+        } }
+      };
+    }
+  };
+
+  T["f2a-dielectrico-num"] = {
+    type: "numeric", concepts: ["f2a-dielectricos"], difficulty: 3,
+    generate(r) {
+      const C0 = r.int(2, 50), V0 = r.int(1, 30) * 10, kap = r.pick([1.5, 2, 2.5, 3, 3.5, 4, 5, 6]), conn = r.bool(), ask = r.pick(["Q", "V", "U"]);
+      const C = kap * C0, Q = conn ? C * V0 : C0 * V0, Vf = conn ? V0 : V0 / kap, U = 0.5 * C * Vf * Vf;
+      const ans = { Q, V: Vf, U: U * 1e-3 }[ask];   // C en pF → Q en pC; U en pJ → nJ
+      return {
+        prompt: `Un capacitor de placas paralelas de $${C0}$ pF, con aire, se carga con una batería de $${V0}$ V. ${conn ? "Sin desconectar la batería" : "Se desconecta la batería y después"} se llena el espacio entre las placas con un dieléctrico de constante $\\kappa = ${dec(kap)}$. ${{ Q: "¿Qué carga tienen las placas al final (en pC)?", V: "¿Qué diferencia de potencial hay entre las placas al final (en V)?", U: "¿Cuánta energía almacena al final (en nJ)?" }[ask]}`,
+        answer: ans,
+        solution: [`El [[f2a-dielectricos|dieléctrico]] multiplica la capacitancia: $C = \\kappa C_0 = ${nf(C)}$ pF.`,
+          conn ? `Con la batería conectada se mantiene $V = ${V0}$ V, así que la carga aumenta: $Q = CV \\approx ${nf(Q)}$ pC.` : `Desconectada, la carga no tiene a dónde ir: $Q = C_0V_0 = ${nf(Q)}$ pC, y la tensión baja a $V = \\frac{Q}{C} \\approx ${nf(Vf)}$ V.`,
+          ...(ask === "U" ? [`$U = \\frac12CV^2 \\approx ${nf(U)}$ pJ $\\approx ${nf(U * 1e-3)}$ nJ (${conn ? "aumenta: la batería entrega más carga" : "disminuye: el campo tira del dieléctrico hacia adentro y hace trabajo"}).`] : [])],
+        // otro camino: con el campo y la carga de polarización (σ_p = σ(1 − 1/κ)) en un capacitor de geometría equivalente
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const d = 1e-3, A = C0 * 1e-12 * d / F.e0;      // placas con C0 = ε0A/d
+          let sig;
+          if (conn) { const Ein = V0 / d; sig = Ein * F.e0 / (1 / kap); } // E = (σ − σp)/ε0 = σ/(κε0)
+          else sig = C0 * 1e-12 * V0 / A;
+          const sp = sig * (1 - 1 / kap), Ein = (sig - sp) / F.e0, Vn = Ein * d, Qn = sig * A, Un = F.simpson(() => 0.5 * kap * F.e0 * Ein * Ein * A, 0, d, 2);
+          return { Q: Qn * 1e12, V: Vn, U: Un * 1e9 }[ask];
+        } }
+      };
+    }
+  };
+
+  T["f2a-bateria-tf"] = {
+    type: "tf", concepts: ["f2a-dielectricos"], difficulty: 2,
+    generate(r) {
+      const conn = r.bool(), qty = r.pick(["Q", "V", "U", "E"]), claim = r.pick(["aumenta", "disminuye", "no cambia"]), kap = r.pick([2, 3, 4, 5]);
+      const C0 = 10, V0 = 100, d = 1e-3;
+      const before = { Q: C0 * V0, V: V0, U: C0 * V0 * V0 / 2, E: V0 / d };
+      const Vf = conn ? V0 : V0 / kap, after = { Q: kap * C0 * Vf, V: Vf, U: kap * C0 * Vf * Vf / 2, E: Vf / d };
+      const rel = Math.abs(after[qty] / before[qty] - 1) < 1e-12 ? "no cambia" : after[qty] > before[qty] ? "aumenta" : "disminuye";
+      const nm = { Q: "la carga de las placas", V: "la diferencia de potencial entre las placas", U: "la energía almacenada", E: "el campo eléctrico entre las placas" }[qty];
+      return {
+        prompt: `<b>Verdadero o falso:</b> un capacitor cargado ${conn ? "sigue conectado a la batería" : "se desconecta de la batería"} y se le introduce un dieléctrico que llena el espacio entre las placas. Entonces ${nm} ${claim}.`,
+        answer: rel === claim,
+        explanation: `La capacitancia pasa a $\\kappa C_0$. ${conn ? "Conectado, $V$ queda fijo; $Q = \\kappa C_0V$ crece, $E = V/d$ no cambia y $U = \\frac12\\kappa C_0V^2$ crece." : "Desconectado, $Q$ queda fija; $V = Q/(\\kappa C_0)$ baja, $E = V/d$ baja y $U = \\frac{Q^2}{2\\kappa C_0}$ baja."} Así que ${nm} ${rel}: es ${rel === claim ? "verdadero" : "falso"}.`,
+        solution: [R`Ver [[f2a-dielectricos|dieléctricos]]: lo primero es ver qué queda fijo, la carga o la tensión.`],
+        // otro camino: con el campo de las cargas libres y de polarización (U como integral de la densidad de energía)
+        verify: { kind: "truth", target: rel === claim, fn: () => {
+          const A = C0 * d / F.e0, sig0 = C0 * V0 / A, sig = conn ? kap * F.e0 * V0 / d : sig0;
+          const Ein = (sig - sig * (1 - 1 / kap)) / F.e0, b = { Q: sig0 * A, V: sig0 / F.e0 * d, U: 0.5 * F.e0 * (sig0 / F.e0) ** 2 * A * d, E: sig0 / F.e0 };
+          const a = { Q: sig * A, V: Ein * d, U: 0.5 * kap * F.e0 * Ein * Ein * A * d, E: Ein };
+          const rl = Math.abs(a[qty] / b[qty] - 1) < 1e-9 ? "no cambia" : a[qty] > b[qty] ? "aumenta" : "disminuye";
+          return rl === claim;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-capacitancia": {
+      title: "Capacitores y capacitancia", aliases: ["capacitancia", "capacitor", "condensador", "capacitor de placas paralelas", "faradio"], concepts: ["f2a-capacitancia"],
+      summary: "C = Q/V, en faradios. Placas paralelas: ε₀A/d. Esférico: 4πε₀ab/(b − a). Cilíndrico: 2πε₀L/ln(b/a). Solo depende de la geometría (y del material entre los conductores).",
+      def: [R`**Capacitor:** dos conductores con cargas $+Q$ y $-Q$. **Capacitancia:** $C = \frac{Q}{V}$, con $V$ la diferencia de potencial entre ellos. Unidad: el faradio, $1$ F $= 1$ C/V (se usan μF, nF y pF).`,
+        R`**Placas paralelas** de área $A$ a distancia $d$: $C = \frac{\varepsilon_0A}{d}$. **Esférico** (radios $a < b$): $C = \frac{4\pi\varepsilon_0ab}{b - a}$. **Cilíndrico** de largo $L$: $C = \frac{2\pi\varepsilon_0L}{\ln(b/a)}$.`],
+      idea: [R`La capacitancia mide cuánta carga «entra» por cada volt. Placas grandes y muy juntas guardan mucha carga con poca tensión: el campo de una placa casi se cancela con el de la otra afuera y queda concentrado en el hueco.`],
+      demo: [R`**Paso 1 (receta).** Se le da carga $\pm Q$ a los conductores, se calcula el campo entre ellos (casi siempre con la [[f2a-gauss|ley de Gauss]]), se integra para obtener $V$ y se divide: $C = Q/V$. $Q$ se cancela siempre, porque $V$ es proporcional a $Q$.`,
+        R`**Paso 2 (placas).** Entre las placas, los campos de las dos ($\frac{\sigma}{2\varepsilon_0}$ cada una) se suman: $E = \frac{\sigma}{\varepsilon_0} = \frac{Q}{\varepsilon_0A}$; afuera se restan y dan cero. Como es uniforme, $V = Ed = \frac{Qd}{\varepsilon_0A}$, y $C = \frac{\varepsilon_0A}{d}$.`,
+        R`**Paso 3 (esférico).** Entre las cáscaras, Gauss da $E = \frac{kQ}{r^2}$ (solo encierra la de adentro). Entonces $V = \int_a^b\frac{kQ}{r^2}dr = kQ\frac{b - a}{ab}$ y $C = \frac{ab}{k(b - a)} = \frac{4\pi\varepsilon_0ab}{b - a}$.`,
+        R`**Paso 4 (cilíndrico).** Con un cilindro gaussiano de radio $r$ y largo $L$: $E\cdot2\pi rL = \frac{Q}{\varepsilon_0}$. Integrando, $V = \frac{Q}{2\pi\varepsilon_0L}\ln\frac ba$, y $C = \frac{2\pi\varepsilon_0L}{\ln(b/a)}$. $\blacksquare$`],
+      examples: [{ q: R`Placas de $100$ cm² a $1$ mm.`, steps: [R`$C = \frac{8{,}854\times10^{-12}\cdot0{,}01}{0{,}001} \approx 88{,}5$ pF. Un faradio es enorme: con $d = 1$ mm harían falta placas de unos $10$ km de lado.`] }],
+      tips: [R`$C$ no depende de $Q$ ni de $V$: si se duplica la tensión, se duplica la carga y el cociente queda igual.`],
+      see: ["f2a-asociacion-capacitores", "f2a-energia-capacitor", "f2a-dielectricos"]
+    },
+    "f2a-asociacion-capacitores": {
+      title: "Capacitores en serie y en paralelo", aliases: ["capacitores en serie", "capacitores en paralelo", "capacitancia equivalente"], concepts: ["f2a-capacitancia"],
+      summary: "En paralelo (misma tensión) se suman: C = C₁ + C₂. En serie (misma carga) se suman las inversas: 1/C = 1/C₁ + 1/C₂.",
+      def: [R`**Paralelo:** todos los capacitores tienen la misma diferencia de potencial; $C_{eq} = C_1 + C_2 + \cdots$`,
+        R`**Serie:** todos tienen la misma carga; $\frac{1}{C_{eq}} = \frac1{C_1} + \frac1{C_2} + \cdots$ (para dos, $C_{eq} = \frac{C_1C_2}{C_1 + C_2}$). La equivalente en serie es menor que la más chica.`],
+      idea: [R`En paralelo es como agrandar el área de las placas; en serie, como separarlas más. Por eso las reglas son al revés que las de las resistencias.`],
+      demo: [R`**Paso 1 (paralelo).** Las placas de un lado están unidas por un conductor y quedan al mismo potencial; lo mismo las del otro: todos tienen la misma $V$. Las cargas son $Q_i = C_iV$, y la total es $Q = (C_1 + C_2 + \cdots)V$. Dividiendo por $V$: $C_{eq} = \sum C_i$.`,
+        R`**Paso 2 (serie).** El tramo de conductor entre dos capacitores está aislado y empieza neutro: si una placa toma $-Q$, la otra queda con $+Q$. Así todos tienen la misma carga.`,
+        R`**Paso 3.** Las tensiones se suman a lo largo del camino: $V = \frac{Q}{C_1} + \frac{Q}{C_2} + \cdots$. Dividiendo por $Q$: $\frac{1}{C_{eq}} = \sum\frac1{C_i}$. $\blacksquare$`],
+      examples: [{ q: R`$3$ μF y $6$ μF en serie, a $12$ V.`, steps: [R`$C_{eq} = \frac{18}{9} = 2$ μF y $Q = 24$ μC en cada uno; $V_1 = 8$ V y $V_2 = 4$ V: el más chico se lleva más tensión.`] }],
+      tips: [R`En una red, reducí de adentro hacia afuera y después volvé: la carga total con $C_{eq}$, y de ahí las tensiones y cargas de cada uno.`],
+      see: ["f2a-capacitancia", "f2a-energia-capacitor"]
+    },
+    "f2a-energia-capacitor": {
+      title: "Energía en un capacitor", aliases: ["energía de un capacitor", "densidad de energía eléctrica"], concepts: ["f2a-capacitancia"],
+      summary: "U = Q²/(2C) = ½CV² = ½QV. La energía está en el campo, con densidad u = ½ε₀E².",
+      def: [R`**Energía almacenada:** $U = \frac{Q^2}{2C} = \frac12CV^2 = \frac12QV$: el trabajo que hizo falta para cargarlo.`,
+        R`**Densidad de energía** del campo eléctrico (en el vacío): $u = \frac12\varepsilon_0E^2$, en J/m³. Integrada sobre el volumen donde hay campo da $U$. Con un dieléctrico, $u = \frac12\kappa\varepsilon_0E^2$.`],
+      idea: [R`Cargar un capacitor es subir carga por una cuesta cada vez más empinada: la primera pasa gratis y la última tiene que vencer toda la tensión $V$. En promedio, cada carga sube $\frac V2$: de ahí el $\frac12$.`],
+      demo: [R`**Paso 1.** Con carga $q$ ya puesta, la tensión es $\frac{q}{C}$. Pasar un $dq$ más de una placa a la otra cuesta $dW = \frac{q}{C}dq$.`,
+        R`**Paso 2.** Sumando desde $0$ hasta $Q$: $U = \int_0^Q\frac{q}{C}dq = \frac{Q^2}{2C}$. Con $Q = CV$ salen las otras dos formas.`,
+        R`**Paso 3 (densidad).** En las placas paralelas, $C = \frac{\varepsilon_0A}{d}$ y $V = Ed$: $U = \frac12\frac{\varepsilon_0A}{d}E^2d^2 = \frac12\varepsilon_0E^2\cdot(Ad)$. Como $Ad$ es el volumen donde hay campo, la energía por unidad de volumen es $\frac12\varepsilon_0E^2$. $\blacksquare$`],
+      examples: [{ q: R`$100$ μF a $50$ V.`, steps: [R`$U = \frac12\cdot10^{-4}\cdot2500 = 0{,}125$ J.`] }],
+      tips: [R`$U = \frac12QV$, no $QV$: la batería entrega $QV$, y la otra mitad se disipa en los cables al cargar.`],
+      see: ["f2a-capacitancia", "f2a-energia-potencial", "f2a-dielectricos"]
+    },
+    "f2a-dielectricos": {
+      title: "Dieléctricos", aliases: ["dieléctrico", "constante dieléctrica", "carga de polarización", "rigidez dieléctrica"], concepts: ["f2a-dielectricos"],
+      summary: "Un dieléctrico entre las placas multiplica la capacitancia por κ > 1, porque se polariza y debilita el campo. Con la batería conectada, V queda fija y Q crece; desconectada, Q queda fija y V baja.",
+      def: [R`**Dieléctrico:** un aislante entre las placas. Si lo llena, $C = \kappa C_0$, con $\kappa \ge 1$ la **constante dieléctrica** ($\kappa = 1$ en el vacío, $\approx 1{,}0006$ en el aire, $\approx 80$ en el agua). Con carga libre fija, el campo adentro baja a $E = \frac{E_0}{\kappa}$.`,
+        R`**Polarización:** el campo alinea (o induce) dipolos en el material, y en sus caras aparecen **cargas de polarización** $\sigma_p = \sigma\left(1 - \frac1\kappa\right)$, de signo opuesto a las de la placa vecina.`,
+        R`**Batería conectada:** $V$ fijo, $Q$ y $U$ crecen en un factor $\kappa$. **Desconectada:** $Q$ fija, $V$ y $E$ bajan en un factor $\kappa$, y $U$ también baja. **Rigidez dieléctrica:** el campo máximo que soporta el material sin romperse (en el aire seco, unos $3\times10^6$ V/m).`],
+      idea: [R`Las cargas de polarización tapan en parte a las de las placas: el campo neto es más débil, la tensión para la misma carga es menor, y entonces entra más carga por volt.`],
+      demo: [R`**Paso 1.** Con densidad libre $\sigma$ en las placas y $\sigma_p$ de polarización en las caras del dieléctrico, el campo adentro (como en dos pares de planos) es $E = \frac{\sigma - \sigma_p}{\varepsilon_0}$.`,
+        R`**Paso 2.** Se define $\kappa$ como el factor en que el material reduce el campo: $E = \frac{\sigma}{\kappa\varepsilon_0}$. Igualando con el paso 1 sale $\sigma_p = \sigma\left(1 - \frac1\kappa\right)$.`,
+        R`**Paso 3.** La tensión es $V = Ed = \frac{\sigma d}{\kappa\varepsilon_0} = \frac{Qd}{\kappa\varepsilon_0A}$, así que $C = \frac QV = \kappa\frac{\varepsilon_0A}{d} = \kappa C_0$.`,
+        R`**Paso 4 (energía, desconectado).** Con $Q$ fija, $U = \frac{Q^2}{2\kappa C_0} = \frac{U_0}{\kappa}$: baja. La diferencia es el trabajo que hace el campo al tirar del dieléctrico hacia adentro. $\blacksquare$`],
+      examples: [{ q: R`Un capacitor de $20$ pF cargado a $100$ V se desconecta y se le pone un dieléctrico con $\kappa = 4$.`, steps: [R`$Q = 2$ nC queda fija; $C = 80$ pF y $V = 25$ V. La energía baja de $100$ nJ a $25$ nJ.`] }],
+      tips: [R`Lo primero en estos problemas: ¿qué queda fijo, la carga (desconectado) o la tensión (conectado)? Todo lo demás sale de $C = \kappa C_0$.`],
+      see: ["f2a-capacitancia", "f2a-energia-capacitor", "f2a-campo-electrico"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-capacitancia": { name: "Capacitancia" }, "f2a-dielectricos": { name: "Dieléctricos" } },
+    templates: T,
+    units: [{
+      id: "f2a-capacitancia-u", order: 3, program: "Unidad 3", title: "Capacitancia y dieléctricos", icon: "grid-3x3",
+      diagnostic: ["f2a-placas-num", "f2a-red-num", "f2a-dielectrico-num"],
+      lessons: [
+        { id: "f2a-capacitancia-l1", title: "Capacitores y redes", templates: ["f2a-placas-num", "f2a-geometria-num", "f2a-red-num"], theory: ["f2a-capacitancia", "f2a-asociacion-capacitores"],
+          intro: R`$C = \frac QV$; placas: $\frac{\varepsilon_0A}{d}$. En paralelo se suman, en serie se suman las inversas.` },
+        { id: "f2a-capacitancia-l2", title: "Energía y dieléctricos", templates: ["f2a-dielectrico-num", "f2a-bateria-tf"], theory: ["f2a-energia-capacitor", "f2a-dielectricos"],
+          intro: R`$U = \frac12CV^2$, y un dieléctrico multiplica $C$ por $\kappa$.` }
       ]
     }],
     cards
