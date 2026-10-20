@@ -16,7 +16,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna) | 51 | 42 |
-| 9+ | 3.º y 4.º año | pendiente: aparecen en la carrera como "Próximamente" | — | — |
+| 9+ | 3.º y 4.º año | en pausa (20/10): primero se pulen los dos primeros años; aparecen como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
@@ -222,7 +222,7 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **3.º y 4.º año.**
+1. **Pulir los dos primeros años** (pedido del usuario, 20/10). 3.º y 4.º año quedan en pausa.
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 

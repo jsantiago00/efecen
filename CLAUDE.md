@@ -22,7 +22,7 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. 3.º y 4.º año.
+1. **Pulir los dos primeros años** (pedido del usuario, 20/10): 3.º y 4.º año quedan en pausa hasta que las ocho materias estén bien terminadas.
 
 Las evaluaciones de las ocho materias completas ya están hechas.
 

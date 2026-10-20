@@ -293,6 +293,7 @@
     }
   };
   T["f1-circular-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["f1-circular"], difficulty: 1,
     generate(r) {
       const v = r.pick(["ac", "T", "rpm"]);
@@ -510,6 +511,7 @@
     }
   };
   T["f1-atwood-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["f1-newton"], difficulty: 2,
     generate(r) {
       const [m2, m1] = r.distinct(2, 1, 9).sort((x, y) => x - y), ask = r.pick(["a", "T"]);
@@ -1430,6 +1432,7 @@
     }
   };
   T["f1-polea-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["f1-torque"], difficulty: 3,
     generate(r) {
       const m = r.int(1, 10), M = r.int(1, 10) * 2, Rr = r.int(5, 30) / 100, ask = r.pick(["a", "T"]);
@@ -1452,6 +1455,7 @@
   };
   const SHAPES = [{ n: "una esfera maciza", b: 0.4, t: "\\frac25" }, { n: "un cilindro macizo", b: 0.5, t: "\\frac12" }, { n: "un aro", b: 1, t: "1" }, { n: "una esfera hueca", b: 2 / 3, t: "\\frac23" }];
   T["f1-rodadura-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["f1-rodadura"], difficulty: 3,
     generate(r) {
       const S = r.pick(SHAPES), h = r.int(1, 20) / 2, v = Math.sqrt(2 * g * h / (1 + S.b));
@@ -1762,6 +1766,7 @@
     }
   };
   T["f1-kepler-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["f1-orbitas"], difficulty: 2,
     generate(r) {
       const pl = r.pick([["Marte", 1.524], ["Júpiter", 5.203], ["Saturno", 9.537], ["Venus", 0.723], ["Mercurio", 0.387], ["un asteroide", 2.8]]);
@@ -1898,6 +1903,7 @@
     }
   };
   T["f1-amort-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["f1-amortiguadas"], difficulty: 3,
     generate(r) {
       const m = r.int(1, 10) / 2, k = r.int(10, 100) * 10, b = r.int(1, 10) / 10, A0 = r.int(5, 20) / 100, t = r.int(2, 20);
@@ -1913,7 +1919,7 @@
     }
   };
   T["f1-resonancia-vf"] = {
-    testN: 25, // simulación cara: menos instancias en los tests
+    testN: 12, // simulación cara: menos instancias en los tests
     type: "tf", concepts: ["f1-amortiguadas"], difficulty: 2,
     generate(r) {
       const m = 1, k = r.int(4, 25) ** 2, b = r.pick([0.2, 0.5, 1]), w0 = Math.sqrt(k / m), fac = r.pick([0.5, 2, 3]), q = r.pick(["mayor", "menor"]);

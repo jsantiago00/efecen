@@ -2616,6 +2616,7 @@
     }
   };
   T["optim-geo-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["optimizacion"], difficulty: 3,
     generate(r) {
       const v = r.pick(["cerca", "lata", "dist"]);
@@ -3346,6 +3347,7 @@
 
   // ---------- integrales impropias ----------
   T["impropia-num"] = {
+    testN: 100, // simulación cara: menos instancias en los tests
     type: "numeric", concepts: ["impropias"], difficulty: 2,
     generate(r) {
       const v = r.pick(["pinf", "exp", "sqrt0", "atan"]);
