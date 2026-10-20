@@ -92,8 +92,9 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - la definición por foco y directriz según la excentricidad;
   - las propiedades métricas de la elipse (suma de distancias), la hipérbola (diferencia, con asíntotas) y la parábola (foco y directriz, con la reflexión);
   - la traslación de ejes, la rotación que elimina el término $Bxy$ y la tangente a una elipse con su propiedad focal.
+- **M105** (`content/m105-figuras.js`), 8 figuras: la binomial con su aproximación normal, la Poisson, áreas bajo la normal, el teorema central del límite (promedio de exponenciales contra la normal), 25 intervalos de confianza simulados, $\alpha$, $\beta$ y potencia de una prueba, la recta de regresión con sus residuos y la verosimilitud de una proporción. Las muestras salen de un generador con semilla, para que la figura no cambie sola.
 - **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
-- **Próximo:** sumar figuras al resto de las materias.
+- **Listo (21/10):** las ocho materias de 1.º y 2.º año tienen figuras.
 
 ## M105 Probabilidad y Estadística (20/10)
 
