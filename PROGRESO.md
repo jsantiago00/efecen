@@ -79,6 +79,10 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - un sistema de 2 × 2 como dos rectas (se cortan, son paralelas o coinciden);
   - autovectores: $A\vec x$ contra $\vec x$ dando la vuelta, y las potencias $A^n\vec x$ que se alinean con el autovector dominante;
   - Gram-Schmidt, restando la proyección paso a paso.
+- **F102B** (`content/f102b-figuras.js`), 9 figuras:
+  - isotermas del gas ideal; isotérmica contra adiabática, con el trabajo; ciclo de Carnot y su rendimiento; distribución de Maxwell;
+  - onda viajera (la forma avanza, la partícula oscila) y armónicos de una onda estacionaria;
+  - refracción y reflexión total; lente delgada con los rayos principales; doble rendija con la envolvente de difracción.
 - **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
 - **Próximo:** sumar figuras al resto de las materias.
 
