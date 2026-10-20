@@ -88,6 +88,10 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - polinomios de Taylor de $\sin x$, $e^x$ y $\ln(1 + x)$ (con su radio de convergencia) y la serie de Fourier de una cuadrada (Gibbs);
   - la circunferencia osculatriz; curvas de nivel con el gradiente; multiplicadores de Lagrange sobre una circunferencia;
   - el campo de pendientes de la ecuación logística con su solución.
+- **M106** (`content/m106-figuras.js`), 7 figuras de cónicas:
+  - la definición por foco y directriz según la excentricidad;
+  - las propiedades métricas de la elipse (suma de distancias), la hipérbola (diferencia, con asíntotas) y la parábola (foco y directriz, con la reflexión);
+  - la traslación de ejes, la rotación que elimina el término $Bxy$ y la tangente a una elipse con su propiedad focal.
 - **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
 - **Próximo:** sumar figuras al resto de las materias.
 
