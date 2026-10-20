@@ -908,3 +908,222 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 5 · CIRCUITOS DE CORRIENTE CONTINUA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dec = v => String(v).replace(".", "{,}");
+  const par = (a, b) => a * b / (a + b);
+  // análisis nodal: resistencias [[a, b, R]], nodo 0 a tierra y nodo 1 a tensión V; devuelve los potenciales de los nodos
+  const nodal = (edges, n, V) => {
+    const free = [...Array(n).keys()].filter(i => i > 1), idx = new Map(free.map((v, i) => [v, i]));
+    const A = free.map(() => free.map(() => 0)), b = free.map(() => 0);
+    for (const [p, q, Rr] of edges) for (const [u, w] of [[p, q], [q, p]]) {
+      if (!idx.has(u)) continue;
+      const i = idx.get(u);
+      A[i][i] += 1 / Rr;
+      if (idx.has(w)) A[i][idx.get(w)] -= 1 / Rr; else b[i] += (w === 1 ? V : 0) / Rr;
+    }
+    const x = free.length ? F.solve(A, b) : [], pot = [0, V];
+    free.forEach((v, i) => { pot[v] = x[i]; });
+    return pot;
+  };
+  const reqNodal = (edges, n) => { const pot = nodal(edges, n, 1); let I = 0; for (const [p, q, Rr] of edges) { if (p === 1) I += (1 - pot[q]) / Rr; if (q === 1) I += (1 - pot[p]) / Rr; } return 1 / I; };
+  // circuito de tres ramas entre los nodos A (arriba) y B (abajo): ε₁ con R₁, ε₂ con R₂ (signos s₁, s₂: +1 si el borne + mira a A) y R₃ sola
+  const branches = (e1, e2, r1, r2, r3) => {
+    // mallas: Ia (izquierda) e Ib (derecha), en sentido horario
+    const [Ia, Ib] = F.solve([[r1 + r3, -r3], [-r3, r2 + r3]], [e1, -e2]);
+    return { I1: Ia, I2: -Ib, I3: Ia - Ib, VAB: (Ia - Ib) * r3 };
+  };
+
+  T["f2a-req-num"] = {
+    type: "numeric", concepts: ["f2a-circuitos"], difficulty: 2,
+    generate(r) {
+      const Rs = [r.int(1, 12), r.int(1, 12), r.int(1, 12), r.int(1, 12)].map(x => x * r.pick([1, 10])), cfg = r.pick(["a", "b", "c"]);
+      const [a, b, c, d] = Rs;
+      const Req = { a: a + par(b, c), b: par(a + b, c), c: par(a, b) + par(c, d) }[cfg];
+      // nodos: 1 = entrada, 0 = salida
+      const edges = { a: [[1, 2, a], [2, 0, b], [2, 0, c]], b: [[1, 2, a], [2, 0, b], [1, 0, c]], c: [[1, 2, a], [1, 2, b], [2, 0, c], [2, 0, d]] }[cfg];
+      const desc = { a: `$R_1 = ${a}\\ \\Omega$ en serie con el paralelo de $R_2 = ${b}\\ \\Omega$ y $R_3 = ${c}\\ \\Omega$`, b: `$R_1 = ${a}\\ \\Omega$ y $R_2 = ${b}\\ \\Omega$ en serie, y ese par en paralelo con $R_3 = ${c}\\ \\Omega$`, c: `el paralelo de $R_1 = ${a}\\ \\Omega$ y $R_2 = ${b}\\ \\Omega$, en serie con el paralelo de $R_3 = ${c}\\ \\Omega$ y $R_4 = ${d}\\ \\Omega$` }[cfg];
+      return {
+        prompt: `¿Cuál es la resistencia equivalente (en Ω) de este arreglo: ${desc}?`,
+        answer: Req,
+        solution: [`En [[f2a-resistores|serie]] se suman las resistencias; en paralelo, las inversas (para dos, $\\frac{R_aR_b}{R_a + R_b}$).`,
+          { a: `$R_{23} = ${nf(par(b, c))}\\ \\Omega$ y $R_{eq} = R_1 + R_{23} \\approx ${nf(Req)}\\ \\Omega$.`, b: `$R_{12} = ${a + b}\\ \\Omega$ y $R_{eq} = \\frac{${a + b}\\cdot${c}}{${a + b + c}} \\approx ${nf(Req)}\\ \\Omega$.`, c: `$R_{12} = ${nf(par(a, b))}\\ \\Omega$, $R_{34} = ${nf(par(c, d))}\\ \\Omega$ y $R_{eq} \\approx ${nf(Req)}\\ \\Omega$.` }[cfg]],
+        // otro camino: análisis nodal con 1 V aplicado; R = V/I
+        verify: { kind: "value", tol: 1e-9, fn: () => reqNodal(edges, 3) }
+      };
+    }
+  };
+
+  T["f2a-kirchhoff-num"] = {
+    type: "numeric", concepts: ["f2a-kirchhoff"], difficulty: 3,
+    generate(r) {
+      const e1 = r.int(2, 24), e2 = r.int(2, 24) * r.pick([1, -1]), r1 = r.int(1, 10), r2 = r.int(1, 10), r3 = r.int(1, 20), ask = r.pick(["I3", "I1", "VAB"]);
+      const s = branches(e1, e2, r1, r2, r3), ans = s[ask];
+      if (Math.abs(ans) < 1e-3) return null;
+      return {
+        prompt: `Entre dos nodos $A$ (arriba) y $B$ (abajo) hay tres ramas en paralelo: la rama 1 tiene una batería de $${e1}$ V, con el borne positivo hacia $A$, en serie con $R_1 = ${r1}\\ \\Omega$; la rama 2, una batería de $${Math.abs(e2)}$ V con el borne positivo hacia ${e2 > 0 ? "$A$" : "$B$"}, en serie con $R_2 = ${r2}\\ \\Omega$; y la rama 3, solo $R_3 = ${r3}\\ \\Omega$. ${{ I3: "¿Qué corriente circula por $R_3$ (en A, positiva si va de $A$ hacia $B$)?", I1: "¿Qué corriente circula por la rama 1 (en A, positiva si va de $B$ hacia $A$, es decir, si sale por el borne positivo de su batería)?", VAB: "¿Cuánto vale $V_A - V_B$ (en V)?" }[ask]} (Baterías ideales.)`,
+        answer: ans,
+        solution: [`[[f2a-kirchhoff|Leyes de Kirchhoff]] con corrientes de malla $I_a$ (izquierda) e $I_b$ (derecha), las dos en sentido horario.`,
+          `Malla izquierda: $${e1} - ${r1}I_a - ${r3}(I_a - I_b) = 0$. Malla derecha: $-${r3}(I_b - I_a) - ${r2}I_b ${e2 > 0 ? "-" : "+"} ${Math.abs(e2)} = 0$.`,
+          `Resolviendo: $I_a \\approx ${nf(s.I1)}$ A e $I_b \\approx ${nf(-s.I2)}$ A. Por $R_3$ pasa $I_a - I_b \\approx ${nf(s.I3)}$ A, y $V_A - V_B = R_3(I_a - I_b) \\approx ${nf(s.VAB)}$ V.`,
+          `Pedido: $${nf(ans)}$ ${ask === "VAB" ? "V" : "A"}${ans < 0 ? " (el signo negativo dice que va al revés del sentido supuesto)" : ""}.`],
+        // otro camino: método de nodos, con una sola incógnita V_A (ley de nodos en A)
+        verify: { kind: "value", tol: 1e-9, fn: () => { const VA = (e1 / r1 + e2 / r2) / (1 / r1 + 1 / r2 + 1 / r3); return { I3: VA / r3, I1: (e1 - VA) / r1, VAB: VA }[ask]; } }
+      };
+    }
+  };
+
+  T["f2a-kirchhoff-order"] = {
+    type: "order", concepts: ["f2a-kirchhoff"], difficulty: 2,
+    generate(r) {
+      const e1 = r.int(2, 24), e2 = r.int(2, 24), r1 = r.int(1, 10), r2 = r.int(1, 10), r3 = r.int(1, 20), s = branches(e1, e2, r1, r2, r3);
+      return {
+        prompt: `Una batería de $${e1}$ V con $R_1 = ${r1}\\ \\Omega$ y otra de $${e2}$ V con $R_2 = ${r2}\\ \\Omega$ alimentan en paralelo una resistencia $R_3 = ${r3}\\ \\Omega$ (las dos con el borne positivo hacia el mismo nodo $A$). Ordená los pasos para hallar la corriente en $R_3$ por el método de nodos.`,
+        steps: [`Elegir un nodo de referencia ($V_B = 0$) y tomar como incógnita el potencial $V_A$ del otro.`,
+          `Escribir la corriente de cada rama en función de $V_A$: $\\frac{${e1} - V_A}{${r1}}$, $\\frac{${e2} - V_A}{${r2}}$ y $\\frac{V_A}{${r3}}$.`,
+          `[[f2a-kirchhoff|Ley de nodos]] en $A$: lo que entra por las ramas 1 y 2 sale por la 3.`,
+          `Despejar: $V_A \\approx ${nf(s.VAB)}$ V, y la corriente en $R_3$ es $\\frac{V_A}{R_3} \\approx ${nf(s.I3)}$ A.`],
+        solution: [`Primero la referencia y la incógnita, después cada corriente en función de ella, la ley de nodos y al final el despeje.`],
+        // verificación: el resultado de los nodos coincide con el de las mallas
+        verify: { kind: "truth", target: true, fn: () => { const VA = (e1 / r1 + e2 / r2) / (1 / r1 + 1 / r2 + 1 / r3); return Math.abs(VA - s.VAB) < 1e-9 * Math.max(1, Math.abs(VA)); } }
+      };
+    }
+  };
+
+  T["f2a-rc-num"] = {
+    type: "numeric", concepts: ["f2a-rc"], difficulty: 3,
+    generate(r) {
+      const Rk = r.int(1, 100), Cu = r.int(1, 100), em = r.int(3, 24), charge = r.bool(), ask = r.pick(["q", "I", "t"]), tau = Rk * Cu; // kΩ·μF = ms
+      const t = r.int(1, 30) / 10 * tau, frac = r.pick([0.25, 0.5, 0.75, 0.9, 0.95]);
+      const Q0 = Cu * em; // μC
+      const q = charge ? Q0 * (1 - Math.exp(-t / tau)) : Q0 * Math.exp(-t / tau), I = em / Rk * Math.exp(-t / tau); // mA
+      const tf = charge ? -tau * Math.log(1 - frac) : -tau * Math.log(frac);
+      const ans = { q, I, t: tf }[ask];
+      const tt = nf(+t.toPrecision(4));
+      return {
+        prompt: `${charge ? `Un capacitor de $${Cu}$ μF, descargado, se conecta en $t = 0$ a una batería de $${em}$ V a través de una resistencia de $${Rk}$ kΩ.` : `Un capacitor de $${Cu}$ μF, cargado a $${em}$ V, se descarga en $t = 0$ a través de una resistencia de $${Rk}$ kΩ.`} ${{ q: `¿Qué carga tiene el capacitor en $t = ${tt}$ ms (en μC)?`, I: `¿Qué corriente circula en $t = ${tt}$ ms (en mA, en valor absoluto)?`, t: `¿En qué instante su carga llega al $${100 * frac}\\,\\%$ de la ${charge ? "carga final" : "carga inicial"} (en ms)?` }[ask]}`,
+        answer: ans,
+        solution: [`[[f2a-rc|Circuito RC]]: la constante de tiempo es $\\tau = RC = ${Rk}\\ \\text{k}\\Omega\\cdot${Cu}\\ \\mu\\text{F} = ${tau}$ ms.`,
+          charge ? `Carga: $q(t) = C\\varepsilon\\left(1 - e^{-t/\\tau}\\right)$, con $C\\varepsilon = ${Q0}$ μC, e $I(t) = \\frac{\\varepsilon}{R}e^{-t/\\tau}$.` : `Descarga: $q(t) = Q_0e^{-t/\\tau}$, con $Q_0 = C\\varepsilon = ${Q0}$ μC, y $|I(t)| = \\frac{Q_0}{RC}e^{-t/\\tau}$.`,
+          { q: `$q \\approx ${nf(q)}$ μC.`, I: `$|I| \\approx ${nf(I)}$ mA.`, t: charge ? `$1 - e^{-t/\\tau} = ${dec(frac)} \\Rightarrow t = -\\tau\\ln(${dec(+(1 - frac).toFixed(2))}) \\approx ${nf(tf)}$ ms.` : `$e^{-t/\\tau} = ${dec(frac)} \\Rightarrow t = -\\tau\\ln(${dec(frac)}) \\approx ${nf(tf)}$ ms.` }[ask]],
+        // otro camino: se integra R dq/dt = ε − q/C (o −q/C) con RK4, en ms, μC y mA
+        verify: ask === "t"
+          ? { kind: "ode", f: (_, y) => [charge ? (Q0 - y[0]) / tau : -y[0] / tau], y0: [charge ? 0 : Q0], t1: 0, until: (_, y) => (charge ? y[0] >= frac * Q0 : y[0] <= frac * Q0), g: (_, y) => y[0] - frac * Q0, dt: tau / 2000, tmax: 20 * tau, out: tt2 => tt2, tol: 1e-4 }
+          : { kind: "ode", f: (_, y) => [charge ? (Q0 - y[0]) / tau : -y[0] / tau], y0: [charge ? 0 : Q0], t1: t, dt: tau / 2000, out: (_, y) => ask === "q" ? y[0] : Math.abs(charge ? (Q0 - y[0]) / tau : -y[0] / tau), tol: 1e-6 }
+      };
+    }
+  };
+  T["f2a-rc-num"].testN = 100;
+
+  T["f2a-rc-tf"] = {
+    type: "tf", concepts: ["f2a-rc"], difficulty: 2,
+    generate(r) {
+      const m = r.pick([{ t: R`\tau`, v: 1 }, { t: R`2\tau`, v: 2 }, { t: R`3\tau`, v: 3 }, { t: R`\tau\ln 2`, v: Math.LN2 }]), truth = r.bool();
+      const real = 100 * (1 - Math.exp(-m.v)), claim = truth ? Math.round(real) : r.pick([Math.round(100 * Math.exp(-m.v)), Math.round(100 * m.v / 3), Math.round(real) + r.pick([-12, 12])]);
+      if (!truth && Math.abs(claim - real) < 3) return null;
+      return {
+        prompt: `<b>Verdadero o falso:</b> un capacitor descargado se carga a través de una resistencia con una batería. En $t = ${m.t}$ (con $\\tau = RC$) ya tiene aproximadamente el $${claim}\\,\\%$ de su carga final.`,
+        answer: Math.abs(claim - real) < 1,
+        explanation: `La fracción cargada es $1 - e^{-t/\\tau} = 1 - e^{-${m.v === Math.LN2 ? "\\ln 2" : m.v}} \\approx ${nf(real / 100)}$, o sea el $${nf(real)}\\,\\%$. Es ${Math.abs(claim - real) < 1 ? "verdadero" : "falso"}.`,
+        solution: [R`Ver [[f2a-rc|circuito RC]]: en $\tau$ se completa el $63\,\%$, en $2\tau$ el $86\,\%$, en $3\tau$ el $95\,\%$, y en $\tau\ln2$ la mitad.`],
+        // otro camino: simulación RK4 de la carga
+        verify: { kind: "truth", fn: () => { let q = 0; const h = m.v / 4000; for (let i = 0; i < 4000; i++) { const f = x => 1 - x, k1 = f(q), k2 = f(q + h / 2 * k1), k3 = f(q + h / 2 * k2), k4 = f(q + h * k3); q += h / 6 * (k1 + 2 * k2 + 2 * k3 + k4); } return Math.abs(claim - 100 * q) < 1; } }
+      };
+    }
+  };
+
+  T["f2a-instrumentos-num"] = {
+    type: "numeric", concepts: ["f2a-circuitos"], difficulty: 2,
+    generate(r) {
+      const Ig = r.pick([50, 100, 200, 500, 1000]), Rg = r.int(2, 20) * 10, amp = r.bool(), Imax = r.pick([0.1, 0.5, 1, 2, 5, 10]), Vmax = r.pick([1, 5, 10, 20, 50, 100]);
+      const ig = Ig * 1e-6, ans = amp ? ig * Rg / (Imax - ig) : Vmax / ig - Rg;
+      return {
+        prompt: `Un galvanómetro tiene resistencia interna $${Rg}\\ \\Omega$ y llega a fondo de escala con $${Ig}$ μA. ${amp ? `Para usarlo como amperímetro de $${dec(Imax)}$ A a fondo de escala, ¿qué resistencia (en Ω) hay que conectarle en paralelo?` : `Para usarlo como voltímetro de $${Vmax}$ V a fondo de escala, ¿qué resistencia (en Ω) hay que conectarle en serie?`}`,
+        answer: ans,
+        solution: amp ? [`[[f2a-instrumentos|Amperímetro]]: la resistencia en paralelo (shunt) desvía todo lo que el galvanómetro no puede llevar, $I - I_g$, con la misma tensión $I_gR_g$.`, `$R_s = \\frac{I_gR_g}{I - I_g} \\approx ${nf(ans)}\\ \\Omega$: muy chica, para que el amperímetro casi no perturbe el circuito.`]
+          : [`[[f2a-instrumentos|Voltímetro]]: con $V$ aplicado, la corriente tiene que ser $I_g$: $I_g(R_g + R_m) = V$.`, `$R_m = \\frac{V}{I_g} - R_g \\approx ${nf(ans)}\\ \\Omega$: muy grande, para que el voltímetro casi no tome corriente.`],
+        // otro camino: con la resistencia hallada, la corriente que pasa por el galvanómetro (divisor de corriente, o ley de Ohm en serie) es justo I_g
+        verify: { kind: "zero", fn: x => amp ? (Imax * x / (x + Rg) - ig) / ig : (Vmax / (Rg + x) - ig) / ig }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-resistores": {
+      title: "Resistencias en serie y en paralelo", aliases: ["resistencias en serie", "resistencias en paralelo", "resistencia equivalente", "divisor de tensión"], concepts: ["f2a-circuitos"],
+      summary: "En serie (misma corriente) se suman: R = R₁ + R₂. En paralelo (misma tensión) se suman las inversas: 1/R = 1/R₁ + 1/R₂.",
+      def: [R`**Serie:** la misma corriente pasa por todas; $R_{eq} = R_1 + R_2 + \cdots$. La tensión se reparte en proporción a cada resistencia (divisor de tensión: $V_1 = V\frac{R_1}{R_1 + R_2}$).`,
+        R`**Paralelo:** todas tienen la misma tensión; $\frac1{R_{eq}} = \frac1{R_1} + \frac1{R_2} + \cdots$ (para dos, $\frac{R_1R_2}{R_1 + R_2}$). La equivalente es menor que la más chica.`],
+      idea: [R`En serie, un camino más largo; en paralelo, más caminos a la vez. Es al revés que con los [[f2a-asociacion-capacitores|capacitores]].`],
+      demo: [R`**Paso 1 (serie).** La carga no se acumula en los cables: la corriente $I$ es la misma en todas. Las caídas se suman a lo largo del camino: $V = IR_1 + IR_2 + \cdots = I(R_1 + R_2 + \cdots)$, y $R_{eq} = \frac VI = \sum R_i$.`,
+        R`**Paso 2 (paralelo).** Los extremos de todas están unidos, así que tienen la misma $V$. Por la ley de nodos, la corriente total es la suma: $I = \frac V{R_1} + \frac V{R_2} + \cdots$. Dividiendo por $V$: $\frac1{R_{eq}} = \sum\frac1{R_i}$. $\blacksquare$`],
+      examples: [{ q: R`$6\ \Omega$ y $3\ \Omega$ en paralelo, en serie con $4\ \Omega$.`, steps: [R`$\frac{18}{9} = 2\ \Omega$, y $R_{eq} = 6\ \Omega$.`] }],
+      tips: [R`Para reducir una red, buscá pares que estén claramente en serie (sin nada que salga del medio) o en paralelo (mismos dos nodos). Si no hay, usá [[f2a-kirchhoff|Kirchhoff]].`],
+      see: ["f2a-kirchhoff", "f2a-resistencia", "f2a-instrumentos"]
+    },
+    "f2a-kirchhoff": {
+      title: "Leyes de Kirchhoff", aliases: ["leyes de Kirchhoff", "ley de nodos", "ley de mallas", "corrientes de malla", "método de nodos"], concepts: ["f2a-kirchhoff"],
+      summary: "Nodos: la suma de corrientes que entran es igual a la de las que salen. Mallas: la suma de subidas y bajadas de potencial en un recorrido cerrado es cero.",
+      def: [R`**Ley de nodos:** en cada nodo, $\sum I_{entran} = \sum I_{salen}$.`,
+        R`**Ley de mallas:** en todo recorrido cerrado, $\sum\Delta V = 0$. Convención: al atravesar una resistencia en el sentido de la corriente, el potencial baja $IR$; al atravesar una fuente de $-$ a $+$, sube $\varepsilon$.`,
+        R`**Métodos:** con corrientes de malla, una incógnita por malla y una ecuación de mallas por cada una; con potenciales de nodo, una incógnita por nodo (salvo el de referencia) y la ley de nodos en cada uno. Las dos dan un sistema lineal.`],
+      idea: [R`Son dos leyes de conservación: la de la carga (no se acumula en los nodos) y la de la energía (una carga que da la vuelta completa vuelve al mismo potencial).`],
+      demo: [R`**Paso 1 (nodos).** En un estado estacionario la carga de un nodo no cambia: $\frac{dQ}{dt} = \sum I_{entran} - \sum I_{salen} = 0$. Es la [[f2a-carga|conservación de la carga]].`,
+        R`**Paso 2 (mallas).** El potencial es una función del punto: al recorrer un camino cerrado y volver al inicio, $V_{final} - V_{inicial} = 0$. Esa diferencia es la suma de los saltos en cada elemento, así que suman cero. Es la conservatividad del [[f2a-potencial|potencial]]. $\blacksquare$`],
+      examples: [{ q: R`Dos ramas con $12$ V y $2\ \Omega$ y con $6$ V y $2\ \Omega$ alimentan una de $4\ \Omega$.`, steps: [R`Nodos: $\frac{12 - V}{2} + \frac{6 - V}{2} = \frac V4$, así que $V = 7{,}2$ V y por la de $4\ \Omega$ pasan $1{,}8$ A.`] }],
+      tips: [R`Elegí los sentidos de las corrientes al azar si hace falta: si alguna sale negativa, circula al revés. Lo que no se puede es cambiar el sentido a mitad de las cuentas.`],
+      see: ["f2a-resistores", "f2a-fem", "al-sistemas"]
+    },
+    "f2a-rc": {
+      title: "Circuitos RC", aliases: ["circuito RC", "constante de tiempo RC", "carga de un capacitor", "descarga de un capacitor"], concepts: ["f2a-rc"],
+      summary: "Al cargar: q = Cε(1 − e^(−t/RC)) e I = (ε/R)e^(−t/RC). Al descargar: q = Q₀e^(−t/RC). τ = RC es el tiempo en que se completa el 63 %.",
+      def: [R`**Carga** (capacitor descargado, batería $\varepsilon$, resistencia $R$): $q(t) = C\varepsilon\left(1 - e^{-t/RC}\right)$ e $I(t) = \frac{\varepsilon}{R}e^{-t/RC}$.`,
+        R`**Descarga** (carga inicial $Q_0$, a través de $R$): $q(t) = Q_0e^{-t/RC}$ e $|I(t)| = \frac{Q_0}{RC}e^{-t/RC}$.`,
+        R`**Constante de tiempo:** $\tau = RC$ (con $R$ en Ω y $C$ en F, da segundos; con kΩ y μF, milisegundos). En $\tau$ la carga completa el $63\,\%$; en $5\tau$, más del $99\,\%$.`],
+      idea: [R`Al principio el capacitor vacío no se opone y la corriente es la máxima, $\frac\varepsilon R$. A medida que se carga, su tensión se resta de la de la batería y la corriente se apaga: cuanto menos le falta, más despacio se llena, y eso es una exponencial.`],
+      demo: [R`**Paso 1.** Ley de mallas durante la carga: $\varepsilon - IR - \frac qC = 0$, con $I = \frac{dq}{dt}$. Queda la [[c2-edo-lineal|ecuación lineal]] $R\frac{dq}{dt} = \varepsilon - \frac qC$.`,
+        R`**Paso 2.** Con $u = C\varepsilon - q$ (lo que falta cargar), $\frac{du}{dt} = -\frac{dq}{dt} = -\frac{u}{RC}$: la derivada es proporcional a la función, así que $u = u_0e^{-t/RC}$.`,
+        R`**Paso 3.** Como $q(0) = 0$, $u_0 = C\varepsilon$ y $q = C\varepsilon\left(1 - e^{-t/RC}\right)$. Derivando, $I = \frac\varepsilon Re^{-t/RC}$.`,
+        R`**Paso 4 (descarga).** Sin batería, $-IR - \frac qC = 0$, es decir $\frac{dq}{dt} = -\frac{q}{RC}$, y $q = Q_0e^{-t/RC}$. $\blacksquare$`],
+      examples: [{ q: R`$R = 10$ kΩ, $C = 100$ μF, $\varepsilon = 12$ V.`, steps: [R`$\tau = 1$ s; en $t = 1$ s, $q \approx 0{,}632\cdot1200 \approx 759$ μC.`] }],
+      tips: [R`Para saber cuándo se llega a una fracción $f$ de la carga final, $t = -\tau\ln(1 - f)$; para la mitad, $\tau\ln2 \approx 0{,}69\,\tau$.`],
+      see: ["f2a-kirchhoff", "f2a-capacitancia", "c2-edo-lineal"]
+    },
+    "f2a-instrumentos": {
+      title: "Amperímetros y voltímetros", aliases: ["amperímetro", "voltímetro", "galvanómetro", "resistencia shunt"], concepts: ["f2a-circuitos"],
+      summary: "El amperímetro va en serie y tiene resistencia muy chica (galvanómetro con un shunt en paralelo); el voltímetro va en paralelo y tiene resistencia muy grande (galvanómetro con una resistencia en serie).",
+      def: [R`**Galvanómetro:** instrumento de bobina móvil que llega a fondo de escala con una corriente chica $I_g$ y tiene resistencia $R_g$.`,
+        R`**Amperímetro** de fondo de escala $I$: galvanómetro con una resistencia **en paralelo** (shunt) $R_s = \frac{I_gR_g}{I - I_g}$. Se conecta en serie con el elemento.`,
+        R`**Voltímetro** de fondo de escala $V$: galvanómetro con una resistencia **en serie** $R_m = \frac{V}{I_g} - R_g$. Se conecta en paralelo con el elemento.`],
+      idea: [R`Un instrumento ideal no cambia lo que mide: el amperímetro no debería agregar resistencia en el camino, y el voltímetro no debería robarle corriente al circuito. Por eso uno es casi un cable y el otro casi un circuito abierto.`],
+      demo: [R`**Paso 1 (shunt).** A fondo de escala pasan $I_g$ por el galvanómetro e $I - I_g$ por el shunt. Como están en paralelo, tienen la misma tensión: $I_gR_g = (I - I_g)R_s$, de donde $R_s = \frac{I_gR_g}{I - I_g}$.`,
+        R`**Paso 2 (multiplicador).** En serie la corriente es la misma, $I_g$, y la tensión total es $V = I_g(R_g + R_m)$. Despejando, $R_m = \frac V{I_g} - R_g$. $\blacksquare$`],
+      examples: [{ q: R`Galvanómetro de $100$ μA y $50\ \Omega$, como amperímetro de $1$ A.`, steps: [R`$R_s = \frac{10^{-4}\cdot50}{0{,}9999} \approx 0{,}005\ \Omega$.`] }],
+      tips: [R`Un amperímetro conectado en paralelo hace un cortocircuito (y se quema); un voltímetro en serie corta casi toda la corriente.`],
+      see: ["f2a-resistores", "f2a-kirchhoff"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-circuitos": { name: "Redes de resistencias" }, "f2a-kirchhoff": { name: "Leyes de Kirchhoff" }, "f2a-rc": { name: "Circuitos RC" } },
+    templates: T,
+    units: [{
+      id: "f2a-circuitos-u", order: 5, program: "Unidad 5", title: "Circuitos de corriente continua", icon: "grid-3x3",
+      diagnostic: ["f2a-req-num", "f2a-kirchhoff-num", "f2a-rc-num"],
+      lessons: [
+        { id: "f2a-circuitos-l1", title: "Redes e instrumentos", templates: ["f2a-req-num", "f2a-instrumentos-num"], theory: ["f2a-resistores", "f2a-instrumentos"],
+          intro: R`En serie se suman las resistencias; en paralelo, las inversas.` },
+        { id: "f2a-circuitos-l2", title: "Kirchhoff", templates: ["f2a-kirchhoff-num", "f2a-kirchhoff-order"], theory: ["f2a-kirchhoff"],
+          intro: R`Nodos: lo que entra sale. Mallas: en una vuelta completa, $\sum\Delta V = 0$.` },
+        { id: "f2a-circuitos-l3", title: "Circuitos RC", templates: ["f2a-rc-num", "f2a-rc-tf"], theory: ["f2a-rc"],
+          intro: R`$q = C\varepsilon\left(1 - e^{-t/RC}\right)$: en $\tau = RC$ se completa el $63\,\%$.` }
+      ]
+    }],
+    cards
+  });
+})();
