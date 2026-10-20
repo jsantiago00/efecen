@@ -1584,3 +1584,237 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 8 · INDUCCIÓN ELECTROMAGNÉTICA E INDUCTANCIA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dec = v => String(v).replace(".", "{,}");
+  const MU = R`\mu_0 = 4\pi\times10^{-7}\ \text{T m/A}`;
+  // derivada numérica centrada, con extrapolación de Richardson
+  const dnum = (f, t, h) => { const d = k => (f(t + k) - f(t - k)) / (2 * k); return (4 * d(h / 2) - d(h)) / 3; };
+
+  T["f2a-faraday-num"] = {
+    type: "numeric", concepts: ["f2a-faraday"], difficulty: 2,
+    generate(r) {
+      const N = r.pick([1, 10, 20, 50, 100, 200, 500]), a = r.int(2, 20), kind = r.pick(["lineal", "seno", "giro"]), Rr = r.int(1, 50), ask = r.pick(["fem", "I"]);
+      const A = (a / 100) ** 2;
+      let Phi, t0, emf, desc, step, h;
+      if (kind === "lineal") {
+        const B0 = r.int(0, 10) / 10, b = r.nz(-20, 20) / 10;
+        t0 = r.int(1, 5); h = 1e-3; Phi = t => N * (B0 + b * t) * A; emf = -N * A * b;
+        desc = `un campo magnético perpendicular a su plano que varía como $B(t) = ${dec(B0)} ${b < 0 ? "-" : "+"} ${dec(Math.abs(b))}\\,t$ (T, con $t$ en s)`;
+        step = `$\\frac{d\\Phi}{dt} = NA\\frac{dB}{dt} = ${N}\\cdot${nf(A)}\\cdot${b < 0 ? `(${dec(b)})` : dec(b)}$, constante.`;
+      } else if (kind === "seno") {
+        const B0 = r.int(1, 10) / 100, f = r.pick([50, 60, 100]), tm = r.int(1, 9), w = 2 * Math.PI * f;
+        t0 = tm / 1000; h = 1e-6; Phi = t => N * B0 * Math.sin(w * t) * A; emf = -N * A * B0 * w * Math.cos(w * t0);
+        desc = `un campo magnético perpendicular a su plano que oscila como $B(t) = ${dec(B0)}\\sin(2\\pi\\cdot${f}\\,t)$ (T, con $t$ en s)`;
+        step = `$\\frac{d\\Phi}{dt} = NAB_0\\,2\\pi f\\cos(2\\pi ft)$, evaluado en $t = ${tm}$ ms.`;
+      } else {
+        const B = r.int(1, 10) / 10, w = r.int(1, 20) * 10, tm = r.int(1, 30);
+        t0 = tm / 1000; h = 1e-6; Phi = t => N * B * A * Math.cos(w * t); emf = N * B * A * w * Math.sin(w * t0);
+        desc = `un campo uniforme de $${dec(B)}$ T y gira con velocidad angular $${w}$ rad/s alrededor de un eje de su plano perpendicular al campo (en $t = 0$ su normal es paralela al campo)`;
+        step = `$\\Phi = NBA\\cos\\omega t$, así que $-\\frac{d\\Phi}{dt} = NBA\\omega\\sin\\omega t$, evaluado en $t = ${tm}$ ms (con $\\omega t$ en radianes).`;
+      }
+      if (Math.abs(emf) < 1e-6) return null;
+      const tq = kind === "lineal" ? `$t = ${t0}$ s` : `$t = ${Math.round(t0 * 1000)}$ ms`;
+      const ans0 = ask === "fem" ? emf : emf / Rr, sc = Math.abs(ans0) >= 1 ? 1 : 1000, un = ask === "fem" ? (sc === 1 ? "V" : "mV") : (sc === 1 ? "A" : "mA"), ans = ans0 * sc;
+      return {
+        prompt: `Una bobina cuadrada de $${N}$ ${N === 1 ? "vuelta" : "vueltas"} y $${a}$ cm de lado está en ${desc}. ${ask === "fem" ? `¿Cuánto vale la fem inducida en ${tq} (en ${un})?` : `La bobina tiene una resistencia total de $${Rr}\\ \\Omega$. ¿Qué corriente se induce en ${tq} (en ${un})?`} (Tomá la fem como $-\\frac{d\\Phi}{dt}$, con el signo incluido.)`,
+        answer: ans,
+        solution: [`[[f2a-faraday|Ley de Faraday]]: $\\varepsilon = -\\frac{d\\Phi_B}{dt}$, con $\\Phi_B = NBA$ el flujo por las $N$ vueltas y $A = ${nf(A)}$ m².`,
+          step, `$\\varepsilon \\approx ${nf(emf)}$ V${ask === "I" ? `, e $I = \\frac{\\varepsilon}{R} \\approx ${nf(ans)}$ ${un}` : ""}.`],
+        // otro camino: derivada numérica del flujo (Richardson)
+        verify: { kind: "value", tol: 1e-6, fn: () => { const e = -dnum(Phi, t0, h); return (ask === "fem" ? e : e / Rr) * sc; } }
+      };
+    }
+  };
+
+  T["f2a-barra-num"] = {
+    type: "numeric", concepts: ["f2a-faraday"], difficulty: 3,
+    generate(r) {
+      const B = r.int(1, 15) / 10, L = r.int(10, 100), Rr = r.int(1, 20) / 10, Lm = L / 100;
+      if (r.bool()) {
+        const v = r.int(1, 20), ask = r.pick(["fem", "I", "F", "P"]);
+        const emf = B * Lm * v, I = emf / Rr, Fm = I * Lm * B, ans = { fem: emf, I, F: Fm, P: Fm * v }[ask];
+        return {
+          prompt: `Una barra conductora de $${L}$ cm se desliza con rapidez constante de $${v}$ m/s sobre dos rieles paralelos unidos por una resistencia de $${dec(Rr)}\\ \\Omega$ (la barra y los rieles no tienen resistencia). Un campo magnético de $${dec(B)}$ T es perpendicular al plano de los rieles. ${{ fem: "¿Cuánto vale la fem inducida (en V)?", I: "¿Qué corriente circula (en A)?", F: "¿Qué fuerza hay que hacer sobre la barra para mantener su rapidez (en N)?", P: "¿Qué potencia entrega esa fuerza (en W)?" }[ask]}`,
+          answer: ans,
+          solution: [`[[f2a-fem-movimiento|Fem de movimiento]]: $\\varepsilon = BLv = ${dec(B)}\\cdot${nf(Lm)}\\cdot${v} \\approx ${nf(emf)}$ V, e $I = \\frac\\varepsilon R \\approx ${nf(I)}$ A.`,
+            ...(ask === "F" || ask === "P" ? [`La corriente en la barra siente $F = ILB \\approx ${nf(Fm)}$ N, que la frena ([[f2a-lenz|Lenz]]); hay que compensarla.${ask === "P" ? ` Potencia: $Fv \\approx ${nf(Fm * v)}$ W, igual a la que se disipa en la resistencia, $I^2R$.` : ""}`] : [])],
+          // otro camino: fem como −dΦ/dt del área barrida (derivada numérica) y potencia como I²R
+          verify: { kind: "value", tol: 1e-7, fn: () => { const Phi = t => B * Lm * (0.3 + v * t), e = Math.abs(dnum(Phi, 1, 1e-3)), i = e / Rr; return { fem: e, I: i, F: i * i * Rr / v, P: i * i * Rr }[ask]; } }
+        };
+      }
+      const m = r.int(1, 20) * 10, v0 = r.int(1, 10), ask = r.pick(["v", "x"]), mk = m / 1000, tau = mk * Rr / (B * B * Lm * Lm), t = +(r.int(1, 20) / 10 * tau).toPrecision(2);
+      const ans = ask === "v" ? v0 * Math.exp(-t / tau) : v0 * tau;
+      return {
+        prompt: `Una barra conductora de $${m}$ g y $${L}$ cm se desliza sin rozamiento sobre dos rieles horizontales paralelos unidos por una resistencia de $${dec(Rr)}\\ \\Omega$, en un campo magnético vertical de $${dec(B)}$ T. Se la lanza con $${v0}$ m/s y se la deja libre. ${ask === "v" ? `¿Qué rapidez tiene a los $${nf(t)}$ s (en m/s)?` : "¿Qué distancia recorre hasta detenerse (en m)?"}`,
+        answer: ans,
+        solution: [`La fuerza magnética sobre la barra es $ILB = \\frac{B^2L^2}{R}v$ y la frena: $m\\frac{dv}{dt} = -\\frac{B^2L^2}{R}v$ ([[f2a-fem-movimiento|fem de movimiento]] y [[f2a-lenz|Lenz]]).`,
+          `La rapidez decae exponencialmente, $v = v_0e^{-t/\\tau}$, con $\\tau = \\frac{mR}{B^2L^2} \\approx ${nf(tau)}$ s.`,
+          ask === "v" ? `$v \\approx ${nf(ans)}$ m/s.` : `La distancia total es $\\int_0^\\infty v\\,dt = v_0\\tau \\approx ${nf(ans)}$ m (nunca se detiene del todo, pero se acerca a ese punto).`],
+        // otro camino: RK4 de la ecuación de movimiento (para la distancia, hasta 40 τ)
+        verify: { kind: "ode", f: (_, y) => [y[1], -B * B * Lm * Lm / (Rr * mk) * y[1]], y0: [0, v0], t1: ask === "v" ? t : 40 * tau, dt: tau / 400, out: (_, y) => ask === "v" ? y[1] : y[0], tol: 1e-6 }
+      };
+    }
+  };
+
+  T["f2a-inductancia-num"] = {
+    type: "numeric", concepts: ["f2a-inductancia"], difficulty: 3,
+    generate(r) {
+      const N = r.int(1, 20) * 50, ell = r.int(10, 50), rad = r.int(1, 5), I = r.int(1, 50) / 10, kind = r.pick(["L", "U", "fem", "M"]), N2 = r.int(1, 10) * 10, didt = r.int(1, 50) * 10;
+      const A = Math.PI * (rad / 100) ** 2, l = ell / 100, Lh = F.mu0 * N * N * A / l, M = F.mu0 * N * N2 * A / l;
+      const ans = { L: Lh * 1e3, U: 0.5 * Lh * I * I * 1e3, fem: Lh * didt, M: M * 1e3 }[kind];
+      return {
+        prompt: `Un solenoide de $${ell}$ cm de largo y $${rad}$ cm de radio tiene $${N}$ vueltas (consideralo largo). ${{ L: "¿Cuál es su autoinductancia (en mH)?", U: `Si lleva $${dec(I)}$ A, ¿cuánta energía hay en su campo magnético (en mJ)?`, fem: `Si la corriente cambia a razón de $${didt}$ A/s, ¿cuánto vale el módulo de la fem autoinducida (en V)?`, M: `Sobre su parte central se enrolla una segunda bobina de $${N2}$ vueltas. ¿Cuál es la inductancia mutua entre las dos (en mH)?` }[kind]} ($${MU}$)`,
+        answer: ans,
+        solution: [`Adentro, $B = \\mu_0\\frac{N}{\\ell}I$, y el flujo por cada vuelta es $BA$, con $A = \\pi r^2 \\approx ${nf(A)}$ m².`,
+          kind === "M" ? `[[f2a-inductancia|Inductancia mutua]]: $M = \\frac{N_2\\Phi_1}{I_1} = \\frac{\\mu_0N_1N_2A}{\\ell} \\approx ${nf(ans)}$ mH.` : `[[f2a-inductancia|Autoinductancia]]: $L = \\frac{N\\Phi}{I} = \\frac{\\mu_0N^2A}{\\ell} \\approx ${nf(Lh * 1e3)}$ mH.`,
+          ...({ U: [`Energía: $U = \\frac12LI^2 \\approx ${nf(ans)}$ mJ.`], fem: [`$|\\varepsilon| = L\\left|\\frac{dI}{dt}\\right| \\approx ${nf(ans)}$ V.`] }[kind] || [])],
+        // otro camino: la energía como integral de B²/(2μ₀) en el volumen (L = 2U/I²), y la fem de la mutua por el flujo enlazado
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const i0 = kind === "U" ? I : 1, B = F.mu0 * N / l * i0, Uf = F.simpson(s => B * B / (2 * F.mu0) * 2 * Math.PI * s * l, 0, rad / 100, 20), Ln = 2 * Uf / (i0 * i0);
+          return { L: Ln * 1e3, U: Uf * 1e3, fem: Ln * didt, M: N2 * B * A / i0 * 1e3 }[kind];
+        } }
+      };
+    }
+  };
+
+  T["f2a-rl-num"] = {
+    type: "numeric", concepts: ["f2a-inductancia"], difficulty: 3,
+    generate(r) {
+      const Lm = r.int(1, 50) * 10, Rr = r.int(1, 50), em = r.int(3, 24), ask = r.pick(["I", "t", "U"]), tau = Lm / Rr; // mH/Ω = ms
+      const t = +(r.int(1, 30) / 10 * tau).toPrecision(3), frac = r.pick([0.25, 0.5, 0.75, 0.9]), I0 = em / Rr;
+      const I = I0 * (1 - Math.exp(-t / tau)), tf = -tau * Math.log(1 - frac);
+      const ans = { I: I * 1000, t: tf, U: 0.5 * Lm * 1e-3 * I * I * 1e3 }[ask];
+      return {
+        prompt: `En $t = 0$ se conecta una batería de $${em}$ V a una bobina de $${Lm}$ mH en serie con una resistencia de $${Rr}\\ \\Omega$. ${{ I: `¿Qué corriente circula en $t = ${nf(t)}$ ms (en mA)?`, t: `¿En qué instante la corriente llega al $${100 * frac}\\,\\%$ de su valor final (en ms)?`, U: `¿Cuánta energía hay en la bobina en $t = ${nf(t)}$ ms (en mJ)?` }[ask]}`,
+        answer: ans,
+        solution: [`[[f2a-rl|Circuito RL]]: $I(t) = \\frac{\\varepsilon}{R}\\left(1 - e^{-t/\\tau}\\right)$, con $\\tau = \\frac LR = ${nf(tau)}$ ms y corriente final $\\frac\\varepsilon R \\approx ${nf(I0 * 1000)}$ mA.`,
+          { I: `$I \\approx ${nf(I * 1000)}$ mA.`, t: `$1 - e^{-t/\\tau} = ${dec(frac)} \\Rightarrow t = -\\tau\\ln(${dec(+(1 - frac).toFixed(2))}) \\approx ${nf(tf)}$ ms.`, U: `Con $I \\approx ${nf(I * 1000)}$ mA, $U = \\frac12LI^2 \\approx ${nf(ans)}$ mJ.` }[ask]],
+        // otro camino: RK4 de L dI/dt = ε − RI (tiempo en ms, corriente en A)
+        verify: ask === "t"
+          ? { kind: "ode", f: (_, y) => [(em - Rr * y[0]) / Lm], y0: [0], t1: 0, until: (_, y) => y[0] >= frac * I0, g: (_, y) => y[0] - frac * I0, dt: tau / 2000, tmax: 20 * tau, out: tt => tt, tol: 1e-4 }
+          : { kind: "ode", f: (_, y) => [(em - Rr * y[0]) / Lm], y0: [0], t1: t, dt: tau / 2000, out: (_, y) => ask === "I" ? y[0] * 1000 : 0.5 * Lm * 1e-3 * y[0] * y[0] * 1e3, tol: 1e-6 }
+      };
+    }
+  };
+  T["f2a-rl-num"].testN = 100;
+
+  T["f2a-lenz-mc"] = {
+    type: "mc", concepts: ["f2a-faraday"], difficulty: 2,
+    generate(r) {
+      // B según z (positivo hacia arriba); la espira está en el plano xy y se la mira desde arriba (+z)
+      const cases = [
+        // el campo de un polo norte apunta alejándose de él: con el imán arriba, hacia abajo en la espira
+        { t: "Se acerca a la espira, desde arriba, el polo norte de un imán", B: t => -(1 + t) },
+        { t: "Se aleja hacia arriba el polo norte de un imán que estaba sobre la espira", B: t => -(2 - t) },
+        { t: "Se acerca a la espira, desde arriba, el polo sur de un imán", B: t => 1 + t },
+        { t: "Se aleja hacia arriba el polo sur de un imán que estaba sobre la espira", B: t => 2 - t },
+        { t: "Un campo magnético vertical hacia arriba aumenta", B: t => 1 + t },
+        { t: "Un campo magnético vertical hacia arriba disminuye", B: t => 2 - t },
+        { t: "Un campo magnético vertical hacia abajo aumenta", B: t => -(1 + t) },
+        { t: "Un campo magnético vertical hacia arriba se mantiene constante mientras la espira se traslada dentro de él", B: () => 1 }
+      ];
+      const c = r.pick(cases);
+      const dB = (c.B(0.6) - c.B(0.4)) / 0.2, correct = Math.abs(dB) < 1e-12 ? "No se induce corriente" : dB > 0 ? "Horario" : "Antihorario";
+      return {
+        prompt: `Una espira horizontal se mira desde arriba. ${c.t}. ¿En qué sentido circula la corriente inducida?`,
+        ...H.mc(r, correct, ["Horario", "Antihorario", "No se induce corriente", "Va cambiando de sentido mientras dura el movimiento"].filter(o => o !== correct), { text: true }),
+        solution: [`[[f2a-lenz|Ley de Lenz]]: la corriente inducida produce un campo que se opone al **cambio** de flujo.`,
+          correct === "No se induce corriente" ? `El flujo por la espira no cambia: no hay fem inducida.` : `El flujo hacia ${dB > 0 ? "arriba aumenta (o el de hacia abajo disminuye)" : "arriba disminuye (o el de hacia abajo aumenta)"}, así que la corriente crea un campo hacia ${dB > 0 ? "abajo" : "arriba"} adentro de la espira: vista desde arriba, circula en sentido ${correct.toLowerCase()} (regla de la mano derecha).`],
+        // verificación: fem = −dΦ/dt con la normal hacia arriba (positiva = antihoraria vista desde arriba), por derivada numérica
+        verify: { kind: "truth", target: true, fn: () => { const h = 1e-4, emf = -(c.B(0.5 + h) - c.B(0.5 - h)) / (2 * h); const got = Math.abs(emf) < 1e-9 ? "No se induce corriente" : emf > 0 ? "Antihorario" : "Horario"; return got === correct; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-faraday": {
+      title: "Flujo magnético y ley de Faraday", aliases: ["ley de Faraday", "flujo magnético", "fem inducida", "inducción electromagnética", "weber"], concepts: ["f2a-faraday"],
+      summary: "Φ_B = ∫B⃗·dA⃗ (en webers). Cuando el flujo por un circuito cambia, aparece una fem ε = −dΦ_B/dt (por N vueltas, −N dΦ/dt).",
+      def: [R`**Flujo magnético** por una superficie: $\Phi_B = \int\vec B\cdot d\vec A$; para $\vec B$ uniforme y una espira plana, $BA\cos\phi$. Unidad: el weber, $1$ Wb $= 1$ T m².`,
+        R`**Ley de Faraday:** la fem inducida en un circuito es $\varepsilon = -\frac{d\Phi_B}{dt}$; con $N$ vueltas iguales, $-N\frac{d\Phi_B}{dt}$. El flujo puede cambiar porque cambia $B$, el área o la orientación.`,
+        R`**Campo eléctrico inducido:** $\oint\vec E\cdot d\vec l = -\frac{d\Phi_B}{dt}$. Un campo magnético variable crea un campo eléctrico con líneas cerradas, que no es conservativo.`],
+      idea: [R`Lo que induce corriente no es el campo magnético sino su **cambio**: un imán quieto al lado de una espira no hace nada, pero acercarlo o alejarlo sí. El signo menos es la [[f2a-lenz|ley de Lenz]].`],
+      demo: [R`**Paso 1 (un caso: la barra).** Una barra de largo $L$ se mueve con velocidad $v$ sobre rieles, en un campo $B$ perpendicular. Sus cargas sienten $q\vec v\times\vec B$, de módulo $qvB$, a lo largo de la barra.`,
+        R`**Paso 2.** El trabajo por unidad de carga al recorrer la barra es $vBL$: esa es la fem ([[f2a-fem-movimiento|fem de movimiento]]).`,
+        R`**Paso 3.** El área del circuito crece a razón de $\frac{dA}{dt} = Lv$, así que $\frac{d\Phi_B}{dt} = BLv$: la fem coincide con el ritmo de cambio del flujo. Faraday generaliza esto a cualquier cambio de flujo (también cuando nada se mueve y cambia $B$), que se comprueba experimentalmente. $\blacksquare$`],
+      examples: [{ q: R`Bobina de $100$ vueltas de $10$ cm² en un campo que crece $0{,}5$ T/s.`, steps: [R`$|\varepsilon| = 100\cdot10^{-3}\cdot0{,}5 = 50$ mV.`] }],
+      tips: [R`Para el sentido de la corriente, no uses el signo de la fórmula: usá la [[f2a-lenz|ley de Lenz]], que es más directa.`],
+      see: ["f2a-lenz", "f2a-fem-movimiento", "f2a-inductancia"]
+    },
+    "f2a-lenz": {
+      title: "Ley de Lenz", aliases: ["ley de Lenz", "corrientes de Foucault", "corrientes parásitas"], concepts: ["f2a-faraday"],
+      summary: "La corriente inducida circula en el sentido que se opone al cambio de flujo que la produce. Es una consecuencia de la conservación de la energía.",
+      def: [R`**Ley de Lenz:** la corriente inducida produce un campo magnético propio que se opone al **cambio** del flujo: si el flujo aumenta, su campo apunta al revés; si disminuye, en el mismo sentido.`,
+        R`**Corrientes de Foucault (parásitas):** las que se inducen en una pieza metálica maciza que se mueve en un campo, o en la que el campo cambia. Frenan el movimiento y calientan el metal (frenos magnéticos, hornos de inducción), y por eso los núcleos de los transformadores se hacen de chapas aisladas.`],
+      idea: [R`El sistema «se resiste» a cambiar: al acercar un imán, la espira lo repele; al alejarlo, lo atrae. Si fuera al revés, el imán se aceleraría solo y sacaríamos energía de la nada.`],
+      demo: [R`**Paso 1.** En la barra sobre rieles, supongamos que la corriente inducida circulara al revés de lo que dice Lenz. La fuerza $ILB$ sobre la barra apuntaría hacia adelante, en el sentido del movimiento.`,
+        R`**Paso 2.** Entonces la barra se aceleraría sola, la fem crecería, la corriente también, y la barra se aceleraría más: la energía cinética y el calor en la resistencia crecerían sin que nadie haga trabajo.`,
+        R`**Paso 3.** Eso viola la conservación de la energía. Con el sentido de Lenz, la fuerza frena la barra, y el trabajo que hay que hacer para moverla es justo el calor que se disipa. $\blacksquare$`],
+      examples: [{ q: R`Se acerca el polo norte de un imán a una espira, desde arriba.`, steps: [R`El flujo hacia abajo aumenta; la espira crea campo hacia arriba: vista desde arriba, la corriente es antihoraria, y la espira repele al imán.`] }],
+      tips: [R`Receta: (1) ¿hacia dónde apunta el campo? (2) ¿el flujo crece o decrece? (3) el campo inducido va al revés del cambio; (4) mano derecha para el sentido de la corriente.`],
+      see: ["f2a-faraday", "f2a-fem-movimiento"]
+    },
+    "f2a-fem-movimiento": {
+      title: "Fem de movimiento y generadores", aliases: ["fem de movimiento", "generador eléctrico", "alternador"], concepts: ["f2a-faraday"],
+      summary: "Una barra de largo L que se mueve con v en un B perpendicular tiene fem BLv. Una bobina que gira con ω en un B uniforme genera ε = NBAω sen ωt.",
+      def: [R`**Fem de movimiento:** un conductor que se mueve en un campo magnético tiene una fem $\varepsilon = \oint(\vec v\times\vec B)\cdot d\vec l$; para una barra de largo $L$ perpendicular a $\vec B$ y a $\vec v$, $\varepsilon = BLv$.`,
+        R`**Generador (alternador):** una bobina de $N$ vueltas y área $A$ que gira con velocidad angular $\omega$ en un campo uniforme tiene $\Phi = NBA\cos\omega t$ y genera $\varepsilon = NBA\omega\sin\omega t$, una tensión alterna de amplitud $NBA\omega$.`],
+      idea: [R`El generador es un motor al revés: en el motor la corriente produce el giro; en el generador el giro produce la corriente. En los dos casos hay un torque que se opone, y eso es lo que convierte energía mecánica en eléctrica.`],
+      demo: [R`**Paso 1 (barra).** Cada carga de la barra tiene velocidad $\vec v$ y siente $q\vec v\times\vec B$, a lo largo de la barra, de módulo $qvB$. El trabajo por unidad de carga a lo largo de $L$ es $\varepsilon = vBL$.`,
+        R`**Paso 2 (generador).** Si la normal de la bobina forma un ángulo $\omega t$ con $\vec B$, el flujo por las $N$ vueltas es $NBA\cos\omega t$.`,
+        R`**Paso 3.** Por la [[f2a-faraday|ley de Faraday]], $\varepsilon = -\frac{d}{dt}(NBA\cos\omega t) = NBA\omega\sin\omega t$. $\blacksquare$`],
+      examples: [{ q: R`Barra de $50$ cm a $4$ m/s en $0{,}5$ T, con $R = 2\ \Omega$.`, steps: [R`$\varepsilon = 1$ V, $I = 0{,}5$ A, fuerza de frenado $0{,}125$ N y potencia $0{,}5$ W.`] }],
+      tips: [R`Una barra lanzada y suelta sobre rieles con resistencia frena exponencialmente, con $\tau = \frac{mR}{B^2L^2}$: la fuerza magnética es proporcional a la velocidad, como un rozamiento viscoso.`],
+      see: ["f2a-faraday", "f2a-lenz", "f2a-torque-espira"]
+    },
+    "f2a-inductancia": {
+      title: "Inductancia y energía magnética", aliases: ["inductancia", "autoinductancia", "inductancia mutua", "fem autoinducida", "densidad de energía magnética"], concepts: ["f2a-inductancia"],
+      summary: "L = NΦ/I (en henrios); fem autoinducida −L dI/dt. Solenoide: L = μ₀N²A/ℓ. Mutua: M = N₂Φ₁/I₁. Energía: ½LI², con densidad B²/(2μ₀).",
+      def: [R`**Autoinductancia:** $L = \frac{N\Phi_B}{I}$, el flujo propio por unidad de corriente. Unidad: el henrio, $1$ H $= 1$ Wb/A. Si la corriente cambia, aparece una **fem autoinducida** $\varepsilon = -L\frac{dI}{dt}$ que se opone al cambio.`,
+        R`**Solenoide** de $N$ vueltas, sección $A$ y largo $\ell$: $L = \frac{\mu_0N^2A}{\ell}$. **Inductancia mutua** entre dos bobinas: $M = \frac{N_2\Phi_{21}}{I_1}$, y la fem en la segunda es $-M\frac{dI_1}{dt}$; para una bobina de $N_2$ vueltas sobre el solenoide, $M = \frac{\mu_0N_1N_2A}{\ell}$.`,
+        R`**Energía** en un inductor: $U = \frac12LI^2$. Está en el campo, con **densidad de energía magnética** $u = \frac{B^2}{2\mu_0}$.`],
+      idea: [R`Un inductor es la inercia de los circuitos: no deja que la corriente cambie de golpe. Así como el capacitor guarda energía en su campo eléctrico, el inductor la guarda en su campo magnético.`],
+      demo: [R`**Paso 1 (solenoide).** Adentro, $B = \mu_0\frac N\ell I$ ([[f2a-ampere|Ampère]]). El flujo por cada vuelta es $BA$, y por las $N$: $N\Phi = \frac{\mu_0N^2A}{\ell}I$. Dividiendo por $I$: $L = \frac{\mu_0N^2A}{\ell}$.`,
+        R`**Paso 2 (energía).** Para aumentar la corriente hay que vencer la fem autoinducida: la fuente entrega $P = LI\frac{dI}{dt}$. Integrando desde $0$ hasta $I$: $U = \int_0^I LI'\,dI' = \frac12LI^2$.`,
+        R`**Paso 3 (densidad).** En el solenoide, $\frac12LI^2 = \frac12\frac{\mu_0N^2A}{\ell}I^2 = \frac{B^2}{2\mu_0}\cdot(A\ell)$, usando $I = \frac{B\ell}{\mu_0N}$. Como $A\ell$ es el volumen con campo, $u = \frac{B^2}{2\mu_0}$. $\blacksquare$`],
+      examples: [{ q: R`Solenoide de $500$ vueltas, $20$ cm de largo y $2$ cm de radio.`, steps: [R`$L = \frac{4\pi\times10^{-7}\cdot250000\cdot1{,}26\times10^{-3}}{0{,}2} \approx 1{,}97$ mH.`] }],
+      tips: [R`$L$ crece con el cuadrado de las vueltas: duplicar $N$ (con el mismo largo) cuadruplica la inductancia.`],
+      see: ["f2a-faraday", "f2a-rl", "f2a-energia-capacitor"]
+    },
+    "f2a-rl": {
+      title: "Circuitos RL", aliases: ["circuito RL", "constante de tiempo RL"], concepts: ["f2a-inductancia"],
+      summary: "Al conectar una fem: I = (ε/R)(1 − e^(−t/τ)), con τ = L/R. Al desconectarla (cerrando el circuito sobre R): I = I₀e^(−t/τ).",
+      def: [R`**Establecimiento** (fem $\varepsilon$, inductancia $L$, resistencia $R$, desde $I = 0$): $I(t) = \frac\varepsilon R\left(1 - e^{-t/\tau}\right)$, con $\tau = \frac LR$ (con mH y Ω, da ms).`,
+        R`**Decaimiento** (sin fem, desde $I_0$): $I(t) = I_0e^{-t/\tau}$.`],
+      idea: [R`Es el mismo comportamiento que el [[f2a-rc|circuito RC]], con la corriente en el lugar de la carga: el inductor frena los cambios al principio, y cuando la corriente ya no cambia es como un cable.`],
+      demo: [R`**Paso 1.** Ley de mallas: $\varepsilon - IR - L\frac{dI}{dt} = 0$ (la fem autoinducida se opone al aumento de la corriente).`,
+        R`**Paso 2.** Con $u = \frac\varepsilon R - I$ (lo que falta), $\frac{du}{dt} = -\frac{dI}{dt} = -\frac RLu$: [[c2-edo-lineal|ecuación lineal]] con solución $u = u_0e^{-Rt/L}$.`,
+        R`**Paso 3.** Como $I(0) = 0$, $u_0 = \frac\varepsilon R$, e $I = \frac\varepsilon R\left(1 - e^{-t/\tau}\right)$. Sin fem queda $L\frac{dI}{dt} = -IR$, e $I = I_0e^{-t/\tau}$. $\blacksquare$`],
+      examples: [{ q: R`$L = 200$ mH, $R = 10\ \Omega$, $\varepsilon = 12$ V.`, steps: [R`$\tau = 20$ ms y la corriente final es $1{,}2$ A; en $20$ ms vale $0{,}63\cdot1{,}2 \approx 0{,}76$ A.`] }],
+      tips: [R`Cortar de golpe la corriente de una bobina produce una fem enorme ($L\frac{dI}{dt}$ con $dt$ chiquito): por eso saltan chispas en las llaves de motores.`],
+      see: ["f2a-inductancia", "f2a-rc", "c2-edo-lineal"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-faraday": { name: "Ley de Faraday" }, "f2a-inductancia": { name: "Inductancia" } },
+    templates: T,
+    units: [{
+      id: "f2a-induccion-u", order: 8, program: "Unidad 8", title: "Inducción electromagnética", icon: "sparkles",
+      diagnostic: ["f2a-faraday-num", "f2a-barra-num", "f2a-inductancia-num"],
+      lessons: [
+        { id: "f2a-induccion-l1", title: "Faraday y Lenz", templates: ["f2a-lenz-mc", "f2a-faraday-num", "f2a-barra-num"], theory: ["f2a-faraday", "f2a-lenz", "f2a-fem-movimiento"],
+          intro: R`$\varepsilon = -\frac{d\Phi_B}{dt}$, y la corriente inducida se opone al cambio.` },
+        { id: "f2a-induccion-l2", title: "Inductancia y circuitos RL", templates: ["f2a-inductancia-num", "f2a-rl-num"], theory: ["f2a-inductancia", "f2a-rl"],
+          intro: R`$\varepsilon = -L\frac{dI}{dt}$, $U = \frac12LI^2$ y $\tau = \frac LR$.` }
+      ]
+    }],
+    cards
+  });
+})();

@@ -15,7 +15,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa | 48 | 25 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
-| 8 | F102A Física General II A | **en curso**: unidades 1 a 7 (electrostática, circuitos de CC, campo magnético y sus fuentes) de 9 | 40 | 31 |
+| 8 | F102A Física General II A | **en curso**: unidades 1 a 8 (electrostática, circuitos de CC, magnetismo e inducción) de 9 | 45 | 36 |
 | 9+ | 3.º y 4.º año | pendiente: aparecen en la carrera como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
@@ -86,7 +86,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 ## F102A Física General II A (en curso, desde el 20/10)
 
 - **Archivo:** `content/f102a-fisica2a.js`, con prefijo `f2a-`. El primer bloque registra la materia y una biblioteca compartida, `E.f2a`: las constantes ($k$, $\varepsilon_0$, $\mu_0$, $e$, $m_e$, $m_p$), `nf` (número para TeX, en notación científica si es muy chico o muy grande), Simpson, RK4 para sistemas, Gauss para sistemas lineales, sección áurea, y el campo y el potencial de cargas puntuales en el plano.
-- **Hechas:** U1 Carga y campo eléctrico (Coulomb, campo, distribuciones continuas, Gauss, conductores) U2 Potencial eléctrico (energía potencial, potencial, gradiente, equipotenciales) y U3 Capacitancia y dieléctricos (placas, esférico y cilíndrico, serie y paralelo, energía, dieléctricos con la batería conectada o no). U4 Corriente, resistencia y fem (deriva, resistividad y temperatura, fem y resistencia interna, potencia y máxima transferencia). U5 Circuitos de CC (serie y paralelo, Kirchhoff, RC, amperímetros y voltímetros). U6 Campo magnético (fuerza de Lorentz, ciclotrón, selector y espectrómetro, fuerza sobre cables, torque sobre espiras, efecto Hall). U7 Fuentes de campo magnético (Biot-Savart, cables paralelos, Ampère con cable grueso, solenoide y toroide, materiales magnéticos). $k$ se define como $1/(4\pi\varepsilon_0)$ exacto, para que las fórmulas con $k$ y con $\varepsilon_0$ den lo mismo.
+- **Hechas:** U1 Carga y campo eléctrico (Coulomb, campo, distribuciones continuas, Gauss, conductores) U2 Potencial eléctrico (energía potencial, potencial, gradiente, equipotenciales) y U3 Capacitancia y dieléctricos (placas, esférico y cilíndrico, serie y paralelo, energía, dieléctricos con la batería conectada o no). U4 Corriente, resistencia y fem (deriva, resistividad y temperatura, fem y resistencia interna, potencia y máxima transferencia). U5 Circuitos de CC (serie y paralelo, Kirchhoff, RC, amperímetros y voltímetros). U6 Campo magnético (fuerza de Lorentz, ciclotrón, selector y espectrómetro, fuerza sobre cables, torque sobre espiras, efecto Hall). U7 Fuentes de campo magnético (Biot-Savart, cables paralelos, Ampère con cable grueso, solenoide y toroide, materiales magnéticos). U8 Inducción (Faraday, Lenz, fem de movimiento y generadores, inductancia propia y mutua, RL). $k$ se define como $1/(4\pi\varepsilon_0)$ exacto, para que las fórmulas con $k$ y con $\varepsilon_0$ den lo mismo.
 - **Verificación independiente:**
   - las fuerzas, como $-dU/dx$, y el campo, como $-\nabla V$, con derivadas numéricas;
   - el campo de varillas, anillos, discos y esferas, integrando Coulomb numéricamente (en la esfera, cáscara por cáscara, con el ángulo reparametrizado para resolver el pico cerca de la carga);
@@ -99,9 +99,10 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - las redes de resistencias, por análisis nodal general; Kirchhoff, por mallas en la respuesta y por nodos en la verificación; los RC, integrando la ecuación del circuito con RK4.
   - las órbitas en un campo magnético, integrando la fuerza de Lorentz con RK4 hasta el cuarto de vuelta; el selector, simulando el desvío; las fuerzas y torques, sumando $I\,d\vec l\times\vec B$ y $\vec r\times\vec F$ lado por lado.
   - Biot-Savart vectorial numérico sobre cada curva; el toroide, sumando una por una las $N$ espiras; el cable grueso, sumando hilos finos en una grilla polar.
+  - las fem inducidas, derivando numéricamente el flujo (con Richardson); la barra que frena, con RK4; la inductancia, integrando la densidad de energía $B^2/2\mu_0$; Lenz, con el signo de $-d\Phi/dt$.
 - **Notación científica en las respuestas:** el campo de respuesta acepta `1,6e-19`, `1,6E-19` y `1,6×10^-19`, y hay una tecla «×10^». La vista previa y la respuesta correcta se muestran en notación científica cuando el número es muy chico o muy grande. «2e» sola sigue siendo 2·e, y «2e-1» es 2e − 1 (para no romper Cálculo).
 - **Test nuevo:** avisa si queda un comando de TeX o una coma `{,}` fuera de `$…$`, y ahora también se valida con KaTeX el texto de las figuras (antes no se chequeaba).
-- **Faltan:** U8 Inducción y U9 Corriente alterna; después, las figuras y los parciales.
+- **Faltan:** U9 Corriente alterna; después, las figuras y los parciales.
 
 ## Pizarra (tablets con lápiz)
 
