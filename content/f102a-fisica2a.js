@@ -717,3 +717,194 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 4 · CORRIENTE, RESISTENCIA Y FUERZA ELECTROMOTRIZ
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dec = v => String(v).replace(".", "{,}");
+  const MAT = [
+    { n: "cobre", rho: 1.72e-8, a: 3.9e-3, t: R`1{,}72\times10^{-8}`, ta: R`3{,}9\times10^{-3}` },
+    { n: "aluminio", rho: 2.75e-8, a: 3.9e-3, t: R`2{,}75\times10^{-8}`, ta: R`3{,}9\times10^{-3}` },
+    { n: "tungsteno", rho: 5.25e-8, a: 4.5e-3, t: R`5{,}25\times10^{-8}`, ta: R`4{,}5\times10^{-3}` },
+    { n: "nicromo", rho: 1.0e-6, a: 4e-4, t: R`1{,}0\times10^{-6}`, ta: R`4\times10^{-4}` }
+  ];
+  // resistencia por otro camino: el alambre como muchos tubos finos en paralelo (G = ∫ dA/(ρL))
+  const Rshells = (rho, L, rad) => 1 / F.simpson(s => 2 * Math.PI * s / (rho * L), 0, rad, 200);
+
+  T["f2a-deriva-num"] = {
+    type: "numeric", concepts: ["f2a-corriente"], difficulty: 2,
+    generate(r) {
+      const I = r.int(1, 30), dmm = r.pick([0.5, 0.8, 1, 1.2, 1.5, 2, 2.5, 3]), ask = r.pick(["v", "J"]), n = 8.5e28;
+      const A = Math.PI * (dmm / 2000) ** 2, J = I / A, v = J / (n * F.qe);
+      const ans = ask === "v" ? v * 1000 : J / 1e6;
+      return {
+        prompt: `Por un alambre de cobre de $${dec(dmm)}$ mm de diámetro circula una corriente de $${I}$ A. ${ask === "v" ? "Con $n = 8{,}5\\times10^{28}$ electrones libres por m³, ¿cuál es la velocidad de deriva de los electrones (en mm/s)? ($e = 1{,}602\\times10^{-19}$ C)" : "¿Cuánto vale la densidad de corriente (en A/mm²)?"}`,
+        answer: ans,
+        solution: [`El área es $A = \\pi r^2 \\approx ${nf(A)}$ m², y la [[f2a-corriente|densidad de corriente]] $J = \\frac IA \\approx ${nf(J)}$ A/m² $= ${nf(J / 1e6)}$ A/mm².`,
+          ...(ask === "v" ? [`De $I = nqv_dA$: $v_d = \\frac{J}{ne} \\approx ${nf(v)}$ m/s $\\approx ${nf(ans)}$ mm/s. Los electrones avanzan muy despacio; lo que viaja rápido es la señal.`] : [])],
+        // otro camino: se cuenta la carga que cruza una sección en un segundo con esa velocidad (o esa densidad)
+        verify: { kind: "zero", fn: x => ask === "v" ? (n * F.qe * (x / 1000) * A - I) / I : (x * 1e6 * A - I) / I }
+      };
+    }
+  };
+
+  T["f2a-resistencia-num"] = {
+    type: "numeric", concepts: ["f2a-corriente"], difficulty: 2,
+    generate(r) {
+      const m = r.pick(MAT), L = r.int(1, 50), dmm = r.pick([0.2, 0.3, 0.5, 0.8, 1, 1.5, 2]), kind = r.pick(["R", "T", "estira"]), Tc = r.int(4, 30) * 10, nst = r.int(2, 4);
+      const A = Math.PI * (dmm / 2000) ** 2, R0 = m.rho * L / A, ans = kind === "R" ? R0 : kind === "T" ? R0 * (1 + m.a * (Tc - 20)) : R0 * nst * nst;
+      return {
+        prompt: `Un alambre de ${m.n} ($\\rho = ${m.t}\\ \\Omega\\,$m a 20 °C${kind === "T" ? `, $\\alpha = ${m.ta}$ °C⁻¹` : ""}) mide $${L}$ m y tiene $${dec(dmm)}$ mm de diámetro. ${{ R: "¿Cuál es su resistencia a 20 °C (en Ω)?", T: `¿Cuál es su resistencia a $${Tc}$ °C (en Ω)?`, estira: `Se lo estira (sin cambiar su volumen) hasta que mide $${nst}$ veces más. ¿Cuál es su nueva resistencia a 20 °C (en Ω)?` }[kind]}`,
+        answer: ans,
+        solution: [`[[f2a-resistencia|Resistencia]] de un conductor uniforme: $R = \\frac{\\rho L}{A}$, con $A = \\pi r^2 \\approx ${nf(A)}$ m². A 20 °C: $R_0 \\approx ${nf(R0)}\\ \\Omega$.`,
+          ...(kind === "T" ? [`Con la temperatura, $R = R_0[1 + \\alpha(T - 20)] \\approx ${nf(R0)}\\cdot${nf(1 + m.a * (Tc - 20))} \\approx ${nf(ans)}\\ \\Omega$.`] : []),
+          ...(kind === "estira" ? [`Si el largo se multiplica por $${nst}$ con el volumen fijo, el área se divide por $${nst}$: $R$ se multiplica por $${nst}^2 = ${nst * nst}$ y queda $\\approx ${nf(ans)}\\ \\Omega$.`] : [])],
+        // otro camino: el alambre como tubos finos en paralelo, con su geometría final y ρ(T)
+        verify: { kind: "value", tol: 1e-8, fn: () => {
+          const rad = dmm / 2000;
+          if (kind === "R") return Rshells(m.rho, L, rad);
+          if (kind === "T") return Rshells(m.rho * (1 + m.a * (Tc - 20)), L, rad);
+          return Rshells(m.rho, L * nst, Math.sqrt(rad * rad * L / (L * nst)));
+        } }
+      };
+    }
+  };
+
+  T["f2a-fem-num"] = {
+    type: "numeric", concepts: ["f2a-fem"], difficulty: 2,
+    generate(r) {
+      const em = r.int(3, 24), ri = r.pick([0.1, 0.2, 0.25, 0.5, 0.8, 1, 1.5, 2]), Rx = r.int(1, 40), ask = r.pick(["I", "V", "P", "Pr"]);
+      const I = em / (Rx + ri), V = I * Rx, ans = { I, V, P: I * I * Rx, Pr: I * I * ri }[ask];
+      return {
+        prompt: `Una batería de fem $${em}$ V y resistencia interna $${dec(ri)}\\ \\Omega$ se conecta a una resistencia de $${Rx}\\ \\Omega$. ${{ I: "¿Qué corriente circula (en A)?", V: "¿Cuál es la tensión entre los bornes de la batería (en V)?", P: "¿Qué potencia se disipa en la resistencia externa (en W)?", Pr: "¿Qué potencia se disipa dentro de la batería (en W)?" }[ask]}`,
+        answer: ans,
+        solution: [`La [[f2a-fem|fem]] se reparte entre la resistencia interna y la externa: $I = \\frac{\\varepsilon}{R + r} = \\frac{${em}}{${nf(Rx + ri)}} \\approx ${nf(I)}$ A.`,
+          { I: `Listo: $I \\approx ${nf(I)}$ A.`, V: `En bornes: $V = \\varepsilon - Ir = IR \\approx ${nf(V)}$ V, un poco menos que la fem.`, P: `[[f2a-potencia-electrica|Potencia]]: $P = I^2R \\approx ${nf(ans)}$ W.`, Pr: `Adentro: $P = I^2r \\approx ${nf(ans)}$ W, que calienta la batería.` }[ask]],
+        // otro camino: sistema lineal en (I, V) con la ley de Ohm afuera y el balance de la batería
+        verify: { kind: "value", tol: 1e-9, fn: () => { const [i, v] = F.solve([[Rx, -1], [ri, 1]], [0, em]); return { I: i, V: v, P: v * i, Pr: (em - v) * i }[ask]; } }
+      };
+    }
+  };
+
+  T["f2a-potencia-num"] = {
+    type: "numeric", concepts: ["f2a-fem"], difficulty: 3,
+    generate(r) {
+      if (r.bool()) {
+        const em = r.int(3, 24), ri = r.pick([0.5, 1, 1.5, 2, 2.5, 3, 4, 5]), ask = r.pick(["R", "P"]);
+        const ans = ask === "R" ? ri : em * em / (4 * ri);
+        return {
+          prompt: `Una fuente de fem $${em}$ V tiene resistencia interna $${dec(ri)}\\ \\Omega$. ${ask === "R" ? "¿Qué resistencia externa hay que conectarle para que la potencia que recibe sea máxima (en Ω)?" : "¿Cuál es la máxima potencia que puede entregarle a una resistencia externa (en W)?"}`,
+          answer: ans,
+          solution: [`La potencia en la carga es $P(R) = \\frac{\\varepsilon^2R}{(R + r)^2}$. Derivando e igualando a cero, el máximo está en $R = r$ ([[f2a-potencia-electrica|máxima transferencia de potencia]]).`,
+            ask === "R" ? `$R = r = ${dec(ri)}\\ \\Omega$.` : `Con $R = r$: $P_{max} = \\frac{\\varepsilon^2}{4r} = \\frac{${em * em}}{${nf(4 * ri)}} \\approx ${nf(ans)}$ W.`],
+          // otro camino: búsqueda numérica del máximo (sección áurea)
+          verify: { kind: "value", tol: 1e-6, fn: () => { const P = R => em * em * R / (R + ri) ** 2, Ro = F.golden(R => -P(R), 0, 100 * ri); return ask === "R" ? Ro : P(Ro); } }
+        };
+      }
+      const P = r.pick([500, 750, 1000, 1200, 1500, 2000, 2200]), V = 220, h = r.int(1, 8), ask = r.pick(["I", "R", "E"]);
+      const I = P / V, Rr = V * V / P, ans = { I, R: Rr, E: P * h / 1000 }[ask];
+      return {
+        prompt: `Una estufa eléctrica de $${P}$ W funciona conectada a $220$ V. ${{ I: "¿Qué corriente consume (en A)?", R: "¿Cuál es la resistencia de su elemento calefactor encendido (en Ω)?", E: `¿Cuánta energía consume en $${h}$ h (en kWh)?` }[ask]}`,
+        answer: ans,
+        solution: [`[[f2a-potencia-electrica|Potencia eléctrica]]: $P = VI = \\frac{V^2}{R}$.`,
+          { I: `$I = \\frac PV = \\frac{${P}}{220} \\approx ${nf(I)}$ A.`, R: `$R = \\frac{V^2}{P} = \\frac{48400}{${P}} \\approx ${nf(Rr)}\\ \\Omega$.`, E: `$E = Pt = ${nf(P / 1000)}\\ \\text{kW}\\cdot${h}\\ \\text{h} = ${nf(ans)}$ kWh.` }[ask]],
+        // otro camino: energía sumando P = V·I instante a instante (Simpson en el tiempo) e I y R desde la ley de Ohm
+        verify: { kind: "value", tol: 1e-9, fn: () => { const i = P / V; return { I: i, R: V / i, E: F.simpson(() => V * i, 0, h * 3600, 2) / 3.6e6 }[ask]; } }
+      };
+    }
+  };
+
+  T["f2a-ohm-tf"] = {
+    type: "tf", concepts: ["f2a-corriente"], difficulty: 2,
+    generate(r) {
+      const what = r.pick(["largo", "diámetro"]), n = r.pick([2, 3]), true_f = what === "largo" ? n : 1 / (n * n), claim = r.pick([n, 1 / n, n * n, 1 / (n * n)]);
+      const say = f => f >= 1 ? `se multiplica por $${f}$` : `se divide por $${Math.round(1 / f)}$`;
+      return {
+        prompt: `<b>Verdadero o falso:</b> si a un alambre se le ${what === "largo" ? "multiplica el largo" : "multiplica el diámetro"} por $${n}$, sin cambiar ${what === "largo" ? "su sección" : "su largo"} ni el material, su resistencia ${say(claim)}.`,
+        answer: Math.abs(claim - true_f) < 1e-12,
+        explanation: `$R = \\frac{\\rho L}{A}$ y $A = \\frac{\\pi D^2}{4}$. ${what === "largo" ? `$R$ es proporcional al largo: ${say(true_f)}.` : `El área crece como $D^2$, es decir $${n * n}$ veces, y $R$ ${say(true_f)}.`} Es ${Math.abs(claim - true_f) < 1e-12 ? "verdadero" : "falso"}.`,
+        solution: [R`Ver [[f2a-resistencia|resistencia]].`],
+        // otro camino: cociente de resistencias calculadas como tubos en paralelo
+        verify: { kind: "truth", fn: () => { const R1 = Rshells(1e-8, 1, 1e-3), R2 = what === "largo" ? Rshells(1e-8, n, 1e-3) : Rshells(1e-8, 1, n * 1e-3); return Math.abs(R2 / R1 / claim - 1) < 1e-9; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-corriente": {
+      title: "Corriente eléctrica y velocidad de deriva", aliases: ["corriente eléctrica", "densidad de corriente", "velocidad de deriva", "ampere"], concepts: ["f2a-corriente"],
+      summary: "I = dQ/dt, en amperes. En un conductor, I = nqv_dA y J = I/A = nqv_d. Los electrones avanzan a fracciones de mm/s.",
+      def: [R`**Corriente:** $I = \frac{dQ}{dt}$, la carga que atraviesa una sección por unidad de tiempo. Unidad: el ampere, $1$ A $= 1$ C/s. Por convención, su sentido es el del movimiento de las cargas positivas.`,
+        R`**Densidad de corriente:** $\vec J = nq\vec v_d$, con $n$ los portadores por unidad de volumen y $\vec v_d$ su **velocidad de deriva** (el promedio de su movimiento, superpuesto a la agitación térmica). Para un alambre uniforme, $I = JA = nqv_dA$.`],
+      idea: [R`Los electrones de un metal se mueven a cientos de km/s, pero en todas las direcciones. Al aplicar un campo, se agrega un avance lento de conjunto, la deriva: la luz se prende enseguida porque el campo se establece en todo el cable a la vez, no porque los electrones lleguen rápido.`],
+      demo: [R`**Paso 1.** En un tiempo $dt$, cada portador avanza $v_d\,dt$. Atraviesan una sección dada los que estaban a menos de esa distancia: los de un cilindro de volumen $A\,v_d\,dt$.`,
+        R`**Paso 2.** En ese cilindro hay $nAv_d\,dt$ portadores, con carga total $dQ = nqAv_d\,dt$.`,
+        R`**Paso 3.** Dividiendo por $dt$: $I = nqv_dA$, y $J = \frac IA = nqv_d$. $\blacksquare$`],
+      examples: [{ q: R`$10$ A por un cable de cobre de $2$ mm de diámetro.`, steps: [R`$A \approx 3{,}14\times10^{-6}$ m² y $v_d = \frac{10}{8{,}5\times10^{28}\cdot1{,}602\times10^{-19}\cdot3{,}14\times10^{-6}} \approx 0{,}23$ mm/s.`] }],
+      tips: [R`Los electrones se mueven al revés que la corriente convencional: el signo lo pone $q$ en $\vec J = nq\vec v_d$.`],
+      see: ["f2a-resistencia", "f2a-fem"]
+    },
+    "f2a-resistencia": {
+      title: "Resistencia, resistividad y ley de Ohm", aliases: ["ley de Ohm", "resistencia eléctrica", "resistividad", "conductividad eléctrica", "coeficiente de temperatura"], concepts: ["f2a-corriente"],
+      summary: "V = IR. Para un conductor uniforme, R = ρL/A. En los metales, ρ crece con la temperatura: ρ = ρ₀[1 + α(T − T₀)].",
+      def: [R`**Ley de Ohm:** en muchos materiales (los óhmicos), la densidad de corriente es proporcional al campo: $\vec J = \sigma\vec E = \frac{\vec E}{\rho}$, con $\rho$ la **resistividad** y $\sigma = \frac1\rho$ la conductividad. Para un conductor, $V = IR$, con $R$ constante.`,
+        R`**Resistencia** de un conductor uniforme de largo $L$ y sección $A$: $R = \frac{\rho L}{A}$, en ohms ($1\ \Omega = 1$ V/A).`,
+        R`**Temperatura:** $\rho(T) = \rho_0[1 + \alpha(T - T_0)]$, con $\alpha$ el **coeficiente de temperatura** (en los metales, $\approx 4\times10^{-3}$ °C⁻¹).`],
+      idea: [R`La resistencia viene de los choques de los electrones con la red de iones: un cable más largo tiene más choques en el camino, y uno más grueso ofrece más carriles en paralelo. Al calentarlo, los iones vibran más y los choques son más frecuentes.`],
+      demo: [R`**Paso 1.** En un conductor uniforme de largo $L$ con una diferencia de potencial $V$ entre sus extremos, el campo es uniforme: $E = \frac VL$.`,
+        R`**Paso 2.** Por la ley de Ohm local, $J = \frac{E}{\rho} = \frac{V}{\rho L}$, y la corriente es $I = JA = \frac{VA}{\rho L}$.`,
+        R`**Paso 3.** Despejando, $V = I\frac{\rho L}{A}$: es la forma $V = IR$ con $R = \frac{\rho L}{A}$. $\blacksquare$`],
+      examples: [{ q: R`$10$ m de cobre de $1$ mm de diámetro.`, steps: [R`$R = \frac{1{,}72\times10^{-8}\cdot10}{7{,}85\times10^{-7}} \approx 0{,}22\ \Omega$.`] }],
+      tips: [R`Duplicar el diámetro divide la resistencia por $4$, no por $2$: el área crece con el cuadrado.`],
+      see: ["f2a-corriente", "f2a-fem", "f2a-potencia-electrica"]
+    },
+    "f2a-fem": {
+      title: "Fuerza electromotriz y resistencia interna", aliases: ["fuerza electromotriz", "resistencia interna", "tensión en bornes"], concepts: ["f2a-fem"],
+      summary: "Una fuente de fem ε mueve cargas hacia potenciales más altos. Con resistencia interna r, la tensión en bornes es V = ε − Ir, y en un circuito simple I = ε/(R + r).",
+      def: [R`**Fuerza electromotriz** $\varepsilon$: el trabajo por unidad de carga que hace una fuente (química, en una pila) para llevar carga desde el borne negativo al positivo. Se mide en volts, aunque no es una fuerza.`,
+        R`**Resistencia interna** $r$: la de los materiales de la propia fuente. Con corriente $I$, la **tensión en bornes** es $V = \varepsilon - Ir$, y solo coincide con la fem en circuito abierto.`,
+        R`**Circuito simple:** una fuente con una resistencia externa $R$ da $I = \frac{\varepsilon}{R + r}$.`],
+      idea: [R`La fuente es como una bomba que sube el agua (la carga) a un tanque más alto, y el circuito, la cañería por donde baja. Parte de la altura se pierde dentro de la misma bomba: eso es la caída $Ir$.`],
+      demo: [R`**Paso 1.** Recorriendo el circuito, el potencial sube $\varepsilon$ al atravesar la fuente y baja $Ir$ en su resistencia interna y $IR$ en la externa.`,
+        R`**Paso 2.** Al volver al punto de partida, el potencial es el mismo (el campo electrostático es conservativo): $\varepsilon - Ir - IR = 0$.`,
+        R`**Paso 3.** Despejando, $I = \frac{\varepsilon}{R + r}$, y la tensión en bornes es $V = IR = \varepsilon - Ir$. $\blacksquare$`],
+      examples: [{ q: R`Una pila de $9$ V con $r = 1\ \Omega$ y una carga de $17\ \Omega$.`, steps: [R`$I = 0{,}5$ A y $V = 9 - 0{,}5 = 8{,}5$ V.`] }],
+      tips: [R`Si al encender algo la tensión de la batería cae mucho, su resistencia interna es grande (pasa con las pilas gastadas).`],
+      see: ["f2a-resistencia", "f2a-potencia-electrica", "f2a-potencial"]
+    },
+    "f2a-potencia-electrica": {
+      title: "Potencia eléctrica y efecto Joule", aliases: ["potencia eléctrica", "efecto Joule", "máxima transferencia de potencia", "kilowatt hora"], concepts: ["f2a-fem"],
+      summary: "P = VI. En una resistencia, P = I²R = V²/R, que se disipa como calor. Una fuente le entrega la máxima potencia a una carga R = r, y vale ε²/(4r).",
+      def: [R`**Potencia eléctrica:** la energía que entrega o recibe un elemento por unidad de tiempo, $P = VI$. En una resistencia se convierte en calor (**efecto Joule**): $P = I^2R = \frac{V^2}{R}$.`,
+        R`**Máxima transferencia de potencia:** una fuente de fem $\varepsilon$ y resistencia interna $r$ le entrega la máxima potencia a una carga $R = r$, y esa potencia es $\frac{\varepsilon^2}{4r}$.`,
+        R`**Energía consumida:** $E = Pt$. En las facturas se mide en kilowatt hora: $1$ kWh $= 3{,}6\times10^6$ J.`],
+      idea: [R`Si la carga es muy chica, circula mucha corriente pero casi toda la potencia se queda en la fuente; si es muy grande, casi no circula corriente. El óptimo está en el medio, cuando las dos resistencias son iguales.`],
+      demo: [R`**Paso 1 ($P = VI$).** Una carga $dq$ que atraviesa un elemento con tensión $V$ pierde energía $V\,dq$. Por unidad de tiempo, $P = V\frac{dq}{dt} = VI$. Con $V = IR$ salen $I^2R$ y $\frac{V^2}{R}$.`,
+        R`**Paso 2 (potencia en la carga).** Con $I = \frac{\varepsilon}{R + r}$, la potencia en $R$ es $P(R) = \frac{\varepsilon^2R}{(R + r)^2}$.`,
+        R`**Paso 3.** Derivando con la regla del cociente: $P'(R) = \varepsilon^2\frac{(R + r) - 2R}{(R + r)^3} = \varepsilon^2\frac{r - R}{(R + r)^3}$. Es positiva si $R < r$ y negativa si $R > r$: el máximo está en $R = r$.`,
+        R`**Paso 4.** Reemplazando, $P_{max} = \frac{\varepsilon^2r}{4r^2} = \frac{\varepsilon^2}{4r}$. $\blacksquare$`],
+      examples: [{ q: R`Un calefactor de $2000$ W a $220$ V.`, steps: [R`$I \approx 9{,}1$ A y $R = \frac{220^2}{2000} \approx 24{,}2\ \Omega$; en $3$ h consume $6$ kWh.`] }],
+      tips: [R`Con tensión fija (la de la red), menos resistencia significa **más** potencia: $P = \frac{V^2}{R}$.`],
+      see: ["f2a-fem", "f2a-resistencia", "f1-potencia"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-corriente": { name: "Corriente y resistencia" }, "f2a-fem": { name: "Fem y potencia" } },
+    templates: T,
+    units: [{
+      id: "f2a-corriente-u", order: 4, program: "Unidad 4", title: "Corriente, resistencia y fuerza electromotriz", icon: "zap",
+      diagnostic: ["f2a-resistencia-num", "f2a-fem-num", "f2a-potencia-num"],
+      lessons: [
+        { id: "f2a-corriente-l1", title: "Corriente y resistencia", templates: ["f2a-deriva-num", "f2a-resistencia-num", "f2a-ohm-tf"], theory: ["f2a-corriente", "f2a-resistencia"],
+          intro: R`$I = nqv_dA$ y $R = \frac{\rho L}{A}$.` },
+        { id: "f2a-corriente-l2", title: "Fem y potencia", templates: ["f2a-fem-num", "f2a-potencia-num"], theory: ["f2a-fem", "f2a-potencia-electrica"],
+          intro: R`$I = \frac{\varepsilon}{R + r}$ y $P = VI = I^2R$.` }
+      ]
+    }],
+    cards
+  });
+})();
