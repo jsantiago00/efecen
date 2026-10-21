@@ -231,7 +231,10 @@
           { title: "Barra que frena sobre rieles", parts: [{ tpl: "f2a-barra-num", pts: 20 }] },
           { title: "Espira que atraviesa un campo", parts: [{ self: "f2a-ex-espira-campo", pts: 20 }] },
           { title: "Circuito RL", parts: [{ tpl: "f2a-rl-num", pts: 10 }, { tpl: "f2a-rl-num", pts: 10 }] },
-          { title: "Reactancias y fases", parts: [{ tpl: "f2a-reactancia-num", pts: 10 }, { tpl: "f2a-fase-mc", pts: 10 }] },
+          { any: [
+            { title: "Reactancias y fases", parts: [{ tpl: "f2a-reactancia-num", pts: 10 }, { tpl: "f2a-fase-mc", pts: 10 }] },
+            { title: "Potencia y RLC paralelo", parts: [{ tpl: "f2a-potencia-ca-num", pts: 10 }, { tpl: "f2a-rlc-paralelo-num", pts: 10 }] }
+          ] },
           { any: [
             { title: "Filtro RLC", parts: [{ self: "f2a-ex-filtro", pts: 20 }] },
             { title: "RLC y resonancia", parts: [{ tpl: "f2a-rlc-num", pts: 10 }, { tpl: "f2a-resonancia-num", pts: 10 }] }
@@ -239,16 +242,16 @@
         ] },
       { id: "final", kind: "final", title: "Final (cuestionario)", topics: "Diez preguntas cortas de toda la materia, como el cuestionario del final: conceptos y cuentas breves.", minutes: 90, pass: 60,
         items: [
-          { title: "Pregunta 1", parts: [{ pick: ["f2a-cero-tf", "f2a-medio-tf"], pts: 10 }] },
+          { title: "Pregunta 1", parts: [{ pick: ["f2a-cero-tf", "f2a-medio-tf", "f2a-dipolo-num"], pts: 10 }] },
           { title: "Pregunta 2", parts: [{ pick: ["f2a-flujo-num", "f2a-gauss-num"], pts: 10 }] },
           { title: "Pregunta 3", parts: [{ pick: ["f2a-esfera-pot-num", "f2a-potencial-num"], pts: 10 }] },
           { title: "Pregunta 4", parts: [{ pick: ["f2a-bateria-tf", "f2a-dielectrico-num"], pts: 10 }] },
           { title: "Pregunta 5", parts: [{ pick: ["f2a-fem-num", "f2a-ohm-tf"], pts: 10 }] },
           { title: "Pregunta 6", parts: [{ pick: ["f2a-rc-tf", "f2a-rc-num"], pts: 10 }] },
           { title: "Pregunta 7", parts: [{ pick: ["f2a-mano-mc", "f2a-ciclotron-num"], pts: 10 }] },
-          { title: "Pregunta 8", parts: [{ pick: ["f2a-cable-grueso-tf", "f2a-solenoide-num"], pts: 10 }] },
-          { title: "Pregunta 9", parts: [{ pick: ["f2a-lenz-mc", "f2a-rl-num"], pts: 10 }] },
-          { title: "Pregunta 10", parts: [{ pick: ["f2a-fase-mc", "f2a-eficaz-num"], pts: 10 }] }
+          { title: "Pregunta 8", parts: [{ pick: ["f2a-cable-grueso-tf", "f2a-solenoide-num", "f2a-carga-movil-num"], pts: 10 }] },
+          { title: "Pregunta 9", parts: [{ pick: ["f2a-lenz-mc", "f2a-rl-num", "f2a-maxwell-tf", "f2a-campo-inducido-num"], pts: 10 }] },
+          { title: "Pregunta 10", parts: [{ pick: ["f2a-fase-mc", "f2a-eficaz-num", "f2a-potencia-ca-num"], pts: 10 }] }
         ] }
     ]
   });

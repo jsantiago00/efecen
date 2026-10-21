@@ -93,6 +93,32 @@
     }
   };
 
+  T["f2a-dipolo-num"] = {
+    type: "numeric", concepts: ["f2a-campo-electrico"], difficulty: 2,
+    generate(r) {
+      const q = r.int(1, 20), d = r.int(1, 20), E0 = r.int(1, 10) * 10, th = r.pick([30, 45, 60, 90, 120, 135, 150]), th2 = r.pick([0, 90, 180]), ask = r.pick(["tau", "U", "W"]);
+      if ((ask === "W" && th === th2) || (ask === "U" && th === 90)) return null;
+      const p = q * 1e-9 * d * 1e-3, Ev = E0 * 1e3, t1 = th * Math.PI / 180, t2 = th2 * Math.PI / 180;
+      const val = { tau: p * Ev * Math.sin(t1), U: -p * Ev * Math.cos(t1), W: p * Ev * (Math.cos(t1) - Math.cos(t2)) }[ask], ans = val * 1e6;
+      return {
+        prompt: `Un dipolo eléctrico está formado por cargas de $\\pm${q}$ nC separadas $${d}$ mm, en un campo eléctrico uniforme de $${E0}$ kN/C. Su momento dipolar forma un ángulo de $${th}°$ con el campo. ${{ tau: "¿Cuánto vale el módulo del torque que le hace el campo (en μN·m)?", U: "¿Cuánto vale su energía potencial $U = -\\vec p\\cdot\\vec E$ (en μJ)?", W: `¿Cuánto trabajo hay que hacer para girarlo lentamente hasta que forme $${th2}°$ con el campo (en μJ)?` }[ask]}`,
+        answer: ans,
+        solution: [`[[f2a-campo-electrico|Momento dipolar]]: $p = qd = ${nf(q * 1e-9)}\\cdot${nf(d * 1e-3)} = ${nf(p)}$ C m, y $pE = ${nf(p * Ev)}$ J.`,
+          { tau: `$\\tau = pE\\sin\\theta = ${nf(p * Ev)}\\cdot\\sin${th}° \\approx ${nf(ans)}$ μN·m. Tiende a alinear $\\vec p$ con $\\vec E$.`,
+            U: `$U = -pE\\cos\\theta = -${nf(p * Ev)}\\cdot\\cos${th}° \\approx ${nf(ans)}$ μJ.`,
+            W: `Girándolo lentamente, el trabajo externo es el aumento de energía: $W = U_2 - U_1 = pE(\\cos${th}° - \\cos${th2}°) \\approx ${nf(ans)}$ μJ${ans < 0 ? " (negativo: el campo lo hace girar solo, y hay que frenarlo)" : ""}.` }[ask]],
+        // otro camino: las dos cargas por separado (torque de cada fuerza, energía qV con V = −Ex) y el trabajo como ∫τ dθ con Simpson
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const Q = q * 1e-9, h = d * 1e-3 / 2;
+          const torque = t => [[Q, 1], [-Q, -1]].reduce((s, [qq, sg]) => { const x = sg * h * Math.cos(t), y = sg * h * Math.sin(t); return s + (x * 0 - y * qq * Ev); }, 0);
+          if (ask === "tau") return Math.abs(torque(t1)) * 1e6;
+          if (ask === "U") return [[Q, 1], [-Q, -1]].reduce((s, [qq, sg]) => s + qq * (-Ev * sg * h * Math.cos(t1)), 0) * 1e6;
+          return F.simpson(t => -torque(t), t1, t2, 400) * 1e6;
+        } }
+      };
+    }
+  };
+
   T["f2a-linea-num"] = {
     type: "numeric", concepts: ["f2a-distribuciones"], difficulty: 3,
     generate(r) {
@@ -228,7 +254,8 @@
       idea: [R`El campo separa el problema en dos: unas cargas crean el campo en todo el espacio, y después cualquier otra carga reacciona al campo que hay donde ella está. No hace falta saber quién lo creó.`],
       demo: [R`**Paso 1 (dipolo sobre su eje).** En un punto del eje a distancia $x$ del centro (con $x \gg d$), las cargas están a $x - \frac d2$ y $x + \frac d2$: $E = kq\left[\frac{1}{(x - d/2)^2} - \frac{1}{(x + d/2)^2}\right]$.`,
         R`**Paso 2.** Con denominador común, el corchete es $\frac{2xd}{(x^2 - d^2/4)^2}$, que para $x \gg d$ es $\approx \frac{2d}{x^3}$. Entonces $E \approx \frac{2kqd}{x^3} = \frac{2kp}{x^3}$: lejos, el campo de un dipolo cae como $\frac1{x^3}$, más rápido que el de una carga.`,
-        R`**Paso 3 (torque).** En un campo uniforme las fuerzas sobre $+q$ y $-q$ son $\pm q\vec E$: la neta es cero, pero forman un par. Su torque respecto del centro es $2\cdot\frac d2\,qE\sin\theta = pE\sin\theta$, que es el módulo de $\vec p\times\vec E$. $\blacksquare$`],
+        R`**Paso 3 (torque).** En un campo uniforme las fuerzas sobre $+q$ y $-q$ son $\pm q\vec E$: la neta es cero, pero forman un par. Su torque respecto del centro es $2\cdot\frac d2\,qE\sin\theta = pE\sin\theta$, que es el módulo de $\vec p\times\vec E$.`,
+        R`**Paso 4 (energía).** Para girar el dipolo lentamente hay que hacer un torque igual y opuesto al del campo, y el trabajo externo es $\int pE\sin\theta\,d\theta$. Tomando $U = 0$ en $\theta = 90°$, queda $U(\theta) = \int_{90°}^{\theta} pE\sin\theta'\,d\theta' = -pE\cos\theta = -\vec p\cdot\vec E$: mínima cuando $\vec p$ apunta como $\vec E$. $\blacksquare$`],
       examples: [{ q: R`Campo de una carga de $5$ nC a $30$ cm.`, steps: [R`$E = 8{,}99\times10^9\cdot\frac{5\times10^{-9}}{0{,}09} \approx 500$ N/C, hacia afuera.`] }],
       tips: [R`El campo en un punto no depende de la carga que se ponga ahí: es una propiedad del lugar.`],
       see: ["f2a-coulomb", "f2a-distribuciones", "f2a-potencial"]
@@ -284,7 +311,7 @@
       id: "f2a-campo-u", order: 1, program: "Unidad 1", title: "Carga eléctrica y campo eléctrico", icon: "zap",
       diagnostic: ["f2a-coulomb-num", "f2a-campo-num", "f2a-gauss-num"],
       lessons: [
-        { id: "f2a-campo-l1", title: "Coulomb y el campo eléctrico", templates: ["f2a-coulomb-num", "f2a-campo-num", "f2a-cero-tf"], theory: ["f2a-carga", "f2a-coulomb", "f2a-campo-electrico"],
+        { id: "f2a-campo-l1", title: "Coulomb y el campo eléctrico", templates: ["f2a-coulomb-num", "f2a-campo-num", "f2a-cero-tf", "f2a-dipolo-num"], theory: ["f2a-carga", "f2a-coulomb", "f2a-campo-electrico"],
           intro: R`$F = k\frac{|q_1q_2|}{r^2}$ y $\vec E = \frac{\vec F}{q_0}$: cada carga suma su parte.` },
         { id: "f2a-campo-l2", title: "Distribuciones continuas", templates: ["f2a-linea-num", "f2a-anillo-num"], theory: ["f2a-distribuciones"],
           intro: R`Se suma el campo de cada $dq$, y la simetría dice qué se cancela.` },
@@ -1428,6 +1455,26 @@
     }
   };
 
+  T["f2a-carga-movil-num"] = {
+    type: "numeric", concepts: ["f2a-biot"], difficulty: 2,
+    generate(r) {
+      const part = r.pick([{ n: "Un protón", q: F.qe }, { n: "Un electrón", q: -F.qe }, { n: "Una partícula alfa (de carga $2e$)", q: 2 * F.qe }]);
+      const v = r.int(1, 99) / 10, d = r.int(1, 50) / 10, th = r.pick([30, 45, 60, 90, 120, 150]);
+      const vm = v * 1e6, dm = d * 1e-9, B = F.mu0 / (4 * Math.PI) * Math.abs(part.q) * vm * Math.sin(th * Math.PI / 180) / (dm * dm), ans = B * 1e3;
+      return {
+        prompt: `${part.n} pasa con una rapidez de $${dec(v)}\\times10^6$ m/s. En ese instante, ¿cuánto vale el campo magnético que produce en un punto a $${dec(d)}$ nm de la partícula, sobre una recta que forma $${th}°$ con su velocidad (en mT)? ($${MU}$, $e = 1{,}602\\times10^{-19}$ C)`,
+        answer: ans,
+        solution: [`[[f2a-biot-savart|Campo de una carga en movimiento]]: es Biot-Savart con $q\\vec v$ en lugar de $I\\,d\\vec l$, $B = \\frac{\\mu_0}{4\\pi}\\frac{|q|v\\sin\\theta}{r^2}$.`,
+          `$B = 10^{-7}\\cdot\\frac{${nf(Math.abs(part.q))}\\cdot${nf(vm)}\\cdot\\sin${th}°}{(${nf(dm)})^2} \\approx ${nf(B)}$ T $\\approx ${nf(ans)}$ mT, perpendicular al plano de $\\vec v$ y $\\vec r$.`],
+        // otro camino: B⃗ = v⃗ × E⃗ / c², con el campo de Coulomb de la carga y c² = 1/(μ₀ε₀)
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const t = th * Math.PI / 180, rh = [Math.cos(t), Math.sin(t), 0], Ec = F.k * part.q / (dm * dm), Ev = rh.map(c => Ec * c);
+          return Math.hypot(...cross([vm, 0, 0], Ev)) * F.mu0 * F.e0 * 1e3;
+        } }
+      };
+    }
+  };
+
   T["f2a-paralelos-num"] = {
     type: "numeric", concepts: ["f2a-ampere"], difficulty: 3,
     generate(r) {
@@ -1515,16 +1562,18 @@
 
   const cards = {
     "f2a-biot-savart": {
-      title: "Ley de Biot-Savart", aliases: ["ley de Biot-Savart", "Biot-Savart", "campo de un hilo recto", "espira circular"], concepts: ["f2a-biot"],
+      title: "Ley de Biot-Savart", aliases: ["ley de Biot-Savart", "Biot-Savart", "campo de un hilo recto", "espira circular", "campo de una carga en movimiento"], concepts: ["f2a-biot"],
       summary: "dB⃗ = (μ₀/4π) I dl⃗ × r̂ / r². Hilo infinito: B = μ₀I/(2πd), en círculos. Espira en su centro: μ₀I/(2R); sobre el eje: μ₀IR²/[2(R² + x²)^(3/2)].",
       def: [R`**Biot-Savart:** un tramo $d\vec l$ con corriente $I$ produce, en un punto a distancia $r$, $d\vec B = \frac{\mu_0}{4\pi}\frac{I\,d\vec l\times\hat r}{r^2}$, con $\mu_0 = 4\pi\times10^{-7}$ T m/A la permeabilidad del vacío. El campo total es la suma (integral) sobre el circuito.`,
         R`**Hilo recto:** un tramo visto desde una distancia $d$, con ángulos $\theta_1$ y $\theta_2$ a sus extremos: $B = \frac{\mu_0I}{4\pi d}(\sin\theta_2 - \sin\theta_1)$. Si es infinito, $B = \frac{\mu_0I}{2\pi d}$, con líneas de campo circulares (regla de la mano derecha: pulgar en la corriente).`,
-        R`**Espira circular** de radio $R$: en el centro, $B = \frac{\mu_0I}{2R}$; sobre el eje a distancia $x$, $B = \frac{\mu_0IR^2}{2(R^2 + x^2)^{3/2}}$. Un arco de ángulo $\theta$, en su centro: $\frac{\mu_0I\theta}{4\pi R}$.`],
+        R`**Espira circular** de radio $R$: en el centro, $B = \frac{\mu_0I}{2R}$; sobre el eje a distancia $x$, $B = \frac{\mu_0IR^2}{2(R^2 + x^2)^{3/2}}$. Un arco de ángulo $\theta$, en su centro: $\frac{\mu_0I\theta}{4\pi R}$.`,
+        R`**Carga puntual en movimiento** (con $v \ll c$): $\vec B = \frac{\mu_0}{4\pi}\frac{q\,\vec v\times\hat r}{r^2}$, perpendicular a la velocidad y a la recta que une la carga con el punto.`],
       idea: [R`Es el análogo magnético de la ley de [[f2a-coulomb|Coulomb]]: cada pedacito de corriente aporta un campo que cae como $\frac1{r^2}$. La diferencia es el producto vectorial: el campo da vueltas alrededor de la corriente, en lugar de salir de ella.`],
       demo: [R`**Paso 1 (hilo).** Con el hilo sobre el eje $x$ y el punto a distancia $d$: $|d\vec l\times\hat r| = dx\sin\alpha = dx\frac{d}{r}$, con $r = \sqrt{x^2 + d^2}$. Todos los aportes tienen la misma dirección, así que $B = \frac{\mu_0I}{4\pi}\int\frac{d\,dx}{(x^2 + d^2)^{3/2}}$.`,
         R`**Paso 2.** Con $x = d\tan u$ (la misma sustitución que para el [[f2a-distribuciones|campo de una varilla]]), el integrando queda $\frac{\cos u}{d}du$, y $B = \frac{\mu_0I}{4\pi d}(\sin\theta_2 - \sin\theta_1)$. Para el hilo infinito los ángulos van de $-90°$ a $90°$: $B = \frac{\mu_0I}{2\pi d}$.`,
         R`**Paso 3 (centro de la espira).** Todos los elementos están a distancia $R$ y son perpendiculares al radio: $dB = \frac{\mu_0I\,dl}{4\pi R^2}$, todos según el eje. Sumando $\int dl = 2\pi R$: $B = \frac{\mu_0I}{2R}$ (y para un arco, $R\theta$ en lugar de $2\pi R$).`,
-        R`**Paso 4 (eje).** A distancia $x$, cada elemento está a $\sqrt{R^2 + x^2}$ y sigue siendo perpendicular a $\vec r$. Las componentes perpendiculares al eje se cancelan de a pares, y la axial es una fracción $\frac{R}{\sqrt{R^2 + x^2}}$ de cada aporte: $B = \frac{\mu_0I}{4\pi}\frac{2\pi R}{R^2 + x^2}\frac{R}{\sqrt{R^2 + x^2}} = \frac{\mu_0IR^2}{2(R^2 + x^2)^{3/2}}$. $\blacksquare$`],
+        R`**Paso 4 (eje).** A distancia $x$, cada elemento está a $\sqrt{R^2 + x^2}$ y sigue siendo perpendicular a $\vec r$. Las componentes perpendiculares al eje se cancelan de a pares, y la axial es una fracción $\frac{R}{\sqrt{R^2 + x^2}}$ de cada aporte: $B = \frac{\mu_0I}{4\pi}\frac{2\pi R}{R^2 + x^2}\frac{R}{\sqrt{R^2 + x^2}} = \frac{\mu_0IR^2}{2(R^2 + x^2)^{3/2}}$.`,
+        R`**Paso 5 (una carga).** En un tramo $dl$ de sección $A$ hay $nA\,dl$ portadores de carga $q$ y velocidad $\vec v$, y $I\,d\vec l = nqA\,dl\,\vec v$. Dividiendo el aporte del tramo por la cantidad de portadores, cada uno produce $\frac{\mu_0}{4\pi}\frac{q\vec v\times\hat r}{r^2}$. $\blacksquare$`],
       examples: [{ q: R`Un cable con $10$ A, a $5$ cm.`, steps: [R`$B = \frac{4\pi\times10^{-7}\cdot10}{2\pi\cdot0{,}05} = 40$ μT, del orden del campo terrestre.`] }],
       tips: [R`Los tramos rectos que apuntan hacia el punto (radiales) no aportan nada: ahí $d\vec l$ es paralelo a $\hat r$.`],
       see: ["f2a-ampere", "f2a-fuerza-paralelos", "f2a-campo-magnetico"]
@@ -1576,7 +1625,7 @@
       id: "f2a-fuentes-u", order: 7, program: "Unidad 7", title: "Fuentes de campo magnético", icon: "rotate-ccw",
       diagnostic: ["f2a-hilo-num", "f2a-espira-num", "f2a-solenoide-num"],
       lessons: [
-        { id: "f2a-fuentes-l1", title: "Biot-Savart", templates: ["f2a-hilo-num", "f2a-espira-num", "f2a-paralelos-num"], theory: ["f2a-biot-savart", "f2a-fuerza-paralelos"],
+        { id: "f2a-fuentes-l1", title: "Biot-Savart", templates: ["f2a-hilo-num", "f2a-espira-num", "f2a-carga-movil-num", "f2a-paralelos-num"], theory: ["f2a-biot-savart", "f2a-fuerza-paralelos"],
           intro: R`$d\vec B = \frac{\mu_0}{4\pi}\frac{I\,d\vec l\times\hat r}{r^2}$; hilo infinito: $\frac{\mu_0I}{2\pi d}$.` },
         { id: "f2a-fuentes-l2", title: "Ley de Ampère", templates: ["f2a-solenoide-num", "f2a-cable-grueso-tf"], theory: ["f2a-ampere", "f2a-materiales-magneticos"],
           intro: R`$\oint\vec B\cdot d\vec l = \mu_0I_{enc}$; solenoide: $B = \mu_0nI$.` }
@@ -1733,6 +1782,112 @@
     }
   };
 
+  // fuente uniforme sobre un disco de radio a (por unidad de densidad): campo a distancia s del centro, como el de una carga
+  // en el plano; con polares centradas en el punto, es (1/2π)|∮ û·L(α) dα|, con L el largo de la cuerda del disco en la dirección û.
+  // Faraday (∮E·dl = −dΦ/dt, ∇·E = 0) y Ampère-Maxwell tienen la forma de Biot-Savart en 2D: el campo azimutal tiene ese módulo
+  const disk2d = (a, s, N = 2000) => {
+    let g = 0;
+    if (s < a) for (let j = 0; j < N; j++) { const ux = Math.cos(2 * Math.PI * (j + 0.5) / N), pu = s * ux; g += ux * (-pu + Math.sqrt(pu * pu - s * s + a * a)) * 2 * Math.PI / N; }
+    else { const b0 = Math.asin(a / s); for (let j = 0; j < N; j++) { const u = Math.PI * ((j + 0.5) / N - 0.5), b = b0 * Math.sin(u); g += Math.cos(b) * 2 * Math.sqrt(Math.max(0, a * a - (s * Math.sin(b)) ** 2)) * b0 * Math.cos(u) * Math.PI / N; } }
+    return Math.abs(g) / (2 * Math.PI);
+  };
+
+  T["f2a-campo-inducido-num"] = {
+    type: "numeric", concepts: ["f2a-maxwell"], difficulty: 3,
+    generate(r) {
+      const Rc = r.int(2, 10), s = r.int(1, 30), b = r.int(1, 50) / 10, ask = r.pick(["E", "E", "fem"]);
+      if (s === Rc) return null;
+      const Rm = Rc / 100, sm = s / 100, E0 = b * Math.min(sm, Rm) ** 2 / (2 * sm), fem = b * Math.PI * Math.min(sm, Rm) ** 2;
+      const ans = (ask === "E" ? E0 : fem) * 1000, inside = s < Rc;
+      return {
+        prompt: `Un solenoide largo de $${Rc}$ cm de radio tiene adentro un campo magnético uniforme que aumenta a razón de $${dec(b)}$ T/s; afuera, el campo magnético es prácticamente nulo. ${ask === "E" ? `¿Cuánto vale el campo eléctrico inducido a $${s}$ cm del eje (en mV/m)?` : `¿Qué fem se induce en una espira circular de $${s}$ cm de radio, coaxial con el solenoide (en mV)?`}`,
+        answer: ans,
+        solution: [`[[f2a-campo-inducido|Campo eléctrico inducido]]: por simetría, sus líneas son circunferencias alrededor del eje, y en una de radio $r$, $\\oint\\vec E\\cdot d\\vec l = E\\cdot2\\pi r = \\left|\\frac{d\\Phi_B}{dt}\\right|$.`,
+          inside ? `Como $r = ${s}$ cm es menor que el radio, el flujo es el de un círculo de radio $r$: $\\frac{d\\Phi_B}{dt} = \\pi r^2\\frac{dB}{dt} = \\pi\\cdot${nf(sm)}^2\\cdot${dec(b)} \\approx ${nf(fem)}$ V.`
+            : `Como $r = ${s}$ cm es mayor que el radio, el campo solo atraviesa el círculo del solenoide: $\\frac{d\\Phi_B}{dt} = \\pi R^2\\frac{dB}{dt} = \\pi\\cdot${nf(Rm)}^2\\cdot${dec(b)} \\approx ${nf(fem)}$ V, aunque en la espira misma no haya campo magnético.`,
+          ask === "E" ? `$E = \\frac{1}{2\\pi r}\\frac{d\\Phi_B}{dt} = ${inside ? "\\frac r2\\frac{dB}{dt}" : "\\frac{R^2}{2r}\\frac{dB}{dt}"} \\approx ${nf(ans)}$ mV/m.` : `[[f2a-faraday|Faraday]]: $|\\varepsilon| = \\frac{d\\Phi_B}{dt} \\approx ${nf(ans)}$ mV.`],
+        // otro camino: el campo inducido como un Biot-Savart en el plano (cuerdas del disco, ver disk2d); la fem, como su circulación
+        verify: { kind: "value", tol: 1e-7, fn: () => { const e = b * disk2d(Rm, sm); return (ask === "E" ? e : 2 * Math.PI * sm * e) * 1000; } }
+      };
+    }
+  };
+
+  T["f2a-desplazamiento-num"] = {
+    type: "numeric", concepts: ["f2a-maxwell"], difficulty: 3,
+    generate(r) {
+      const Rc = r.int(2, 15), d = r.int(1, 5), ask = r.pick(["id", "B", "B"]);
+      const Rm = Rc / 100, A = Math.PI * Rm * Rm, dm = d / 1000;
+      if (ask === "id") {
+        const k = r.int(1, 50), dVdt = k * 1e6, id = F.e0 * A / dm * dVdt, ans = id * 1e6;
+        return {
+          prompt: `Un capacitor de placas circulares de $${Rc}$ cm de radio, separadas $${d}$ mm, se está cargando: la tensión entre las placas aumenta a razón de $${k}\\times10^6$ V/s. ¿Cuánto vale la corriente de desplazamiento entre las placas (en μA)? ($\\varepsilon_0 = 8{,}854\\times10^{-12}$ C²/(N m²))`,
+          answer: ans,
+          solution: [`[[f2a-maxwell|Corriente de desplazamiento]]: $i_d = \\varepsilon_0\\frac{d\\Phi_E}{dt}$. Entre las placas, $E = \\frac Vd$ es uniforme y $\\Phi_E = EA = \\frac{VA}{d}$.`,
+            `$i_d = \\frac{\\varepsilon_0A}{d}\\frac{dV}{dt} = \\frac{${nf(F.e0)}\\cdot${nf(A)}}{${nf(dm)}}\\cdot${nf(dVdt)} \\approx ${nf(id)}$ A $\\approx ${nf(ans)}$ μA. Es la misma corriente que llega por los cables, $C\\frac{dV}{dt}$.`],
+          // otro camino: flujo eléctrico integrado en polares (Simpson) en dos instantes y derivada numérica
+          verify: { kind: "value", tol: 1e-6, fn: () => { const Phi = t => F.simpson(rho => (100 + dVdt * t) / dm * 2 * Math.PI * rho, 0, Rm, 200), h = 1e-6; return F.e0 * (Phi(h) - Phi(-h)) / (2 * h) * 1e6; } }
+        };
+      }
+      const I = r.int(1, 50) / 10, s = r.int(1, 30);
+      if (s === Rc) return null;
+      const sm = s / 100, B = s < Rc ? F.mu0 * I * sm / (2 * Math.PI * Rm * Rm) : F.mu0 * I / (2 * Math.PI * sm), ans = B * 1e6;
+      return {
+        prompt: `Un capacitor de placas circulares de $${Rc}$ cm de radio se carga con una corriente de $${dec(I)}$ A. ¿Cuánto vale el campo magnético en el espacio entre las placas, a $${s}$ cm del eje (en μT)? ($${MU}$; despreciá los efectos de borde)`,
+        answer: ans,
+        solution: [`Entre las placas no pasa carga, pero el campo eléctrico crece: hay una [[f2a-maxwell|corriente de desplazamiento]] $i_d = \\varepsilon_0\\frac{d\\Phi_E}{dt}$ igual a la de los cables, repartida uniformemente en el área de las placas.`,
+          `Ley de Ampère-Maxwell en una circunferencia de radio $r$ coaxial: $B\\cdot2\\pi r = \\mu_0 i_{d,enc}$.`,
+          s < Rc ? `Adentro, la corriente encerrada es la fracción $\\frac{r^2}{R^2}$: $B = \\frac{\\mu_0Ir}{2\\pi R^2} \\approx ${nf(ans)}$ μT.` : `Afuera de las placas se encierra toda: $B = \\frac{\\mu_0I}{2\\pi r} \\approx ${nf(ans)}$ μT, como el de un cable.`],
+        // otro camino: Biot-Savart en el plano de la densidad de corriente de desplazamiento uniforme (cuerdas del disco)
+        verify: { kind: "value", tol: 1e-7, fn: () => F.mu0 * I / (Math.PI * Rm * Rm) * disk2d(Rm, sm) * 1e6 }
+      };
+    }
+  };
+
+  T["f2a-maxwell-tf"] = {
+    type: "tf", concepts: ["f2a-maxwell"], difficulty: 2,
+    generate(r) {
+      // dipolo magnético ideal m ẑ en el origen (unidades arbitrarias): flujo por una esfera de radio 1 centrada en (0, 0, 0,4)
+      const dipFlux = () => {
+        const c = 0.4, Bf = (x, y, z) => { const r2 = x * x + y * y + z * z, rr = Math.sqrt(r2), mr = z; return [3 * mr * x / rr ** 5, 3 * mr * y / rr ** 5, 3 * mr * z / rr ** 5 - 1 / rr ** 3]; };
+        const integ = g => F.simpson(th => F.simpson(ph => { const n = [Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th)], B = Bf(n[0], n[1], n[2] + c); return g(B[0] * n[0] + B[1] * n[1] + B[2] * n[2]) * Math.sin(th); }, 0, 2 * Math.PI, 40), 0, Math.PI, 200);
+        const flux = integ(x => x), up = integ(Math.abs);
+        return Math.abs(flux) / up;
+      };
+      // capacitor de placas de 10 cm de radio separadas 1 mm, cargado con ε = 12 V a través de R = 1 MΩ (RK4)
+      const rc = () => {
+        const C = F.e0 * Math.PI * 0.01 / 1e-3, Rr = 1e6, tau = Rr * C, f = (_, y) => [(12 - y[0] / C) / Rr], t = tau, h = tau * 1e-3;
+        // E = Q/(ε₀A) entre las placas, Φ_E = EA, i_d = ε₀ dΦ_E/dt por derivada numérica
+        const A = Math.PI * 0.01, Q = tt => F.rk4(f, [0], tt, tau / 400)[0], PhiE = tt => Q(tt) / (F.e0 * A) * A;
+        const icond = (12 - Q(t) / C) / Rr, idisp = F.e0 * (PhiE(t + h) - PhiE(t - h)) / (2 * h);
+        return { icond, idisp };
+      };
+      const items = [
+        { t: "El flujo magnético a través de cualquier superficie cerrada es cero, aunque la superficie encierre uno de los polos de un imán.", v: true, chk: () => dipFlux() < 1e-6,
+          e: "Es la ley de Gauss para el magnetismo: no hay cargas magnéticas sueltas (monopolos), y las líneas de $\\vec B$ son cerradas: todas las que entran a la superficie vuelven a salir." },
+        { t: "El flujo magnético a través de una superficie cerrada que encierra el polo norte de un imán es positivo, igual que el flujo eléctrico alrededor de una carga positiva.", v: false, chk: () => dipFlux() > 1e-3,
+          e: "Por la ley de Gauss para el magnetismo, el flujo de $\\vec B$ por cualquier superficie cerrada es cero: no hay monopolos, y del polo norte salen tantas líneas como las que entran por adentro del imán." },
+        { t: "Entre las placas de un capacitor que se está cargando no hay campo magnético, porque entre ellas no pasa carga.", v: false, chk: () => disk2d(0.1, 0.05) === 0,
+          e: "Entre las placas el flujo eléctrico cambia, y eso es una corriente de desplazamiento $\\varepsilon_0\\frac{d\\Phi_E}{dt}$ que produce campo magnético igual que una corriente (ley de Ampère-Maxwell)." },
+        { t: "Mientras un capacitor se carga, la corriente de desplazamiento entre sus placas es igual a la corriente que llega por los cables.", v: true, chk: () => { const { icond, idisp } = rc(); return Math.abs(idisp - icond) < 1e-5 * icond; },
+          e: "Por la ley de Gauss, la carga de la placa es $Q = \\varepsilon_0\\Phi_E$; derivando, $i = \\frac{dQ}{dt} = \\varepsilon_0\\frac{d\\Phi_E}{dt} = i_d$. Así la corriente «continúa» a través del capacitor." },
+        { t: "El campo eléctrico inducido por un campo magnético variable es conservativo, como el de las cargas en reposo.", v: false, chk: () => 2 * Math.PI * 0.05 * disk2d(0.1, 0.05) === 0,
+          e: "Su circulación por una curva cerrada es $-\\frac{d\\Phi_B}{dt} \\neq 0$ (ley de Faraday): sus líneas son cerradas y no se puede definir un potencial." },
+        { t: "Afuera de un solenoide largo, donde el campo magnético es prácticamente nulo, igual hay campo eléctrico inducido mientras cambia la corriente del solenoide.", v: true, chk: () => disk2d(0.02, 0.05) > 0,
+          e: "El campo eléctrico inducido depende del flujo encerrado por la curva, no del campo en la curva: afuera vale $\\frac{R^2}{2r}\\frac{dB}{dt}$." }
+      ];
+      const it = r.pick(items);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${it.t}`,
+        answer: it.v,
+        explanation: `${it.e} Es ${it.v ? "verdadero" : "falso"}.`,
+        solution: [R`Ver [[f2a-maxwell|ecuaciones de Maxwell]] y [[f2a-campo-inducido|campo eléctrico inducido]].`],
+        // otro camino: flujo numérico del campo de un dipolo, RC simulado con RK4 y el campo de la fuente uniforme en un disco
+        verify: { kind: "truth", fn: it.chk }
+      };
+    }
+  };
+  T["f2a-maxwell-tf"].testN = 60;
+
   const cards = {
     "f2a-faraday": {
       title: "Flujo magnético y ley de Faraday", aliases: ["ley de Faraday", "flujo magnético", "fem inducida", "inducción electromagnética", "weber"], concepts: ["f2a-faraday"],
@@ -1800,11 +1955,42 @@
       examples: [{ q: R`$L = 200$ mH, $R = 10\ \Omega$, $\varepsilon = 12$ V.`, steps: [R`$\tau = 20$ ms y la corriente final es $1{,}2$ A; en $20$ ms vale $0{,}63\cdot1{,}2 \approx 0{,}76$ A.`] }],
       tips: [R`Cortar de golpe la corriente de una bobina produce una fem enorme ($L\frac{dI}{dt}$ con $dt$ chiquito): por eso saltan chispas en las llaves de motores.`],
       see: ["f2a-inductancia", "f2a-rc", "c2-edo-lineal"]
+    },
+    "f2a-campo-inducido": {
+      title: "Campo eléctrico inducido", aliases: ["campo eléctrico inducido", "campo eléctrico no conservativo"], concepts: ["f2a-maxwell"],
+      summary: "Un campo magnético que cambia crea un campo eléctrico de líneas cerradas: ∮E⃗·dl⃗ = −dΦ_B/dt. En un solenoide de radio R: E = (r/2) dB/dt adentro y (R²/2r) dB/dt afuera.",
+      def: [R`**Campo eléctrico inducido:** donde el flujo magnético cambia aparece un campo eléctrico $\vec E$ que cumple $\oint\vec E\cdot d\vec l = -\frac{d\Phi_B}{dt}$ en cualquier curva cerrada, haya o no un conductor. Es la [[f2a-faraday|ley de Faraday]] escrita con el campo.`,
+        R`Sus líneas son **cerradas** y su circulación no es cero: **no es conservativo** y no tiene potencial. Por eso en un circuito con inducción no se puede hablar de «la diferencia de potencial» entre dos puntos sin aclarar el camino.`,
+        R`**Solenoide** de radio $R$ con campo uniforme que cambia: $E = \frac r2\frac{dB}{dt}$ a distancia $r < R$ del eje, y $E = \frac{R^2}{2r}\frac{dB}{dt}$ afuera, en circunferencias alrededor del eje.`],
+      idea: [R`En una espira quieta la fem no puede venir de la fuerza magnética, porque las cargas no se mueven. Lo que las empuja es un campo eléctrico nuevo, creado por el cambio de $\vec B$, que da vueltas alrededor de la región donde cambia el flujo, como $\vec B$ da vueltas alrededor de una corriente.`,
+        R`Afuera del solenoide no hay campo magnético, y sin embargo hay campo eléctrico: lo que importa es el flujo que encierra la curva, no el campo sobre la curva.`],
+      demo: [R`**Paso 1 (simetría).** El solenoide es simétrico respecto de giros alrededor de su eje, así que $\vec E$ tiene el mismo módulo en toda una circunferencia de radio $r$ coaxial. Además es tangente a ella: una componente radial daría flujo eléctrico neto por un cilindro sin carga adentro, contra la [[f2a-gauss|ley de Gauss]].`,
+        R`**Paso 2.** Entonces la circulación sobre esa circunferencia es $E\cdot2\pi r$.`,
+        R`**Paso 3 (adentro).** Si $r < R$, el flujo encerrado es $B\pi r^2$. Por Faraday, $E\cdot2\pi r = \pi r^2\frac{dB}{dt}$ (en módulo), y $E = \frac r2\frac{dB}{dt}$.`,
+        R`**Paso 4 (afuera).** Si $r > R$, el campo solo atraviesa el círculo de radio $R$: el flujo es $B\pi R^2$, y $E = \frac{R^2}{2r}\frac{dB}{dt}$. $\blacksquare$`],
+      examples: [{ q: R`Solenoide de $5$ cm de radio, con $B$ que crece $2$ T/s. Campo eléctrico a $10$ cm del eje.`, steps: [R`Está afuera: $E = \frac{0{,}05^2}{2\cdot0{,}1}\cdot2 = 0{,}025$ V/m $= 25$ mV/m.`] }],
+      tips: [R`El sentido sale de la [[f2a-lenz|ley de Lenz]]: es el de la corriente que circularía en una espira puesta sobre esa línea de campo.`],
+      see: ["f2a-faraday", "f2a-maxwell", "f2a-lenz"]
+    },
+    "f2a-maxwell": {
+      title: "Corriente de desplazamiento y ecuaciones de Maxwell", aliases: ["corriente de desplazamiento", "ley de Ampère-Maxwell", "ley de Gauss para el magnetismo"], concepts: ["f2a-maxwell"],
+      summary: "Un flujo eléctrico que cambia produce campo magnético como una corriente: i_d = ε₀ dΦ_E/dt. Con ese término, las cuatro ecuaciones de Maxwell resumen todo el electromagnetismo.",
+      def: [R`**Corriente de desplazamiento:** $i_d = \varepsilon_0\frac{d\Phi_E}{dt}$. **Ley de Ampère-Maxwell:** $\oint\vec B\cdot d\vec l = \mu_0\left(i_{enc} + \varepsilon_0\frac{d\Phi_E}{dt}\right)$.`,
+        R`**Ecuaciones de Maxwell** (forma integral, en el vacío): (1) Gauss: $\oint\vec E\cdot d\vec A = \frac{q_{enc}}{\varepsilon_0}$; (2) Gauss para el magnetismo: $\oint\vec B\cdot d\vec A = 0$ (no hay monopolos); (3) Faraday: $\oint\vec E\cdot d\vec l = -\frac{d\Phi_B}{dt}$; (4) Ampère-Maxwell.`,
+        R`Juntas, predicen que los campos se propagan como [[f2b-em|ondas electromagnéticas]] a $c = \frac{1}{\sqrt{\mu_0\varepsilon_0}}$.`],
+      idea: [R`Faraday dice que un $\vec B$ variable crea $\vec E$; Maxwell agregó lo simétrico: un $\vec E$ variable crea $\vec B$. Esa simetría es la que permite que un campo «empuje» al otro y la perturbación viaje sola por el vacío: eso es la luz.`],
+      demo: [R`**Paso 1 (el problema).** Mientras un capacitor se carga, tomemos una curva alrededor del cable. La [[f2a-ampere|ley de Ampère]] usa la corriente que atraviesa una superficie apoyada en la curva: un disco que corta el cable encierra $i$, pero una «bolsa» que pasa entre las placas no encierra ninguna. Las dos no pueden tener razón.`,
+        R`**Paso 2.** Entre las placas, por la [[f2a-gauss|ley de Gauss]], $\Phi_E = \frac{Q}{\varepsilon_0}$ (todo el campo de la placa pasa por la bolsa). Derivando: $\varepsilon_0\frac{d\Phi_E}{dt} = \frac{dQ}{dt} = i$.`,
+        R`**Paso 3.** Sumando $\varepsilon_0\frac{d\Phi_E}{dt}$ a la corriente encerrada, las dos superficies dan lo mismo: el disco tiene $i$ y flujo eléctrico nulo, la bolsa tiene corriente nula e $i_d = i$.`,
+        R`**Paso 4 (campo entre placas circulares de radio $R$).** $i_d$ se reparte uniforme en el área. En una circunferencia de radio $r < R$ se encierra la fracción $\frac{r^2}{R^2}$: $B\cdot2\pi r = \mu_0i\frac{r^2}{R^2}$, y $B = \frac{\mu_0ir}{2\pi R^2}$. $\blacksquare$`],
+      examples: [{ q: R`Placas de $10$ cm de radio, cargadas con $2$ A. Campo magnético a $5$ cm del eje, entre las placas.`, steps: [R`$B = \frac{4\pi\times10^{-7}\cdot2\cdot0{,}05}{2\pi\cdot0{,}01} = 2$ μT.`] }],
+      tips: [R`La corriente de desplazamiento no es un movimiento de cargas: es el ritmo de cambio del flujo eléctrico, que produce campo magnético igual que una corriente.`],
+      see: ["f2a-campo-inducido", "f2a-ampere", "f2b-em"]
     }
   };
 
   E.extendCourse("f102a", {
-    concepts: { "f2a-faraday": { name: "Ley de Faraday" }, "f2a-inductancia": { name: "Inductancia" } },
+    concepts: { "f2a-faraday": { name: "Ley de Faraday" }, "f2a-inductancia": { name: "Inductancia" }, "f2a-maxwell": { name: "Campos inducidos y Maxwell" } },
     templates: T,
     units: [{
       id: "f2a-induccion-u", order: 8, program: "Unidad 8", title: "Inducción electromagnética", icon: "sparkles",
@@ -1813,7 +1999,9 @@
         { id: "f2a-induccion-l1", title: "Faraday y Lenz", templates: ["f2a-lenz-mc", "f2a-faraday-num", "f2a-barra-num"], theory: ["f2a-faraday", "f2a-lenz", "f2a-fem-movimiento"],
           intro: R`$\varepsilon = -\frac{d\Phi_B}{dt}$, y la corriente inducida se opone al cambio.` },
         { id: "f2a-induccion-l2", title: "Inductancia y circuitos RL", templates: ["f2a-inductancia-num", "f2a-rl-num"], theory: ["f2a-inductancia", "f2a-rl"],
-          intro: R`$\varepsilon = -L\frac{dI}{dt}$, $U = \frac12LI^2$ y $\tau = \frac LR$.` }
+          intro: R`$\varepsilon = -L\frac{dI}{dt}$, $U = \frac12LI^2$ y $\tau = \frac LR$.` },
+        { id: "f2a-induccion-l3", title: "Campos inducidos y ecuaciones de Maxwell", templates: ["f2a-campo-inducido-num", "f2a-desplazamiento-num", "f2a-maxwell-tf"], theory: ["f2a-campo-inducido", "f2a-maxwell"],
+          intro: R`Un $\vec B$ variable crea $\vec E$ ($\oint\vec E\cdot d\vec l = -\frac{d\Phi_B}{dt}$), y un $\vec E$ variable crea $\vec B$ ($i_d = \varepsilon_0\frac{d\Phi_E}{dt}$).` }
       ]
     }],
     cards
@@ -1849,18 +2037,23 @@
   T["f2a-eficaz-num"] = {
     type: "numeric", concepts: ["f2a-alterna"], difficulty: 2,
     generate(r) {
-      const Vp = r.int(1, 40) * 10, f = r.pick([50, 60, 100, 400]), Rr = r.int(1, 20) * 10, wave = r.pick(["seno", "seno", "cuadrada", "triangular", "media onda"]), ask = r.pick(["rms", "P"]);
-      const k = { seno: Math.SQRT1_2, cuadrada: 1, triangular: 1 / Math.sqrt(3), "media onda": 0.5 }[wave], Vr = Vp * k, ans = ask === "rms" ? Vr : Vr * Vr / Rr;
-      const Tp = 1 / f, wf = { seno: t => Vp * Math.sin(2 * Math.PI * f * t), cuadrada: t => (t % Tp < Tp / 2 ? Vp : -Vp), triangular: t => { const u = (t % Tp) / Tp; return Vp * (u < 0.25 ? 4 * u : u < 0.75 ? 2 - 4 * u : 4 * u - 4); }, "media onda": t => Math.max(0, Vp * Math.sin(2 * Math.PI * f * t)) }[wave];
-      const nm = { seno: "senoidal", cuadrada: "cuadrada (que vale $+V_p$ medio período y $-V_p$ el otro)", triangular: "triangular simétrica", "media onda": "senoidal rectificada de media onda (se anula la mitad negativa)" }[wave];
+      const Vp = r.int(1, 40) * 10, f = r.pick([50, 60, 100, 400]), Rr = r.int(1, 20) * 10, wave = r.pick(["seno", "seno", "cuadrada", "triangular", "media onda", "onda completa"]);
+      const rect = wave === "media onda" || wave === "onda completa", ask = r.pick(rect ? ["rms", "P", "media"] : ["rms", "P"]);
+      const k = { seno: Math.SQRT1_2, cuadrada: 1, triangular: 1 / Math.sqrt(3), "media onda": 0.5, "onda completa": Math.SQRT1_2 }[wave], Vr = Vp * k;
+      const avg = wave === "media onda" ? Vp / Math.PI : 2 * Vp / Math.PI, ans = { rms: Vr, P: Vr * Vr / Rr, media: avg }[ask];
+      const Tp = 1 / f, wf = { seno: t => Vp * Math.sin(2 * Math.PI * f * t), cuadrada: t => (t % Tp < Tp / 2 ? Vp : -Vp), triangular: t => { const u = (t % Tp) / Tp; return Vp * (u < 0.25 ? 4 * u : u < 0.75 ? 2 - 4 * u : 4 * u - 4); }, "media onda": t => Math.max(0, Vp * Math.sin(2 * Math.PI * f * t)), "onda completa": t => Math.abs(Vp * Math.sin(2 * Math.PI * f * t)) }[wave];
+      const nm = { seno: "senoidal", cuadrada: "cuadrada (que vale $+V_p$ medio período y $-V_p$ el otro)", triangular: "triangular simétrica", "media onda": "senoidal rectificada de media onda (se anula la mitad negativa)", "onda completa": "senoidal rectificada de onda completa (la mitad negativa se invierte)" }[wave];
       return {
-        prompt: `Una tensión ${nm} de amplitud $${Vp}$ V y $${f}$ Hz ${ask === "rms" ? "se aplica a un circuito. ¿Cuál es su valor eficaz (en V)?" : `se aplica a una resistencia de $${Rr}\\ \\Omega$. ¿Qué potencia media se disipa (en W)?`}`,
+        prompt: `Una tensión ${nm} de amplitud $${Vp}$ V y $${f}$ Hz ${{ rms: "se aplica a un circuito. ¿Cuál es su valor eficaz (en V)?", P: `se aplica a una resistencia de $${Rr}\\ \\Omega$. ¿Qué potencia media se disipa (en W)?`, media: "se aplica a un circuito. ¿Cuál es su valor medio, el que marcaría un voltímetro de continua (en V)?" }[ask]}`,
         answer: ans,
-        solution: [`El [[f2a-ca|valor eficaz]] es la raíz del valor medio del cuadrado: $V_{ef} = \\sqrt{\\overline{v^2}}$.`,
-          { seno: `Para una senoidal, $\\overline{\\sin^2} = \\frac12$: $V_{ef} = \\frac{V_p}{\\sqrt2} \\approx ${nf(Vr)}$ V.`, cuadrada: `El cuadrado vale siempre $V_p^2$: $V_{ef} = V_p = ${Vp}$ V.`, triangular: `Para una rampa, $\\overline{u^2} = \\frac13$: $V_{ef} = \\frac{V_p}{\\sqrt3} \\approx ${nf(Vr)}$ V.`, "media onda": `El cuadrado es el de la senoidal la mitad del tiempo y cero la otra mitad: $\\overline{v^2} = \\frac{V_p^2}{4}$ y $V_{ef} = \\frac{V_p}{2} = ${nf(Vr)}$ V.` }[wave],
+        solution: ask === "media"
+          ? [`El [[f2a-ca|valor medio]] es el promedio de $v$ en un período. Un medio ciclo de la senoidal tiene área $\\int_0^{T/2}V_p\\sin\\omega t\\,dt = \\frac{V_pT}{\\pi}$.`,
+            wave === "media onda" ? `En un período hay un solo medio ciclo y el resto es cero: $\\overline v = \\frac{V_p}{\\pi} \\approx ${nf(ans)}$ V.` : `En un período hay dos medios ciclos positivos: $\\overline v = \\frac{2V_p}{\\pi} \\approx ${nf(ans)}$ V.`]
+          : [`El [[f2a-ca|valor eficaz]] es la raíz del valor medio del cuadrado: $V_{ef} = \\sqrt{\\overline{v^2}}$.`,
+          { seno: `Para una senoidal, $\\overline{\\sin^2} = \\frac12$: $V_{ef} = \\frac{V_p}{\\sqrt2} \\approx ${nf(Vr)}$ V.`, cuadrada: `El cuadrado vale siempre $V_p^2$: $V_{ef} = V_p = ${Vp}$ V.`, triangular: `Para una rampa, $\\overline{u^2} = \\frac13$: $V_{ef} = \\frac{V_p}{\\sqrt3} \\approx ${nf(Vr)}$ V.`, "media onda": `El cuadrado es el de la senoidal la mitad del tiempo y cero la otra mitad: $\\overline{v^2} = \\frac{V_p^2}{4}$ y $V_{ef} = \\frac{V_p}{2} = ${nf(Vr)}$ V.`, "onda completa": `Invertir la mitad negativa no cambia el cuadrado: $V_{ef} = \\frac{V_p}{\\sqrt2} \\approx ${nf(Vr)}$ V, como la senoidal.` }[wave],
           ...(ask === "P" ? [`[[f2a-potencia-ca|Potencia media]]: $P = \\frac{V_{ef}^2}{R} \\approx ${nf(ans)}$ W.`] : [])],
-        // otro camino: promedio numérico de v² (y de v²/R) en un período
-        verify: { kind: "value", tol: 1e-5, fn: () => { const m2 = mean(t => wf(t) ** 2, Tp, 4000); return ask === "rms" ? Math.sqrt(m2) : m2 / Rr; } }
+        // otro camino: promedios numéricos de v y de v² (y de v²/R) en un período
+        verify: { kind: "value", tol: 1e-5, fn: () => { if (ask === "media") return mean(wf, Tp, 4000); const m2 = mean(t => wf(t) ** 2, Tp, 4000); return ask === "rms" ? Math.sqrt(m2) : m2 / Rr; } }
       };
     }
   };
@@ -1953,6 +2146,76 @@
     }
   };
 
+  // carga RL serie con v = Vp·sen ωt: RK4 hasta el régimen (16 τ) y muestras de v e i a lo largo de un período
+  const rlSamples = (Vp, w, Rr, L, M = 400) => {
+    const Tp = 2 * Math.PI / w, h = Tp / M, f = (t, i) => (Vp * Math.sin(w * t) - Rr * i) / L, nT = Math.ceil(16 * L / Rr / Tp) + 2;
+    let i = 0, t = 0; const vs = [], is = [];
+    for (let k = 0; k < (nT + 1) * M; k++) {
+      if (k >= nT * M) { vs.push(Vp * Math.sin(w * t)); is.push(i); }
+      const k1 = f(t, i), k2 = f(t + h / 2, i + h / 2 * k1), k3 = f(t + h / 2, i + h / 2 * k2), k4 = f(t + h, i + h * k3);
+      i += h / 6 * (k1 + 2 * k2 + 2 * k3 + k4); t += h;
+    }
+    return { vs, is, t0: nT * Tp };
+  };
+  const avgOf = a => a.reduce((s, x) => s + x, 0) / a.length;
+
+  T["f2a-potencia-ca-num"] = {
+    type: "numeric", concepts: ["f2a-rlc"], difficulty: 3,
+    generate(r) {
+      const Vr = r.pick([110, 220, 380]), f = r.pick([50, 60]), Rr = r.int(2, 40) * 5, L = r.int(1, 40) * 10, ask = r.pick(["P", "Q", "S", "fp", "C"]), target = r.pick([0.9, 0.95, 1]);
+      const w = 2 * Math.PI * f, XL = w * L / 1000, Z = Math.hypot(Rr, XL), I = Vr / Z, P = I * I * Rr, Q = I * I * XL, S = Vr * I, fp = Rr / Z;
+      if (ask === "C" && fp > target - 0.03) return null;
+      const Cn = P * (XL / Rr - Math.tan(Math.acos(target))) / (w * Vr * Vr), ans = { P, Q, S, fp, C: Cn * 1e6 }[ask];
+      return {
+        prompt: `Un motor se modela como una resistencia de $${Rr}\\ \\Omega$ en serie con una bobina de $${L}$ mH, y se conecta a $${Vr}$ V eficaces de $${f}$ Hz. ${{ P: "¿Qué potencia activa consume (en W)?", Q: "¿Cuánta potencia reactiva toma (en var)?", S: "¿Cuál es su potencia aparente (en VA)?", fp: "¿Cuál es su factor de potencia?", C: `¿Qué capacitor hay que conectar en paralelo con el motor para llevar el factor de potencia a $${String(target).replace(".", "{,}")}$ (en μF)?` }[ask]}`,
+        answer: ans,
+        solution: [`$X_L = \\omega L \\approx ${nf(XL)}\\ \\Omega$, $Z = \\sqrt{R^2 + X_L^2} \\approx ${nf(Z)}\\ \\Omega$ e $I_{ef} = \\frac{V_{ef}}{Z} \\approx ${nf(I)}$ A.`,
+          { P: `[[f2a-potencia-ca|Potencia activa]]: solo consume la resistencia, $P = I_{ef}^2R \\approx ${nf(P)}$ W.`,
+            Q: `[[f2a-potencia-ca|Potencia reactiva]]: la que va y viene en la bobina, $Q = I_{ef}^2X_L \\approx ${nf(Q)}$ var.`,
+            S: `[[f2a-potencia-ca|Potencia aparente]]: $S = V_{ef}I_{ef} \\approx ${nf(S)}$ VA (y $S^2 = P^2 + Q^2$).`,
+            fp: `[[f2a-potencia-ca|Factor de potencia]]: $\\cos\\phi = \\frac RZ = \\frac PS \\approx ${nf(fp)}$.`,
+            C: `[[f2a-potencia-ca|Corrección del factor de potencia]]: el capacitor no cambia $P \\approx ${nf(P)}$ W y aporta una reactiva $-\\omega CV_{ef}^2$. La reactiva tiene que bajar de $Q_1 = P\\tan\\phi_1 \\approx ${nf(Q)}$ var a $Q_2 = P\\tan\\phi_2 \\approx ${nf(P * Math.tan(Math.acos(target)))}$ var: $C = \\frac{Q_1 - Q_2}{\\omega V_{ef}^2} \\approx ${nf(ans)}$ μF.` }[ask]],
+        // otro camino: corriente del motor simulada con RK4; P = ⟨v·i⟩, Q = ⟨v(t)·i(t + T/4)⟩, valores eficaces numéricos, y el capacitor sumando C·dv/dt
+        verify: { kind: "value", tol: 1e-4, fn: () => {
+          const M = 400, sm = rlSamples(Vr * Math.SQRT2, w, Rr, L / 1000, M), sh = k => (k + M / 4) % M;
+          const Pn = avgOf(sm.vs.map((v, k) => v * sm.is[k])), Qn = avgOf(sm.vs.map((v, k) => v * sm.is[sh(k)])), Sn = Math.sqrt(avgOf(sm.vs.map(v => v * v)) * avgOf(sm.is.map(i => i * i)));
+          if (ask !== "C") return { P: Pn, Q: Qn, S: Sn, fp: Pn / Sn }[ask];
+          // dv/dt por diferencias centradas; la reactiva es lineal en C: Q(C) = Qn + C·q1
+          const dt = 2 * Math.PI / w / M, dv = k => (Vr * Math.SQRT2) * (Math.sin(w * (sm.t0 + k * dt + 1e-7)) - Math.sin(w * (sm.t0 + k * dt - 1e-7))) / 2e-7;
+          const q1 = avgOf(sm.vs.map((v, k) => v * dv(sh(k))));
+          return (Pn * Math.tan(Math.acos(target)) - Qn) / q1 * 1e6;
+        } }
+      };
+    }
+  };
+  T["f2a-potencia-ca-num"].testN = 60;
+
+  T["f2a-rlc-paralelo-num"] = {
+    type: "numeric", concepts: ["f2a-rlc"], difficulty: 3,
+    generate(r) {
+      const Rr = r.int(2, 20) * 10, L = r.int(1, 50) * 10, C = r.int(1, 50), Vr = r.pick([12, 24, 50, 110, 220]), f = r.pick([50, 60, 100, 200, 500]), ask = r.pick(["I", "Z", "phi"]);
+      const w = 2 * Math.PI * f, IR = Vr / Rr, IL = Vr / (w * L / 1000), IC = Vr * w * C * 1e-6, I = Math.hypot(IR, IC - IL), phi = Math.atan((IC - IL) / IR) * 180 / Math.PI;
+      if (ask === "phi" && Math.abs(phi) < 1) return null;
+      const ans = { I, Z: Vr / I, phi }[ask];
+      return {
+        prompt: `Una resistencia de $${Rr}\\ \\Omega$, una bobina de $${L}$ mH y un capacitor de $${C}$ μF se conectan en paralelo a una fuente de $${Vr}$ V eficaces y $${f}$ Hz. ${{ I: "¿Qué corriente eficaz entrega la fuente (en A)?", Z: "¿Cuál es la impedancia del conjunto (en Ω)?", phi: "¿Qué ángulo forma la corriente total con la tensión (en grados, positivo si la corriente adelanta)?" }[ask]}`,
+        answer: ans,
+        solution: [`En [[f2a-rlc|paralelo]] la tensión es común y se suman las corrientes de cada rama como fasores: $I_R = \\frac VR \\approx ${nf(IR)}$ A en fase, $I_L = \\frac{V}{X_L} \\approx ${nf(IL)}$ A atrasada $90°$ e $I_C = \\frac{V}{X_C} \\approx ${nf(IC)}$ A adelantada $90°$.`,
+          `$I_L$ e $I_C$ son opuestas: $I = \\sqrt{I_R^2 + (I_C - I_L)^2} \\approx ${nf(I)}$ A.`,
+          { I: `Listo: $I \\approx ${nf(I)}$ A.`, Z: `$Z = \\frac VI \\approx ${nf(ans)}\\ \\Omega$.`, phi: `$\\tan\\phi = \\frac{I_C - I_L}{I_R}$: $\\phi \\approx ${nf(phi)}°$ (${phi > 0 ? "capacitivo: la corriente adelanta" : "inductivo: la corriente atrasa"}).` }[ask]],
+        // otro camino: corrientes de cada rama en el tiempo (i_L integrando v con Simpson, i_C derivando v numéricamente), suma y proyección de Fourier
+        verify: { kind: "value", tol: 1e-5, fn: () => {
+          const Vp = Vr * Math.SQRT2, Tp = 1 / f, M = 200, v = t => Vp * Math.sin(w * t), Lh = L / 1000, Cf = C * 1e-6;
+          const ts = Array.from({ length: M }, (_, k) => k * Tp / M), iLraw = ts.map(t => F.simpson(v, 0, t, 200) / Lh), mL = avgOf(iLraw);
+          const it = ts.map((t, k) => v(t) / Rr + (iLraw[k] - mL) + Cf * (v(t + 1e-8) - v(t - 1e-8)) / 2e-8);
+          const a = 2 * avgOf(it.map((x, k) => x * Math.sin(w * ts[k]))), b = 2 * avgOf(it.map((x, k) => x * Math.cos(w * ts[k]))), Ie = Math.sqrt(avgOf(it.map(x => x * x)));
+          return { I: Ie, Z: Vr / Ie, phi: Math.atan2(b, a) * 180 / Math.PI }[ask];
+        } }
+      };
+    }
+  };
+  T["f2a-rlc-paralelo-num"].testN = 100;
+
   T["f2a-fase-mc"] = {
     type: "mc", concepts: ["f2a-alterna"], difficulty: 2,
     generate(r) {
@@ -1983,11 +2246,13 @@
       title: "Corriente alterna y valores eficaces", aliases: ["corriente alterna", "valor eficaz", "valor rms", "tensión eficaz"], concepts: ["f2a-alterna"],
       summary: "v = V_p sen ωt, con ω = 2πf. El valor eficaz es √(promedio de v²): para una senoidal, V_p/√2. Los 220 V de la red son eficaces (picos de 311 V).",
       def: [R`**Tensión alterna senoidal:** $v(t) = V_p\sin\omega t$, con amplitud $V_p$, frecuencia $f$ y $\omega = 2\pi f$ (en la Argentina, $f = 50$ Hz).`,
-        R`**Valor eficaz (rms):** $V_{ef} = \sqrt{\overline{v^2}}$, el valor de una tensión continua que disiparía la misma potencia media en una resistencia. Para una senoidal, $V_{ef} = \frac{V_p}{\sqrt2}$; para una cuadrada, $V_p$; para una triangular, $\frac{V_p}{\sqrt3}$.`],
+        R`**Valor eficaz (rms):** $V_{ef} = \sqrt{\overline{v^2}}$, el valor de una tensión continua que disiparía la misma potencia media en una resistencia. Para una senoidal, $V_{ef} = \frac{V_p}{\sqrt2}$; para una cuadrada, $V_p$; para una triangular, $\frac{V_p}{\sqrt3}$.`,
+        R`**Corriente alterna rectificada:** un rectificador de **media onda** (un diodo) deja pasar solo los semiciclos positivos; uno de **onda completa** (un puente de diodos) invierte los negativos. Su **valor medio** ya no es cero: $\frac{V_p}{\pi}$ y $\frac{2V_p}{\pi}$; sus valores eficaces son $\frac{V_p}2$ y $\frac{V_p}{\sqrt2}$.`],
       idea: [R`Una corriente que va y viene tiene promedio cero, pero calienta igual: lo que importa para la potencia es el cuadrado. El valor eficaz es la «corriente continua equivalente».`],
       demo: [R`**Paso 1.** En una resistencia, $p(t) = \frac{v^2}{R}$, y la potencia media es $\frac{\overline{v^2}}{R}$. Para que una tensión continua $V_{ef}$ dé lo mismo, $V_{ef}^2 = \overline{v^2}$.`,
         R`**Paso 2 (senoidal).** Por la identidad $\sin^2x = \frac{1 - \cos2x}{2}$, el promedio de $\sin^2\omega t$ en un período es $\frac12$ (el coseno promedia cero).`,
-        R`**Paso 3.** Entonces $\overline{v^2} = \frac{V_p^2}{2}$ y $V_{ef} = \frac{V_p}{\sqrt2}$. $\blacksquare$`],
+        R`**Paso 3.** Entonces $\overline{v^2} = \frac{V_p^2}{2}$ y $V_{ef} = \frac{V_p}{\sqrt2}$.`,
+        R`**Paso 4 (rectificada).** Un semiciclo tiene área $\int_0^{T/2}V_p\sin\omega t\,dt = \frac{V_p}{\omega}[-\cos\omega t]_0^{T/2} = \frac{2V_p}{\omega} = \frac{V_pT}{\pi}$. En media onda hay uno por período y $\overline v = \frac{V_p}{\pi}$; en onda completa hay dos y $\overline v = \frac{2V_p}{\pi}$. Para el eficaz: en onda completa $v^2$ es el mismo que el de la senoidal, y en media onda es la mitad del tiempo, así que $\overline{v^2} = \frac{V_p^2}{4}$. $\blacksquare$`],
       examples: [{ q: R`La red de $220$ V.`, steps: [R`$V_p = 220\sqrt2 \approx 311$ V: la tensión oscila entre $-311$ y $311$ V, $50$ veces por segundo.`] }],
       tips: [R`Salvo que se diga otra cosa, los voltímetros y amperímetros de alterna miden valores eficaces.`],
       see: ["f2a-reactancia", "f2a-potencia-ca", "f2a-fem-movimiento"]
@@ -2006,15 +2271,17 @@
       see: ["f2a-ca", "f2a-rlc", "f2a-inductancia", "f2a-capacitancia"]
     },
     "f2a-rlc": {
-      title: "Circuito RLC serie e impedancia", aliases: ["circuito RLC", "impedancia", "ángulo de fase"], concepts: ["f2a-rlc"],
-      summary: "Z = √(R² + (X_L − X_C)²), I = V/Z y tan φ = (X_L − X_C)/R. Si X_L > X_C el circuito es inductivo (la corriente atrasa); si X_L < X_C, capacitivo.",
+      title: "Circuitos RLC serie y paralelo e impedancia", aliases: ["circuito RLC", "impedancia", "ángulo de fase", "RLC paralelo"], concepts: ["f2a-rlc"],
+      summary: "Z = √(R² + (X_L − X_C)²), I = V/Z y tan φ = (X_L − X_C)/R. Si X_L > X_C el circuito es inductivo (la corriente atrasa); si X_L < X_C, capacitivo. En paralelo se suman las corrientes: I = √(I_R² + (I_C − I_L)²).",
       def: [R`**Impedancia** del RLC serie: $Z = \sqrt{R^2 + (X_L - X_C)^2}$, y $V = IZ$ (amplitudes o eficaces).`,
         R`**Ángulo de fase** de la tensión respecto de la corriente: $\tan\phi = \frac{X_L - X_C}{R}$. Positivo: inductivo, la corriente atrasa. Negativo: capacitivo, la corriente adelanta.`,
-        R`Las tensiones sobre $R$, $L$ y $C$ no se suman como números: $V_L$ y $V_C$ están en oposición, y cada una puede ser mayor que la de la fuente.`],
+        R`Las tensiones sobre $R$, $L$ y $C$ no se suman como números: $V_L$ y $V_C$ están en oposición, y cada una puede ser mayor que la de la fuente.`,
+        R`**RLC paralelo:** la tensión es común y las corrientes de las ramas se suman como fasores: $I = \sqrt{I_R^2 + (I_C - I_L)^2}$, con $I_R = \frac VR$, $I_L = \frac{V}{X_L}$ e $I_C = \frac{V}{X_C}$; $Z = \frac VI$ y $\tan\phi = \frac{I_C - I_L}{I_R}$ (la corriente adelanta si domina el capacitor).`],
       idea: [R`La bobina y el capacitor tiran la fase para lados opuestos y se compensan en parte. Lo que queda de esa diferencia, $X_L - X_C$, se combina «en ángulo recto» con la resistencia, como los catetos de un triángulo.`],
       demo: [R`**Paso 1.** En serie la corriente es común: $i = I\sin\omega t$. Las tensiones son $v_R = IR\sin\omega t$, $v_L = IX_L\sin(\omega t + 90°)$ y $v_C = IX_C\sin(\omega t - 90°)$ ([[f2a-reactancia]]).`,
         R`**Paso 2.** En el diagrama de fasores, $V_R$ va sobre el eje de la corriente y $V_L$, $V_C$ sobre la perpendicular, en sentidos opuestos: su suma es $I(X_L - X_C)$ en esa dirección.`,
-        R`**Paso 3.** La tensión total es la suma vectorial de dos fasores perpendiculares, $IR$ e $I(X_L - X_C)$: por Pitágoras, $V = I\sqrt{R^2 + (X_L - X_C)^2} = IZ$, y el ángulo cumple $\tan\phi = \frac{X_L - X_C}{R}$. $\blacksquare$`],
+        R`**Paso 3.** La tensión total es la suma vectorial de dos fasores perpendiculares, $IR$ e $I(X_L - X_C)$: por Pitágoras, $V = I\sqrt{R^2 + (X_L - X_C)^2} = IZ$, y el ángulo cumple $\tan\phi = \frac{X_L - X_C}{R}$.`,
+        R`**Paso 4 (paralelo).** Ahora lo común es la tensión: $I_R$ va en fase con ella, $I_L$ atrasada $90°$ e $I_C$ adelantada $90°$. Las dos últimas están sobre la misma recta en sentidos opuestos y suman $I_C - I_L$; por Pitágoras con $I_R$, $I = \sqrt{I_R^2 + (I_C - I_L)^2}$. $\blacksquare$`],
       examples: [{ q: R`$R = 40\ \Omega$, $X_L = 80\ \Omega$, $X_C = 50\ \Omega$, $100$ V.`, steps: [R`$Z = 50\ \Omega$, $I = 2$ A y $\phi = \arctan0{,}75 \approx 36{,}9°$ (inductivo).`] }],
       tips: [R`Con números complejos es más rápido: $Z = R + j(X_L - X_C)$, y la impedancia y la fase son el módulo y el argumento.`],
       see: ["f2a-reactancia", "f2a-resonancia", "f2a-potencia-ca"]
@@ -2033,16 +2300,19 @@
       see: ["f2a-rlc", "f1-amortiguadas", "f2a-potencia-ca"]
     },
     "f2a-potencia-ca": {
-      title: "Potencia en corriente alterna", aliases: ["factor de potencia", "potencia activa", "potencia en alterna"], concepts: ["f2a-rlc"],
-      summary: "P = V_ef I_ef cos φ = I_ef² R. Solo las resistencias consumen energía en promedio: bobinas y capacitores la toman y la devuelven. cos φ es el factor de potencia.",
+      title: "Potencia en corriente alterna", aliases: ["factor de potencia", "potencia activa", "potencia en alterna", "potencia reactiva", "potencia aparente", "corrección del factor de potencia"], concepts: ["f2a-rlc"],
+      summary: "Activa P = V_ef I_ef cos φ (W), reactiva Q = V_ef I_ef sen φ (var) y aparente S = V_ef I_ef (VA), con S² = P² + Q². Solo las resistencias consumen energía en promedio. cos φ es el factor de potencia.",
       def: [R`**Potencia media:** $P = V_{ef}I_{ef}\cos\phi$, con $\cos\phi$ el **factor de potencia**. En un RLC serie, $P = I_{ef}^2R$: la bobina y el capacitor, en promedio, no consumen.`,
-        R`Una carga con factor de potencia bajo necesita más corriente para la misma potencia, y eso aumenta las pérdidas en los cables; por eso las industrias lo corrigen con capacitores.`],
+        R`**Potencia reactiva:** $Q = V_{ef}I_{ef}\sin\phi$, en volt-amperes reactivos (var): la que va y viene entre la fuente y las bobinas o capacitores. Positiva en una carga inductiva ($Q = I_{ef}^2X_L$), negativa en una capacitiva. **Potencia aparente:** $S = V_{ef}I_{ef}$, en VA. Forman el **triángulo de potencias**: $S^2 = P^2 + Q^2$ y $\cos\phi = \frac PS$.`,
+        R`Una carga con factor de potencia bajo necesita más corriente para la misma potencia, y eso aumenta las pérdidas en los cables. **Corrección:** se conecta un capacitor en paralelo, que aporta una reactiva $-\omega CV_{ef}^2$ sin cambiar $P$; para pasar de $\phi_1$ a $\phi_2$, $C = \frac{P(\tan\phi_1 - \tan\phi_2)}{\omega V_{ef}^2}$.`],
       idea: [R`En una bobina o un capacitor, la energía entra durante un cuarto de ciclo y sale en el siguiente: va y viene sin quedarse. Solo la componente de la corriente en fase con la tensión hace trabajo neto.`],
       demo: [R`**Paso 1.** Con $v = V_p\sin\omega t$ e $i = I_p\sin(\omega t - \phi)$, la potencia instantánea es $p = V_pI_p\sin\omega t\sin(\omega t - \phi)$.`,
         R`**Paso 2.** Por la identidad $\sin a\sin b = \frac12[\cos(a - b) - \cos(a + b)]$: $p = \frac{V_pI_p}{2}[\cos\phi - \cos(2\omega t - \phi)]$.`,
-        R`**Paso 3.** El segundo término promedia cero en un período: $P = \frac{V_pI_p}{2}\cos\phi = V_{ef}I_{ef}\cos\phi$. En el RLC, $\cos\phi = \frac RZ$ y $V_{ef} = I_{ef}Z$, así que $P = I_{ef}^2R$. $\blacksquare$`],
+        R`**Paso 3.** El segundo término promedia cero en un período: $P = \frac{V_pI_p}{2}\cos\phi = V_{ef}I_{ef}\cos\phi$. En el RLC, $\cos\phi = \frac RZ$ y $V_{ef} = I_{ef}Z$, así que $P = I_{ef}^2R$.`,
+        R`**Paso 4 (triángulo).** Descomponiendo el fasor de la corriente en una parte en fase con la tensión, $I\cos\phi$, y otra a $90°$, $I\sin\phi$: la primera da $P$, y la segunda, que solo intercambia energía, da $Q = V_{ef}I_{ef}\sin\phi$. Como $\cos^2\phi + \sin^2\phi = 1$, $P^2 + Q^2 = (V_{ef}I_{ef})^2 = S^2$.`,
+        R`**Paso 5 (corrección).** En paralelo, el motor sigue con la misma tensión y la misma corriente, así que $P$ y su $Q_1 = P\tan\phi_1$ no cambian. El capacitor toma $I_C = \omega CV_{ef}$ adelantada $90°$, o sea una reactiva $-\omega CV_{ef}^2$. Para quedar con $Q_2 = P\tan\phi_2$ hace falta $\omega CV_{ef}^2 = P(\tan\phi_1 - \tan\phi_2)$. $\blacksquare$`],
       examples: [{ q: R`$220$ V, $5$ A y $\cos\phi = 0{,}8$.`, steps: [R`$P = 220\cdot5\cdot0{,}8 = 880$ W.`] }],
-      tips: [R`$V_{ef}I_{ef}$ (sin el coseno) se llama potencia aparente y se mide en VA, no en W.`],
+      tips: [R`No mezcles unidades: $P$ en W, $Q$ en var y $S$ en VA. Las compañías eléctricas dimensionan cables y transformadores por $S$, no por $P$.`],
       see: ["f2a-rlc", "f2a-ca", "f2a-potencia-electrica"]
     },
     "f2a-transformador": {
@@ -2069,8 +2339,10 @@
       lessons: [
         { id: "f2a-alterna-l1", title: "Valores eficaces y reactancias", templates: ["f2a-eficaz-num", "f2a-reactancia-num", "f2a-fase-mc"], theory: ["f2a-ca", "f2a-reactancia"],
           intro: R`$V_{ef} = \frac{V_p}{\sqrt2}$, $X_L = \omega L$ y $X_C = \frac1{\omega C}$.` },
-        { id: "f2a-alterna-l2", title: "RLC, resonancia y transformadores", templates: ["f2a-rlc-num", "f2a-resonancia-num", "f2a-transformador-num"], theory: ["f2a-rlc", "f2a-resonancia", "f2a-potencia-ca", "f2a-transformador"],
-          intro: R`$Z = \sqrt{R^2 + (X_L - X_C)^2}$, resonancia en $\omega_0 = \frac1{\sqrt{LC}}$ y $P = V_{ef}I_{ef}\cos\phi$.` }
+        { id: "f2a-alterna-l2", title: "RLC, resonancia y transformadores", templates: ["f2a-rlc-num", "f2a-resonancia-num", "f2a-transformador-num"], theory: ["f2a-rlc", "f2a-resonancia", "f2a-transformador"],
+          intro: R`$Z = \sqrt{R^2 + (X_L - X_C)^2}$, resonancia en $\omega_0 = \frac1{\sqrt{LC}}$ y $\frac{V_2}{V_1} = \frac{N_2}{N_1}$.` },
+        { id: "f2a-alterna-l3", title: "Potencia y circuitos en paralelo", templates: ["f2a-potencia-ca-num", "f2a-rlc-paralelo-num"], theory: ["f2a-potencia-ca", "f2a-rlc"],
+          intro: R`$P = V_{ef}I_{ef}\cos\phi$, $Q = V_{ef}I_{ef}\sin\phi$ y $S^2 = P^2 + Q^2$; en paralelo se suman las corrientes como fasores.` }
       ]
     }],
     cards

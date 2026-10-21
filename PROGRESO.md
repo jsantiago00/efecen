@@ -15,7 +15,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa (repasada el 21/10) | 52 | 26 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
-| 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna) | 51 | 42 |
+| 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10) | 58 | 44 |
 | 9+ | 3.º y 4.º año | en pausa (20/10): primero se pulen los dos primeros años; aparecen como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
@@ -155,6 +155,14 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
   - **Superficies paramétricas y área** (lección nueva en la U6): área de planos, paraboloides, casquetes esféricos y conos (verificada integrando $\|\vec r_u\times\vec r_v\|$ con otra parametrización), y reconocer la superficie de una parametrización (verificado con la ecuación implícita). Ficha nueva con la demo de $dS$.
   - **Stokes** (en la lección de teoremas): circulación por una circunferencia con el rotor, verificada con la integral de línea directa.
   - **Diferencial total** (en la lección del gradiente): cambio aproximado de un volumen, verificado con derivadas numéricas.
+
+- **F102A (21/10).** Se comparó con el programa 2026. Faltaban los dipolos (U1), el campo de una carga en movimiento (U7), los campos eléctricos inducidos, la corriente de desplazamiento y las ecuaciones de Maxwell (U8), y la alterna rectificada, el RLC paralelo y las potencias reactiva y aparente (U9). Se agregaron 7 plantillas y 2 fichas, y se amplió otra plantilla:
+  - **Dipolo en un campo uniforme** (en la lección de Coulomb): torque, energía y trabajo para girarlo, verificados con las dos cargas por separado y el trabajo como $\int\tau\,d\theta$. La ficha de campo eléctrico suma la demo de $U = -\vec p\cdot\vec E$.
+  - **Campo de una carga en movimiento** (en Biot-Savart), verificado con $\vec B = \vec v\times\vec E/c^2$. La ficha suma de dónde sale a partir de $I\,d\vec l$.
+  - **Campos inducidos y ecuaciones de Maxwell** (lección nueva en la U8): campo eléctrico inducido dentro y fuera de un solenoide, corriente de desplazamiento y campo magnético entre las placas de un capacitor, y un V/F de Maxwell. Se verifican con un Biot-Savart en el plano calculado por cuerdas del disco (otro camino que Faraday y Ampère-Maxwell), el flujo de un dipolo magnético integrado sobre una esfera y un RC simulado con RK4. Fichas nuevas de campo eléctrico inducido y de corriente de desplazamiento y ecuaciones de Maxwell.
+  - **Potencia y circuitos en paralelo** (lección nueva en la U9): potencias activa, reactiva y aparente, factor de potencia y su corrección con un capacitor (verificados simulando la corriente del motor con RK4, con $Q = \langle v(t)\,i(t + T/4)\rangle$), y RLC paralelo (verificado sumando las corrientes de cada rama en el tiempo). Se ampliaron las fichas de potencia y de RLC.
+  - **Rectificada:** la plantilla de valores eficaces suma la onda completa y el valor medio, y la ficha de alterna, la rectificación con su demo.
+  - **Exámenes:** las plantillas nuevas entran como alternativas en el 3.er parcial y en el final.
 
 ## Pizarra (tablets con lápiz)
 
