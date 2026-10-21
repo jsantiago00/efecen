@@ -1534,6 +1534,7 @@ body.board-split .nav { padding-bottom: 0; }
         if (pb) pb.addEventListener("click", () => {
           st.playing = !st.playing;
           pb.querySelector("span").textContent = st.playing ? "Pausa" : "Reproducir";
+          if (!st.playing) drawViz(el, st);   // al pausar, la lectura queda con el valor final
           const pl = st.spec.play;
           if (st.playing && st.p[pl.k] >= pl.max) st.p[pl.k] = 0;
           let last = performance.now();
@@ -1583,7 +1584,16 @@ body.board-split .nav { padding-bottom: 0; }
     };
     const out = spec.draw(g, st.p);
     const rd = el.querySelector(".viz-read");
-    if (typeof out === "string" && out !== st.read) { st.read = out; rd.innerHTML = out.split("\\qquad").map(part => `<span>${tex(`$${part.trim()}$`)}</span>`).join(""); }
+    // la lectura con fórmulas: durante la animación se actualiza a lo sumo ~7 veces por segundo, y solo se
+    // vuelve a componer el tramo que cambió (rehacer todo el KaTeX en cada cuadro hace titilar el texto en el celu)
+    if (typeof out === "string" && out !== st.read) {
+      const now = performance.now();
+      if (st.playing && now - (st.readT || 0) < 140) return;
+      st.read = out; st.readT = now;
+      const parts = out.split("\\qquad").map(x => x.trim()), spans = rd.children;
+      if (spans.length !== parts.length) rd.innerHTML = parts.map(x => `<span data-src="${esc(x)}">${tex(`$${x}$`)}</span>`).join("");
+      else parts.forEach((x, i) => { if (spans[i].dataset.src !== x) { spans[i].dataset.src = x; spans[i].innerHTML = tex(`$${x}$`); } });
+    }
   }
   let rT;
   window.addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(() => drawGraphs(), 120); });

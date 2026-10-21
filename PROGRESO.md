@@ -95,6 +95,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
 - **M105** (`content/m105-figuras.js`), 8 figuras: la binomial con su aproximación normal, la Poisson, áreas bajo la normal, el teorema central del límite (promedio de exponenciales contra la normal), 25 intervalos de confianza simulados, $\alpha$, $\beta$ y potencia de una prueba, la recta de regresión con sus residuos y la verosimilitud de una proporción. Las muestras salen de un generador con semilla, para que la figura no cambie sola.
 - **Tests:** cada figura se dibuja con un lápiz falso que exige coordenadas finitas en los extremos y en el medio de cada deslizador, y en varios instantes de la animación; además se chequea el TeX de la lectura. Se probaron en Chromium, en una pantalla de 400 px de ancho.
 - **Listo (21/10):** las ocho materias de 1.º y 2.º año tienen figuras.
+- **Titileo de la lectura (21/10):** el usuario vio que las fórmulas debajo de las figuras titilaban en el celu durante la animación. Se rehacía todo el KaTeX en cada cuadro (unas 50 veces por segundo). Ahora, mientras corre la animación, la lectura se actualiza a lo sumo unas 7 veces por segundo y solo se recompone el tramo (separado por `\qquad`) que cambió; al pausar queda el valor final.
 
 ## M105 Probabilidad y Estadística (20/10)
 
