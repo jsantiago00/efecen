@@ -380,6 +380,12 @@ for (const cid of E.courseOrder) {
   if (!c.theory) { fail(cid, "el curso no tiene apuntes"); continue; }
   const cards = c.theory.cards, groups = c.units.map(u => u.id);
   console.log(`Apuntes ${cid}: ${Object.keys(cards).length} fichas`);
+  // Aprender lista las fichas en el orden de las lecciones: tiene que incluirlas a todas, una sola vez
+  ok(Array.isArray(c.cardOrder) && c.cardOrder.length === Object.keys(cards).length && new Set(c.cardOrder).size === c.cardOrder.length && c.cardOrder.every(id => cards[id]), cid, "cardOrder no coincide con las fichas");
+  // y dentro de cada unidad, una ficha que aparece en una lección no queda después de otra que aparece en una lección posterior
+  { const first = {}; c.lessonList.forEach((l, i) => l.theory.forEach(t => { if (!(t in first)) first[t] = i; }));
+    const seen = c.cardOrder.filter(id => id in first);
+    for (let i = 1; i < seen.length; i++) ok(first[seen[i]] >= first[seen[i - 1]], cid, `orden de apuntes: ${seen[i]} antes que ${seen[i - 1]}`); }
   for (const [id, card] of Object.entries(cards)) {
     const w = `ficha ${id}`;
     ok(groups.includes(card.group), w, `grupo desconocido ${card.group}`);

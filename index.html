@@ -867,7 +867,9 @@ body.board-split .nav { padding-bottom: 0; }
     });
     // concepto -> fichas, priorizando el orden en que aparecen en las lecciones
     c.conceptCards = {};
-    const order = [...new Set([...c.lessonList.flatMap(l => l.theory), ...Object.keys(c.theory.cards)])];
+    const order = [...new Set([...c.lessonList.flatMap(l => l.theory), ...Object.keys(c.theory.cards)])].filter(id => c.theory.cards[id]);
+    // orden de lectura de los apuntes: el del recorrido de las lecciones (las fichas sueltas, al final)
+    c.cardOrder = order;
     for (const id of order) {
       const card = c.theory.cards[id];
       if (card) for (const k of card.concepts || []) (c.conceptCards[k] = c.conceptCards[k] || []).push(id);
@@ -2815,7 +2817,7 @@ body.board-split .nav { padding-bottom: 0; }
     const cid = activeCourse(), c = course(cid), th = c.theory;
     if (!th) { app.innerHTML = `<main class="screen"><h1>Aprender</h1><p class="muted">Este curso todavía no tiene apuntes.</p></main>${nav("learn")}`; return; }
     const cur = currentLesson(cid);
-    const ids = Object.keys(th.cards), read = ids.filter(id => S.read[id]).length;
+    const ids = c.cardOrder || Object.keys(th.cards), read = ids.filter(id => S.read[id]).length;
     app.innerHTML = `<main class="screen">
       <div class="row"><h1 class="grow" style="font-size:1.4rem">Aprender</h1>${boardBtn()}</div>
       ${subjectPicker()}

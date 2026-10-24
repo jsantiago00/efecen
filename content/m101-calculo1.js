@@ -631,13 +631,14 @@
   // 20 · Unir función ↔ derivada (fórmulas)
   const DPAIRS = [
     r => { const n = r.int(2, 5); return { k: "pow", f: xp(n), d: `${n}${xp(n - 1)}` }; },
-    r => { const k = r.int(2, 4); return { k: "sin", f: `\\sin(${k}x)`, d: `${k}\\cos(${k}x)` }; },
-    r => { const k = r.int(2, 4); return { k: "cos", f: `\\cos(${k}x)`, d: `-${k}\\sin(${k}x)` }; },
-    r => { const k = r.int(2, 4); return { k: "exp", f: `e^{${k}x}`, d: `${k}e^{${k}x}` }; },
+    // sin la regla de la cadena (se ve después): constantes que multiplican, no adentro del argumento
+    r => { const k = r.int(2, 4); return { k: "sin", f: `${k}\\sin x`, d: `${k}\\cos x` }; },
+    r => { const k = r.int(2, 4); return { k: "cos", f: `${k}\\cos x`, d: `-${k}\\sin x` }; },
+    r => { const k = r.int(2, 4); return { k: "exp", f: `${k}e^{x}`, d: `${k}e^{x}` }; },
     r => { const k = r.int(2, 5); return { k: "ln", f: `\\ln(${k}x)`, d: `\\frac{1}{x}` }; },
     () => ({ k: "sqrt", f: `\\sqrt{x}`, d: `\\frac{1}{2\\sqrt{x}}` }),
     () => ({ k: "inv", f: `\\frac{1}{x}`, d: `-\\frac{1}{x^{2}}` }),
-    () => ({ k: "tan", f: `\\tan x`, d: `\\sec^{2} x` })
+    () => ({ k: "cbrt", f: `\\sqrt[3]{x}`, d: `\\frac{1}{3\\sqrt[3]{x^{2}}}` })
   ];
   T["der-match-formula"] = {
     type: "match", concepts: ["der-potencia", "der-trig", "der-explog"], difficulty: 1,
@@ -657,17 +658,17 @@
     generate(r) {
       const v = r.pick(["exp", "ln", "cos"]);
       if (v === "exp") {
-        const a = r.nz(-4, 4), b = r.int(-5, 5), k = r.nz(-3, 3), x0 = r.pick([0, 1]);
+        const a = r.nz(-4, 4), b = r.int(-5, 5), k = 1, x0 = r.pick([0, 1, 2]); // e^x sola: la cadena viene después
         const ans = (a + k * (a * x0 + b)) * Math.exp(k * x0), co = a + k * (a * x0 + b);
         if (co === 0) return null;
         return {
           prompt: `Si $f(x) = (${polyc([a, b])})\\,e^{${kx(k)}}$, calculá $f'(${x0})$.`,
-          answer: ans, answerTex: x0 === 0 ? String(co) : `${cf(co)}e^{${k}}`,
+          answer: ans, answerTex: x0 === 0 ? String(co) : `${cf(co)}e^{${k * x0}}`,
           solution: [
             `[[regla-producto|Regla del producto]]: $(uv)' = u'v + uv'$ con $u = ${polyc([a, b])}$ y $v = e^{${kx(k)}}$.`,
-            `$u' = ${a}$, $\\;v' = ${k}e^{${kx(k)}}$.`,
-            `$f'(x) = ${a}e^{${kx(k)}} + ${par(k)}(${polyc([a, b])})e^{${kx(k)}} = (${polyc([k * a, a + k * b])})e^{${kx(k)}}$.`,
-            `$f'(${x0}) = ${x0 === 0 ? co : cf(co)}${x0 === 0 ? "" : `\\,e^{${k}}`}${x0 === 0 ? "" : ` \\approx ${num(ans, 3)}`}$.`
+            `$u' = ${a}$, $\\;v' = e^{x}$ (la [[exp-log|exponencial]] es su propia derivada).`,
+            `$f'(x) = ${a}e^{x} + (${polyc([a, b])})e^{x} = (${polyc([a, a + b])})e^{x}$.`,
+            `$f'(${x0}) = ${x0 === 0 ? co : cf(co)}${x0 === 0 ? "" : `\\,e^{${k * x0}}`}${x0 === 0 ? "" : ` \\approx ${num(ans, 3)}`}$.`
           ],
           verify: { kind: "deriv", f: x => (a * x + b) * Math.exp(k * x), x0 }
         };
@@ -1175,10 +1176,10 @@
             intro: `$(x^n)' = n\\,x^{n-1}$ para todo $n$ real. La derivada es lineal: $(af + bg)' = af' + bg'$.` },
           { id: "der-prodcoc", title: "Producto y cociente", templates: ["der-prod-num", "der-coc-num", "der-error-coc"],
             intro: `$$(uv)' = u'v + uv' \\qquad \\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}$$` },
-          { id: "der-trans", title: "Trigonométricas, exp y ln", templates: ["der-trig-mc", "der-explog-num", "der-axnsin-num"],
-            intro: `$(\\sin x)' = \\cos x$, $(\\cos x)' = -\\sin x$, $(\\tan x)' = \\sec^2 x$, $(e^x)' = e^x$, $(\\ln x)' = \\frac{1}{x}$.` },
           { id: "der-cadena", title: "Regla de la cadena", templates: ["der-cadena-mc", "der-cadena-num", "der-error-cadena", "der-order-lntrig"],
             intro: `$$\\big(f(g(x))\\big)' = f'(g(x))\\cdot g'(x)$$ Derivás la de afuera dejando la de adentro igual, y multiplicás por la derivada de la de adentro.` },
+          { id: "der-trans", title: "Trigonométricas, exp y ln", templates: ["der-trig-mc", "der-explog-num", "der-axnsin-num"],
+            intro: `$(\\sin x)' = \\cos x$, $(\\cos x)' = -\\sin x$, $(\\tan x)' = \\sec^2 x$, $(e^x)' = e^x$, $(\\ln x)' = \\frac{1}{x}$, ahora combinadas con la cadena: $(\\sin kx)' = k\\cos kx$.` },
           { id: "der-apl", title: "Tangentes, implícita y sucesivas", templates: ["der-tangente-num", "der-implicita-num", "der-orden2-num", "der-match-graph"],
             intro: `Tangente en $a$: $y = f(a) + f'(a)(x - a)$. Implícita: derivás todo respecto de $x$ tratando $y$ como $y(x)$ (aparece $y'$) y despejás.` }
         ]
@@ -1244,9 +1245,7 @@
       idea: [R`Los límites y las derivadas de funciones trigonométricas **solo dan "lindo" en radianes**. El [[lim-trig-notable|límite notable]] $\frac{\sin x}{x} \to 1$ sale de comparar el arco (que mide $x$) con el seno, y eso funciona porque el arco mide exactamente $x$. En grados daría $\frac{\pi}{180}$ y todas las [[derivadas-trig|derivadas trigonométricas]] arrastrarían ese factor.`],
       demo: [R`**Paso 1.** La longitud de una circunferencia de radio $r$ es $2\pi r$. Con $r = 1$, una vuelta entera mide $2\pi$. Como una vuelta son $360^\circ$, el ángulo de $360^\circ$ abarca un arco de largo $2\pi$.`,
         R`**Paso 2.** El arco es **proporcional** al ángulo: el doble de ángulo abarca el doble de arco. Entonces vale una regla de tres: si $360^\circ$ corresponden a $2\pi$, entonces $$x^\circ = \frac{2\pi}{360}\,x = \frac{\pi x}{180}\ \text{radianes}.$$ En particular, $180^\circ = \pi$.`,
-        R`**Paso 3.** En una circunferencia de radio $r$ todo es igual pero agrandado $r$ veces (es una figura semejante a la de radio $1$), así que todas las longitudes se multiplican por $r$. Un ángulo de $x$ radianes abarca entonces un arco $$s = r\,x.$$`,
-        R`**Paso 4 (por qué en grados las derivadas quedan feas).** Si medimos $x$ en grados, la función «seno en grados» es en realidad $\sin\left(\frac{\pi x}{180}\right)$: primero pasamos a radianes y después aplicamos el seno de siempre. Es una composición, así que por la [[regla-cadena|regla de la cadena]] sale el factor de adentro: $$\frac{d}{dx}\sin\left(\frac{\pi x}{180}\right) = \frac{\pi}{180}\cos\left(\frac{\pi x}{180}\right).$$`,
-        R`**Paso 5.** En radianes la función de adentro es $x$ mismo, cuya derivada es $1$, y el factor molesto desaparece: $(\sin x)' = \cos x$. Por eso en cálculo se trabaja siempre en radianes.`],
+        R`**Paso 3.** En una circunferencia de radio $r$ todo es igual pero agrandado $r$ veces (es una figura semejante a la de radio $1$), así que todas las longitudes se multiplican por $r$. Un ángulo de $x$ radianes abarca entonces un arco $$s = r\,x.$$ $\blacksquare$`],
       examples: [{ q: R`Pasá $135^\circ$ a radianes.`, steps: [R`Multiplicamos por $\frac{\pi}{180^\circ}$: $135\cdot\frac{\pi}{180} = \frac{3\pi}{4}$.`] }],
       see: ["lim-trig-notable", "identidades-trig"]
     },
@@ -1353,9 +1352,9 @@
     },
     "sustitucion": {
       group: "limites", title: "Sustitución directa", aliases: ["sustitución directa", "sustituir", "sustituimos", "sustituyendo", "alcanza con sustituir"], concepts: ["lim-sustitucion"],
-      summary: "Si f es continua en a, el límite es simplemente f(a).",
-      def: [R`Si $f$ es [[continuidad|continua]] en $a$, entonces $\displaystyle\lim_{x\to a} f(x) = f(a)$: alcanza con **reemplazar $x$ por $a$**.`,
-        R`Son continuas en todo su dominio: polinomios, cocientes de polinomios (donde el denominador no se anula), raíces, $\sin$, $\cos$, $e^x$, $\ln x$, y sumas, productos, cocientes y composiciones de ellas.`],
+      summary: "Para las funciones elementales, en un punto de su dominio el límite es simplemente f(a).",
+      def: [R`Si $f$ es una función elemental y $a$ está en su dominio, entonces $\displaystyle\lim_{x\to a} f(x) = f(a)$: alcanza con **reemplazar $x$ por $a$**.`,
+        R`Las elementales son los polinomios, los cocientes de polinomios (donde el denominador no se anula), las raíces, $\sin$, $\cos$, $e^x$, $\ln x$, y las sumas, productos, cocientes y composiciones de ellas. Para polinomios y cocientes sale de las [[algebra-limites|propiedades de los límites]]; más adelante, a las funciones que cumplen esto se las llama [[continuidad|continuas]].`],
       idea: [R`**Siempre probá sustituir primero.** Puede pasar una de tres cosas:`,
         R`1. Da un número: ese es el límite.<br>2. Da $\frac{k}{0}$ con $k \ne 0$: es un [[limites-infinitos|límite infinito]] (mirá los signos).<br>3. Da $\frac{0}{0}$, $\frac{\infty}{\infty}$, etc.: es una [[indeterminacion|indeterminación]] y hay que transformar la expresión.`],
       demo: [R`**Paso 1 (los ladrillos).** Empezamos por las dos funciones más simples. $\lim_{x\to a} k = k$ para una constante, porque $|k - k| = 0 < \varepsilon$ con cualquier $\delta$. Y $\lim_{x\to a} x = a$, porque $|x - a| < \varepsilon$ se logra con $\delta = \varepsilon$. Ambas salen directo de la definición de [[limite]].`,
@@ -1428,7 +1427,7 @@
       summary: "Receta: sustituí, y si da 0/0 armá los límites notables con el argumento correcto.",
       def: [R`Los dos resultados que se usan todo el tiempo (con $u \to 0$): $$\frac{\sin u}{u} \to 1 \qquad\qquad \frac{1-\cos u}{u^2} \to \frac12$$ Sus demostraciones están en [[lim-trig-notable]] y [[lim-1-cos]].`],
       idea: [R`**Receta en 4 pasos:**`,
-        R`1. **Sustituí.** Si no da una indeterminación, listo: las trigonométricas son [[continuidad|continuas]].<br>2. Pasá todo a $\sin$ y $\cos$ ($\tan = \frac{\sin}{\cos}$, etc.).<br>3. **Armá el argumento:** por cada $\sin(\square)$, hacé aparecer el mismo $\square$ en el denominador, multiplicando y dividiendo.<br>4. Reemplazá cada cociente notable por su límite y operá con lo que sobra.`,
+        R`1. **Sustituí.** Si no da una indeterminación, listo: las trigonométricas admiten [[sustitucion|sustitución directa]].<br>2. Pasá todo a $\sin$ y $\cos$ ($\tan = \frac{\sin}{\cos}$, etc.).<br>3. **Armá el argumento:** por cada $\sin(\square)$, hacé aparecer el mismo $\square$ en el denominador, multiplicando y dividiendo.<br>4. Reemplazá cada cociente notable por su límite y operá con lo que sobra.`,
         R`Multiplicar y dividir por lo mismo es multiplicar por $1$: no cambia la función, solo la escribe de forma que se vea el límite notable.`],
       examples: [
         { q: R`Calculá $\displaystyle\lim_{x\to 0}\frac{\sin(3x)}{\sin(7x)}$.`, steps: [R`Sustituyendo queda $\frac00$.`, R`Armamos los dos notables: $\dfrac{\sin 3x}{\sin 7x} = \dfrac{\sin 3x}{3x}\cdot\dfrac{7x}{\sin 7x}\cdot\dfrac{3x}{7x}$.`, R`Los dos primeros factores tienden a $1$, y $\dfrac{3x}{7x} = \dfrac37$.`, R`Resultado: $\dfrac{3}{7}$.`] },
@@ -1551,7 +1550,7 @@
         R`**Paso 2.** Restamos $x^n$ (se cancela con el primer término) y dividimos por $h \neq 0$: $$\frac{(x+h)^n - x^n}{h} = n\,x^{n-1} + h\cdot(\text{un polinomio en } x \text{ y } h).$$`,
         R`**Paso 3.** Cuando $h \to 0$, el polinomio tiende a un número finito y lo multiplicamos por $h \to 0$, así que el segundo término desaparece. Queda $(x^n)' = n\,x^{n-1}$. $\blacksquare$`,
         R`**Paso 4 (linealidad).** El cociente incremental de $af + bg$ es $a$ por el de $f$ más $b$ por el de $g$. Por el [[algebra-limites|álgebra de límites]], tiende a $a f' + b g'$. Por eso los polinomios se derivan término a término.`,
-        R`**Paso 5 (exponente real).** Para $x > 0$ escribimos $x^n = e^{n\ln x}$ y usamos la [[regla-cadena|regla de la cadena]] con la [[exp-log|derivada de la exponencial y del logaritmo]]: $$(x^n)' = e^{n\ln x}\cdot\frac{n}{x} = x^n\cdot\frac{n}{x} = n\,x^{n-1}.$$`],
+        R`**Paso 5 (exponente real).** Para $x > 0$ sacamos $x^n$ de factor común con $u = \frac hx$: $\frac{(x+h)^n - x^n}{h} = \frac{x^n}{x}\cdot\frac{(1+u)^n - 1}{u}$. Escribimos $(1+u)^n = e^{s}$ con $s = n\ln(1+u)$, que tiende a $0$: $$\frac{(1+u)^n - 1}{u} = \frac{e^s - 1}{s}\cdot n\,\frac{\ln(1+u)}{u} \;\longrightarrow\; 1\cdot n\cdot 1,$$ por los dos límites de la ficha de la [[exp-log|exponencial y el logaritmo]]. Queda $(x^n)' = \frac{x^n}{x}\,n = n\,x^{n-1}$.`],
       examples: [{ q: R`Derivá $f(x) = 3x^4 - \dfrac{2}{x^2} + \sqrt{x}$.`, steps: [R`Reescribimos: $3x^4 - 2x^{-2} + x^{1/2}$.`, R`$f'(x) = 12x^3 + 4x^{-3} + \frac12 x^{-1/2} = 12x^3 + \dfrac{4}{x^3} + \dfrac{1}{2\sqrt{x}}$.`] }],
       tips: [R`Con exponente negativo, el exponente igual **baja** en uno: $(x^{-2})' = -2x^{-3}$, no $-2x^{-1}$.`],
       see: ["derivada", "regla-producto"]
@@ -1590,8 +1589,8 @@
       demo: [R`**Paso 1 (seno).** Armamos el cociente incremental y desarrollamos $\sin(x + h)$ con la fórmula del [[identidades-trig|seno de una suma]]: $$\frac{\sin(x+h) - \sin x}{h} = \frac{\sin x\cos h + \cos x\sin h - \sin x}{h}.$$`,
         R`**Paso 2.** Agrupamos los dos términos con $\sin x$ y separamos en dos cocientes. $\sin x$ y $\cos x$ no dependen de $h$, así que quedan como constantes adelante: $$= \sin x\,\frac{\cos h - 1}{h} + \cos x\,\frac{\sin h}{h}.$$`,
         R`**Paso 3.** Cuando $h \to 0$ usamos los dos límites notables: $\frac{\sin h}{h}\to 1$ ([[lim-trig-notable]]) y $\frac{\cos h - 1}{h}\to 0$ ([[lim-1-cos]]). Queda $(\sin x)' = \sin x\cdot 0 + \cos x\cdot 1 = \cos x$. $\blacksquare$`,
-        R`**Paso 4 (coseno, sale del seno).** Por los complementarios, $\cos x = \sin\left(\frac\pi2 - x\right)$. Derivamos con la [[regla-cadena|regla de la cadena]]: la derivada de afuera es el coseno, y la de adentro, $\frac\pi2 - x$, vale $-1$: $$(\cos x)' = \cos\left(\tfrac\pi2 - x\right)\cdot(-1) = -\sin x.$$`,
-        R`**Paso 5 (tangente).** Con $\tan x = \frac{\sin x}{\cos x}$ y la [[regla-cociente|regla del cociente]], usando los pasos 3 y 4 y la identidad pitagórica: $$(\tan x)' = \frac{\cos x\cos x - \sin x\,(-\sin x)}{\cos^2 x} = \frac{\cos^2 x + \sin^2 x}{\cos^2 x} = \frac{1}{\cos^2 x} = \sec^2 x.$$`,
+        R`**Paso 4 (coseno, por definición).** Igual que con el seno, desarrollamos $\cos(x + h)$ con el [[identidades-trig|coseno de una suma]] y agrupamos: $$\frac{\cos(x+h) - \cos x}{h} = \cos x\,\frac{\cos h - 1}{h} - \sin x\,\frac{\sin h}{h} \;\longrightarrow\; \cos x\cdot 0 - \sin x\cdot 1 = -\sin x.$$`,
+        R`**Paso 5 (tangente; usa la [[regla-cociente|regla del cociente]], que está en la lección siguiente).** Con $\tan x = \frac{\sin x}{\cos x}$, usando los pasos 3 y 4 y la identidad pitagórica: $$(\tan x)' = \frac{\cos x\cos x - \sin x\,(-\sin x)}{\cos^2 x} = \frac{\cos^2 x + \sin^2 x}{\cos^2 x} = \frac{1}{\cos^2 x} = \sec^2 x.$$`,
         R`**Paso 6 (secante y cotangente).** Igual que en el paso 5: $(\sec x)' = \left(\frac{1}{\cos x}\right)' = \frac{\sin x}{\cos^2 x} = \sec x\tan x$, y $(\cot x)' = \left(\frac{\cos x}{\sin x}\right)' = \frac{-\sin^2 x - \cos^2 x}{\sin^2 x} = -\csc^2 x$. $\blacksquare$`],
       examples: [{ q: R`Derivá $\tan x$ usando que $\tan x = \frac{\sin x}{\cos x}$.`, steps: [R`$\left(\dfrac{\sin x}{\cos x}\right)' = \dfrac{\cos x\cos x - \sin x\,(-\sin x)}{\cos^2 x}$.`, R`$= \dfrac{\cos^2 x + \sin^2 x}{\cos^2 x} = \dfrac{1}{\cos^2 x} = \sec^2 x$.`] }],
       see: ["lim-trig-notable", "regla-cadena", "identidades-trig"]
@@ -1607,10 +1606,10 @@
       demo: [R`**Paso 1 (exponencial).** Planteamos la [[derivada|definición de derivada]]: $$(e^x)' = \lim_{h\to0}\frac{e^{x+h} - e^x}{h}.$$`,
         R`**Paso 2.** Como $e^{x+h} = e^x\cdot e^h$, sacamos $e^x$ de factor común. No depende de $h$, así que sale del límite: $$(e^x)' = e^x\cdot\lim_{h\to0}\frac{e^h - 1}{h}.$$`,
         R`**Paso 3.** Ese límite vale $1$: es justamente la propiedad que distingue al número $e$ (mirá «La idea»). Queda $(e^x)' = e^x\cdot 1 = e^x$.`,
-        R`**Paso 4 (logaritmo).** Partimos de la identidad $e^{\ln x} = x$, que vale para todo $x > 0$ porque $\ln$ deshace a $e^{(\cdot)}$. Derivamos los dos lados respecto de $x$.`,
-        R`**Paso 5.** El lado derecho da $(x)' = 1$. El izquierdo es una composición: afuera está $e^u$ y adentro $u = \ln x$. Con la [[regla-cadena|regla de la cadena]] (la derivada de afuera evaluada en lo de adentro, por la derivada de adentro): $$\big(e^{\ln x}\big)' = e^{\ln x}\cdot(\ln x)'.$$`,
-        R`**Paso 6.** Igualamos: $e^{\ln x}\cdot(\ln x)' = 1$. Pero $e^{\ln x} = x$, así que $x\cdot(\ln x)' = 1$, y despejando, $(\ln x)' = \dfrac{1}{x}$. $\blacksquare$`,
-        R`**Base cualquiera.** Escribimos $a^x = e^{x\ln a}$ y usamos la regla de la cadena: $(a^x)' = e^{x\ln a}\cdot\ln a = a^x\ln a$. La constante $c_a$ de «La idea» es entonces $\ln a$: por eso daba $\ln 2 \approx 0{,}693$ y $\ln 3 \approx 1{,}099$.`],
+        R`**Paso 4 (un límite auxiliar).** También $\displaystyle\lim_{u\to0}\frac{\ln(1+u)}{u} = 1$. Llamamos $t = \ln(1+u)$, o sea $u = e^t - 1$; cuando $u \to 0$, también $t \to 0$. El cociente queda $\frac{t}{e^t - 1}$, que es la inversa del cociente del paso 3 y tiende a $\frac11 = 1$.`,
+        R`**Paso 5 (logaritmo).** Por definición y con la propiedad $\ln A - \ln B = \ln\frac AB$: $$\frac{\ln(x+h) - \ln x}{h} = \frac1h\ln\left(1 + \frac hx\right) = \frac1x\cdot\frac{\ln(1+u)}{u}, \qquad u = \frac hx.$$ Cuando $h \to 0$, $u \to 0$ ($x$ está fijo), y por el paso 4 el límite es $\frac1x\cdot 1$.`,
+        R`**Paso 6.** Entonces $(\ln x)' = \dfrac{1}{x}$ para $x > 0$. $\blacksquare$`,
+        R`**Base cualquiera.** Como en el paso 2, $(a^x)' = a^x\cdot\lim_{h\to0}\frac{a^h - 1}{h}$. Escribimos $a^h = e^{h\ln a}$ y llamamos $s = h\ln a$, que tiende a $0$ con $h$: $\frac{a^h - 1}{h} = \ln a\cdot\frac{e^s - 1}{s} \to \ln a$. Así $(a^x)' = a^x\ln a$, y la constante $c_a$ de «La idea» es $\ln a$: por eso daba $\ln 2 \approx 0{,}693$ y $\ln 3 \approx 1{,}099$.`],
       examples: [{ q: R`Derivá $f(x) = 3e^x - 2\ln x$ y evaluá en $x=1$.`, steps: [R`$f'(x) = 3e^x - \dfrac{2}{x}$.`, R`$f'(1) = 3e - 2 \approx 6{,}15$.`] }],
       see: ["regla-cadena", "regla-potencia"]
     },
@@ -1627,7 +1626,8 @@
         R`**Paso 5.** Tomamos $h \to 0$. Como $g$ es [[derivable-continua|derivable y por lo tanto continua]], $k \to 0$, y por la continuidad de $\varphi$, $\varphi(k) \to f'(g(x))$. El segundo factor tiende a $g'(x)$. Por el [[algebra-limites|álgebra de límites]], $$\big(f(g(x))\big)' = f'(g(x))\cdot g'(x). \;\blacksquare$$`],
       examples: [
         { q: R`Derivá $(x^2+1)^5$.`, steps: [R`Afuera: $u^5$. Adentro: $u = x^2 + 1$.`, R`$5(x^2+1)^4\cdot 2x = 10x(x^2+1)^4$.`] },
-        { q: R`Derivá $\sin^2(3x)$.`, steps: [R`Hay tres capas: $(\cdot)^2$, $\sin(\cdot)$ y $3x$.`, R`$2\sin(3x)\cdot\cos(3x)\cdot 3 = 6\sin(3x)\cos(3x)$.`] }
+        { q: R`Derivá $\sin^2(3x)$.`, steps: [R`Hay tres capas: $(\cdot)^2$, $\sin(\cdot)$ y $3x$.`, R`$2\sin(3x)\cdot\cos(3x)\cdot 3 = 6\sin(3x)\cos(3x)$.`] },
+        { q: R`¿Por qué en cálculo los ángulos van en [[radian|radianes]]? Derivá el «seno en grados».`, steps: [R`Si $x$ está en grados, el seno de siempre se aplica a $\frac{\pi x}{180}$ (primero se pasa a radianes): es la composición $\sin\left(\frac{\pi x}{180}\right)$.`, R`Por la cadena sale la derivada de adentro: $\frac{d}{dx}\sin\left(\frac{\pi x}{180}\right) = \frac{\pi}{180}\cos\left(\frac{\pi x}{180}\right)$.`, R`En radianes lo de adentro es $x$, con derivada $1$, y el factor molesto desaparece: $(\sin x)' = \cos x$.`] }
       ],
       tips: [R`Error típico: olvidarse de multiplicar por $g'(x)$, o derivar lo de adentro y dejarlo adentro: $(\sin(x^2))' = 2x\cos(x^2)$, **no** $\cos(2x)$.`],
       see: ["regla-producto", "derivadas-trig", "implicita"]
@@ -1675,8 +1675,8 @@
       def: [R`Si $f' > 0$ en un intervalo, $f$ **crece** ahí; si $f' < 0$, **decrece**. En un máximo o mínimo local con tangente, $f' = 0$.`],
       idea: [R`Para dibujar $f'$ a partir de $f$, recorré el gráfico de $f$ de izquierda a derecha y preguntate **qué tan empinado está** en cada punto: esa pendiente es la altura de $f'$.`,
         { graph: { fns: [x => x ** 3 / 3 - 2 * x, x => x * x - 2], xr: [-4, 4], yr: [-4, 4] }, caption: R`En violeta $f = \frac{x^3}{3} - 2x$; en naranja $f' = x^2 - 2$, que se anula justo donde $f$ tiene su máximo y su mínimo.` }],
-      demo: [R`**Paso 1 (derivada positiva implica crecer).** Supongamos $f' > 0$ en un intervalo y tomemos dos puntos cualesquiera $x_1 < x_2$ de él. Queremos comparar $f(x_1)$ con $f(x_2)$, y el [[valor-medio|teorema del valor medio]] justamente relaciona esa diferencia con la derivada: existe $c$ entre ellos con $$f(x_2) - f(x_1) = f'(c)\,(x_2 - x_1).$$`,
-        R`**Paso 2.** Como $c$ está en el intervalo, $f'(c) > 0$, y además $x_2 - x_1 > 0$. El producto es positivo, así que $f(x_2) > f(x_1)$: $f$ crece. Si $f' < 0$, el mismo argumento da un producto negativo y $f$ decrece.`,
+      demo: [R`**Paso 1 (si crece, la derivada no es negativa).** Si $f$ crece en un intervalo, para $h > 0$ es $f(x + h) > f(x)$ y para $h < 0$ es $f(x + h) < f(x)$. En los dos casos el cociente incremental $\frac{f(x+h) - f(x)}{h}$ es positivo, y su límite, $f'(x)$, es $\ge 0$. Si $f$ decrece, igual: $f'(x) \le 0$.`,
+        R`**Paso 2 (al revés).** Que $f' > 0$ en un intervalo **implique** que $f$ crece es más delicado: hay que pasar de lo que pasa en cada punto a lo que pasa entre dos puntos alejados. Se prueba con el teorema de Lagrange, en la Unidad de aplicaciones ([[valor-medio]]).`,
         R`**Paso 3 (en un extremo, derivada cero).** Si en $c$ hay un máximo local, cerca de $c$ vale $f(c + h) \le f(c)$, o sea $f(c+h) - f(c) \le 0$. Miramos el signo del cociente incremental $\frac{f(c+h) - f(c)}{h}$: para $h > 0$ es $\le 0$ (negativo sobre positivo) y para $h < 0$ es $\ge 0$ (negativo sobre negativo).`,
         R`**Paso 4.** Como $f$ es derivable en $c$, los dos [[limites-laterales|límites laterales]] del cociente valen $f'(c)$. Un límite de números $\le 0$ es $\le 0$, y uno de números $\ge 0$ es $\ge 0$. Entonces $f'(c) \le 0$ y $f'(c) \ge 0$ a la vez: $f'(c) = 0$. Para un mínimo es igual, con las desigualdades al revés. $\blacksquare$`],
       examples: [{ q: R`Si $f$ es una parábola con mínimo en $x = 1$, ¿cómo es $f'$?`, steps: [R`A la izquierda de $1$, $f$ decrece: $f' < 0$. A la derecha crece: $f' > 0$.`, R`$f'(1) = 0$. De hecho, $f'$ es una recta creciente que corta el eje en $x = 1$.`] }],
@@ -1688,9 +1688,9 @@
     cards,
     // qué fichas conviene leer antes de cada lección (en orden)
     lessons: {
-      "lim-idea": ["limite", "limites-laterales", "sustitucion", "algebra-limites"],
+      "lim-idea": ["limite", "limites-laterales", "algebra-limites", "sustitucion"],
       "lim-00": ["indeterminacion", "factorizar", "conjugado"],
-      "lim-trig": ["lim-trig-tecnicas", "lim-trig-notable", "lim-1-cos", "sandwich", "radian", "identidades-trig"],
+      "lim-trig": ["sandwich", "lim-trig-notable", "lim-1-cos", "lim-trig-tecnicas", "radian", "identidades-trig"],
       "lim-inf": ["limites-infinitos", "limites-al-infinito", "asintotas"],
       "cont": ["continuidad", "discontinuidades", "bolzano", "funcion"],
       "der-def": ["derivada", "derivable-continua"],
@@ -2126,7 +2126,7 @@
       idea: [R`Pensá $z$ como el punto $(a, b)$ del plano. Sumar complejos es sumar vectores. Multiplicar es más lindo en forma polar: **los módulos se multiplican y los ángulos se suman**. Multiplicar por $i$ es rotar $90^\circ$.`],
       demo: [R`**Paso 1.** Escribimos los dos números en forma polar: $z = r(\cos\alpha + i\sin\alpha)$ y $w = s(\cos\beta + i\sin\beta)$. Multiplicamos con la distributiva, como si fueran polinomios en $i$: $$\begin{aligned}zw = rs\,\big(&\cos\alpha\cos\beta + i\cos\alpha\sin\beta \\ &+ i\sin\alpha\cos\beta + i^2\sin\alpha\sin\beta\big).\end{aligned}$$`,
         R`**Paso 2.** Usamos $i^2 = -1$ y juntamos la parte real y la parte imaginaria: $$\begin{aligned}zw = rs\big[&(\cos\alpha\cos\beta - \sin\alpha\sin\beta) \\ &+ i(\sin\alpha\cos\beta + \cos\alpha\sin\beta)\big].\end{aligned}$$`,
-        R`**Paso 3.** Los dos paréntesis son exactamente las fórmulas del coseno y del seno de una suma ([[identidades-trig]]): $$zw = rs\big(\cos(\alpha+\beta) + i\sin(\alpha+\beta)\big).$$ Es un complejo de módulo $rs$ y ángulo $\alpha + \beta$: los módulos se multiplican y los ángulos se suman. $\blacksquare$`],
+        R`**Paso 3.** Los dos paréntesis son exactamente las fórmulas del coseno y del seno de una suma, de la trigonometría de la secundaria (se repasan en [[identidades-trig]]): $$zw = rs\big(\cos(\alpha+\beta) + i\sin(\alpha+\beta)\big).$$ Es un complejo de módulo $rs$ y ángulo $\alpha + \beta$: los módulos se multiplican y los ángulos se suman. $\blacksquare$`],
       examples: [{ q: R`Calculá $(2 + 3i)(1 - i)$.`, steps: [R`Distribuimos: $2 - 2i + 3i - 3i^2$.`, R`Con $i^2 = -1$: $2 + i + 3 = 5 + i$.`] }, { q: R`Calculá $\dfrac{1}{1+i}$.`, steps: [R`Multiplicamos arriba y abajo por el conjugado $1 - i$: $\dfrac{1-i}{(1+i)(1-i)} = \dfrac{1-i}{2}$.`] }],
       see: ["conjuntos-numericos", "identidades-trig"]
     },
@@ -2210,10 +2210,10 @@
     "modelos": {
       title: "Modelos matemáticos", aliases: ["modelo lineal", "modelo exponencial", "vida media", "decaimiento exponencial"], concepts: ["modelos"],
       summary: "Lineal si cambia a ritmo constante; exponencial si cambia en proporción a lo que hay.",
-      def: [R`**Modelo lineal:** $y(t) = y_0 + m\,t$, con razón de cambio constante $m$.`, R`**Modelo exponencial:** $N(t) = N_0 e^{kt}$, que crece ($k>0$) o decae ($k<0$) a un ritmo **proporcional a la cantidad**: $N'(t) = kN(t)$.`],
+      def: [R`**Modelo lineal:** $y(t) = y_0 + m\,t$, con razón de cambio constante $m$.`, R`**Modelo exponencial:** $N(t) = N_0 e^{kt}$, que crece ($k>0$) o decae ($k<0$) a un ritmo **proporcional a la cantidad**: en tiempos iguales se multiplica por el mismo factor.`],
       idea: [R`En el decaimiento radiactivo la **vida media** $T_{1/2}$ es el tiempo en que queda la mitad, $e^{-kT_{1/2}} = \frac12$, así que $k = \frac{\ln 2}{T_{1/2}}$ y $N(t) = N_0\,2^{-t/T_{1/2}}$.`,
-        R`El modelo exponencial es la solución de la ecuación diferencial $N' = kN$, que aparece en la unidad de integrales.`],
-      demo: [R`**Paso 1 (por qué el modelo exponencial cumple N' = kN).** Derivamos $N(t) = N_0 e^{kt}$. La constante $N_0$ sale afuera y $e^{kt}$ es una composición, así que por la [[regla-cadena|regla de la cadena]] aparece la derivada de adentro, $k$: $$N'(t) = N_0\,k\,e^{kt} = k\,N(t).$$ Además $N(0) = N_0 e^0 = N_0$, así que $N_0$ es la cantidad inicial.`,
+        R`Más adelante, con derivadas, esto se escribe $N' = kN$: es la ecuación diferencial que aparece en la unidad de integrales.`],
+      demo: [R`**Paso 1 (crece en proporción a lo que hay).** Comparamos $N$ en dos instantes separados por un lapso fijo $\Delta$. Por la propiedad $e^{a+b} = e^ae^b$, $$N(t + \Delta) = N_0e^{kt}e^{k\Delta} = N(t)\,e^{k\Delta}:$$ en cada lapso de largo $\Delta$ la cantidad se multiplica por el mismo factor $e^{k\Delta}$, sin importar cuándo empieza. El aumento, $N(t + \Delta) - N(t) = N(t)\,(e^{k\Delta} - 1)$, es proporcional a lo que hay. Además $N(0) = N_0e^0 = N_0$: $N_0$ es la cantidad inicial.`,
         R`**Paso 2 (vida media).** Escribimos el decaimiento como $N_0 e^{-kt}$ con $k > 0$. Queda la mitad en el instante $T_{1/2}$ que cumple $N_0 e^{-kT_{1/2}} = \frac12 N_0$. Simplificamos $N_0$ y aplicamos $\ln$ a los dos lados, que deshace la exponencial: $$-kT_{1/2} = \ln\tfrac12 = -\ln 2 \quad\Longrightarrow\quad k = \frac{\ln 2}{T_{1/2}}.$$`,
         R`**Paso 3 (la fórmula con base 2).** Reemplazamos $k$ y usamos que $e^{\ln 2} = 2$ (exponencial y logaritmo se deshacen) junto con la potencia de potencia: $$e^{-kt} = e^{-\ln 2\cdot t/T_{1/2}} = \left(e^{\ln 2}\right)^{-t/T_{1/2}} = 2^{-t/T_{1/2}}.$$ Por eso cada vida media la cantidad se divide por $2$.`],
       examples: [{ q: R`Una población se duplica cada 3 horas. Si arranca con 500, ¿cuántos hay a las 7 horas?`, steps: [R`$N(t) = 500\cdot 2^{t/3}$.`, R`$N(7) = 500\cdot 2^{7/3} \approx 2520$.`] }],
@@ -2252,7 +2252,7 @@
           theory: ["composicion", "funcion-inversa"],
           intro: R`$(f\circ g)(x) = f(g(x))$. La inversa deshace a $f$: se despeja $x$ de $y = f(x)$.` },
         { id: "transformaciones", title: "Transformaciones y funciones trascendentes", templates: ["transf-mc", "transf-match", "trig-param-num", "explog-eq-num"],
-          theory: ["transformaciones", "funciones-trig", "exp-log-func", "radian", "identidades-trig"],
+          theory: ["transformaciones", "radian", "funciones-trig", "identidades-trig", "exp-log-func"],
           intro: R`$f(x - h) + k$ corre el gráfico. $A\sin(Bx + C) + D$ tiene amplitud $|A|$ y período $\frac{2\pi}{|B|}$. $\log_a$ es la inversa de $a^x$.` },
         { id: "modelos", title: "Modelos matemáticos", templates: ["model-lineal-num", "model-exp-num"],
           theory: ["modelos", "exp-log-func"],
@@ -3231,8 +3231,8 @@
       demo: [R`**Paso 1 (linealidad).** Tomamos la misma partición y los mismos puntos $x_i^*$ para $f$, para $g$ y para $\alpha f + \beta g$. Una suma de Riemann es una suma finita, así que podemos separarla y sacar las constantes $\alpha$ y $\beta$ afuera (propiedad distributiva): $$\sum_{i=1}^n\big(\alpha f(x_i^*) + \beta g(x_i^*)\big)\Delta x = \alpha\sum_{i=1}^n f(x_i^*)\,\Delta x + \beta\sum_{i=1}^n g(x_i^*)\,\Delta x.$$`,
         R`**Paso 2.** Tomamos límite cuando $n \to \infty$. Por el [[algebra-limites|álgebra de límites]], el límite de la combinación es la combinación de los límites, y cada límite es una integral: $\int(\alpha f + \beta g) = \alpha\int f + \beta\int g$.`,
         R`**Paso 3 (monotonía).** Si $f \le g$, cada sumando cumple $f(x_i^*)\,\Delta x \le g(x_i^*)\,\Delta x$, porque $\Delta x > 0$. Sumando, cada suma de Riemann de $f$ es menor o igual que la de $g$. Las desigualdades $\le$ se mantienen al pasar al límite, así que $\int_a^b f \le \int_a^b g$.`,
-        R`**Paso 4 (pares e impares: dar vuelta la mitad izquierda).** Partimos $\int_{-a}^a f = \int_{-a}^0 f + \int_0^a f$. En la primera hacemos la [[int-sustitucion|sustitución]] $x = -u$, $dx = -du$; cuando $x$ va de $-a$ a $0$, $u$ va de $a$ a $0$. Dar vuelta los límites cambia el signo y se cancela con el de $-du$: $$\int_{-a}^0 f(x)\,dx = \int_a^0 f(-u)\,(-du) = \int_0^a f(-u)\,du.$$`,
-        R`**Paso 5.** Si $f$ es impar, $f(-u) = -f(u)$, así que la mitad izquierda vale $-\int_0^a f$ y la suma da $0$: las áreas de cada lado se cancelan. Si $f$ es par, $f(-u) = f(u)$, la mitad izquierda vale $\int_0^a f$ y la suma da $2\int_0^a f$. $\blacksquare$`],
+        R`**Paso 4 (pares e impares: dar vuelta la mitad izquierda).** Partimos $\int_{-a}^a f = \int_{-a}^0 f + \int_0^a f$. Tomamos en $[0, a]$ una partición en $n$ partes iguales con puntos $x_i$, y en $[-a, 0]$ la reflejada, con puntos $-x_i$: los rectángulos tienen el mismo ancho $\frac an$ de los dos lados.`,
+        R`**Paso 5.** Si $f$ es impar, $f(-x_i) = -f(x_i)$: cada rectángulo de la izquierda tiene la altura opuesta a la de su reflejo, así que la suma de Riemann de la izquierda es la opuesta de la de la derecha, y en el límite $\int_{-a}^0 f = -\int_0^a f$: el total da $0$. Si $f$ es par, $f(-x_i) = f(x_i)$, las dos sumas coinciden y el total es $2\int_0^a f$. $\blacksquare$`],
       examples: [{ q: R`Calculá $\int_0^1 x\,dx$ como límite de sumas de Riemann (extremo derecho).`, steps: [R`$\Delta x = \frac1n$, $x_i = \frac in$: $\sum_{i=1}^n \frac{i}{n}\cdot\frac1n = \frac{1}{n^2}\cdot\frac{n(n+1)}{2}$.`, R`Tiende a $\frac12$: el área del triángulo.`] }],
       see: ["tfc", "antiderivada", "area-curvas"]
     },
