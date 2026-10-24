@@ -2256,7 +2256,7 @@
           intro: R`$f(x - h) + k$ corre el gráfico. $A\sin(Bx + C) + D$ tiene amplitud $|A|$ y período $\frac{2\pi}{|B|}$. $\log_a$ es la inversa de $a^x$.` },
         { id: "modelos", title: "Modelos matemáticos", templates: ["model-lineal-num", "model-exp-num"],
           theory: ["modelos", "exp-log-func"],
-          intro: R`Lineal: cambio constante. Exponencial: cambio proporcional a lo que hay ($N' = kN$), con vida media $T_{1/2} = \frac{\ln 2}{k}$.` }
+          intro: R`Lineal: cambio constante. Exponencial: en tiempos iguales se multiplica por el mismo factor ($N_0e^{kt}$), con vida media $T_{1/2} = \frac{\ln 2}{k}$.` }
       ]
     }],
     cards
