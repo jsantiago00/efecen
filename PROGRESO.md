@@ -13,7 +13,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 3 | F101 Física General I | **completa**: unidad transversal y 10 unidades | 62 | 34 |
 | 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción; repasada el 21/10) | 42 | 20 |
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa (repasada el 21/10) | 52 | 26 |
-| 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
+| 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa (repasada el 24/10) | 61 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado; repasada el 24/10) | 56 | 33 |
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10) | 58 | 44 |
 | 9+ | 3.º y 4.º año | en pausa (20/10): primero se pulen los dos primeros años; aparecen como "Próximamente" | — | — |
@@ -173,6 +173,14 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
   - **Comparación de dos medias** (lección nueva en la U7): varianza combinada, $t$ y margen del intervalo (verificados armando datos con esas medias y desvíos y un ANOVA de dos grupos, $F = t^2$), y datos pareados (verificados con $s_x^2 + s_y^2 - 2\,cov$). Ficha nueva con la demo.
   - **Residuos e inferencia para la pendiente** (lección nueva en la U8): $s_e$, error estándar de $b_1$, $t$ e intervalo (verificados con los residuos uno por uno y $t^2 = SC_R/(SC_E/(n-2))$), y un V/F de propiedades de los residuos (verificado recalculándolos o reajustando la recta). Ficha nueva con las ecuaciones normales, $SC_T = SC_R + SC_E$ y $Var(b_1) = \sigma^2/S_{xx}$.
   - **Exámenes:** las plantillas nuevas entran como alternativas en los dos parciales.
+
+- **M106 (24/10).** Se comparó con el programa 2026 y con los exámenes de `docs/parciales/m106.md`. Las fichas ya tenían la teoría, pero faltaba practicar con números las familias de circunferencias y el eje radical, las paramétricas de las cónicas, las tangentes desde un punto exterior, las superficies cilíndricas con generatrices oblicuas, los paralelos de las superficies de revolución, las paramétricas de las cuádricas y los focos de una cónica rotada. Se agregaron 7 plantillas, sin fichas nuevas:
+  - **Eje radical y familia de circunferencias** (lección 1 de la U3): pendiente, ordenada al origen y cuerda común, verificadas buscando los puntos de corte sobre la paramétrica de una circunferencia; y el $\lambda$ de la familia que pasa por un punto, verificado con la circunferencia por tres puntos.
+  - **Paramétricas de cónicas** (lección 3): distancia focal y excentricidad de elipses e hipérbolas, y el foco de una parábola, verificados con la definición métrica sobre los puntos de la paramétrica.
+  - **Tangentes desde un punto exterior** (lección 4), verificadas minimizando la ecuación de la cónica sobre la recta.
+  - **Superficies** (U4): la coordenada de un punto de un cilindro oblicuo (verificada bajando por la generatriz con bisección), el radio y el área de un paralelo de una superficie de revolución (verificados bisecando la curva generatriz y girando el punto) e identificar una cuádrica por su paramétrica (verificado con la ecuación canónica en puntos de la parametrización).
+  - **Focos de una cónica rotada** (U6), verificados con la propiedad focal en puntos sacados de la ecuación en $x$ e $y$.
+  - **Exámenes:** las plantillas nuevas entran como alternativas en los dos parciales y en el final.
 
 ## Pizarra (tablets con lápiz)
 

@@ -515,18 +515,23 @@
             { title: "Haz de planos, trazas y distancias", parts: [{ self: "ga-ex-haz-trazas", pts: 50 }] },
             { title: "Planos y rectas en el espacio", parts: [{ tpl: "ga-haz-num", pts: 12 }, { tpl: "ga-dist-rectas-num", pts: 14 }, { tpl: "ga-angulo-num", pts: 12 }, { tpl: "ga-dist-planos-num", pts: 12 }] }
           ] },
-          { title: "Circunferencias y eje radical", parts: [{ self: "ga-ex-circ-radical", pts: 18 }] }
+          { any: [
+            { title: "Circunferencias y eje radical", parts: [{ self: "ga-ex-circ-radical", pts: 18 }] },
+            { title: "Familias de circunferencias", parts: [{ tpl: "ga-eje-radical-num", pts: 10 }, { tpl: "ga-circ-num", pts: 8 }] }
+          ] }
         ] },
       { id: "p2", kind: "parcial", title: "2.º parcial", topics: "Cónicas, superficies cilíndricas y de revolución, esfera", minutes: 120, pass: 60,
         items: [
           { any: [
             { title: "Elipse: tangentes en el lado recto", parts: [{ self: "ga-ex-elipse-lr", pts: 30 }] },
-            { title: "Cónicas: elementos y tangentes", parts: [{ tpl: "ga-elipse-num", pts: 10 }, { tpl: "ga-tangente-num", pts: 10 }, { tpl: "ga-hiperbola-num", pts: 10 }] }
+            { title: "Cónicas: elementos y tangentes", parts: [{ tpl: "ga-elipse-num", pts: 10 }, { tpl: "ga-tangente-num", pts: 10 }, { tpl: "ga-hiperbola-num", pts: 10 }] },
+            { title: "Cónicas: paramétricas y tangentes desde un punto exterior", parts: [{ tpl: "ga-param-conica-num", pts: 10 }, { tpl: "ga-tangente-ext-num", pts: 12 }, { tpl: "ga-recta-conica-mc", pts: 8 }] }
           ] },
           { title: "Parábola y paraboloide de revolución", parts: [{ self: "ga-ex-paraboloide", pts: 22 }] },
           { any: [
             { title: "Superficie cilíndrica", parts: [{ self: "ga-ex-cilindrica", pts: 30 }] },
-            { title: "Superficies cilíndricas, cónicas y de revolución", parts: [{ tpl: "ga-sup-conica-num", pts: 12 }, { tpl: "ga-sup-cil-tf", pts: 8 }, { tpl: "ga-revolucion-mc", pts: 10 }] }
+            { title: "Superficies cilíndricas, cónicas y de revolución", parts: [{ tpl: "ga-sup-conica-num", pts: 12 }, { tpl: "ga-sup-cil-tf", pts: 8 }, { tpl: "ga-revolucion-mc", pts: 10 }] },
+            { title: "Superficies: generatrices, paralelos y paramétricas", parts: [{ tpl: "ga-sup-cil-num", pts: 12 }, { tpl: "ga-revolucion-num", pts: 10 }, { tpl: "ga-param-sup-mc", pts: 8 }] }
           ] },
           { any: [
             { title: "Esfera (completar)", parts: [{ self: "ga-ex-esfera", pts: 18 }] },
@@ -538,7 +543,8 @@
           { title: "Cónica en coordenadas polares", parts: [{ self: "ga-ex-conica-polar", pts: 32 }] },
           { any: [
             { title: "Cónica rotada", parts: [{ self: "ga-ex-conica-rotada", pts: 32 }] },
-            { title: "Ecuación general de segundo grado", parts: [{ tpl: "ga-rotacion-num", pts: 10 }, { tpl: "ga-semiejes-num", pts: 12 }, { tpl: "ga-identificar-conica-mc", pts: 10 }] }
+            { title: "Ecuación general de segundo grado", parts: [{ tpl: "ga-rotacion-num", pts: 10 }, { tpl: "ga-semiejes-num", pts: 12 }, { tpl: "ga-identificar-conica-mc", pts: 10 }] },
+            { title: "Cónica rotada: ejes y focos", parts: [{ tpl: "ga-semiejes-num", pts: 12 }, { tpl: "ga-foco-rotada-num", pts: 20 }] }
           ] },
           { title: "Hiperboloide de revolución", parts: [{ self: "ga-ex-hiperboloide", pts: 26 }] },
           { title: "Transformación ortogonal", parts: [{ tpl: "ga-ex-matriz-p", pts: 10 }] }

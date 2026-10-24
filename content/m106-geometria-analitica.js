@@ -1367,6 +1367,135 @@
     }
   };
 
+  T["ga-eje-radical-num"] = {
+    type: "numeric", concepts: ["ga-circunferencia"], difficulty: 3,
+    generate(r) {
+      const h1 = r.int(-4, 4), k1 = r.int(-4, 4), h2 = r.int(-4, 4), k2 = r.int(-4, 4), q1 = r.int(2, 30), q2 = r.int(2, 30);
+      const d = Math.hypot(h2 - h1, k2 - k1), r1 = Math.sqrt(q1), r2 = Math.sqrt(q2);
+      // tienen que cortarse en dos puntos, con un margen para que la cuerda no sea minúscula
+      if (d === 0 || d >= r1 + r2 - 0.3 || d <= Math.abs(r1 - r2) + 0.3) return null;
+      const D1 = -2 * h1, E1 = -2 * k1, F1 = h1 * h1 + k1 * k1 - q1, D2 = -2 * h2, E2 = -2 * k2, F2 = h2 * h2 + k2 * k2 - q2;
+      const a = D1 - D2, b = E1 - E2, c = F1 - F2, ask = r.pick(["m", "n", "cuerda", "lambda"]);
+      if ((ask === "m" || ask === "n") && b === 0) return null;
+      const C1 = (x, y) => x * x + y * y + D1 * x + E1 * y + F1, C2 = (x, y) => x * x + y * y + D2 * x + E2 * y + F2;
+      // para la familia: un punto entero que no esté en ninguna de las dos
+      const P = [r.int(-5, 5), r.int(-5, 5)];
+      if (ask === "lambda" && (C1(...P) === 0 || C2(...P) === 0)) return null;
+      const dist = Math.abs(a * h1 + b * k1 + c) / Math.hypot(a, b), chord = 2 * Math.sqrt(q1 - dist * dist), lam = -C1(...P) / C2(...P);
+      if (ask === "lambda" && Math.abs(lam + 1) < 1e-9) return null;
+      const ans = { m: -a / b, n: -c / b, cuerda: chord, lambda: lam }[ask];
+      const eqA = eq2(1, 1, D1, E1, F1), eqB = eq2(1, 1, D2, E2, F2), line = `${H.poly([[a, "x"], [b, "y"], [c, ""]])} = 0`;
+      return {
+        prompt: `Las circunferencias $C_1: ${eqA}$ y $C_2: ${eqB}$ se cortan en dos puntos. ${{ m: "Calculá la pendiente de su eje radical (la recta que pasa por los dos puntos de corte).", n: "Calculá la ordenada al origen de su eje radical (la recta que pasa por los dos puntos de corte).", cuerda: "Calculá la longitud de la cuerda común.", lambda: `En la familia $C_1 + \\lambda C_2 = 0$, ¿qué valor de $\\lambda$ da la circunferencia que pasa también por $(${P[0]}, ${P[1]})$?` }[ask]}`,
+        answer: ans,
+        solution: ask === "lambda" ? [`Toda curva de la [[ga-circunferencia|familia de circunferencias]] $C_1 + \\lambda C_2 = 0$ pasa por los puntos donde se anulan $C_1$ y $C_2$ a la vez, o sea, por los dos puntos de corte.`,
+          `Para que pase por $(${P[0]}, ${P[1]})$: $C_1(${P[0]}, ${P[1]}) + \\lambda\\, C_2(${P[0]}, ${P[1]}) = ${C1(...P)} ${C2(...P) < 0 ? "-" : "+"} ${Math.abs(C2(...P))}\\lambda = 0$, de donde $\\lambda = ${H.frac(-C1(...P), C2(...P))} \\approx ${nd(lam)}$.`]
+          : [`Restando las ecuaciones se cancelan $x^2$ e $y^2$: queda el [[ga-circunferencia|eje radical]] $${line}$ (es $C_1 + \\lambda C_2 = 0$ con $\\lambda = -1$). Los dos puntos de corte lo cumplen, porque anulan las dos ecuaciones.`,
+            ask === "cuerda" ? `Centro de $C_1$: $(${h1}, ${k1})$, radio $\\sqrt{${q1}}$. Su distancia al eje radical es $\\frac{|${a}\\cdot${H.par(h1)} ${b < 0 ? "-" : "+"} ${Math.abs(b)}\\cdot${H.par(k1)} ${c < 0 ? "-" : "+"} ${Math.abs(c)}|}{\\sqrt{${a * a + b * b}}} \\approx ${nd(dist)}$.`
+              : `Despejando $y$ (se divide por $${b}$), ${ask === "m" ? `la pendiente es $-\\frac{${a}}{${b}} = ${H.frac(-a, b)}$` : `la ordenada al origen es $-\\frac{${c}}{${b}} = ${H.frac(-c, b)}$`}${Number.isInteger(ans) ? "" : `, o sea $\\approx ${nd(ans)}$`}. El eje radical es perpendicular a la recta que une los centros.`,
+            ...(ask === "cuerda" ? [`La cuerda es perpendicular al radio que la biseca: por Pitágoras, mide $2\\sqrt{${q1} - ${nd(dist * dist)}} \\approx ${nd(chord)}$.`] : [])],
+        // verificación: los puntos de corte se buscan recorriendo C₁ con su paramétrica y bisecando el signo de C₂
+        verify: { kind: "value", tol: 1e-7, fn: () => {
+          const pt = t => [h1 + r1 * Math.cos(t), k1 + r1 * Math.sin(t)], g = t => C2(...pt(t)), N = 720, roots = [];
+          for (let i = 0; i < N; i++) {
+            // grilla corrida un poco para que ningún corte caiga justo en un borde; se descartan las raíces repetidas
+            let lo = 2 * Math.PI * (i + 0.137) / N, hi = 2 * Math.PI * (i + 1.137) / N;
+            if (g(lo) * g(hi) > 0) continue;
+            for (let j = 0; j < 80; j++) { const m = (lo + hi) / 2; if (g(lo) * g(m) <= 0) hi = m; else lo = m; }
+            const X = pt((lo + hi) / 2);
+            if (!roots.some(Y => Math.hypot(X[0] - Y[0], X[1] - Y[1]) < 1e-6)) roots.push(X);
+          }
+          const [A, B] = roots;
+          if (ask === "lambda") {
+            // circunferencia por A, B y P (x² + y² + Dx + Ey + F = 0, sistema 3×3 por Cramer); su D tiene que ser (D₁ + λD₂)/(1 + λ)
+            const rows = [A, B, P].map(([x, y]) => [x, y, 1, -(x * x + y * y)]);
+            const det = M => M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
+            const M0 = rows.map(w => w.slice(0, 3)), Dc = det(rows.map(w => [w[3], w[1], w[2]])) / det(M0), Ec = det(rows.map(w => [w[0], w[3], w[2]])) / det(M0);
+            // se usa el coeficiente que mejor separa las dos circunferencias (con D₁ = D₂ el de x no dice nada)
+            return Math.abs(D2 - Dc) > Math.abs(E2 - Ec) ? (Dc - D1) / (D2 - Dc) : (Ec - E1) / (E2 - Ec);
+          }
+          const m = (B[1] - A[1]) / (B[0] - A[0]);
+          return { m, n: A[1] - m * A[0], cuerda: Math.hypot(B[0] - A[0], B[1] - A[1]) }[ask];
+        } }
+      };
+    }
+  };
+
+  T["ga-param-conica-num"] = {
+    type: "numeric", concepts: ["ga-conica-def"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["elipse", "elipse", "hiperbola", "parabola"]), h = r.int(-4, 4), k = r.int(-4, 4), swap = r.bool();
+      const X = (s, v) => (s === 0 ? `${v}` : `${s} ${v.startsWith("-") ? "-" : "+"} ${v.replace(/^-/, "")}`);
+      let px, py, ans, ask, sol, verify, name;
+      if (kind === "parabola") {
+        // sin girar: x = h + 2pt, y = k + pt², o sea (x − h)² = 4p(y − k); girada: x = h + pt², y = k + 2pt
+        const p = r.nz(-3, 3), e1 = `${2 * p}t`, e2 = `${cf(p)}t^2`;
+        [px, py] = swap ? [X(h, e2), X(k, e1)] : [X(h, e1), X(k, e2)];
+        name = "una parábola"; ask = "la distancia del vértice al foco"; ans = Math.abs(p);
+        const [U, V, u0, v0] = swap ? ["y", "x", k, h] : ["x", "y", h, k];
+        sol = [`Se despeja $t = \\frac{${H.xm(u0, U)}}{${2 * p}}$ de la ecuación de $${U}$ y se reemplaza en la otra: $${H.xm(v0, V)} = ${p}\\cdot\\frac{${sq(U, u0)}}{${4 * p * p}}$, o sea $${sq(U, u0)} = ${4 * p}${v0 === 0 ? V : `(${H.xm(v0, V)})`}$.`,
+          `Es una [[ga-parabola|parábola]] con vértice $(${h}, ${k})$ y $4p = ${4 * p}$: el foco está a $|p| = ${Math.abs(p)}$ del vértice.`];
+        // verificación: con el foco y la directriz a la distancia respondida, cada punto de la paramétrica equidista de los dos
+        verify = { kind: "zero", fn: v => [-2, -1, -0.4, 0.5, 1.3, 2.2].map(t => {
+          const lin = 2 * p * t, cua = p * t * t, P = swap ? [h + cua, k + lin] : [h + lin, k + cua], s = Math.sign(p);
+          const F = swap ? [h + s * v, k] : [h, k + s * v], dDir = swap ? Math.abs(P[0] - (h - s * v)) : Math.abs(P[1] - (k - s * v));
+          return (Math.hypot(P[0] - F[0], P[1] - F[1]) - dDir) / 10;
+        }) };
+      } else {
+        const [a, b] = r.distinct(2, 1, 6), hyp = kind === "hiperbola";
+        const f1 = hyp ? "\\sec t" : "\\cos t", f2 = hyp ? "\\tan t" : "\\sin t";
+        [px, py] = swap ? [X(h, `${cf(b)}${f2}`), X(k, `${cf(a)}${f1}`)] : [X(h, `${cf(a)}${f1}`), X(k, `${cf(b)}${f2}`)];
+        const c = Math.sqrt(hyp ? a * a + b * b : Math.abs(a * a - b * b)), big = hyp ? a : Math.max(a, b);
+        ask = r.pick(["c", "e"]); ans = ask === "c" ? c : c / big;
+        name = hyp ? "una hipérbola" : "una elipse";
+        const U = swap ? "y" : "x", V = swap ? "x" : "y", u0 = swap ? k : h, v0 = swap ? h : k;
+        sol = [hyp ? `Como $\\sec^2 t - \\tan^2 t = 1$: $\\frac{${sq(U, u0)}}{${a * a}} - \\frac{${sq(V, v0)}}{${b * b}} = 1$, una [[ga-hiperbola|hipérbola]] de centro $(${h}, ${k})$ con $a = ${a}$ y $b = ${b}$.`
+          : `Como $\\cos^2 t + \\sin^2 t = 1$: $\\frac{${sq(U, u0)}}{${a * a}} + \\frac{${sq(V, v0)}}{${b * b}} = 1$, una [[ga-elipse|elipse]] de centro $(${h}, ${k})$ con semiejes $${a}$ y $${b}$.`,
+          hyp ? `$c = \\sqrt{a^2 + b^2} = \\sqrt{${a * a + b * b}} \\approx ${nd(c)}$${ask === "e" ? `, y $e = \\frac ca \\approx ${nd(ans)}$` : ""}.`
+            : `$c = \\sqrt{${Math.max(a, b) ** 2} - ${Math.min(a, b) ** 2}} \\approx ${nd(c)}$${ask === "e" ? `, y $e = \\frac{c}{${big}} \\approx ${nd(ans)}$` : ""}.`];
+        ask = ask === "c" ? "la distancia del centro a cada foco" : "la excentricidad";
+        // verificación: con los focos a la distancia que da la respuesta, la suma (elipse) o la diferencia (hipérbola)
+        // de las distancias a los focos es la misma en todos los puntos de la paramétrica
+        verify = { kind: "zero", fn: v => {
+          const cc = ask === "la excentricidad" ? v * big : v, alongU = hyp || a > b, dir = (alongU !== swap) ? [1, 0] : [0, 1];
+          const F1 = [h + cc * dir[0], k + cc * dir[1]], F2 = [h - cc * dir[0], k - cc * dir[1]];
+          const vals = [0.3, 0.9, 1.2, 2.0, 2.6, 4.0, 5.5].map(t => {
+            const u = a * (hyp ? 1 / Math.cos(t) : Math.cos(t)), w = b * (hyp ? Math.tan(t) : Math.sin(t)), P = swap ? [h + w, k + u] : [h + u, k + w];
+            const d1 = Math.hypot(P[0] - F1[0], P[1] - F1[1]), d2 = Math.hypot(P[0] - F2[0], P[1] - F2[1]);
+            return hyp ? Math.abs(d1 - d2) : d1 + d2;
+          });
+          return vals.map(x => (x - vals[0]) / 10);
+        } };
+      }
+      return {
+        prompt: `Las ecuaciones paramétricas $x = ${px}$, $y = ${py}$ describen ${name}. Calculá ${ask}.`,
+        answer: ans, solution: sol, verify
+      };
+    }
+  };
+
+  T["ga-tangente-ext-num"] = {
+    type: "numeric", concepts: ["ga-tangente-conica"], difficulty: 3,
+    generate(r) {
+      const circ = r.bool(), a = r.int(1, 5), b = circ ? a : r.int(1, 5), x1 = r.int(-6, 6), y1 = r.int(-6, 6);
+      if (!circ && a === b) return null;
+      if (x1 * x1 / (a * a) + y1 * y1 / (b * b) <= 1.05 || x1 * x1 === a * a) return null;
+      // y − y₁ = m(x − x₁) es tangente si n = y₁ − m x₁ cumple n² = a²m² + b²
+      const A2 = x1 * x1 - a * a, B2 = -2 * x1 * y1, C2 = y1 * y1 - b * b, disc = B2 * B2 - 4 * A2 * C2;
+      const m1 = (-B2 + Math.sqrt(disc)) / (2 * A2), m2 = (-B2 - Math.sqrt(disc)) / (2 * A2), ans = Math.max(m1, m2);
+      const eq = circ ? `x^2 + y^2 = ${a * a}` : `${a === 1 ? "x^2" : `\\frac{x^2}{${a * a}}`} + ${b === 1 ? "y^2" : `\\frac{y^2}{${b * b}}`} = 1`;
+      return {
+        prompt: `Desde el punto exterior $P(${x1}, ${y1})$ se trazan las dos rectas tangentes a ${circ ? "la circunferencia" : "la elipse"} $${eq}$. Calculá la mayor de sus pendientes.`,
+        answer: ans,
+        solution: [`[[ga-tangente-conica|Tangentes desde un punto exterior]]: el haz de rectas por $P$ es $y = mx + n$ con $n = ${H.poly([[y1, ""], [-x1, "m"]])}$.`,
+          `Una recta $y = mx + n$ es tangente a $\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1$ si $n^2 = a^2m^2 + b^2$ (el discriminante de la intersección se anula). Acá: $(${H.poly([[y1, ""], [-x1, "m"]])})^2 = ${H.poly([[a * a, "m^{2}"], [b * b, ""]])}$.`,
+          `Queda $${H.poly([[A2, "m^{2}"], [B2, "m"], [C2, ""]])} = 0$, con raíces $m \\approx ${nd(Math.min(m1, m2))}$ y $m \\approx ${nd(ans)}$.`],
+        // verificación: sobre la recta con la pendiente respondida, el mínimo de x²/a² + y²/b² − 1 es cero (la toca sin cortarla)
+        verify: { kind: "zero", tol: 1e-6, fn: m => [ternMin(x => x * x / (a * a) + (y1 + m * (x - x1)) ** 2 / (b * b) - 1, -1e3, 1e3)] }
+      };
+    }
+  };
+
   const cards = {
     "ga-conica-def": {
       group: "ga-conicas-u", title: "Definición general de cónica: foco, directriz y excentricidad",
@@ -1510,13 +1639,13 @@
       id: "ga-conicas-u", order: 3, program: "Unidad 3", title: "Cónicas", icon: "target",
       diagnostic: ["ga-circ-num", "ga-elipse-num", "ga-recta-conica-mc"],
       lessons: [
-        { id: "ga-conicas-l1", title: "Circunferencia y traslación de ejes", templates: ["ga-circ-num", "ga-traslacion-tf"], theory: ["ga-circunferencia", "ga-traslacion"],
+        { id: "ga-conicas-l1", title: "Circunferencia y traslación de ejes", templates: ["ga-circ-num", "ga-traslacion-tf", "ga-eje-radical-num"], theory: ["ga-circunferencia", "ga-traslacion"],
           intro: R`Completar cuadrados es trasladar los ejes al centro: $(x - h)^2 + (y - k)^2 = r^2$.` },
         { id: "ga-conicas-l2", title: "Foco, directriz y parábola", templates: ["ga-parabola-num", "ga-conica-match"], theory: ["ga-conica-def", "ga-parabola"],
           intro: R`Una sola definición para todas: $d(P, F) = e\,d(P, d)$. Con $e = 1$, la parábola.` },
-        { id: "ga-conicas-l3", title: "Elipse e hipérbola", templates: ["ga-elipse-num", "ga-hiperbola-num"], theory: ["ga-elipse", "ga-hiperbola"],
+        { id: "ga-conicas-l3", title: "Elipse e hipérbola", templates: ["ga-elipse-num", "ga-hiperbola-num", "ga-param-conica-num"], theory: ["ga-elipse", "ga-hiperbola"],
           intro: R`Suma de distancias constante (elipse, $c^2 = a^2 - b^2$) o diferencia constante (hipérbola, $c^2 = a^2 + b^2$).` },
-        { id: "ga-conicas-l4", title: "Rectas tangentes", templates: ["ga-tangente-num", "ga-recta-conica-mc", "ga-tangente-order"], theory: ["ga-tangente-conica"],
+        { id: "ga-conicas-l4", title: "Rectas tangentes", templates: ["ga-tangente-num", "ga-recta-conica-mc", "ga-tangente-order", "ga-tangente-ext-num"], theory: ["ga-tangente-conica"],
           intro: R`Recta y cónica: una cuadrática y su discriminante. Tangente en un punto: desdoblamiento.` }
       ]
     }],
@@ -1871,6 +2000,106 @@
     }
   };
 
+  T["ga-sup-cil-num"] = {
+    type: "numeric", concepts: ["ga-sup-cilindrica"], difficulty: 3,
+    generate(r) {
+      const kind = r.pick(["par", "circ", "ell"]), l = r.int(-3, 3), m = r.int(-3, 3), n = r.nz(-3, 3), A = r.int(1, 3), B = r.int(1, 4), K = r.int(1, 25);
+      if (l === 0 && m === 0) return null;
+      const x0 = r.int(-4, 4), z0 = r.nz(-4, 4), u = x0 - l * z0 / n;
+      // directriz f(x, y) = 0 en z = 0; el punto (x₀, y₀, z₀) está en la superficie si f(x₀ − l z₀/n, y₀ − m z₀/n) = 0
+      const f = (x, y) => (kind === "par" ? y - A * x * x : kind === "circ" ? x * x + y * y - K : A * x * x + B * y * y - K);
+      let w;
+      if (kind === "par") w = A * u * u;
+      else { const s = kind === "circ" ? K - u * u : (K - A * u * u) / B; if (s <= 0.05) return null; w = Math.sqrt(s); }
+      const y0 = w + m * z0 / n, pz = x => (x < 0 ? `(${nd(x)})` : nd(x)), tf = H.frac(z0, n), tp = tf.startsWith("-") ? `(${tf})` : tf;
+      const dirTex = kind === "par" ? `y = ${cf(A)}x^2` : kind === "circ" ? `x^2 + y^2 = ${K}` : `${cf(A)}x^2 + ${cf(B)}y^2 = ${K}`;
+      return {
+        prompt: `Una superficie cilíndrica tiene directriz $${dirTex}$, $z = 0$, y generatrices paralelas a $\\vec v = ${pt([l, m, n])}$. El punto $(${x0}, y_0, ${z0})$ está en la superficie${kind === "par" ? "" : " y su generatriz corta a la directriz en un punto con $y > 0$"}. Calculá $y_0$.`,
+        answer: y0,
+        solution: [`La generatriz por $P = (${x0}, y_0, ${z0})$ es $P - t\\vec v$; corta al plano $z = 0$ cuando $${z0} ${n < 0 ? "+" : "-"} ${Math.abs(n) === 1 ? "" : Math.abs(n)}t = 0$, o sea en $t = ${H.frac(z0, n)}$ ([[ga-sup-cilindrica|superficie cilíndrica]]).`,
+          `Ese punto es $Q = (${x0} - ${pz(l)}\\cdot ${tp},\\ y_0 - ${pz(m)}\\cdot ${tp},\\ 0)$, con abscisa $x_Q = ${nd(u)}$.`,
+          kind === "par" ? `$Q$ está en la directriz: su ordenada es $y_Q = ${A === 1 ? "" : `${A}\\cdot`}${pz(u)}^2 = ${nd(w)}$.` : `$Q$ está en la directriz con ordenada positiva: $y_Q = \\sqrt{${kind === "circ" ? `${K} - ${pz(u)}^2` : `\\frac{${K} - ${A === 1 ? "" : `${A}\\cdot`}${pz(u)}^2}{${B}}`}} \\approx ${nd(w)}$.`,
+          `Como $y_Q = y_0 - ${pz(m)}\\cdot ${tp}$, queda $y_0 \\approx ${nd(y0)}$.`],
+        // verificación: desde el punto respondido se baja por la generatriz con bisección hasta z = 0 y se evalúa la directriz
+        verify: { kind: "zero", fn: v => {
+          let lo = -100, hi = 100; const zz = t => z0 - t * n;
+          for (let i = 0; i < 100; i++) { const mid = (lo + hi) / 2; if (Math.sign(zz(mid)) === Math.sign(zz(lo))) lo = mid; else hi = mid; }
+          const t = (lo + hi) / 2, Q = [x0 - t * l, v - t * m];
+          return [f(Q[0], Q[1]) / (1 + Math.abs(K)), kind === "par" ? 0 : (Q[1] > 0 ? 0 : 1)];
+        } }
+      };
+    }
+  };
+
+  T["ga-revolucion-num"] = {
+    type: "numeric", concepts: ["ga-sup-revolucion"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["ell", "hyp1", "hyp2", "par"]), a = r.int(1, 5), c = r.int(1, 5), A = r.int(1, 4), z0 = r.nz(-6, 6), ask = r.pick(["radio", "area"]);
+      // generatriz en el plano yz, eje de giro z: el paralelo a la altura z₀ tiene radio ρ con f(ρ, z₀) = 0
+      const f = (y, z) => (kind === "ell" ? y * y / (a * a) + z * z / (c * c) - 1 : kind === "hyp1" ? y * y / (a * a) - z * z / (c * c) - 1 : kind === "hyp2" ? z * z / (c * c) - y * y / (a * a) - 1 : z - A * y * y);
+      const rho2 = kind === "ell" ? a * a * (1 - z0 * z0 / (c * c)) : kind === "hyp1" ? a * a * (1 + z0 * z0 / (c * c)) : kind === "hyp2" ? a * a * (z0 * z0 / (c * c) - 1) : z0 / A;
+      if (rho2 <= 0.05) return null;
+      const rho = Math.sqrt(rho2), ans = ask === "radio" ? rho : Math.PI * rho2;
+      const fr = (v, d) => (d === 1 ? v : `\\frac{${v}}{${d}}`);
+      const curve = { ell: `${fr("y^2", a * a)} + ${fr("z^2", c * c)} = 1`, hyp1: `${fr("y^2", a * a)} - ${fr("z^2", c * c)} = 1`, hyp2: `${fr("z^2", c * c)} - ${fr("y^2", a * a)} = 1`, par: `z = ${cf(A)}y^2` }[kind];
+      const surf = { ell: `${fr("x^2 + y^2", a * a)} + ${fr("z^2", c * c)} = 1`, hyp1: `${fr("x^2 + y^2", a * a)} - ${fr("z^2", c * c)} = 1`, hyp2: `${fr("z^2", c * c)} - ${fr("x^2 + y^2", a * a)} = 1`, par: `z = ${cf(A)}(x^2 + y^2)` }[kind];
+      const name = { ell: "un elipsoide de revolución", hyp1: "un hiperboloide de una hoja de revolución", hyp2: "un hiperboloide de dos hojas de revolución", par: "un paraboloide de revolución" }[kind];
+      return {
+        prompt: `La curva $${curve}$, $x = 0$, gira alrededor del eje $z$. Calculá ${ask === "radio" ? "el radio de" : "el área del círculo que encierra"} la circunferencia que se obtiene al cortar la superficie con el plano $z = ${z0}$.`,
+        answer: ans,
+        solution: [`Se conserva $z$ y se reemplaza $y^2$ por $x^2 + y^2$ ([[ga-sup-revolucion|superficie de revolución]]): $${surf}$, ${name}.`,
+          `Con $z = ${z0}$ queda $x^2 + y^2 = ${nd(rho2)}$: una circunferencia (un paralelo) de radio $\\sqrt{${nd(rho2)}} \\approx ${nd(rho)}$${ask === "area" ? `, que encierra un área $\\pi\\cdot${nd(rho2)} \\approx ${nd(ans)}$` : ""}.`],
+        // verificación: el punto de la curva generatriz a la altura z₀ (por bisección en y > 0) está a distancia ρ del eje,
+        // y al girarlo en varios ángulos sigue cumpliendo la ecuación de la superficie
+        verify: { kind: "value", tol: 1e-7, fn: () => {
+          const g = y => f(y, z0); let lo = 0, hi = 1;
+          while (Math.sign(g(hi)) === Math.sign(g(lo))) hi *= 2;
+          for (let i = 0; i < 100; i++) { const m = (lo + hi) / 2; if (Math.sign(g(m)) === Math.sign(g(lo))) lo = m; else hi = m; }
+          const y = (lo + hi) / 2, S = (X, Y, Z) => f(Math.hypot(X, Y), Z);
+          const okRot = [0.4, 1.7, 3.9].every(t => Math.abs(S(y * Math.cos(t), y * Math.sin(t), z0)) < 1e-9);
+          return okRot ? (ask === "radio" ? y : Math.PI * y * y) : NaN;
+        } }
+      };
+    }
+  };
+
+  // cuádricas canónicas y sus paramétricas (para identificar una superficie a partir de su parametrización)
+  const PARAM_SUP = [
+    { name: "Elipsoide", par: (a, b, c) => `(${cf(a)}\\sin\\varphi\\cos\\theta,\\ ${cf(b)}\\sin\\varphi\\sin\\theta,\\ ${cf(c)}\\cos\\varphi)`, pts: (a, b, c, u, v) => [a * Math.sin(u) * Math.cos(v), b * Math.sin(u) * Math.sin(v), c * Math.cos(u)], vars: "\\varphi, \\theta", eq: (x, y, z) => x * x + y * y + z * z - 1 },
+    { name: "Hiperboloide de una hoja", par: (a, b, c) => `(${cf(a)}\\cosh u\\cos\\theta,\\ ${cf(b)}\\cosh u\\sin\\theta,\\ ${cf(c)}\\sinh u)`, pts: (a, b, c, u, v) => [a * Math.cosh(u) * Math.cos(v), b * Math.cosh(u) * Math.sin(v), c * Math.sinh(u)], vars: "u, \\theta", eq: (x, y, z) => x * x + y * y - z * z - 1 },
+    { name: "Hiperboloide de dos hojas", par: (a, b, c) => `(${cf(a)}\\sinh u\\cos\\theta,\\ ${cf(b)}\\sinh u\\sin\\theta,\\ ${cf(c)}\\cosh u)`, pts: (a, b, c, u, v) => [a * Math.sinh(u) * Math.cos(v), b * Math.sinh(u) * Math.sin(v), c * Math.cosh(u)], vars: "u, \\theta", eq: (x, y, z) => z * z - x * x - y * y - 1 },
+    { name: "Paraboloide elíptico", par: (a, b, c) => `(${cf(a)}u\\cos\\theta,\\ ${cf(b)}u\\sin\\theta,\\ ${cf(c)}u^2)`, pts: (a, b, c, u, v) => [a * u * Math.cos(v), b * u * Math.sin(v), c * u * u], vars: "u, \\theta", eq: (x, y, z) => z - x * x - y * y },
+    { name: "Paraboloide hiperbólico", par: (a, b, c) => `(${cf(a)}u,\\ ${cf(b)}v,\\ ${cf(c)}(u^2 - v^2))`, pts: (a, b, c, u, v) => [a * u, b * v, c * (u * u - v * v)], vars: "u, v", eq: (x, y, z) => z - x * x + y * y },
+    { name: "Cono elíptico", par: (a, b, c) => `(${cf(a)}u\\cos\\theta,\\ ${cf(b)}u\\sin\\theta,\\ ${cf(c)}u)`, pts: (a, b, c, u, v) => [a * u * Math.cos(v), b * u * Math.sin(v), c * u], vars: "u, \\theta", eq: (x, y, z) => x * x + y * y - z * z },
+    { name: "Cilindro elíptico", par: (a, b, c) => `(${cf(a)}\\cos\\theta,\\ ${cf(b)}\\sin\\theta,\\ ${cf(c)}u)`, pts: (a, b, c, u, v) => [a * Math.cos(v), b * Math.sin(v), c * u], vars: "u, \\theta", eq: (x, y) => x * x + y * y - 1 }
+  ];
+  const PARAM_WHY = {
+    "Elipsoide": R`$\frac{x^2}{a^2} + \frac{y^2}{b^2} = \sin^2\varphi$ y $\frac{z^2}{c^2} = \cos^2\varphi$: la suma da $1$.`,
+    "Hiperboloide de una hoja": R`$\frac{x^2}{a^2} + \frac{y^2}{b^2} = \cosh^2 u$ y $\frac{z^2}{c^2} = \sinh^2 u$: como $\cosh^2 u - \sinh^2 u = 1$, queda $\frac{x^2}{a^2} + \frac{y^2}{b^2} - \frac{z^2}{c^2} = 1$.`,
+    "Hiperboloide de dos hojas": R`$\frac{x^2}{a^2} + \frac{y^2}{b^2} = \sinh^2 u$ y $\frac{z^2}{c^2} = \cosh^2 u$: queda $\frac{z^2}{c^2} - \frac{x^2}{a^2} - \frac{y^2}{b^2} = 1$.`,
+    "Paraboloide elíptico": R`$\frac{x^2}{a^2} + \frac{y^2}{b^2} = u^2$ y $\frac zc = u^2$: queda $\frac zc = \frac{x^2}{a^2} + \frac{y^2}{b^2}$.`,
+    "Paraboloide hiperbólico": R`$\frac xa = u$, $\frac yb = v$ y $\frac zc = u^2 - v^2$: queda $\frac zc = \frac{x^2}{a^2} - \frac{y^2}{b^2}$, una silla de montar.`,
+    "Cono elíptico": R`$\frac{x^2}{a^2} + \frac{y^2}{b^2} = u^2 = \frac{z^2}{c^2}$: la ecuación es homogénea, un cono con vértice en el origen.`,
+    "Cilindro elíptico": R`$\frac{x^2}{a^2} + \frac{y^2}{b^2} = 1$ y $z$ es libre: falta una variable, así que es un cilindro paralelo al eje $z$.`
+  };
+  T["ga-param-sup-mc"] = {
+    type: "mc", concepts: ["ga-cuadricas-tipos"], difficulty: 2,
+    generate(r) {
+      const i = r.int(0, PARAM_SUP.length - 1), Q = PARAM_SUP[i], a = r.int(1, 5), b = r.int(1, 5), c = r.int(1, 5);
+      const others = r.sample(PARAM_SUP.filter((_, j) => j !== i).map(o => o.name), 3);
+      return {
+        prompt: `¿Qué superficie describe $X(${Q.vars}) = ${Q.par(a, b, c)}$?`,
+        ...H.mc(r, Q.name, others, { text: true }),
+        solution: [`Se eliminan los parámetros dividiendo cada coordenada por su coeficiente y usando una identidad ([[ga-cuadricas-tipos|cuádricas]]): ${PARAM_WHY[Q.name]}`, `Con $a = ${a}$, $b = ${b}$ y $c = ${c}$, es un ${Q.name.toLowerCase()}.`],
+        // verificación: puntos de la parametrización cumplen la ecuación canónica (escalada) de la correcta y no la de las otras
+        verify: { kind: "truth", target: true, fn: () => {
+          const P = [[0.3, 0.7], [0.9, 2.1], [1.4, 4.0], [0.6, 5.3], [1.1, 1.2]].map(([u, v]) => Q.pts(a, b, c, u, v)), fits = q => P.every(([x, y, z]) => Math.abs(q.eq(x / a, y / b, z / c)) < 1e-9);
+          return fits(Q) && PARAM_SUP.filter(o => o !== Q).every(o => !fits(o));
+        } }
+      };
+    }
+  };
+
   const cards = {
     "ga-esfera": {
       group: "ga-superficies-u", title: "Superficie esférica",
@@ -1988,11 +2217,11 @@
       lessons: [
         { id: "ga-superficies-l1", title: "Superficie esférica", templates: ["ga-esfera-num", "ga-esfera-tg-num", "ga-esfera-plano-num"], theory: ["ga-esfera"],
           intro: R`$(x - a)^2 + (y - b)^2 + (z - c)^2 = R^2$; el plano tangente es perpendicular al radio.` },
-        { id: "ga-superficies-l2", title: "Superficies cilíndricas y cónicas", templates: ["ga-sup-cil-tf", "ga-sup-conica-num"], theory: ["ga-sup-cilindrica", "ga-sup-conica"],
+        { id: "ga-superficies-l2", title: "Superficies cilíndricas y cónicas", templates: ["ga-sup-cil-tf", "ga-sup-conica-num", "ga-sup-cil-num"], theory: ["ga-sup-cilindrica", "ga-sup-conica"],
           intro: R`Rectas paralelas que se apoyan en una curva (cilindro) o rectas que pasan por un vértice (cono).` },
-        { id: "ga-superficies-l3", title: "Superficies de revolución", templates: ["ga-revolucion-mc", "ga-revolucion-order"], theory: ["ga-sup-revolucion"],
+        { id: "ga-superficies-l3", title: "Superficies de revolución", templates: ["ga-revolucion-mc", "ga-revolucion-order", "ga-revolucion-num"], theory: ["ga-sup-revolucion"],
           intro: R`Una curva que gira: se conserva la variable del eje y la otra pasa a ser la distancia al eje.` },
-        { id: "ga-superficies-l4", title: "Cuádricas y superficies regladas", templates: ["ga-cuadrica-match", "ga-reglada-tf"], theory: ["ga-cuadricas-tipos", "ga-sup-reglada"],
+        { id: "ga-superficies-l4", title: "Cuádricas y superficies regladas", templates: ["ga-cuadrica-match", "ga-reglada-tf", "ga-param-sup-mc"], theory: ["ga-cuadricas-tipos", "ga-sup-reglada"],
           intro: R`Elipsoide, hiperboloides, cono y paraboloides; algunas están hechas de rectas.` }
       ]
     }],
@@ -2863,6 +3092,41 @@
       };
     }
   };
+  T["ga-foco-rotada-num"] = {
+    type: "numeric", concepts: ["ga-ejes-principales"], difficulty: 3,
+    generate(r) {
+      const hyp = r.bool(), cc = makeConic(r, hyp ? 1 : 0, true), { P, p, q, n, l1, l2, rhs, h, k } = cc;
+      const s1 = rhs / l1, s2 = rhs / l2;
+      if (hyp && s1 * s2 >= 0) return null;
+      // eje focal: en la elipse, el del semieje mayor; en la hipérbola, el del cuadrado positivo
+      const first = hyp ? s1 > 0 : s1 > s2, u = first ? [p, q] : [-q, p], nu = Math.sqrt(n), dir = u.map(x => x / nu);
+      const c = Math.sqrt(hyp ? Math.abs(s1) + Math.abs(s2) : Math.abs(s1 - s2));
+      if (Math.abs(dir[0]) < 1e-9 || c < 1e-9) return null;
+      const sgn = dir[0] > 0 ? 1 : -1, Fx = h + sgn * c * dir[0], Fy = k + sgn * c * dir[1], ask = r.pick(["x", "y"]), ans = ask === "x" ? Fx : Fy;
+      const canon = `${H.poly([[l1, "x'^{2}"], [l2, "y'^{2}"]])} = ${rhs}`;
+      return {
+        prompt: `La cónica $${eq2(P)}$ es ${hyp ? "una hipérbola" : "una elipse"} con los ejes girados. De sus dos focos, tomá el de mayor abscisa y calculá su ${ask === "x" ? "abscisa" : "ordenada"} en el sistema $xy$.`,
+        answer: ans,
+        solution: [`**Centro:** se anulan las derivadas parciales, $${H.poly([[2 * P.A, "x"], [P.B, "y"], [P.D, ""]])} = 0$ y $${H.poly([[P.B, "x"], [2 * P.C, "y"], [P.E, ""]])} = 0$: es $(${h}, ${k})$.`,
+          `**Ejes principales** ([[ga-ejes-principales|teorema de los ejes principales]]): los autovalores de $M = ${pmh([[P.A, P.B / 2], [P.B / 2, P.C]])}$ son $\\lambda_1 = ${l1}$ y $\\lambda_2 = ${l2}$, con autovectores $${vtex([p, q])}$ y $${vtex([-q, p])}$. En los ejes girados y trasladados queda $${canon}$.`,
+          `Los cuadrados de los semiejes son $${H.frac(rhs, l1)}$ y $${H.frac(rhs, l2)}$; ${hyp ? "el positivo marca el eje real" : "el mayor marca el eje focal"}, en la dirección de $${vtex(u)}$. Además $c^2 = ${hyp ? "a^2 + b^2" : "a^2 - b^2"} = ${nd(c * c)}$, así que $c \\approx ${nd(c)}$.`,
+          `Los focos son el centro $\\pm\\, c$ por el versor $\\frac{1}{\\sqrt{${n}}}${vtex(u)}$: el de mayor abscisa es $(${nd(Fx)};\\ ${nd(Fy)})$.`],
+        // verificación: con los dos focos (el respondido y su simétrico respecto del centro), la suma (elipse) o la diferencia
+        // (hipérbola) de las distancias es la misma en todos los puntos de la curva, sacados de la ecuación en x e y
+        verify: { kind: "zero", tol: 1e-7, fn: v => {
+          const F1 = ask === "x" ? [v, Fy] : [Fx, v], F2 = [2 * h - F1[0], 2 * k - F1[1]], F0 = evalP(P, h, k), vals = [];
+          for (let i = 0; i < 48; i++) {
+            const t = (i + 0.3) * Math.PI / 24, ct = Math.cos(t), st = Math.sin(t), Q = P.A * ct * ct + P.B * ct * st + P.C * st * st, rr = -F0 / Q;
+            if (!(rr > 0)) continue;
+            const X = [h + Math.sqrt(rr) * ct, k + Math.sqrt(rr) * st], d1 = Math.hypot(X[0] - F1[0], X[1] - F1[1]), d2 = Math.hypot(X[0] - F2[0], X[1] - F2[1]);
+            vals.push(hyp ? Math.abs(d1 - d2) : d1 + d2);
+          }
+          return vals.length < 6 ? [1] : vals.map(x => x - vals[0]);
+        } }
+      };
+    }
+  };
+
   function invSolution(P, iv, kind) {
     return [`Invariantes ([[ga-identificar-conica|identificación de cónicas]]): $\\delta = AC - \\frac{B^2}{4} = ${deltaTex(iv)}$ y $\\Delta = \\det\\bar M = ${DeltaTex(iv)}$, con $\\bar M = ${pmh(Mbar(P))}$.`,
       `Como $\\delta ${iv.d4 > 0 ? "> 0" : iv.d4 < 0 ? "< 0" : "= 0"}$, es de tipo ${tipoTex(iv.d4)}.`, conclText(kind, iv)];
@@ -3129,7 +3393,7 @@
           intro: R`$Ax^2 + Bxy + Cy^2 = X^tMX$, con $\frac B2$ afuera de la diagonal. Los autovalores de $M$ dicen su signo.` },
         { id: "ga-l6-rotacion", title: "Rotación de ejes", templates: ["ga-rotacion-num", "ga-rotacion-order"], theory: ["ga-rotacion-ejes", "ga-ejes-principales"],
           intro: R`Girando los ejes un ángulo con $\cot(2\theta) = \frac{A - C}{B}$, o con los autovectores de $M$, desaparece el término en $xy$.` },
-        { id: "ga-l6-conicas", title: "Identificación de cónicas", templates: ["ga-semiejes-num", "ga-identificar-conica-mc", "ga-conica-error"], theory: ["ga-ejes-principales", "ga-identificar-conica"],
+        { id: "ga-l6-conicas", title: "Identificación de cónicas", templates: ["ga-semiejes-num", "ga-identificar-conica-mc", "ga-conica-error", "ga-foco-rotada-num"], theory: ["ga-ejes-principales", "ga-identificar-conica"],
           intro: R`Centro, ejes principales y forma canónica; y para clasificar rápido, los invariantes $\delta$ y $\Delta$.` },
         { id: "ga-l6-cuadricas", title: "Identificación de cuádricas", templates: ["ga-cuadrica-mc", "ga-cuadrica-num"], theory: ["ga-identificar-cuadrica"],
           intro: R`Lo mismo en el espacio: autovalores de una matriz de $3 \times 3$ y lo que queda después de completar cuadrados.` }
