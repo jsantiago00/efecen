@@ -870,6 +870,9 @@ body.board-split .nav { padding-bottom: 0; }
     const order = [...new Set([...c.lessonList.flatMap(l => l.theory), ...Object.keys(c.theory.cards)])].filter(id => c.theory.cards[id]);
     // orden de lectura de los apuntes: el del recorrido de las lecciones (las fichas sueltas, al final)
     c.cardOrder = order;
+    // la lección donde se presenta cada ficha; en las siguientes que la listan, la ficha es de repaso
+    c.cardFirstLesson = {};
+    for (const l of c.lessonList) for (const id of l.theory) if (!c.cardFirstLesson[id]) c.cardFirstLesson[id] = l;
     for (const id of order) {
       const card = c.theory.cards[id];
       if (card) for (const k of card.concepts || []) (c.conceptCards[k] = c.conceptCards[k] || []).push(id);
@@ -2796,20 +2799,25 @@ body.board-split .nav { padding-bottom: 0; }
     let l, cid;
     for (const id of E.courseOrder) { const x = course(id).lessonList.find(y => y.id === lessonId); if (x) { l = x; cid = id; break; } }
     if (!l) return "";
-    const canStart = !ui.session && lessonUnlocked(cid, l);
+    const canStart = !ui.session && lessonUnlocked(cid, l), c = course(cid);
+    // primero lo nuevo de esta lección; lo que ya se presentó antes va aparte, como repaso
+    const fresh = l.theory.filter(id => (c.cardFirstLesson || {})[id] === l || !(c.cardFirstLesson || {})[id]), review = l.theory.filter(id => !fresh.includes(id));
     return `<div class="learn-inner">${learnHead("Apuntes de la lección")}
       <div class="learn-hero">${mascot("think")}<div class="grow"><div class="ses-tag">Unidad ${l.unit.index + 1} · ${esc(l.unit.title)}</div><h1>${esc(l.title)}</h1></div></div>
       <div class="card"><div class="ses-tag">${icon("lightbulb")}En dos líneas</div><div class="para">${texL(l.intro || "")}</div></div>
-      <h2 class="section-title">Leelos en este orden</h2>
-      <div class="learn-list">${l.theory.map((id, i) => noteRow(id, i + 1)).join("")}</div>
+      ${fresh.length ? `<h2 class="section-title">Leelos en este orden</h2>
+      <div class="learn-list">${fresh.map((id, i) => noteRow(id, i + 1)).join("")}</div>` : ""}
+      ${review.length ? `<h2 class="section-title">Para repasar</h2>
+      <p class="muted small" style="margin:-6px 0 0">Temas de lecciones anteriores que se usan en esta.</p>
+      <div class="learn-list">${review.map(id => { const f = c.cardFirstLesson[id]; return noteRow(id, null, `Lo viste en «${f.title}» · Unidad ${f.unit.index + 1}`); }).join("")}</div>` : ""}
       ${canStart ? `<div class="learn-actions"><button class="btn block" data-act="learn-lesson" data-cid="${cid}" data-id="${l.id}">${icon("play")}${lessonDone(cid, l) ? "Practicar la lección" : "Empezar la lección"}</button></div>` : ""}
     </div>`;
   }
-  function noteRow(id, n) {
+  function noteRow(id, n, origin) {
     const card = cardOf(id), read = !!S.read[id];
     return `<button class="note-row" data-act="learn" data-id="${id}" data-q="${esc(norm(card.title + " " + (card.aliases || []).join(" ") + " " + card.summary))}">
       <span class="note-n ${read ? "read" : ""}">${read ? icon("check") : n != null ? n : icon("book-open")}</span>
-      <span class="grow"><b>${esc(card.title)}</b><span class="muted small" style="display:block">${tex(card.summary)}</span></span>${icon("chevron-right")}</button>`;
+      <span class="grow"><b>${esc(card.title)}</b>${origin ? `<span class="small" style="display:block;font-weight:700;color:var(--primary)">${esc(origin)}</span>` : ""}<span class="muted small" style="display:block">${tex(card.summary)}</span></span>${icon("chevron-right")}</button>`;
   }
 
   // ---------- APRENDER (índice de apuntes) ----------
