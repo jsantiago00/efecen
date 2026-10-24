@@ -49,7 +49,7 @@
 
   // muestreo estratificado con asignación proporcional y sistemático dentro de cada estrato
   SELF["pe-ex-estratificado"] = {
-    concepts: ["pe-centralizacion"],
+    concepts: ["pe-muestreo"],
     generate(r) {
       const kS = r.int(3, 4), Nh = Array.from({ length: kS }, () => r.int(5, 60) * 10), N = Nh.reduce((x, y) => x + y, 0), n = r.pick([40, 50, 60, 80]);
       // asignación proporcional redondeada con el método del mayor resto
@@ -192,7 +192,8 @@
           ] },
           { any: [
             { title: "Binomial y normal", parts: [{ tpl: "pe-binomial-num", pts: 13 }, { tpl: "pe-normal-num", pts: 12 }] },
-            { title: "Poisson y exponencial", parts: [{ tpl: "pe-poisson-num", pts: 13 }, { tpl: "pe-exponencial-num", pts: 12 }] }
+            { title: "Poisson y exponencial", parts: [{ tpl: "pe-poisson-num", pts: 13 }, { tpl: "pe-exponencial-num", pts: 12 }] },
+            { title: "Combinaciones de normales y falta de memoria", parts: [{ tpl: "pe-suma-normales-num", pts: 13 }, { tpl: "pe-memoria-num", pts: 12 }] }
           ] }
         ] },
       { id: "p2", kind: "parcial", title: "2.º parcial", topics: "Estimación, pruebas de hipótesis, χ², ANOVA y regresión", minutes: 120, pass: 60,
@@ -203,10 +204,14 @@
           ] },
           { any: [
             { title: "Prueba para la media", parts: [{ tpl: "pe-test-media-num", pts: 13 }, { tpl: "pe-decision-mc", pts: 12 }] },
-            { title: "Prueba para una proporción y errores", parts: [{ tpl: "pe-test-prop-num", pts: 13 }, { tpl: "pe-errores-tf", pts: 12 }] }
+            { title: "Prueba para una proporción y errores", parts: [{ tpl: "pe-test-prop-num", pts: 13 }, { tpl: "pe-errores-tf", pts: 12 }] },
+            { title: "Comparación de dos medias", parts: [{ tpl: "pe-dos-medias-num", pts: 13 }, { tpl: "pe-pareadas-num", pts: 12 }] }
           ] },
           { title: "χ² y ANOVA", parts: [{ tpl: "pe-chi2-num", pts: 13 }, { tpl: "pe-anova-num", pts: 12 }] },
-          { title: "Regresión y correlación", parts: [{ tpl: "pe-regresion-num", pts: 13 }, { tpl: "pe-correlacion-num", pts: 12 }] }
+          { any: [
+            { title: "Regresión y correlación", parts: [{ tpl: "pe-regresion-num", pts: 13 }, { tpl: "pe-correlacion-num", pts: 12 }] },
+            { title: "Regresión e inferencia para la pendiente", parts: [{ tpl: "pe-regresion-num", pts: 13 }, { tpl: "pe-pendiente-num", pts: 12 }] }
+          ] }
         ] },
       { id: "final", kind: "final", title: "Final práctico", topics: "Análisis de datos: intervalos para la varianza y la media, correlación, regresión y ANOVA, siempre con interpretación.", minutes: 150, pass: 60,
         items: [

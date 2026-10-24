@@ -264,17 +264,103 @@
     }
   };
 
+  T["pe-muestreo-num"] = {
+    type: "numeric", concepts: ["pe-muestreo"], difficulty: 1,
+    generate(r) {
+      if (r.bool()) {
+        // estratos de tamaño múltiplo de k = N/n: la asignación proporcional da enteros
+        const kS = r.int(3, 4), k = r.pick([5, 8, 10, 20, 25]), c = Array.from({ length: kS }, () => r.int(2, 12)), Nh = c.map(x => x * k), N = Nh.reduce((s, x) => s + x, 0), n = N / k, h = r.int(0, kS - 1), Z = "ABCD";
+        return {
+          prompt: `Una finca de ${N} plantas está dividida en ${kS} zonas: ${Nh.map((x, i) => `${Z[i]} con ${x}`).join(", ")}. Se toma una muestra estratificada de ${n} plantas con asignación proporcional. ¿Cuántas plantas se eligen de la zona ${Z[h]}?`,
+          answer: c[h],
+          solution: [`En la [[pe-muestreo|asignación proporcional]] cada estrato aporta la misma fracción que tiene en la población: $n_h = n\\frac{N_h}{N}$.`,
+            `Zona ${Z[h]}: $n_h = ${n}\\cdot\\frac{${Nh[h]}}{${N}} = ${c[h]}$ plantas (la fracción de muestreo es $\\frac{${n}}{${N}} = \\frac{1}{${k}}$ en todas las zonas).`],
+          // otro camino: un sistemático de paso N/n sobre la lista ordenada por zona elige N_h/k de cada una
+          verify: { kind: "value", tol: 0, fn: () => {
+            const lo = Nh.slice(0, h).reduce((s, x) => s + x, 0), s0 = k - 1;
+            let cnt = 0; for (let i = 0; i < N; i++) if ((i - s0) % k === 0 && i >= s0 && i >= lo && i < lo + Nh[h]) cnt++;
+            return cnt;
+          } }
+        };
+      }
+      const n = r.int(8, 40), k = r.int(4, 15), N = n * k, s = r.int(1, k), j = r.int(2, n), ask = r.pick(["pos", "pos", "paso"]);
+      const ans = ask === "paso" ? k : s + (j - 1) * k;
+      return {
+        prompt: ask === "paso" ? `Se numeran de 1 a ${N} las fichas de una lista y se quiere una muestra sistemática de ${n}. ¿Cada cuántas fichas se elige una?`
+          : `Se numeran de 1 a ${N} las fichas de una lista y se toma una muestra sistemática de ${n}, con el arranque sorteado en la ficha ${s}. ¿Qué número tiene la ${j}.ª ficha elegida?`,
+        answer: ans,
+        solution: [`En el [[pe-muestreo|muestreo sistemático]] el paso es $k = \\frac{N}{n} = \\frac{${N}}{${n}} = ${k}$.`,
+          ...(ask === "paso" ? [`Se elige una ficha cada ${k}, empezando en una sorteada entre la 1 y la ${k}.`] : [`Las elegidas son $${s},\\ ${s + k},\\ ${s + 2 * k},\\ \\dots$: la $j$-ésima es $${s} + (j - 1)\\cdot ${k}$, y con $j = ${j}$ da $${ans}$.`])],
+        // otro camino: se recorre la lista contando las fichas elegidas
+        verify: { kind: "value", tol: 0, fn: () => {
+          // el paso más chico con el que, arrancando en la 1, se eligen a lo sumo n fichas
+          if (ask === "paso") { for (let t = 1; t <= N; t++) { let cnt = 0; for (let i = 1; i <= N; i += t) cnt++; if (cnt <= n) return t; } return NaN; }
+          let cnt = 0; for (let i = 1; i <= N; i++) if (i >= s && (i - s) % k === 0 && ++cnt === j) return i;
+          return NaN;
+        } }
+      };
+    }
+  };
+
+  T["pe-sturges-num"] = {
+    type: "numeric", concepts: ["pe-tablas-frecuencia"], difficulty: 1,
+    generate(r) {
+      const n = r.int(20, 600), kf = 1 + 3.322 * Math.log10(n);
+      if (Math.abs(kf - Math.floor(kf) - 0.5) < 0.03) return null;
+      const k = Math.round(kf), lo = r.int(0, 50) * r.pick([1, 10]), rg = r.int(10, 90) * r.pick([1, 2, 5]) / 2, ask = r.pick(["k", "w"]), w = rg / k;
+      return {
+        prompt: ask === "k" ? `Se van a agrupar ${n} datos en un histograma. ¿Cuántas clases recomienda la regla de Sturges?`
+          : `Se van a agrupar ${n} datos, que van de $${nf(lo)}$ a $${nf(lo + rg)}$, en clases del mismo ancho. Con la cantidad de clases de la regla de Sturges, ¿qué ancho tiene cada clase?`,
+        answer: ask === "k" ? k : w,
+        solution: [`[[pe-tablas-frecuencia|Regla de Sturges]]: $k = 1 + \\log_2 n = 1 + 3{,}322\\log_{10} n = 1 + 3{,}322\\log_{10} ${n} \\approx ${nf(kf, 2)}$, que se redondea a $${k}$ clases.`,
+          ...(ask === "w" ? [`Recorrido: $${nf(lo + rg)} - ${nf(lo)} = ${nf(rg)}$; ancho $\\frac{${nf(rg)}}{${k}} \\approx ${nf(w)}$ (en la práctica se redondea hacia arriba para que entren todos los datos).`] : [])],
+        // otro camino: k es el entero con 2^(k − 1,5) ≤ n < 2^(k − 0,5), o sea, el más cercano a 1 + log₂ n
+        verify: { kind: "value", tol: 1e-9, fn: () => { let kk = 1; while (!(2 ** (kk - 1.5) <= n && n < 2 ** (kk - 0.5))) kk++; return ask === "k" ? kk : rg / kk; } }
+      };
+    }
+  };
+
+  T["pe-asimetria-num"] = {
+    type: "numeric", concepts: ["pe-posicion-forma"], difficulty: 3,
+    generate(r) {
+      const n = r.int(5, 7), a = Array.from({ length: n }, () => r.int(0, 15)), ask = r.pick(["g1", "g2"]);
+      const m = S.mean(a), s = Math.sqrt(S.var(a));
+      if (s === 0) return null;
+      const d = a.map(x => x - m), m3 = S.mean(d.map(x => x ** 3)), m4 = S.mean(d.map(x => x ** 4)), g1 = m3 / s ** 3, g2 = m4 / s ** 4 - 3, ans = ask === "g1" ? g1 : g2;
+      if (ask === "g1" && Math.abs(g1) < 0.05) return null;
+      return {
+        prompt: `Para los datos $${S.list(a)}$, calculá ${ask === "g1" ? "el coeficiente de asimetría $g_1 = \\frac{\\frac1n\\sum(x_i - \\bar x)^3}{s^3}$" : "la curtosis $g_2 = \\frac{\\frac1n\\sum(x_i - \\bar x)^4}{s^4} - 3$"}, con $s$ el desvío estándar muestral.`,
+        answer: ans,
+        solution: [`$\\bar x = ${nf(m)}$ y $s = \\sqrt{\\frac{\\sum(x_i - \\bar x)^2}{n - 1}} \\approx ${nf(s)}$.`,
+          ask === "g1" ? `Tercer momento central: $\\frac1n\\sum(x_i - \\bar x)^3 \\approx ${nf(m3)}$. [[pe-posicion-forma|Asimetría]]: $g_1 \\approx \\frac{${nf(m3)}}{${nf(s ** 3)}} \\approx ${nf(g1)}$, ${g1 > 0 ? "positiva: la cola larga está a la derecha" : "negativa: la cola larga está a la izquierda"}.`
+            : `Cuarto momento central: $\\frac1n\\sum(x_i - \\bar x)^4 \\approx ${nf(m4)}$. [[pe-posicion-forma|Curtosis]]: $g_2 \\approx \\frac{${nf(m4)}}{${nf(s ** 4)}} - 3 \\approx ${nf(g2)}$, ${g2 > 0 ? "positiva: colas más pesadas que las de la normal" : "negativa: colas más livianas que las de la normal"}.`],
+        // otro camino: los momentos centrales a partir de los crudos y la varianza con la fórmula de pares
+        verify: { kind: "value", tol: 1e-8, fn: () => {
+          let pp = 0; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) pp += (a[i] - a[j]) ** 2;
+          const sd = Math.sqrt(pp / (n * (n - 1))), e = p => S.mean(a.map(x => x ** p)), mu = e(1);
+          return ask === "g1" ? (e(3) - 3 * mu * e(2) + 2 * mu ** 3) / sd ** 3 : (e(4) - 4 * mu * e(3) + 6 * mu * mu * e(2) - 3 * mu ** 4) / sd ** 4 - 3;
+        } }
+      };
+    }
+  };
+
   const cards = {
     "pe-muestreo": {
-      title: "Población, muestra y muestreo", aliases: ["población estadística", "muestra aleatoria", "muestreo aleatorio simple", "muestreo estratificado", "variable cuantitativa", "variable cualitativa"], concepts: ["pe-centralizacion"],
-      summary: "La población es el conjunto completo que interesa; la muestra, la parte que se observa. Una muestra aleatoria simple da a cada subconjunto del mismo tamaño la misma probabilidad de salir.",
+      title: "Población, muestra y muestreo", aliases: ["población estadística", "muestra aleatoria", "muestreo aleatorio simple", "muestreo estratificado", "muestreo sistemático", "asignación proporcional", "variable cuantitativa", "variable cualitativa"], concepts: ["pe-muestreo"],
+      summary: "La población es el conjunto completo que interesa; la muestra, la parte que se observa. Una muestra aleatoria simple da a cada subconjunto del mismo tamaño la misma probabilidad de salir. Estratificado proporcional: nₕ = n·Nₕ/N; sistemático: uno cada k = N/n.",
       def: [R`**Población:** el conjunto de todos los individuos (o mediciones) que interesan. **Muestra:** el subconjunto que efectivamente se observa. Un **parámetro** describe a la población (por ejemplo $\mu$); un **estadístico** se calcula con la muestra (por ejemplo $\bar x$).`,
         R`**Variables:** cualitativas (categorías, como el color) o cuantitativas, que pueden ser discretas (se cuentan) o continuas (se miden).`,
-        R`**Muestreo aleatorio simple:** todos los subconjuntos de tamaño $n$ tienen la misma probabilidad de ser la muestra. **Estratificado:** la población se divide en grupos homogéneos (estratos, como los meses del año) y se toma una muestra aleatoria de cada uno. **Sistemático:** se elige un individuo cada $k$ de una lista, empezando al azar.`],
+        R`**Muestreo aleatorio simple:** todos los subconjuntos de tamaño $n$ tienen la misma probabilidad de ser la muestra. **Estratificado:** la población se divide en grupos homogéneos (estratos, como los meses del año) y se toma una muestra aleatoria de cada uno. **Sistemático:** se elige un individuo cada $k$ de una lista, empezando al azar.`,
+        R`**Asignación proporcional:** si el estrato $h$ tiene $N_h$ individuos de un total de $N$, se toman $n_h = n\frac{N_h}{N}$ de él (redondeando de modo que sumen $n$). **Paso del sistemático:** $k = \frac{N}{n}$; con el arranque $s$ sorteado entre $1$ y $k$, se eligen los individuos $s,\ s + k,\ s + 2k,\ \dots$`],
       idea: [R`Se mira una muestra porque casi nunca se puede mirar a toda la población. El azar en la elección es lo que permite, después, medir cuánto nos podemos equivocar al pasar de la muestra a la población ([[pe-ic-media|intervalos de confianza]]).`,
         R`El estratificado conviene cuando los estratos son distintos entre sí: asegura que todos estén representados (por ejemplo, días de todos los meses en datos meteorológicos).`],
-      examples: [{ q: R`Se quiere estudiar la temperatura diaria de un año con 120 días. ¿Cómo se arma una muestra estratificada por mes?`, steps: [R`Cada mes es un estrato. De cada uno se sortean 10 días al azar (sin reposición): $12\cdot 10 = 120$ días.`] }],
-      tips: [R`Una muestra grande pero sesgada (por ejemplo, solo voluntarios) no se arregla agrandándola: el problema es cómo se eligió.`],
+      demo: [R`**Paso 1 (lo que se busca).** La asignación proporcional se elige para que la muestra estratificada no favorezca a nadie: cada individuo de la población tiene que tener la misma probabilidad de quedar en la muestra.`,
+        R`**Paso 2.** Dentro del estrato $h$ se sortean $n_h$ de sus $N_h$ individuos al azar, así que cada uno de ellos queda elegido con probabilidad $\frac{n_h}{N_h}$ (hay $\binom{N_h - 1}{n_h - 1}$ muestras que lo contienen, de $\binom{N_h}{n_h}$ posibles).`,
+        R`**Paso 3.** Con $n_h = n\frac{N_h}{N}$, esa probabilidad es $\frac{nN_h/N}{N_h} = \frac nN$, la misma en todos los estratos: la muestra es una «foto a escala» de la población.`,
+        R`**Paso 4 (sistemático).** Con paso $k = \frac Nn$ y el arranque sorteado entre $1$ y $k$, cada individuo de la lista queda elegido para exactamente uno de los $k$ arranques posibles, así que también tiene probabilidad $\frac1k = \frac nN$. $\blacksquare$`],
+      examples: [{ q: R`Se quiere estudiar la temperatura diaria de un año con 120 días. ¿Cómo se arma una muestra estratificada por mes?`, steps: [R`Cada mes es un estrato. De cada uno se sortean 10 días al azar (sin reposición): $12\cdot 10 = 120$ días.`] },
+        { q: R`Tres zonas con 200, 300 y 500 plantas; muestra de 50 con asignación proporcional.`, steps: [R`$n_h = 50\cdot\frac{N_h}{1000}$: 10, 15 y 25 plantas.`, R`Dentro de la zona de 500, un sistemático toma una cada $\frac{500}{25} = 20$ plantas.`] }],
+      tips: [R`Una muestra grande pero sesgada (por ejemplo, solo voluntarios) no se arregla agrandándola: el problema es cómo se eligió.`, R`En el sistemático, cuidado si la lista tiene un ciclo que coincide con el paso (por ejemplo, un dato por día y $k = 7$: saldrían siempre los mismos días de la semana).`],
       see: ["pe-centralizacion", "pe-ic-media"]
     },
     "pe-centralizacion": {
@@ -323,31 +409,34 @@
       see: ["pe-centralizacion", "pe-dispersion"]
     },
     "pe-tablas-frecuencia": {
-      title: "Tablas de frecuencias y datos agrupados", aliases: ["tabla de frecuencias", "frecuencia absoluta", "frecuencia relativa", "frecuencia acumulada", "marca de clase", "datos agrupados", "intervalo de clase"], concepts: ["pe-tablas-frecuencia"],
-      summary: "Cada clase tiene frecuencia absoluta f, relativa f/N y acumulada. Con datos agrupados, la media se aproxima con las marcas de clase: x̄ ≈ Σ mᵢfᵢ / N.",
+      title: "Tablas de frecuencias y datos agrupados", aliases: ["tabla de frecuencias", "frecuencia absoluta", "frecuencia relativa", "frecuencia acumulada", "marca de clase", "datos agrupados", "intervalo de clase", "regla de Sturges"], concepts: ["pe-tablas-frecuencia"],
+      summary: "Cada clase tiene frecuencia absoluta f, relativa f/N y acumulada. Con datos agrupados, la media se aproxima con las marcas de clase: x̄ ≈ Σ mᵢfᵢ / N. Regla de Sturges: k = 1 + log₂ n ≈ 1 + 3,322 log₁₀ n clases.",
       def: [R`**Frecuencia absoluta** $f_i$: cuántos datos caen en la clase $i$. **Relativa:** $\frac{f_i}{N}$. **Acumulada:** la suma de las frecuencias hasta esa clase inclusive.`,
-        R`**Marca de clase:** el punto medio del intervalo, $m_i$. **Media de datos agrupados:** $\bar x \approx \frac{1}{N}\sum m_if_i$. El histograma dibuja un rectángulo por clase con área proporcional a $f_i$.`],
+        R`**Marca de clase:** el punto medio del intervalo, $m_i$. **Media de datos agrupados:** $\bar x \approx \frac{1}{N}\sum m_if_i$. El histograma dibuja un rectángulo por clase con área proporcional a $f_i$.`,
+        R`**Regla de Sturges:** para $n$ datos se usan $k = 1 + \log_2 n = 1 + 3{,}322\log_{10} n$ clases, redondeando al entero más cercano. El ancho de cada clase es el recorrido dividido por $k$, redondeado hacia arriba.`],
       idea: [R`Agrupar pierde información: ya no se sabe dónde está cada dato dentro de su intervalo. La marca de clase es la mejor apuesta si los datos se reparten parejo dentro de cada clase.`],
       demo: [R`**Paso 1.** Los datos de la clase $i$ están entre $a_i$ y $a_i + w$. Si se reparten parejo, su promedio es el punto medio $m_i$, así que su suma es aproximadamente $f_im_i$.`,
-        R`**Paso 2.** La suma de todos los datos es la suma de las sumas de cada clase, $\approx \sum f_im_i$; dividiendo por $N$ queda la fórmula. El error de cada clase está acotado por $\frac w2$ por dato, así que la media agrupada difiere de la real en menos de $\frac w2$. $\blacksquare$`],
+        R`**Paso 2.** La suma de todos los datos es la suma de las sumas de cada clase, $\approx \sum f_im_i$; dividiendo por $N$ queda la fórmula. El error de cada clase está acotado por $\frac w2$ por dato, así que la media agrupada difiere de la real en menos de $\frac w2$. $\blacksquare$`,
+        R`**Paso 3 (de dónde sale Sturges).** Sturges pensó en datos con forma de campana ideal: con $k$ clases, las frecuencias proporcionales a los números combinatorios $\binom{k - 1}{0}, \binom{k - 1}{1}, \dots, \binom{k - 1}{k - 1}$ (la [[pe-binomial|binomial]] con $p = \frac12$, que se parece a la normal).`,
+        R`**Paso 4.** Esos números suman $2^{k - 1}$, por el binomio de Newton con $(1 + 1)^{k - 1}$. Si esa es la cantidad de datos, $n = 2^{k - 1}$, y despejando, $k = 1 + \log_2 n$. Como $\log_2 n = \frac{\log_{10} n}{\log_{10} 2}$ y $\frac1{\log_{10} 2} \approx 3{,}322$, queda la otra forma. $\blacksquare$`],
       examples: [{ q: R`Clases $[0, 10)$: 3 datos, $[10, 20)$: 5 datos, $[20, 30)$: 2 datos.`, steps: [R`Marcas: $5$, $15$ y $25$; $\bar x \approx \frac{5\cdot3 + 15\cdot5 + 25\cdot2}{10} = 14$.`, R`Frecuencia relativa acumulada hasta $[10, 20)$: $\frac{8}{10} = 80\,\%$.`] }],
-      tips: [R`Los intervalos se escriben cerrados a la izquierda y abiertos a la derecha, $[a, b)$, para que cada dato caiga en una sola clase.`],
+      tips: [R`Los intervalos se escriben cerrados a la izquierda y abiertos a la derecha, $[a, b)$, para que cada dato caiga en una sola clase.`, R`Sturges es una guía, no una ley: con muchos datos o distribuciones muy asimétricas da pocas clases.`],
       see: ["pe-centralizacion", "pe-muestreo"]
     }
   };
 
   E.extendCourse("m105", {
-    concepts: { "pe-centralizacion": { name: "Tendencia central" }, "pe-dispersion": { name: "Dispersión" }, "pe-posicion-forma": { name: "Cuartiles y forma" }, "pe-tablas-frecuencia": { name: "Tablas de frecuencias" } },
+    concepts: { "pe-muestreo": { name: "Muestreo" }, "pe-centralizacion": { name: "Tendencia central" }, "pe-dispersion": { name: "Dispersión" }, "pe-posicion-forma": { name: "Cuartiles y forma" }, "pe-tablas-frecuencia": { name: "Tablas de frecuencias" } },
     templates: T,
     units: [{
       id: "pe-descriptiva-u", order: 1, program: "Unidad 1", title: "Estadística descriptiva", icon: "chart-column",
       diagnostic: ["pe-centro-num", "pe-dispersion-num", "pe-cuartiles-num"],
       lessons: [
-        { id: "pe-desc-l1", title: "Muestras y tendencia central", templates: ["pe-centro-num", "pe-tabla-num"], theory: ["pe-muestreo", "pe-centralizacion", "pe-tablas-frecuencia"],
-          intro: R`Media, mediana y moda: tres maneras de decir «el valor típico».` },
+        { id: "pe-desc-l1", title: "Muestras y tendencia central", templates: ["pe-centro-num", "pe-tabla-num", "pe-muestreo-num", "pe-sturges-num"], theory: ["pe-muestreo", "pe-centralizacion", "pe-tablas-frecuencia"],
+          intro: R`Cómo se elige la muestra, cómo se agrupan los datos y tres maneras de decir «el valor típico».` },
         { id: "pe-desc-l2", title: "Dispersión", templates: ["pe-dispersion-num", "pe-transf-tf"], theory: ["pe-dispersion"],
           intro: R`$s^2 = \frac{1}{n - 1}\sum (x_i - \bar x)^2$: cuánto se alejan los datos de la media.` },
-        { id: "pe-desc-l3", title: "Cuartiles y forma de la distribución", templates: ["pe-cuartiles-num", "pe-forma-mc"], theory: ["pe-posicion-forma"],
+        { id: "pe-desc-l3", title: "Cuartiles y forma de la distribución", templates: ["pe-cuartiles-num", "pe-forma-mc", "pe-asimetria-num"], theory: ["pe-posicion-forma"],
           intro: R`La caja va de $Q_1$ a $Q_3$; la cola larga dice hacia dónde es asimétrica.` }
       ]
     }],
@@ -959,6 +1048,44 @@
     }
   };
 
+  T["pe-memoria-num"] = {
+    type: "numeric", concepts: ["pe-uniforme-exponencial"], difficulty: 2,
+    generate(r) {
+      const ask = r.pick(["mediana", "percentil", "memoria", "uniforme"]);
+      if (ask === "uniforme") {
+        const a = r.int(0, 20), b = a + r.int(10, 60), d = r.int(a + 1, b - 4), c = r.int(d + 1, b - 1), ans = (b - c) / (b - d);
+        return {
+          prompt: `Un colectivo pasa en un momento uniforme entre los minutos ${a} y ${b}. Si a los ${d} minutos todavía no pasó, ¿cuál es la probabilidad de que pase después del minuto ${c}?`,
+          answer: ans,
+          solution: [`$P(X > ${c} \\mid X > ${d}) = \\frac{P(X > ${c})}{P(X > ${d})}$, porque $\\{X > ${c}\\} \\subseteq \\{X > ${d}\\}$ ([[pe-condicional|condicional]]).`,
+            `Con la [[pe-uniforme-exponencial|uniforme]], $P(X > t) = \\frac{${b} - t}{${b - a}}$: queda $\\frac{${b - c}}{${b - d}} \\approx ${nf(ans)}$. Dado que no pasó, el tiempo que falta es uniforme en el tramo que queda: la uniforme sí «recuerda».`],
+          // otro camino: las colas integrando la densidad con Simpson
+          verify: { kind: "value", tol: 1e-9, fn: () => S.simpson(() => 1 / (b - a), c, b, 200) / S.simpson(() => 1 / (b - a), d, b, 200) }
+        };
+      }
+      const mu = r.pick([2, 4, 5, 8, 10, 20, 50, 100, 1000]), lam = 1 / mu, unit = mu >= 50 ? "horas" : "minutos", p = r.pick([0.1, 0.25, 0.75, 0.9, 0.95]), s = Math.round(mu * r.pick([0.5, 1, 2, 3])), t = Math.round(mu * r.pick([0.5, 1, 1.5, 2]));
+      const ans = ask === "mediana" ? mu * Math.LN2 : ask === "percentil" ? -mu * Math.log(1 - p) : Math.exp(-t / mu);
+      const what = unit === "horas" ? "La duración de un componente" : "El tiempo hasta el próximo llamado a una central";
+      return {
+        prompt: ask === "mediana" ? `${what} es exponencial con media ${mu} ${unit}. Calculá su mediana (en ${unit}).`
+          : ask === "percentil" ? `${what} es exponencial con media ${mu} ${unit}. ¿Qué valor (en ${unit}) deja por debajo el ${nf(100 * p, 0)} % de los casos?`
+            : unit === "horas" ? `${what} es exponencial con media ${mu} horas. Si ya funcionó ${s} horas, ¿cuál es la probabilidad de que dure más de ${s + t} horas en total?`
+              : `${what} es exponencial con media ${mu} minutos. Si ya pasaron ${s} minutos sin llamados, ¿cuál es la probabilidad de tener que esperar más de ${s + t} minutos en total?`,
+        answer: ans,
+        solution: ask === "memoria" ? [`$\\lambda = \\frac1{${mu}}$. Por la [[pe-uniforme-exponencial|falta de memoria]], $P(X > ${s} + ${t} \\mid X > ${s}) = P(X > ${t}) = e^{-${t}/${mu}} \\approx ${nf(ans)}$: lo que ya pasó no cambia nada.`]
+          : [`La [[pe-uniforme-exponencial|exponencial]] tiene $P(X \\le x) = 1 - e^{-\\lambda x}$, con $\\lambda = \\frac1{${mu}}$.`,
+            ask === "mediana" ? `La mediana cumple $1 - e^{-\\lambda m} = \\frac12$: $m = \\frac{\\ln 2}{\\lambda} = ${mu}\\ln 2 \\approx ${nf(ans)}$ ${unit}, menor que la media.`
+              : `Se despeja $1 - e^{-\\lambda x} = ${nf(p)}$: $x = -\\frac{\\ln(1 - ${nf(p)})}{\\lambda} = -${mu}\\ln ${nf(1 - p)} \\approx ${nf(ans)}$ ${unit}.`],
+        // otro camino: la función de distribución integrando la densidad con Simpson (y el cuantil por bisección)
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const F = x => S.simpson(u => lam * Math.exp(-lam * u), 0, x, 400);
+          if (ask === "memoria") return (1 - F(s + t)) / (1 - F(s));
+          return S.quantile(F, ask === "mediana" ? 0.5 : p, 0, 10 * mu, 80);
+        } }
+      };
+    }
+  };
+
   const cards = {
     "pe-va-continua": {
       title: "Variables aleatorias continuas", aliases: ["variable aleatoria continua", "función de densidad", "densidad de probabilidad", "percentil", "cuantil"], concepts: ["pe-va-continua"],
@@ -1028,7 +1155,7 @@
       lessons: [
         { id: "pe-cont-l1", title: "Densidades", templates: ["pe-densidad-num", "pe-uniforme-tf"], theory: ["pe-va-continua"],
           intro: R`La probabilidad es un área: $P(a < X < b) = \int_a^b f$.` },
-        { id: "pe-cont-l2", title: "Uniforme y exponencial", templates: ["pe-exponencial-num"], theory: ["pe-uniforme-exponencial"],
+        { id: "pe-cont-l2", title: "Uniforme y exponencial", templates: ["pe-exponencial-num", "pe-memoria-num"], theory: ["pe-uniforme-exponencial"],
           intro: R`La exponencial no tiene memoria: $P(X > s + t\mid X > s) = P(X > t)$.` },
         { id: "pe-cont-l3", title: "La normal", templates: ["pe-normal-num", "pe-normal-order", "pe-aprox-binomial-num"], theory: ["pe-normal", "pe-aprox-normal"],
           intro: R`Estandarizar: $Z = \frac{X - \mu}{\sigma}$, y todas las normales son la misma.` }
@@ -1158,19 +1285,80 @@
     }
   };
 
+  T["pe-suma-normales-num"] = {
+    type: "numeric", concepts: ["pe-conjuntas"], difficulty: 3,
+    generate(r) {
+      const kind = r.pick(["encastre", "suma", "desvio"]);
+      let mx, sx, my, sy, a, b, c, ctx, wt = "Y - X";
+      if (kind === "encastre") {
+        // eje X y buje Y: entra si Y − X > 0
+        mx = r.int(195, 205) / 10; my = mx + r.int(1, 8) / 10; sx = r.pick([0.1, 0.2, 0.3]); sy = r.pick([0.1, 0.2, 0.3]); a = -1; b = 1; c = 0;
+        ctx = `El diámetro de un eje es $X \\sim N(${nf(mx)};\\ ${nf(sx)}^2)$ mm y el del buje donde va es $Y \\sim N(${nf(my)};\\ ${nf(sy)}^2)$ mm, independientes. ¿Cuál es la probabilidad de que el eje entre en el buje ($Y > X$)?`;
+      } else {
+        mx = r.int(20, 80); sx = r.int(2, 9); my = r.int(20, 80); sy = r.int(2, 9); a = r.pick([1, 2, 3]); b = r.pick([1, -1, 2, -2]);
+        const m = a * mx + b * my, sd = Math.sqrt(a * a * sx * sx + b * b * sy * sy);
+        wt = `${a === 1 ? "" : a}X ${b < 0 ? "-" : "+"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}Y`;
+        c = Math.round(m + r.pick([-1.5, -1, -0.5, 0.5, 1, 1.5, 2]) * sd);
+        ctx = kind === "desvio" ? `Si $X \\sim N(${mx};\\ ${sx}^2)$ e $Y \\sim N(${my};\\ ${sy}^2)$ son independientes, ¿cuál es el desvío estándar de $W = ${wt}$?`
+          : `Si $X \\sim N(${mx};\\ ${sx}^2)$ e $Y \\sim N(${my};\\ ${sy}^2)$ son independientes, calculá $P(${wt} > ${c})$.`;
+      }
+      const m = a * mx + b * my, v = a * a * sx * sx + b * b * sy * sy, sd = Math.sqrt(v), z = (c - m) / sd, ans = kind === "desvio" ? sd : 1 - S.Phi(z);
+      return {
+        prompt: ctx,
+        answer: ans,
+        solution: [`Una [[pe-conjuntas|combinación lineal de normales independientes]] es normal: $W = ${wt}$ tiene media $${kind === "encastre" ? `${nf(my)} - ${nf(mx)}` : `${a === 1 ? "" : `${a}\\cdot`}${mx} ${b < 0 ? "-" : "+"} ${Math.abs(b) === 1 ? "" : `${Math.abs(b)}\\cdot`}${my}`} = ${nf(m)}$ y varianza $${kind === "encastre" ? `${nf(sx)}^2 + ${nf(sy)}^2` : `${a === 1 ? "" : `${a * a}\\cdot`}${sx}^2 + ${b * b === 1 ? "" : `${b * b}\\cdot`}${sy}^2`} = ${nf(v)}$${b < 0 || kind === "encastre" ? " (las varianzas se suman aunque se reste)" : ""}.`,
+          kind === "desvio" ? `Desvío: $\\sqrt{${nf(v)}} \\approx ${nf(sd)}$.` : `[[pe-normal|Estandarizando]]: $P(W > ${nf(c)}) = P\\left(Z > \\frac{${nf(c)} ${m < 0 ? "+" : "-"} ${nf(Math.abs(m))}}{${nf(sd)}}\\right) = 1 - \\Phi(${nf(z, 3)}) \\approx ${nf(ans)}$.`],
+        // otro camino: convolución, integrando la densidad de X por la probabilidad condicional de Y (Simpson);
+        // el desvío, con E(W²) − E(W)² integrando las densidades
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const fx = x => Math.exp(-(((x - mx) / sx) ** 2) / 2) / (sx * Math.sqrt(2 * Math.PI)), fy = y => Math.exp(-(((y - my) / sy) ** 2) / 2) / (sy * Math.sqrt(2 * Math.PI));
+          const E1 = (f, mu, s, g) => S.simpson(x => g(x) * f(x), mu - 12 * s, mu + 12 * s, 1200);
+          if (kind === "desvio") {
+            const ex = E1(fx, mx, sx, x => x), ey = E1(fy, my, sy, y => y), ex2 = E1(fx, mx, sx, x => x * x), ey2 = E1(fy, my, sy, y => y * y);
+            return Math.sqrt(a * a * (ex2 - ex * ex) + b * b * (ey2 - ey * ey));
+          }
+          // P(bY > c − aX) dado X = x: cola de la normal de Y por encima o por debajo de (c − ax)/b
+          return E1(fx, mx, sx, x => { const u = (c - a * x) / b; return b > 0 ? 1 - S.Phi((u - my) / sy) : S.Phi((u - my) / sy); });
+        } }
+      };
+    },
+    testN: 60
+  };
+
+  T["pe-var-muestral-num"] = {
+    type: "numeric", concepts: ["pe-muestrales"], difficulty: 3,
+    generate(r) {
+      const n = r.int(6, 25), sg = r.int(2, 12), f = r.pick([0.5, 0.6, 0.75, 1.25, 1.5, 1.8, 2]), c = Math.round(f * sg * sg * 10) / 10, up = r.bool();
+      const q = (n - 1) * c / (sg * sg), F = S.chi2cdf(q, n - 1), ans = up ? 1 - F : F;
+      return {
+        prompt: `Se toma una muestra de ${n} datos de una población normal con $\\sigma = ${sg}$. ¿Cuál es la probabilidad de que la varianza muestral $S^2$ sea ${up ? "mayor" : "menor"} que $${nf(c)}$?`,
+        answer: ans,
+        solution: [`En [[pe-muestrales|muestras normales]], $\\frac{(n - 1)S^2}{\\sigma^2} \\sim \\chi^2_{n-1}$.`,
+          `$P(S^2 ${up ? ">" : "<"} ${nf(c)}) = P\\left(\\chi^2_{${n - 1}} ${up ? ">" : "<"} \\frac{${n - 1}\\cdot ${nf(c)}}{${sg * sg}}\\right) = P(\\chi^2_{${n - 1}} ${up ? ">" : "<"} ${nf(q, 3)}) \\approx ${nf(ans)}$.`],
+        // otro camino: la χ² integrando su densidad con Simpson
+        verify: { kind: "value", tol: 1e-6, fn: () => { const G = S.chi2cdfNum(q, n - 1); return up ? 1 - G : G; } }
+      };
+    }
+  };
+
   const cards = {
     "pe-conjuntas": {
       title: "Variables conjuntas, covarianza e independencia", aliases: ["distribución conjunta", "distribución marginal", "covarianza", "variables independientes", "independencia de variables aleatorias"], concepts: ["pe-conjuntas"],
       summary: "Con la tabla p(x, y): las marginales salen sumando filas o columnas. Cov(X, Y) = E(XY) − E(X)E(Y); Var(X + Y) = Var(X) + Var(Y) + 2Cov(X, Y). Independientes: p(x, y) = p(x)p(y), y entonces Cov = 0.",
       def: [R`**Distribución conjunta** (discreta): $p(x, y) = P(X = x, Y = y)$. **Marginales:** $p_X(x) = \sum_y p(x, y)$ y $p_Y(y) = \sum_x p(x, y)$.`,
         R`**Independencia:** $X$ e $Y$ son independientes si $p(x, y) = p_X(x)\,p_Y(y)$ para todos los pares (en el caso continuo, con las densidades).`,
-        R`**Covarianza:** $Cov(X, Y) = E\big[(X - \mu_X)(Y - \mu_Y)\big] = E(XY) - E(X)E(Y)$. **Correlación:** $\rho = \frac{Cov(X, Y)}{\sigma_X\sigma_Y}$, entre $-1$ y $1$ ([[pe-correlacion]]).`],
+        R`**Covarianza:** $Cov(X, Y) = E\big[(X - \mu_X)(Y - \mu_Y)\big] = E(XY) - E(X)E(Y)$. **Correlación:** $\rho = \frac{Cov(X, Y)}{\sigma_X\sigma_Y}$, entre $-1$ y $1$ ([[pe-correlacion]]).`,
+        R`**Combinaciones de normales:** si $X \sim N(\mu_X, \sigma_X^2)$ e $Y \sim N(\mu_Y, \sigma_Y^2)$ son independientes, $aX + bY \sim N(a\mu_X + b\mu_Y,\ a^2\sigma_X^2 + b^2\sigma_Y^2)$. En particular, la suma de $n$ normales independientes iguales es $N(n\mu, n\sigma^2)$.`],
       idea: [R`La covarianza mide si $X$ e $Y$ tienden a estar a la vez por encima (o por debajo) de sus medias: positiva si suben juntas, negativa si una sube cuando la otra baja.`,
         R`Independencia implica covarianza nula, pero no al revés: $Y = X^2$ con $X$ simétrica tiene $Cov = 0$ aunque $Y$ depende completamente de $X$. La covarianza solo detecta relaciones lineales.`],
       demo: [R`**Paso 1 (fórmula de cálculo).** Desarrollando el producto, $E[(X - \mu_X)(Y - \mu_Y)] = E(XY) - \mu_YE(X) - \mu_XE(Y) + \mu_X\mu_Y$ por linealidad, y como $E(X) = \mu_X$ y $E(Y) = \mu_Y$, queda $E(XY) - \mu_X\mu_Y$.`,
         R`**Paso 2 (varianza de la suma).** $(X + Y) - (\mu_X + \mu_Y) = (X - \mu_X) + (Y - \mu_Y)$. Elevando al cuadrado y tomando esperanza: $Var(X + Y) = Var(X) + Var(Y) + 2Cov(X, Y)$.`,
-        R`**Paso 3 (independientes ⇒ covarianza nula).** Si son independientes, $E(XY) = \sum_{x,y} xy\,p_X(x)p_Y(y) = \left(\sum_x xp_X(x)\right)\left(\sum_y yp_Y(y)\right) = E(X)E(Y)$, así que $Cov = 0$ y $Var(X + Y) = Var(X) + Var(Y)$. $\blacksquare$`],
-      examples: [{ q: R`$X$, $Y$ independientes con $Var(X) = 4$ y $Var(Y) = 9$. ¿$Var(2X - Y)$?`, steps: [R`$Var(2X - Y) = 4Var(X) + Var(Y) = 16 + 9 = 25$ (las varianzas siempre se **suman**, aunque se reste).`] }],
+        R`**Paso 3 (independientes ⇒ covarianza nula).** Si son independientes, $E(XY) = \sum_{x,y} xy\,p_X(x)p_Y(y) = \left(\sum_x xp_X(x)\right)\left(\sum_y yp_Y(y)\right) = E(X)E(Y)$, así que $Cov = 0$ y $Var(X + Y) = Var(X) + Var(Y)$.`,
+        R`**Paso 4 (combinación de normales: media y varianza).** Por linealidad, $E(aX + bY) = a\mu_X + b\mu_Y$; por el paso 3 y porque $Var(aX) = a^2Var(X)$, $Var(aX + bY) = a^2\sigma_X^2 + b^2\sigma_Y^2$.`,
+        R`**Paso 5 (sigue siendo normal).** Se usa la función generadora de momentos $M_X(t) = E(e^{tX})$, que para la normal vale $e^{\mu t + \sigma^2t^2/2}$ y determina la distribución. Por independencia, $M_{aX + bY}(t) = E(e^{atX})E(e^{btY}) = M_X(at)M_Y(bt)$.`,
+        R`**Paso 6.** Multiplicando las dos exponenciales, los exponentes se suman: $M_{aX + bY}(t) = e^{(a\mu_X + b\mu_Y)t + (a^2\sigma_X^2 + b^2\sigma_Y^2)t^2/2}$, que es la de una normal con la media y la varianza del paso 4. $\blacksquare$`],
+      examples: [{ q: R`$X$, $Y$ independientes con $Var(X) = 4$ y $Var(Y) = 9$. ¿$Var(2X - Y)$?`, steps: [R`$Var(2X - Y) = 4Var(X) + Var(Y) = 16 + 9 = 25$ (las varianzas siempre se **suman**, aunque se reste).`] },
+        { q: R`Un eje mide $X \sim N(20;\ 0{,}2^2)$ mm y su buje $Y \sim N(20{,}5;\ 0{,}3^2)$ mm, independientes. ¿$P(Y > X)$?`, steps: [R`$Y - X \sim N(0{,}5;\ 0{,}04 + 0{,}09)$, con desvío $\sqrt{0{,}13} \approx 0{,}361$.`, R`$P(Y - X > 0) = 1 - \Phi\left(\frac{-0{,}5}{0{,}361}\right) = \Phi(1{,}39) \approx 0{,}917$.`] }],
       tips: [R`$Var(aX + bY) = a^2Var(X) + b^2Var(Y) + 2abCov(X, Y)$.`],
       see: ["pe-va-discreta", "pe-tcl", "pe-correlacion"]
     },
@@ -1215,11 +1403,11 @@
       id: "pe-muestrales-u", order: 5, program: "Unidad 5", title: "Variables conjuntas y distribuciones muestrales", icon: "grid-3x3",
       diagnostic: ["pe-conjunta-num", "pe-tcl-num", "pe-cuantil-num"],
       lessons: [
-        { id: "pe-mues-l1", title: "Distribuciones conjuntas", templates: ["pe-conjunta-num", "pe-indep-va-tf"], theory: ["pe-conjuntas"],
+        { id: "pe-mues-l1", title: "Distribuciones conjuntas", templates: ["pe-conjunta-num", "pe-indep-va-tf", "pe-suma-normales-num"], theory: ["pe-conjuntas"],
           intro: R`$Var(X + Y) = Var(X) + Var(Y) + 2Cov(X, Y)$.` },
         { id: "pe-mues-l2", title: "Teorema central del límite", templates: ["pe-tcl-num", "pe-media-dados-tf"], theory: ["pe-tcl"],
           intro: R`El promedio de $n$ datos tiene desvío $\frac{\sigma}{\sqrt n}$ y forma de campana.` },
-        { id: "pe-mues-l3", title: "χ², t y F", templates: ["pe-cuantil-num"], theory: ["pe-muestrales"],
+        { id: "pe-mues-l3", title: "χ², t y F", templates: ["pe-cuantil-num", "pe-var-muestral-num"], theory: ["pe-muestrales"],
           intro: R`Sin $\sigma$, la normal se ensancha y pasa a ser una $t$.` }
       ]
     }],
@@ -1571,6 +1759,60 @@
     }
   };
 
+  // cuantil de la t integrando la densidad (Simpson) y bisección, para los verify
+  const tqNum = (p, v) => S.quantile(x => S.tcdfNum(x, v), p, -50, 50, 60);
+  // datos con media y desvío muestral exactos (para recalcular a partir de datos concretos)
+  const withStats = (n, m, s) => { const b = Array.from({ length: n }, (_, i) => (i * 7919) % 13 + i * 0.37), mb = S.mean(b), sb = Math.sqrt(S.var(b)); return b.map(x => m + s * (x - mb) / sb); };
+
+  T["pe-dos-medias-num"] = {
+    type: "numeric", concepts: ["pe-dos-muestras"], difficulty: 3, testN: 120,
+    generate(r) {
+      const n1 = r.int(6, 15), n2 = r.int(6, 15), s1 = r.int(2, 8), s2 = r.int(2, 8), x1 = r.int(30, 70) + r.int(0, 9) / 10, x2 = Math.round((x1 + r.pick([-1, 1]) * r.int(5, 60) / 10) * 10) / 10;
+      if (Math.max(s1, s2) > 2 * Math.min(s1, s2)) return null;
+      const conf = r.pick([0.9, 0.95, 0.99]), a = 1 - conf, df = n1 + n2 - 2, ask = r.pick(["sp", "t", "margen"]);
+      const sp = Math.sqrt(((n1 - 1) * s1 * s1 + (n2 - 1) * s2 * s2) / df), se = sp * Math.sqrt(1 / n1 + 1 / n2), t = (x1 - x2) / se, crit = S.tq(1 - a / 2, df), E0 = crit * se;
+      const ans = { sp, t, margen: E0 }[ask];
+      return {
+        prompt: `Se compararon dos métodos de secado midiendo la humedad final (en %). Método A: $n_1 = ${n1}$, $\\bar x_1 = ${nf(x1)}$, $s_1 = ${s1}$. Método B: $n_2 = ${n2}$, $\\bar x_2 = ${nf(x2)}$, $s_2 = ${s2}$. Suponiendo poblaciones normales con la misma varianza, calculá ${{ sp: "el desvío combinado $s_p$", t: "el estadístico $t$ de la prueba de $H_0: \\mu_1 = \\mu_2$", margen: `el margen de error del intervalo del ${nf(100 * conf, 0)} % para $\\mu_1 - \\mu_2$` }[ask]}.`,
+        answer: ans,
+        solution: [`[[pe-dos-muestras|Varianza combinada]]: $s_p^2 = \\frac{(n_1 - 1)s_1^2 + (n_2 - 1)s_2^2}{n_1 + n_2 - 2} = \\frac{${n1 - 1}\\cdot ${s1 * s1} + ${n2 - 1}\\cdot ${s2 * s2}}{${df}} \\approx ${nf(sp * sp)}$, así que $s_p \\approx ${nf(sp)}$.`,
+          ...(ask === "sp" ? [] : [`Error estándar de la diferencia: $s_p\\sqrt{\\frac1{n_1} + \\frac1{n_2}} = ${nf(sp)}\\sqrt{\\frac1{${n1}} + \\frac1{${n2}}} \\approx ${nf(se)}$.`]),
+          ...(ask === "t" ? [`$t = \\frac{\\bar x_1 - \\bar x_2}{${nf(se)}} = \\frac{${nf(x1)} - ${nf(x2)}}{${nf(se)}} \\approx ${nf(t)}$, con ${df} grados de libertad. ${Math.abs(t) > S.tq(0.975, df) ? `Como $|t| > t_{0{,}025;\\,${df}} \\approx ${nf(S.tq(0.975, df), 3)}$, se rechaza $H_0$ al 5 %.` : `Como $|t| < t_{0{,}025;\\,${df}} \\approx ${nf(S.tq(0.975, df), 3)}$, no se rechaza $H_0$ al 5 %.`}`] : []),
+          ...(ask === "margen" ? [`Margen: $t_{${nf(a / 2, 3)};\\,${df}}\\cdot ${nf(se)} \\approx ${nf(crit, 3)}\\cdot ${nf(se)} \\approx ${nf(E0)}$. Intervalo: $${nf(x1 - x2)} \\pm ${nf(E0)}$.`] : [])],
+        // otro camino: datos concretos con esas medias y desvíos, y un ANOVA de dos grupos (F = t²);
+        // el valor crítico, integrando la densidad t
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const g1 = withStats(n1, x1, s1), g2 = withStats(n2, x2, s2), all = g1.concat(g2), mm = S.mean(all);
+          const SST = all.reduce((s, v) => s + (v - mm) ** 2, 0), SSW = [g1, g2].reduce((s, g) => { const mg = S.mean(g); return s + g.reduce((u, v) => u + (v - mg) ** 2, 0); }, 0);
+          const F = (SST - SSW) / (SSW / df), spv = Math.sqrt(SSW / df);
+          return { sp: spv, t: Math.sign(x1 - x2) * Math.sqrt(F), margen: tqNum(1 - a / 2, df) * spv * Math.sqrt(1 / n1 + 1 / n2) }[ask];
+        } }
+      };
+    }
+  };
+
+  T["pe-pareadas-num"] = {
+    type: "numeric", concepts: ["pe-dos-muestras"], difficulty: 3,
+    generate(r) {
+      const n = r.int(5, 8), shift = r.int(-4, 6), x = Array.from({ length: n }, () => r.int(20, 60)), y = x.map(v => v + shift + r.int(-4, 4)), d = y.map((v, i) => v - x[i]), ask = r.pick(["dbar", "sd", "t"]);
+      const db = S.mean(d), sd = Math.sqrt(S.var(d));
+      if (sd === 0 || db === 0) return null;
+      const t = db / (sd / Math.sqrt(n)), ans = { dbar: db, sd, t }[ask];
+      return {
+        prompt: `Se midió el tiempo (en s) que tardan ${n} operarios en armar una pieza, antes y después de una capacitación: $$\\begin{array}{c|${"c".repeat(n)}} \\text{antes} & ${x.join(" & ")} \\\\ \\hline \\text{después} & ${y.join(" & ")} \\end{array}$$ Con las diferencias $d = \\text{después} - \\text{antes}$, calculá ${{ dbar: "la diferencia media $\\bar d$", sd: "el desvío estándar $s_d$ de las diferencias", t: "el estadístico $t$ de la prueba de $H_0: \\mu_d = 0$" }[ask]}.`,
+        answer: ans,
+        solution: [`Son [[pe-dos-muestras|datos pareados]]: los mismos operarios medidos dos veces. Diferencias: $${S.list(d)}$.`,
+          `$\\bar d = ${nf(db)}$ y $s_d = \\sqrt{\\frac{\\sum (d_i - \\bar d)^2}{n - 1}} \\approx ${nf(sd)}$.`,
+          ...(ask === "t" ? [`$t = \\frac{\\bar d}{s_d/\\sqrt n} = \\frac{${nf(db)}}{${nf(sd)}/\\sqrt{${n}}} \\approx ${nf(t)}$, con ${n - 1} grados de libertad (una prueba para una media sobre las diferencias).`] : [])],
+        // otro camino: con las dos columnas, Var(Y − X) = s_x² + s_y² − 2 cov(x, y)
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const mx = S.mean(x), my = S.mean(y), cov = x.reduce((s, v, i) => s + (v - mx) * (y[i] - my), 0) / (n - 1), s2 = S.var(x) + S.var(y) - 2 * cov;
+          return { dbar: my - mx, sd: Math.sqrt(s2), t: (my - mx) / Math.sqrt(s2 / n) }[ask];
+        } }
+      };
+    }
+  };
+
   const cards = {
     "pe-hipotesis": {
       title: "Pruebas de hipótesis: ideas y errores", aliases: ["prueba de hipótesis", "pruebas de hipótesis", "hipótesis nula", "hipótesis alternativa", "nivel de significación", "valor p", "error de tipo I", "error de tipo II", "potencia de una prueba", "región crítica"], concepts: ["pe-hipotesis"],
@@ -1628,6 +1870,23 @@
       tips: [R`Si alguna frecuencia esperada es menor que 5, conviene juntar categorías.`],
       see: ["pe-hipotesis", "pe-muestrales", "pe-anova"]
     },
+    "pe-dos-muestras": {
+      title: "Comparación de dos medias", aliases: ["dos muestras independientes", "varianza combinada", "desvío combinado", "datos pareados", "muestras pareadas", "prueba t para dos muestras", "diferencia de medias"], concepts: ["pe-dos-muestras"],
+      summary: "Muestras independientes con la misma varianza: s²ₚ = ((n₁ − 1)s₁² + (n₂ − 1)s₂²)/(n₁ + n₂ − 2) y t = (x̄₁ − x̄₂)/(sₚ√(1/n₁ + 1/n₂)) con n₁ + n₂ − 2 grados. Datos pareados: se trabaja con las diferencias, t = d̄/(s_d/√n) con n − 1 grados.",
+      def: [R`**Muestras independientes, varianzas conocidas:** $Z = \frac{(\bar X_1 - \bar X_2) - (\mu_1 - \mu_2)}{\sqrt{\sigma_1^2/n_1 + \sigma_2^2/n_2}} \sim N(0, 1)$.`,
+        R`**Muestras independientes, varianzas desconocidas pero iguales** (poblaciones normales): la **varianza combinada** es $s_p^2 = \frac{(n_1 - 1)s_1^2 + (n_2 - 1)s_2^2}{n_1 + n_2 - 2}$, y $T = \frac{(\bar X_1 - \bar X_2) - (\mu_1 - \mu_2)}{s_p\sqrt{1/n_1 + 1/n_2}} \sim t_{n_1 + n_2 - 2}$. El intervalo para $\mu_1 - \mu_2$ es $\bar x_1 - \bar x_2 \pm t_{\alpha/2;\,n_1 + n_2 - 2}\,s_p\sqrt{\frac1{n_1} + \frac1{n_2}}$.`,
+        R`**Datos pareados:** cuando cada dato de una muestra va con uno de la otra (la misma persona antes y después, la misma parcela con dos tratamientos), se calculan las diferencias $d_i$ y se hace una [[pe-test-media|prueba t]] para una media: $T = \frac{\bar d - \mu_d}{s_d/\sqrt n} \sim t_{n-1}$.`],
+      idea: [R`La pregunta es si la diferencia entre los dos promedios es más grande que lo que explicaría el azar. El error estándar de la diferencia junta la incertidumbre de los dos promedios.`,
+        R`Parear saca del medio la variación entre individuos: si un operario es lento antes, también lo es después, y al restar esa lentitud se cancela. Por eso, con los mismos datos, la prueba pareada suele detectar diferencias que la de muestras independientes no ve. Pero solo vale si los datos realmente vienen de a pares.`],
+      demo: [R`**Paso 1 (varianza de la diferencia).** $\bar X_1$ y $\bar X_2$ son independientes, así que las varianzas se suman ([[pe-conjuntas]]): $Var(\bar X_1 - \bar X_2) = \frac{\sigma_1^2}{n_1} + \frac{\sigma_2^2}{n_2}$, usando $Var(\bar X) = \frac{\sigma^2}{n}$ ([[pe-tcl]]). Con poblaciones normales, la diferencia es normal, y estandarizando sale la $Z$.`,
+        R`**Paso 2 (la varianza combinada).** Si $\sigma_1 = \sigma_2 = \sigma$, cada $S_i^2$ estima $\sigma^2$, y $\frac{(n_i - 1)S_i^2}{\sigma^2} \sim \chi^2_{n_i - 1}$ ([[pe-muestrales]]). La suma de las dos, independientes, es $\chi^2_{n_1 + n_2 - 2}$: los grados de libertad se suman.`,
+        R`**Paso 3.** Esa suma es $\frac{(n_1 + n_2 - 2)S_p^2}{\sigma^2}$. Como $E(\chi^2_k) = k$, $E(S_p^2) = \sigma^2$: es un estimador insesgado que pesa cada muestra por sus grados de libertad.`,
+        R`**Paso 4 (la t).** Dividiendo la $Z$ del paso 1 (con $\sigma_1 = \sigma_2 = \sigma$) por $\sqrt{S_p^2/\sigma^2}$, la $\sigma$ se cancela y queda $T$. Es una normal estándar sobre la raíz de una $\chi^2$ dividida por sus grados, independiente de ella: una $t_{n_1 + n_2 - 2}$.`,
+        R`**Paso 5 (pareados).** Las diferencias $d_i$ son independientes entre sí (cada par es un individuo distinto) y tienen media $\mu_d = \mu_1 - \mu_2$, así que forman una muestra de una sola variable, y vale la prueba de una media con $n - 1$ grados. $\blacksquare$`],
+      examples: [{ q: R`$n_1 = 8$, $\bar x_1 = 52$, $s_1 = 4$; $n_2 = 10$, $\bar x_2 = 48$, $s_2 = 5$.`, steps: [R`$s_p^2 = \frac{7\cdot16 + 9\cdot25}{16} = \frac{337}{16} \approx 21{,}06$, $s_p \approx 4{,}59$.`, R`Error estándar: $4{,}59\sqrt{\frac18 + \frac1{10}} \approx 2{,}18$; $t = \frac{4}{2{,}18} \approx 1{,}84$, con 16 grados. El crítico bilateral al 5 % es $2{,}12$: no se rechaza $H_0$.`] }],
+      tips: [R`Si las varianzas son muy distintas (una más del doble que la otra), no se combinan: se usa $\sqrt{s_1^2/n_1 + s_2^2/n_2}$ con los grados de libertad de Welch.`, R`Antes de elegir la prueba, preguntate si los datos vienen de a pares.`],
+      see: ["pe-test-media", "pe-ic-media", "pe-anova"]
+    },
     "pe-anova": {
       title: "Análisis de la varianza de un factor", aliases: ["ANOVA", "análisis de la varianza", "suma de cuadrados entre grupos", "suma de cuadrados dentro de los grupos"], concepts: ["pe-anova"],
       summary: "Para comparar k medias: SC total = SC entre + SC dentro. F = (SC_E/(k − 1)) / (SC_D/(N − k)) ~ F con (k − 1, N − k) grados bajo H₀: todas las medias iguales.",
@@ -1645,7 +1904,7 @@
   };
 
   E.extendCourse("m105", {
-    concepts: { "pe-hipotesis": { name: "Pruebas de hipótesis" }, "pe-test-media": { name: "Prueba para la media" }, "pe-test-prop-var": { name: "Pruebas para proporción y varianza" }, "pe-chi-cuadrado": { name: "Pruebas χ²" }, "pe-anova": { name: "ANOVA" } },
+    concepts: { "pe-hipotesis": { name: "Pruebas de hipótesis" }, "pe-test-media": { name: "Prueba para la media" }, "pe-test-prop-var": { name: "Pruebas para proporción y varianza" }, "pe-chi-cuadrado": { name: "Pruebas χ²" }, "pe-anova": { name: "ANOVA" }, "pe-dos-muestras": { name: "Dos medias" } },
     templates: T,
     units: [{
       id: "pe-hipotesis-u", order: 7, program: "Unidad 7", title: "Pruebas de hipótesis", icon: "flag",
@@ -1656,7 +1915,9 @@
         { id: "pe-hip-l2", title: "Pruebas para la media y la proporción", templates: ["pe-test-media-num", "pe-test-prop-num"], theory: ["pe-test-media", "pe-test-prop-var"],
           intro: R`¿A cuántos errores estándar quedó el dato del valor de $H_0$?` },
         { id: "pe-hip-l3", title: "χ² y ANOVA", templates: ["pe-chi2-num", "pe-anova-num"], theory: ["pe-chi-cuadrado", "pe-anova"],
-          intro: R`Observado contra esperado, y la variación entre grupos contra la de adentro.` }
+          intro: R`Observado contra esperado, y la variación entre grupos contra la de adentro.` },
+        { id: "pe-hip-l4", title: "Comparación de dos medias", templates: ["pe-dos-medias-num", "pe-pareadas-num"], theory: ["pe-dos-muestras"],
+          intro: R`Dos grupos independientes o los mismos individuos dos veces: no es la misma prueba.` }
       ]
     }],
     cards
@@ -1759,6 +2020,66 @@
     }
   };
 
+  T["pe-pendiente-num"] = {
+    type: "numeric", concepts: ["pe-regresion-inferencia"], difficulty: 3,
+    generate(r) {
+      const P = pairs(r), f = fit(P), n = f.n, ask = r.pick(["se", "seb1", "t", "ic"]);
+      const SCE = f.Syy - f.b1 * f.Sxy;
+      if (f.Syy === 0 || SCE < 0.5) return null;
+      const se = Math.sqrt(SCE / (n - 2)), seb = se / Math.sqrt(f.Sxx), t = f.b1 / seb, crit = S.tq(0.975, n - 2), ans = { se, seb1: seb, t, ic: f.b1 + crit * seb }[ask];
+      return {
+        prompt: `Con los datos $$${tab(P)}$$ se ajustó la recta de regresión de $y$ sobre $x$. Calculá ${{ se: "el error estándar de la estimación $s_e$", seb1: "el error estándar de la pendiente", t: "el estadístico $t$ de la prueba de $H_0: \\beta_1 = 0$", ic: "el límite superior del intervalo del 95 % para la pendiente $\\beta_1$" }[ask]}.`,
+        answer: ans,
+        solution: [`$S_{xx} = ${nf(f.Sxx)}$, $S_{yy} = ${nf(f.Syy)}$, $S_{xy} = ${nf(f.Sxy)}$ y $b_1 = \\frac{S_{xy}}{S_{xx}} \\approx ${nf(f.b1)}$.`,
+          `[[pe-regresion-inferencia|Suma de cuadrados residual]]: $SC_E = S_{yy} - b_1S_{xy} \\approx ${nf(SCE)}$, y $s_e = \\sqrt{\\frac{SC_E}{n - 2}} = \\sqrt{\\frac{${nf(SCE)}}{${n - 2}}} \\approx ${nf(se)}$.`,
+          ...(ask === "se" ? [] : [`Error estándar de la pendiente: $\\frac{s_e}{\\sqrt{S_{xx}}} \\approx \\frac{${nf(se)}}{${nf(Math.sqrt(f.Sxx))}} \\approx ${nf(seb)}$.`]),
+          ...(ask === "t" ? [`$t = \\frac{b_1}{s_e/\\sqrt{S_{xx}}} \\approx ${nf(t)}$, con $n - 2 = ${n - 2}$ grados de libertad. ${Math.abs(t) > crit ? `Como $|t| > t_{0{,}025;\\,${n - 2}} \\approx ${nf(crit, 3)}$, la pendiente es significativa al 5 %.` : `Como $|t| < t_{0{,}025;\\,${n - 2}} \\approx ${nf(crit, 3)}$, no hay evidencia al 5 % de que la pendiente sea distinta de cero.`}`] : []),
+          ...(ask === "ic" ? [`Intervalo: $b_1 \\pm t_{0{,}025;\\,${n - 2}}\\frac{s_e}{\\sqrt{S_{xx}}} = ${nf(f.b1)} \\pm ${nf(crit, 3)}\\cdot ${nf(seb)}$; el límite superior es $\\approx ${nf(ans)}$.`] : [])],
+        // otro camino: los residuos uno por uno, la descomposición SC_T = SC_R + SC_E (t² = SC_R/(SC_E/(n − 2))) y el cuantil integrando la densidad t
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const my = S.mean(P.map(p => p[1])), yh = P.map(p => f.b0 + f.b1 * p[0]), sce = P.reduce((s, p, i) => s + (p[1] - yh[i]) ** 2, 0), scr = yh.reduce((s, v) => s + (v - my) ** 2, 0);
+          const sev = Math.sqrt(sce / (n - 2)), tv = Math.sign(f.b1) * Math.sqrt(scr / (sce / (n - 2))), sb = Math.abs(f.b1 / tv);
+          const cv = S.quantile(x => S.tcdfNum(x, n - 2), 0.975, -50, 50, 60);
+          return { se: sev, seb1: sb, t: tv, ic: f.b1 + cv * sb }[ask];
+        } }
+      };
+    }
+  };
+
+  T["pe-residuos-tf"] = {
+    type: "tf", concepts: ["pe-regresion-inferencia"], difficulty: 2,
+    generate(r) {
+      const P = pairs(r), f = fit(P), kind = r.pick(["suma", "xe", "medio", "otra", "sumab0", "sce"]);
+      if (f.Syy === 0 || Math.abs(f.b0) < 0.5 || Math.abs(f.b1 - 1) < 0.1 || Math.abs(f.b1) < 0.1) return null;
+      const sceOk = f.Syy - f.b1 * f.Sxy, sceBad = f.Syy - f.b1 * f.Sxx, sceTrue = r.bool();
+      if (Math.abs(sceOk - sceBad) < 0.5) return null;
+      const txt = {
+        suma: [`la suma de los residuos $e_i = y_i - \\hat y_i$ es cero`, true],
+        xe: [`$\\sum x_ie_i = 0$, con $e_i = y_i - \\hat y_i$ los residuos`, true],
+        medio: [`si se agrega a los datos el punto $(\\bar x, \\bar y) = (${nf(f.mx)};\\ ${nf(f.my)})$, la recta de mínimos cuadrados no cambia`, true],
+        otra: [`la recta que pasa por $(\\bar x, \\bar y)$ con pendiente $${nf(f.b1 + 0.1, 4)}$ deja una suma de residuos al cuadrado menor que la recta de mínimos cuadrados`, false],
+        sumab0: [`la suma de los residuos es igual a la ordenada al origen $b_0 \\approx ${nf(f.b0)}$`, false],
+        sce: [`la suma de los residuos al cuadrado vale $${nf(sceTrue ? sceOk : sceBad)}$`, sceTrue]
+      }[kind];
+      return {
+        prompt: `<b>Verdadero o falso:</b> para los datos $$${tab(P)}$$ con la recta de mínimos cuadrados $\\hat y = ${nf(f.b0)} ${f.b1 < 0 ? "-" : "+"} ${nf(Math.abs(f.b1))}x$, ${txt[0]}.`,
+        answer: txt[1],
+        explanation: `${{ suma: "Es la ecuación normal de la ordenada: derivar $\\sum e_i^2$ respecto de $b_0$ e igualar a cero da $\\sum e_i = 0$", xe: "Es la ecuación normal de la pendiente: derivar $\\sum e_i^2$ respecto de $b_1$ e igualar a cero da $\\sum x_ie_i = 0$", medio: "La recta pasa por $(\\bar x, \\bar y)$, así que ese punto tiene residuo cero; agregarlo no cambia $\\bar x$, $\\bar y$, $S_{xx}$ ni $S_{xy}$", otra: "La recta de mínimos cuadrados es justamente la que hace mínima esa suma: cualquier otra da una suma mayor", sumab0: "Los residuos de la recta de mínimos cuadrados suman cero, sea cual sea $b_0$", sce: `$SC_E = S_{yy} - b_1S_{xy} \\approx ${nf(sceOk)}$ (no $S_{yy} - b_1S_{xx}$)` }[kind]} ([[pe-regresion-inferencia]]). Es ${txt[1] ? "verdadero" : "falso"}.`,
+        solution: [R`Los residuos de mínimos cuadrados cumplen $\sum e_i = 0$ y $\sum x_ie_i = 0$, y $SC_E = S_{yy} - b_1S_{xy}$.`],
+        // otro camino: se calculan los residuos (o se reajusta la recta) con los datos
+        verify: { kind: "truth", fn: () => {
+          const e = P.map(p => p[1] - f.b0 - f.b1 * p[0]), sum = e.reduce((s, v) => s + v, 0);
+          if (kind === "suma") return Math.abs(sum) < 1e-9;
+          if (kind === "xe") return Math.abs(P.reduce((s, p, i) => s + p[0] * e[i], 0)) < 1e-9;
+          if (kind === "medio") { const g = fit(P.concat([[f.mx, f.my]])); return Math.abs(g.b1 - f.b1) < 1e-9 && Math.abs(g.b0 - f.b0) < 1e-9; }
+          if (kind === "otra") { const b = f.b1 + 0.1, b0 = f.my - b * f.mx; return P.reduce((s, p) => s + (p[1] - b0 - b * p[0]) ** 2, 0) < e.reduce((s, v) => s + v * v, 0); }
+          if (kind === "sumab0") return Math.abs(sum - f.b0) < 1e-9;
+          return Math.abs(e.reduce((s, v) => s + v * v, 0) - (sceTrue ? sceOk : sceBad)) < 1e-6;
+        } }
+      };
+    }
+  };
+
   const cards = {
     "pe-regresion": {
       title: "Regresión lineal por mínimos cuadrados", aliases: ["regresión lineal", "recta de regresión", "mínimos cuadrados", "método de mínimos cuadrados", "residuo", "residuos"], concepts: ["pe-regresion"],
@@ -1773,6 +2094,24 @@
       examples: [{ q: R`Datos $(1, 2), (2, 4), (3, 5)$.`, steps: [R`$\bar x = 2$, $\bar y = \frac{11}{3}$; $S_{xx} = 2$, $S_{xy} = 3$.`, R`$b_1 = 1{,}5$ y $b_0 = \frac{11}{3} - 3 = \frac23$.`] }],
       tips: [R`La recta de $x$ sobre $y$ no es la misma recta despejada: minimiza las distancias horizontales.`],
       see: ["pe-correlacion", "pe-centralizacion"]
+    },
+    "pe-regresion-inferencia": {
+      title: "Inferencia en la regresión: residuos y pendiente", aliases: ["error estándar de la estimación", "error estándar de la pendiente", "suma de cuadrados residual", "suma de cuadrados de la regresión", "prueba para la pendiente", "ecuaciones normales"], concepts: ["pe-regresion-inferencia"],
+      summary: "Los residuos cumplen Σeᵢ = 0 y Σxᵢeᵢ = 0. SC_T = SC_R + SC_E, con SC_E = S_yy − b₁S_xy. s_e = √(SC_E/(n − 2)); el error estándar de b₁ es s_e/√S_xx, y t = b₁/(s_e/√S_xx) ~ tₙ₋₂ bajo H₀: β₁ = 0.",
+      def: [R`**Ecuaciones normales:** los $b_0$, $b_1$ de [[pe-regresion|mínimos cuadrados]] cumplen $\sum e_i = 0$ y $\sum x_ie_i = 0$, con $e_i = y_i - \hat y_i$.`,
+        R`**Sumas de cuadrados:** total $SC_T = S_{yy} = \sum (y_i - \bar y)^2$; de la regresión $SC_R = \sum (\hat y_i - \bar y)^2 = b_1S_{xy}$; residual $SC_E = \sum e_i^2 = S_{yy} - b_1S_{xy}$. Se cumple $SC_T = SC_R + SC_E$, y $R^2 = \frac{SC_R}{SC_T}$ ([[pe-correlacion]]).`,
+        R`**Error estándar de la estimación:** $s_e = \sqrt{\frac{SC_E}{n - 2}}$, que estima el desvío $\sigma$ del error $\varepsilon$ del modelo.`,
+        R`**Inferencia para la pendiente** (errores normales, independientes y con la misma varianza): $\frac{b_1 - \beta_1}{s_e/\sqrt{S_{xx}}} \sim t_{n-2}$. Para $H_0: \beta_1 = 0$ (que $x$ no sirve para predecir $y$), $t = \frac{b_1}{s_e/\sqrt{S_{xx}}}$; el intervalo es $b_1 \pm t_{\alpha/2;\,n-2}\frac{s_e}{\sqrt{S_{xx}}}$.`],
+      idea: [R`Aunque $x$ e $y$ no tengan nada que ver, los datos casi nunca dan $b_1 = 0$ justo: la pendiente estimada cambia de muestra en muestra. La prueba pregunta si la $b_1$ observada es más grande que lo que daría el puro ruido.`,
+        R`La pendiente es más precisa cuanto menos ruido hay ($s_e$ chico) y cuanto más separados están los $x$ ($S_{xx}$ grande): una recta apoyada en puntos muy juntos «baila» mucho.`],
+      demo: [R`**Paso 1 (ecuaciones normales).** $b_0$ y $b_1$ minimizan $Q = \sum (y_i - b_0 - b_1x_i)^2$, así que las dos derivadas parciales se anulan: $\frac{\partial Q}{\partial b_0} = -2\sum e_i = 0$ y $\frac{\partial Q}{\partial b_1} = -2\sum x_ie_i = 0$.`,
+        R`**Paso 2 (descomposición).** $y_i - \bar y = e_i + (\hat y_i - \bar y)$. Al elevar al cuadrado y sumar, el término cruzado es $2\sum e_i(\hat y_i - \bar y) = 2\sum e_i(b_0 + b_1x_i - \bar y)$, que se anula por las dos ecuaciones del paso 1. Queda $SC_T = SC_E + SC_R$.`,
+        R`**Paso 3 ($SC_R$).** $\hat y_i - \bar y = b_1(x_i - \bar x)$, porque la recta pasa por $(\bar x, \bar y)$. Entonces $SC_R = b_1^2S_{xx} = b_1S_{xy}$, usando $b_1S_{xx} = S_{xy}$; y por el paso 2, $SC_E = S_{yy} - b_1S_{xy}$.`,
+        R`**Paso 4 (varianza de la pendiente).** $b_1 = \frac{S_{xy}}{S_{xx}} = \sum c_iy_i$ con $c_i = \frac{x_i - \bar x}{S_{xx}}$ (el término con $\bar y$ desaparece porque $\sum (x_i - \bar x) = 0$). Los $y_i$ son independientes con varianza $\sigma^2$, así que $Var(b_1) = \sigma^2\sum c_i^2 = \sigma^2\frac{S_{xx}}{S_{xx}^2} = \frac{\sigma^2}{S_{xx}}$ ([[pe-conjuntas]]).`,
+        R`**Paso 5 (la t).** Con errores normales, $b_1$ es normal, $\frac{(n - 2)s_e^2}{\sigma^2} \sim \chi^2_{n-2}$ (se pierden dos grados por estimar $b_0$ y $b_1$) y es independiente de $b_1$. Estandarizando con $s_e$ en lugar de $\sigma$ queda una $t_{n-2}$, como en [[pe-muestrales]]. $\blacksquare$`],
+      examples: [{ q: R`$n = 6$, $S_{xx} = 17{,}5$, $S_{yy} = 60$, $S_{xy} = 31{,}5$.`, steps: [R`$b_1 = 1{,}8$; $SC_E = 60 - 1{,}8\cdot31{,}5 = 3{,}3$; $s_e = \sqrt{3{,}3/4} \approx 0{,}908$.`, R`Error estándar de $b_1$: $\frac{0{,}908}{\sqrt{17{,}5}} \approx 0{,}217$; $t \approx 8{,}29$, con 4 grados: la pendiente es claramente significativa.`] }],
+      tips: [R`Mirá el gráfico de residuos contra $x$: si tiene forma (una curva, un embudo), el modelo lineal o la varianza constante no valen, aunque $R^2$ sea alto.`, R`En la regresión simple, la prueba $t$ de la pendiente y la de $\rho = 0$ son la misma: $t^2 = \frac{SC_R}{SC_E/(n - 2)}$.`],
+      see: ["pe-regresion", "pe-correlacion", "pe-test-media"]
     },
     "pe-correlacion": {
       title: "Correlación y coeficiente de determinación", aliases: ["coeficiente de correlación", "correlación lineal", "coeficiente de determinación", "coeficiente de Pearson"], concepts: ["pe-correlacion"],
@@ -1791,7 +2130,7 @@
   };
 
   E.extendCourse("m105", {
-    concepts: { "pe-regresion": { name: "Regresión lineal" }, "pe-correlacion": { name: "Correlación" } },
+    concepts: { "pe-regresion": { name: "Regresión lineal" }, "pe-correlacion": { name: "Correlación" }, "pe-regresion-inferencia": { name: "Inferencia en la regresión" } },
     templates: T,
     units: [{
       id: "pe-regresion-u", order: 8, program: "Unidad 8", title: "Regresión y correlación", icon: "zap",
@@ -1800,7 +2139,9 @@
         { id: "pe-reg-l1", title: "La recta de mínimos cuadrados", templates: ["pe-regresion-num", "pe-regresion-error"], theory: ["pe-regresion"],
           intro: R`$b_1 = \frac{S_{xy}}{S_{xx}}$, y la recta pasa por $(\bar x, \bar y)$.` },
         { id: "pe-reg-l2", title: "Correlación", templates: ["pe-correlacion-num", "pe-r-tf"], theory: ["pe-correlacion"],
-          intro: R`$r$ mide qué tan alineados están los puntos; $R^2$, cuánto explica la recta.` }
+          intro: R`$r$ mide qué tan alineados están los puntos; $R^2$, cuánto explica la recta.` },
+        { id: "pe-reg-l3", title: "Residuos e inferencia para la pendiente", templates: ["pe-pendiente-num", "pe-residuos-tf"], theory: ["pe-regresion-inferencia"],
+          intro: R`¿La pendiente observada es más grande que lo que daría el puro ruido?` }
       ]
     }],
     cards

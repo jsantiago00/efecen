@@ -14,7 +14,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción; repasada el 21/10) | 42 | 20 |
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa (repasada el 21/10) | 52 | 26 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa | 54 | 33 |
-| 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado) | 46 | 31 |
+| 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado; repasada el 24/10) | 56 | 33 |
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10) | 58 | 44 |
 | 9+ | 3.º y 4.º año | en pausa (20/10): primero se pulen los dos primeros años; aparecen como "Próximamente" | — | — |
 
@@ -104,7 +104,7 @@ Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, 
   - gamma y beta incompletas regularizadas, de donde salen las distribuciones χ², t y F;
   - cuantiles por bisección;
   - combinatoria, estadísticos de una muestra y formato de números (`nf` para TeX, `nt` para texto común).
-- **Unidades:** 8, con 46 plantillas y 31 fichas, todas las fórmulas con su demostración paso a paso.
+- **Unidades:** 8, con 46 plantillas y 31 fichas, todas las fórmulas con su demostración paso a paso (56 y 33 después del repaso del 24/10).
 - **Verificación independiente:**
   - probabilidades por enumeración exhaustiva (dados, subconjuntos, permutaciones) y por poblaciones construidas a partir de las tablas;
   - la binomial por convolución de Bernoulli, la Poisson con la gamma incompleta;
@@ -163,6 +163,16 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
   - **Potencia y circuitos en paralelo** (lección nueva en la U9): potencias activa, reactiva y aparente, factor de potencia y su corrección con un capacitor (verificados simulando la corriente del motor con RK4, con $Q = \langle v(t)\,i(t + T/4)\rangle$), y RLC paralelo (verificado sumando las corrientes de cada rama en el tiempo). Se ampliaron las fichas de potencia y de RLC.
   - **Rectificada:** la plantilla de valores eficaces suma la onda completa y el valor medio, y la ficha de alterna, la rectificación con su demo.
   - **Exámenes:** las plantillas nuevas entran como alternativas en el 3.er parcial y en el final.
+
+- **M105 (24/10).** No hay programa publicado, así que se comparó con lo que piden el parcial de 2020 y el final de 2021 (`docs/parciales/m105.md`) y con un temario estándar. Se evaluaban sin práctica el muestreo estratificado y sistemático, la regla de Sturges y la asimetría y curtosis numéricas; además faltaban la comparación de dos medias y la inferencia en la regresión. Se agregaron 10 plantillas y 2 fichas, en dos lecciones nuevas y cinco ampliadas:
+  - **Muestreo y Sturges** (en la lección 1 de la U1): asignación proporcional (verificada con un sistemático de paso $N/n$ sobre la lista ordenada por estrato), posición y paso del sistemático (recorriendo la lista), y cantidad y ancho de clases (verificada con potencias de 2, sin logaritmos). La ficha de muestreo suma las fórmulas y la demo de que todos tienen probabilidad $n/N$; la de tablas, la regla de Sturges con su demo a partir de la binomial.
+  - **Asimetría y curtosis** (en la lección de cuartiles), verificadas con los momentos crudos y la varianza por pares.
+  - **Exponencial y uniforme** (en la U4): mediana, percentiles, falta de memoria y la uniforme condicionada, verificadas integrando la densidad con Simpson.
+  - **Combinaciones de normales** (en la U5): encastre eje-buje y $P(aX + bY > c)$, verificadas con una convolución numérica. La ficha de conjuntas suma el teorema con su demo por la función generadora de momentos.
+  - **Distribución de $S^2$** (en la lección de χ², t y F), verificada integrando la densidad χ².
+  - **Comparación de dos medias** (lección nueva en la U7): varianza combinada, $t$ y margen del intervalo (verificados armando datos con esas medias y desvíos y un ANOVA de dos grupos, $F = t^2$), y datos pareados (verificados con $s_x^2 + s_y^2 - 2\,cov$). Ficha nueva con la demo.
+  - **Residuos e inferencia para la pendiente** (lección nueva en la U8): $s_e$, error estándar de $b_1$, $t$ e intervalo (verificados con los residuos uno por uno y $t^2 = SC_R/(SC_E/(n-2))$), y un V/F de propiedades de los residuos (verificado recalculándolos o reajustando la recta). Ficha nueva con las ecuaciones normales, $SC_T = SC_R + SC_E$ y $Var(b_1) = \sigma^2/S_{xx}$.
+  - **Exámenes:** las plantillas nuevas entran como alternativas en los dos parciales.
 
 ## Pizarra (tablets con lápiz)
 
