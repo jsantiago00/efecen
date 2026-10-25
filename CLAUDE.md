@@ -34,7 +34,7 @@ Las evaluaciones de las ocho materias completas ya están hechas.
 | `content/carrera.js` | La carrera: años → semestres → materias, con `code`, `title`, `course` (si ya tiene contenido) y `step` (orden sugerido). |
 | `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
-| `board.js` | Pizarra para escribir con lápiz en tablets (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. |
+| `board.js` | Pizarra para escribir con lápiz en tablets: el motor de la pizarra del usuario (`jsantiago00/pizarra`) en JS sin build, con lazo, goma por área, texto, fórmulas (MathJax, bajo demanda) y figuras (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. Usa `assets/vendor/perfect-freehand/`, `asciimath2tex/` y `mathjax/`. |
 | `content/<código>-examenes.js` | Parciales y finales simulados de la materia (`E.registerExams`). El análisis de los originales está en `docs/parciales/`. |
 | `service-worker.js` | Precache offline (stale-while-revalidate). `CACHE` y `CONTENT`. |
 | `tests/run-tests.mjs` | Suite: carga el motor y el contenido en un `vm` de Node y verifica todo. |

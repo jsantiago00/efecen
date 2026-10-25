@@ -14,7 +14,7 @@ const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const engine = /<script id="engine">([\s\S]*?)<\/script>/.exec(html)[1];
 const contentFiles = [...html.matchAll(/<script src="(content\/[^"]+)"><\/script>/g)].map(m => m[1]);
 
-const ctx = { console, Math, Date, JSON };
+const ctx = { console, Math, Date, JSON, TextEncoder, TextDecoder };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(root, "assets/vendor/katex/katex.min.js"), "utf8"), ctx);
@@ -565,6 +565,43 @@ for (const cid of E.courseOrder) {
   ok(JSON.stringify(packed.s[0]) === '{"c":"ink","w":4,"h":0,"p":[1.2,5.7,0.5]}', w, "guardado compacto: " + JSON.stringify(packed.s[0]));
   const bb = B.bbox(mk([[10, 20], [30, 5]], 4));
   ok(Math.abs(bb.x0 - (10 - 1.75)) < 1e-9 && Math.abs(bb.y1 - (20 + 1.75)) < 0.01, w, "caja del trazo con el grosor");
+  // goma por área: corta el trazo en dos y se deshace y rehace entera
+  {
+    const pg2 = { s: [] }, l = mk(Array.from({ length: 11 }, (_, i) => [i * 10, 0]));
+    B.doAct(pg2, { a: "add", s: l });
+    const cut = B.eraseArea(pg2, 50, 0, 6);
+    ok(cut && pg2.s.length === 2 && !pg2.s.includes(l), w, "la goma por área tiene que dejar dos tramos");
+    ok(pg2.s.every(s => s.p.every((v, i) => i % 3 !== 0 || Math.abs(v - 50) > 6)), w, "quedó tinta dentro de la goma");
+    pg2._undo.push({ a: "seq", acts: [cut] }); pg2._redo = [];
+    ok(B.undoAny(pg2) && pg2.s.length === 1 && pg2.s[0] === l, w, "deshacer la goma por área no repone el trazo");
+    ok(B.redoAny(pg2) && pg2.s.length === 2, w, "rehacer la goma por área");
+    ok(B.eraseArea(pg2, 50, 300, 6) === null, w, "la goma por área lejos del trazo no hace nada");
+    // reemplazo en el mismo lugar (mover o escalar con el lazo), con deshacer
+    const pg3 = { s: [] }, s1 = mk([[0, 0], [10, 0]]), s2 = mk([[0, 20], [10, 20]]), s3 = mk([[0, 40], [10, 40]]);
+    for (const s of [s1, s2, s3]) B.doAct(pg3, { a: "add", s });
+    const moved = Object.assign({}, s2, { p: B.transformPts(s2.p, 2, 0, 20, 5, 0) });
+    B.doAct(pg3, { a: "rep", rem: [s2], add: [moved] });
+    ok(pg3.s[1] === moved && pg3.s.length === 3 && moved.p[3] === 25 && moved.p[4] === 20, w, "mover y escalar tiene que reemplazar el trazo en su lugar");
+    ok(B.undo(pg3) && pg3.s[1] === s2 && B.redo(pg3) && pg3.s[1] === moved, w, "deshacer y rehacer un reemplazo");
+    // lazo: un trazo cuenta si la mayoría de sus puntos está adentro
+    const sq = [0, 0, 100, 0, 100, 100, 0, 100];
+    ok(B.fractionInside(mk([[10, 10], [50, 50], [90, 90]]).p, sq) === 1 && B.fractionInside(mk([[10, 10], [150, 50]]).p, sq) === 0.5, w, "fracción del trazo dentro del lazo");
+    // los objetos se guardan con su contenido y se borran enteros
+    const txt = { c: "blue", w: 32, o: { k: "text", t: "Hola" }, p: B.rectPts(0, 0, 100.04, 40) };
+    ok(JSON.stringify(B.packPage({ id: "y", t: 1, s: [txt] }).s[0]) === '{"c":"blue","w":32,"o":{"k":"text","t":"Hola"},"p":[0,0,1,100,0,1,100,40,1,0,40,1,0,0,1]}', w, "guardado de un objeto");
+    ok(B.hits(txt, 50, 20, 1) && !B.hits(txt, 150, 20, 1), w, "la goma toca un objeto por su caja");
+    // funciones para graficar
+    const f = B.Ex.compileExpr("y = 2sin(x) + |x - 1|^2");
+    ok(f.fn && Math.abs(f.fn(0.5) - (2 * Math.sin(0.5) + 0.25)) < 1e-12, w, "función mal compilada");
+    ok(B.Ex.compileExpr("2x(").error && B.Ex.compileExpr("hola").error, w, "una función mal escrita tiene que dar un error");
+    const parts = B.Ex.sample(x => 1 / x, -5, 5, -5, 5, 200);
+    ok(parts.length === 2, w, "1/x se tiene que cortar en la asíntota: " + parts.length + " tramos");
+    // PDF mínimo: encabezado, una página por imagen y xref al final
+    const pdf = new TextDecoder("latin1").decode(B.pdfFromJpegs([{ bytes: new Uint8Array([255, 216, 255, 217]), w: 2, h: 3 }, { bytes: new Uint8Array([255, 216, 255, 217]), w: 2, h: 3 }]));
+    ok(pdf.startsWith("%PDF-1.4") && /\/Count 2/.test(pdf) && /startxref\n\d+\n%%EOF\n$/.test(pdf), w, "PDF mal armado");
+    const xref = +/startxref\n(\d+)/.exec(pdf)[1];
+    ok(pdf.slice(xref, xref + 4) === "xref", w, "la tabla xref del PDF no está donde dice");
+  }
 }
 
 // plantillas propias de las evaluaciones: corrección automática, verify obligatorio y variedad

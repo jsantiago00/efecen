@@ -209,6 +209,17 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
   - Tampoco actúa si el equipo ya informa el botón al pasar por encima.
 - **`setPointerCapture`** puede fallar sin cortar el trazo.
 
+- **Motor de la pizarra del usuario (25/10).** A pedido del usuario, `board.js` pasó a usar el motor de su pizarra (`jsantiago00/pizarra`, React + TypeScript), reescrito en JS sin build. Se conservó lo propio de efecen (una hoja por ejercicio, IndexedDB, botón del S Pen, formas, disposición en la tablet) y se sumó:
+  - **Trazo con perfect-freehand** (`assets/vendor/perfect-freehand/`): presión real con lápiz y simulada por velocidad con dedo o mouse (campo `m` del trazo). Las hojas viejas se ven igual, con el trazo nuevo.
+  - **Lazo:** seleccionar (cuenta un trazo si el 60 % de sus puntos queda adentro), mover, escalar desde las esquinas, duplicar, cambiar el color y borrar (también con Supr).
+  - **Goma por trazo o por área** (la de área recorta los trazos); se elige tocando la goma activa.
+  - **Texto** con teclado (tamaño, negrita, color) y **fórmulas** escritas como en la calculadora (`x^2 + sqrt(x)/3`), con botones de símbolos y vista previa. Se pasan a TeX con asciimath2tex y MathJax arma un SVG que se dibuja en el canvas (`assets/vendor/mathjax/tex-svg.js`, 2 MB: se carga recién la primera vez que se usa una fórmula y el service worker lo guarda al usarlo, no se precarga).
+  - **Figuras:** ejes cartesianos con cuadrícula y funciones (parser propio, sin eval), y recta numérica, con sus diálogos para editar el rango y las funciones.
+  - **Hoja punteada**, **deshacer con un toque de dos dedos** y **exportar** la hoja a PNG o a PDF (un generador de PDF mínimo con una página A4 por imagen JPEG, sin jsPDF).
+  - **Barra:** las herramientas, insertar figura, color y grosor (o tocando la herramienta activa), deshacer, rehacer y un menú «⋯» con el tipo de hoja, el dedo, las formas, exportar y borrar la hoja.
+  - **Objetos:** `{ c, w, o: { k: "text" | "math" | "axes" | "line", … }, p: rectángulo de 5 puntos }`, así el lazo, la goma, el deshacer y el guardado los tratan como a cualquier trazo. El historial suma la acción `rep` (reemplazar en el mismo lugar).
+  - **Tests:** goma por área con deshacer y rehacer, reemplazos, fracción dentro del lazo, guardado de objetos, funciones para graficar y el PDF. En Chromium (tablet de 1280 × 800 y 800 × 1280, celular de 390 × 780): trazo, formas, lazo, goma por área, texto, fórmula, ejes con función, recta numérica, guardado al recargar, tema oscuro, deshacer con dos dedos y exportar. `E.board.debug()` dice qué hay en la hoja.
+
 ## Fórmulas en los apuntes
 
 - Las fórmulas destacadas (`$$…$$`) van centradas y numeradas (1), (2)… dentro de cada ficha, con una sola numeración para toda la ficha, así se pueden citar.
