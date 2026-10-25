@@ -452,6 +452,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 .learn-see > div { width: 100%; }
 .chip-link { border: 2px solid var(--line); background: var(--card); color: var(--primary); font-weight: 800; font-size: .85rem; padding: 6px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; text-align: left; }
 .learn-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.ask-btn { display: inline-flex; align-items: center; gap: 4px; margin: 2px 0 8px; font-size: .82rem; opacity: .85; }
 .theory-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .learn-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .note-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: 0 2px 0 var(--line); }
@@ -2303,6 +2304,7 @@ body.board-split .nav { padding-bottom: 0; }
         ${sol.length ? `<button class="linkbtn" data-act="sol">${icon("book-open")} ${ok ? "Ver resolución" : "Ocultar resolución"}</button>
         <div class="solution" id="sol" ${ok ? "hidden" : ""}><ol>${sol.map(x => `<li>${texL(x)}</li>`).join("")}</ol></div>` : ""}
         ${theoryChips(icid, t.concepts, ok ? "Teoría:" : "Repasá la teoría:")}
+        ${askBtn(`data-ex="1"`, "Preguntar sobre este ejercicio")}
       </div>
       <button class="btn block ${ok ? "ok" : "bad"}" data-act="next">Continuar</button></div>`;
     $(".ses-foot").style.visibility = "hidden";
@@ -2769,6 +2771,53 @@ body.board-split .nav { padding-bottom: 0; }
     : b.viz ? `<figure>${vizHtml(b.viz)}${b.caption ? `<figcaption>${tex(b.caption)}</figcaption>` : ""}</figure>` : "";
   const lsec = (title, ic, inner, open) => inner
     ? `<details class="lsec" ${open ? "open" : ""}><summary>${icon(ic)}<span class="grow">${title}</span>${icon("chevron-right", "chev")}</summary><div class="lsec-body">${inner}</div></details>` : "";
+  // ---------- preguntar: abre Claude con la pregunta armada (la app no tiene servidor ni claves) ----------
+  const askBtn = (data, label) => `<button class="linkbtn ask-btn" data-act="ask" ${data}>${icon("circle-help")} ${label}</button>`;
+  // texto llano para la pregunta: los links quedan como su texto y se sacan las etiquetas HTML (el TeX se deja tal cual)
+  const plainOf = x => String(x == null ? "" : x)
+    .replace(/\[\[([a-z0-9-]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([a-z0-9-]+)\]\]/g, (m, id) => (E.cards[id] ? E.cards[id].title : id))
+    .replace(/<br\s*\/?>/g, "\n").replace(/<\/?(b|i|u|em|strong|span|div|p|sub|sup|small)\b[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  const ASK_SEC = { def: "la definición", idea: "«La idea»", demo: "la demostración", examples: "los ejemplos resueltos" };
+  // la respuesta correcta en texto llano (TeX sin renderizar), para la pregunta
+  function answerPlain(inst) {
+    const t = v => (v && typeof v === "object" ? (v.tex != null ? "$" + v.tex + "$" : v.text || "") : String(v));
+    switch (inst.type) {
+      case "mc": return plainOf(t(inst.options[inst.correct]));
+      case "tf": return inst.answer ? "Verdadero" : "Falso";
+      case "numeric": return "$" + (inst.answerTex || H.num(inst.answer, 4)) + "$";
+      case "order": return "\n" + inst.steps.map((x, i) => `${i + 1}. ${plainOf(x)}`).join("\n");
+      case "match": return "\n" + inst.pairs.map(([a, b]) => `${plainOf(t(a))} ↔ ${plainOf(t(b))}`).join("\n");
+      case "error": return `el primer paso incorrecto es el ${inst.wrongIndex + 1}: ${plainOf(inst.steps[inst.wrongIndex])}. ${plainOf(inst.fix || "")}`;
+    }
+    return "";
+  }
+  function askPrompt(d) {
+    const intro = c => `Estoy estudiando ${c.title} (${c.code}) de la Licenciatura en Ciencias Básicas con orientación en Física (FCEN, UNCuyo), con la app efecen.`;
+    const ending = "¿Me lo explicás de otra forma, más despacio y paso a paso? Si sirve, usá un ejemplo con números o describime un dibujo. Contestá en español rioplatense y escribí las fórmulas en LaTeX.";
+    if (d.ex) {
+      const s = ui.session, inst = s && s.inst, c = course(s.items[s.i].cid || activeCourse());
+      const sol = (inst.solution || []).map((x, i) => `${i + 1}. ${plainOf(x)}`).join("\n");
+      return `${intro(c)} Hice este ejercicio:\n\n${plainOf(inst.prompt)}\n\nLa respuesta correcta es: ${answerPlain(inst)}${inst.explanation ? `\n${plainOf(inst.explanation)}` : ""}${sol ? `\n\nLa resolución de la app:\n${sol}` : ""}\n\nNo termino de entenderlo. ${ending}`;
+    }
+    const card = cardOf(d.card), c = course(card.course);
+    let body;
+    if (d.sec === "demo") {
+      const k = +d.i;
+      body = `En el apunte «${card.title}» hay esta demostración:\n\n${(card.demo || []).map((b, i) => (typeof b === "string" ? `${i === k ? ">>> " : ""}${plainOf(b)}` : "")).filter(Boolean).join("\n\n")}\n\nNo entiendo el paso marcado con >>>:\n${plainOf(card.demo[k])}`;
+    } else {
+      const arr = d.sec === "examples" ? (card.examples || []).map(ex => `${plainOf(ex.q)}\n${ex.steps.map(st => "- " + plainOf(st)).join("\n")}`) : (card[d.sec] || []).filter(b => typeof b === "string").map(plainOf);
+      body = `En el apunte «${card.title}» (${card.summary}) no entiendo ${ASK_SEC[d.sec] || "esta parte"}:\n\n${arr.join("\n\n")}`;
+    }
+    return `${intro(c)} ${body}\n\n${ending}`;
+  }
+  function askClaude(d) {
+    let q = askPrompt(d);
+    if (q.length > 6000) q = q.slice(0, 6000) + "…";
+    // también queda copiada, por si el enlace no la carga o preferís otra IA
+    try { if (navigator.clipboard) navigator.clipboard.writeText(q).catch(() => {}); } catch (e) { /* sin portapapeles */ }
+    window.open("https://claude.ai/new?q=" + encodeURIComponent(q), "_blank", "noopener");
+    toast("Abrí Claude con tu pregunta (también quedó copiada)");
+  }
   function cardHtml(card) {
     const c = course(card.course);
     const gu = c.units.find(u => u.id === card.group);
@@ -2776,6 +2825,9 @@ body.board-split .nav { padding-bottom: 0; }
     // una sola numeración de fórmulas para toda la ficha
     const eq = { n: 0 };
     const blocks = arr => (arr && arr.length ? arr.map(b => block(b, eq)).join("") : "");
+    // cada paso de la demostración lleva su «preguntar»; las otras secciones, uno al final
+    const demoBlocks = (card.demo || []).map((b, i) => block(b, eq) + (typeof b === "string" ? askBtn(`data-card="${card.id}" data-sec="demo" data-i="${i}"`, "No entiendo este paso") : "")).join("");
+    const withAsk = (html, sec) => (html ? html + askBtn(`data-card="${card.id}" data-sec="${sec}"`, "Preguntar sobre esto") : "");
     const examples = (card.examples || []).map((ex, i) => `<div class="ex"><div class="ex-q"><b>Ejemplo ${i + 1}.</b> ${tex(ex.q, { eq })}</div>
       <details class="ex-sol"><summary>Ver resolución</summary><ol>${ex.steps.map(st => `<li>${tex(st, { eq })}</li>`).join("")}</ol></details></div>`).join("");
     const lessons = c.lessonList.filter(l => (l.theory || []).includes(card.id));
@@ -2785,10 +2837,10 @@ body.board-split .nav { padding-bottom: 0; }
     const lockedNote = !inSession && !practice && lessons.length ? `<p class="muted small" style="margin:0">Lo vas a practicar en la lección «${esc(lessons[0].title)}» cuando la desbloquees.</p>` : "";
     return `<div class="learn-inner">${learnHead("Apuntes · " + group)}
       <div class="learn-hero">${mascot("wow")}<div class="grow"><h1>${esc(card.title)}</h1><p class="muted">${tex(card.summary)}</p></div></div>
-      ${lsec("Definición", "book-open", blocks(card.def), true)}
-      ${lsec("La idea", "lightbulb", blocks(card.idea), true)}
-      ${lsec("Demostración", "sigma", blocks(card.demo), false)}
-      ${lsec((card.examples || []).length > 1 ? "Ejemplos resueltos" : "Ejemplo resuelto", "check", examples, true)}
+      ${lsec("Definición", "book-open", withAsk(blocks(card.def), "def"), true)}
+      ${lsec("La idea", "lightbulb", withAsk(blocks(card.idea), "idea"), true)}
+      ${lsec("Demostración", "sigma", demoBlocks, false)}
+      ${lsec((card.examples || []).length > 1 ? "Ejemplos resueltos" : "Ejemplo resuelto", "check", withAsk(examples, "examples"), true)}
       ${lsec("Errores comunes", "info", blocks(card.tips), false)}
       ${card.see && card.see.length ? `<div class="learn-see"><div class="muted small" style="font-weight:800">Ver también</div>${card.see.map(id => `<button class="chip-link" data-act="learn" data-id="${id}">${esc(cardOf(id).title)}</button>`).join("")}</div>` : ""}
       ${lessons.length ? `<div class="learn-see"><div class="muted small" style="font-weight:800">Aparece en</div>${lessons.map(l => `<button class="chip-link" data-act="learn" data-id="lesson:${l.id}">${icon("map")} ${esc(l.title)}</button>`).join("")}</div>` : ""}
@@ -3093,6 +3145,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "pick-subject": S.activeCourse = el.dataset.id; save(); render(); break;
       case "learn-back": history.back(); break;
       case "learn-close": closeLearn(); break;
+      case "ask": askClaude(el.dataset); break;
       case "learn-practice": { const { cid, k } = el.dataset; closeLearn(() => startPractice(cid, k)); break; }
       case "learn-lesson": { const { cid, id } = el.dataset; closeLearn(() => startLesson(cid, id)); break; }
       case "daily": startDaily(); break;

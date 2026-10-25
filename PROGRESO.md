@@ -182,6 +182,12 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
   - **Focos de una cónica rotada** (U6), verificados con la propiedad focal en puntos sacados de la ecuación en $x$ e $y$.
   - **Exámenes:** las plantillas nuevas entran como alternativas en los dos parciales y en el final.
 
+## Preguntar (25/10, pedido del usuario)
+
+- **Para qué:** cuando algo no se entiende, poder preguntarlo o pedir otra explicación.
+- **Cómo:** botones «No entiendo este paso» en cada paso de las demostraciones, «Preguntar sobre esto» al final de la definición, de «La idea» y de los ejemplos, y «Preguntar sobre este ejercicio» en la corrección. Abren `claude.ai/new?q=…` con la pregunta armada (materia, ficha, la demo entera con el paso marcado, o el enunciado, la respuesta y la resolución del ejercicio) y la copian al portapapeles, por si se prefiere pegarla en otro lado (`askClaude` en `index.html`).
+- **Por qué así:** la app es estática y sin servidor; llamar a una IA desde el navegador necesitaría una clave de API, que en un repo público quedaría expuesta. Si más adelante se quiere la respuesta dentro de la app, haría falta una función de Firebase (plan Blaze) que guarde la clave.
+
 ## Pizarra (tablets con lápiz)
 
 - **`board.js`** (archivo aparte, se carga antes del script de la app): una hoja para hacer cuentas con el lápiz, estilo Samsung Notes.
