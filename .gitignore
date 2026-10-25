@@ -3,3 +3,6 @@ node_modules/
 Thumbs.db
 __pycache__/
 *.log
+
+# Bibliografía de referencia local (17 GB, material con copyright): no se versiona
+Bibliografía - Cs. Físicas - FCEN - UBA/

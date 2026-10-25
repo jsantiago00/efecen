@@ -6,6 +6,8 @@
  *   1 Cinemática · 2 Dinámica · 3 Trabajo y energía · 4 Cantidad de movimiento, impulso y choques
  *   5 Mecánica de fluidos · 6 Cinemática rotacional · 7 Dinámica rotacional
  *   8 Equilibrio de cuerpos rígidos · 9 Gravitación · 10 Movimiento periódico
+ * Extra UBA (temas de Física 1 de Cs. Físicas, FCEN-UBA, que no están en el programa de F101):
+ *   Sistemas no inerciales · Estabilidad y potencial efectivo · Relatividad especial
  *
  * Convención: g = 9,8 m/s² (se aclara en cada enunciado). Respuestas numéricas con ±1 %.
  * Verificaciones (tests): las de dinámica simulan las ecuaciones de movimiento con RK4
@@ -2004,6 +2006,593 @@
           intro: R`Simple: $T = 2\pi\sqrt{L/g}$. Físico: $T = 2\pi\sqrt{I/(mgd)}$. Con ángulos chicos, son MAS.` },
         { id: "f1-amortiguadas", title: "Amortiguadas y resonancia", templates: ["f1-amort-num", "f1-resonancia-vf"], theory: ["f1-amortiguadas"],
           intro: R`La amplitud decae como $e^{-bt/2m}$. Forzando cerca de $\omega_0$ hay resonancia.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · SISTEMAS NO INERCIALES
+ *  Temas de Física 1 de la Lic. en Cs. Físicas (FCEN, UBA) que no figuran en el programa de F101.
+ *  Solo se tomó la lista de temas; el texto y los ejercicios son originales.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180, deg = x => x * 180 / Math.PI;
+  // segunda derivada numérica de una trayectoria (vector) en t
+  const acc = (pos, t, h = 1e-3) => pos(t + h).map((p, i) => (p - 2 * pos(t)[i] + pos(t - h)[i]) / (h * h));
+
+  T["f1-ascensor-num"] = {
+    type: "numeric", concepts: ["f1-noinercial"], difficulty: 1,
+    generate(r) {
+      const m = r.int(40, 100), a = r.int(5, 30) / 10;
+      const cases = [["sube y acelera", a], ["sube y frena", -a], ["baja y acelera", -a], ["baja y frena", a]];
+      const [txt, ay] = r.pick(cases), ask = r.pick(["kg", "N"]);
+      const N = m * (g + ay), ans = ask === "kg" ? N / g : N;
+      return {
+        prompt: `Una persona de $${m}$ kg está parada sobre una balanza dentro de un ascensor que ${txt} con aceleración de módulo $${dn(a, 1)}$ m/s². ¿${ask === "kg" ? "Cuántos kg marca la balanza (calibrada con $g = 9{,}8$ m/s²)" : "Qué fuerza normal (N) hace la balanza sobre la persona"}? ($g = 9{,}8$ m/s²)`,
+        answer: ans,
+        solution: [
+          `En el sistema del ascensor (no inercial) aparece la [[f1-noinercial|fuerza de inercia]] $-m\\vec a_{asc}$. Con el eje hacia arriba, la aceleración del ascensor es $a_y = ${dn(ay, 1)}$ m/s² (${ay > 0 ? "hacia arriba" : "hacia abajo"}).`,
+          `La persona está en reposo respecto del ascensor: $N - mg - ma_y = 0 \\Rightarrow N = m(g + a_y) = ${dn(N, 2)}$ N.`,
+          ask === "kg" ? `La balanza "traduce" la fuerza a kg dividiendo por $g$: marca $${dn(N / g, 2)}$ kg (${ay > 0 ? "más" : "menos"} que los $${m}$ kg reales).` : `Es el **peso aparente**: ${ay > 0 ? "mayor" : "menor"} que el peso $mg = ${dn(m * g, 1)}$ N.`
+        ],
+        // verificación: en el sistema inercial, la persona sobre un resorte rígido y amortiguado cuyo apoyo sube con y = a t²/2;
+        // pasado el transitorio, la fuerza del resorte es lo que mide la balanza
+        verify: (() => {
+          const k = 2000 * m, b = 2 * Math.sqrt(k * m);
+          return { kind: "ode", f: (t, y) => [y[1], (k * (ay * t * t / 2 - y[0]) + b * (ay * t - y[1])) / m - g], y0: [-m * g / k, 0], t1: 3, dt: 1e-3,
+            out: (t, y) => { const F = k * (ay * t * t / 2 - y[0]); return ask === "kg" ? F / g : F; }, tol: 1e-4 };
+        })()
+      };
+    }
+  };
+  T["f1-plomada-num"] = {
+    type: "numeric", concepts: ["f1-noinercial"], difficulty: 2,
+    generate(r) {
+      const ask = r.pick(["angulo", "acel", "periodo"]);
+      // péndulo en el sistema inercial: masa unida al punto de suspensión (que acelera) por un hilo muy rígido y amortiguado
+      const inertialAngle = a => {
+        const k = 1e4, b = 6, L = 1;
+        const f = (t, s) => { const dx = s[0] - a * t * t / 2, dy = s[1], d = Math.hypot(dx, dy), F = -k * (d - L) / d;
+          return [s[2], s[3], F * dx - b * (s[2] - a * t), F * dy - b * s[3] - g]; };
+        let s = [0, -L - g / k, 0, 0], t = 0; const h = 2e-3;
+        const add = (u, v, c) => u.map((x, i) => x + v[i] * c);
+        for (let n = 0; n < 6000; n++) { const k1 = f(t, s), k2 = f(t + h / 2, add(s, k1, h / 2)), k3 = f(t + h / 2, add(s, k2, h / 2)), k4 = f(t + h, add(s, k3, h));
+          s = s.map((x, i) => x + h / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i])); t += h; }
+        return deg(Math.atan2(a * t * t / 2 - s[0], -s[1]));
+      };
+      if (ask === "angulo") {
+        const a = r.int(5, 60) / 10, th = deg(Math.atan(a / g));
+        return { prompt: `Un vagón acelera hacia adelante con $a = ${dn(a, 1)}$ m/s² por una vía horizontal. Del techo cuelga una plomada en reposo respecto del vagón. ¿Qué ángulo (en grados) forma el hilo con la vertical? ($g = 9{,}8$ m/s²)`, answer: th,
+          solution: [`En el vagón, sobre la plomada actúan el peso, la tensión y la [[f1-noinercial|fuerza de inercia]] $-m\\vec a$, que apunta hacia atrás.`,
+            `Todo pasa como si hubiera una **gravedad efectiva** $\\vec g_{ef} = \\vec g - \\vec a$: el hilo se alinea con ella, inclinado hacia atrás.`,
+            `$\\tan\\theta = \\frac{a}{g} \\Rightarrow \\theta = \\arctan\\frac{${dn(a, 1)}}{9{,}8} \\approx ${dn(th, 2)}^\\circ$.`],
+          verify: { kind: "value", fn: () => inertialAngle(a), tol: 1e-4 } };
+      }
+      if (ask === "acel") {
+        const th = r.pick([3, 5, 8, 10, 12, 15, 20, 25]), a = g * Math.tan(rad(th));
+        return { prompt: `En un vagón que acelera por una vía horizontal, un péndulo en reposo respecto del vagón forma $${th}^\\circ$ con la vertical. ¿Qué aceleración (m/s²) tiene el vagón? ($g = 9{,}8$ m/s²)`, answer: a,
+          solution: [`En el sistema del vagón el péndulo está en equilibrio con la [[f1-noinercial|fuerza de inercia]] $-m\\vec a$: $T\\sin\\theta = ma$, $T\\cos\\theta = mg$.`,
+            `Dividiendo: $a = g\\tan\\theta = 9{,}8\\tan ${th}^\\circ \\approx ${dn(a, 3)}$ m/s². El péndulo funciona como **acelerómetro**.`],
+          verify: { kind: "zero", fn: ans => [inertialAngle(ans) - th], tol: 1e-3, scale: th } };
+      }
+      const a = r.int(10, 60) / 10, L = r.int(5, 20) / 10, ge = Math.hypot(g, a), Tp = 2 * Math.PI * Math.sqrt(L / ge), the = Math.atan(a / g);
+      return { prompt: `Un péndulo simple de $${dn(L, 1)}$ m cuelga dentro de un vagón que acelera horizontalmente con $a = ${dn(a, 1)}$ m/s². ¿Cuál es su período (s) para oscilaciones chicas alrededor de su posición de equilibrio? ($g = 9{,}8$ m/s²)`, answer: Tp,
+        solution: [`En el vagón, el péndulo siente la **gravedad efectiva** $\\vec g_{ef} = \\vec g - \\vec a$ ([[f1-noinercial]]), de módulo $\\sqrt{g^2 + a^2} \\approx ${dn(ge, 3)}$ m/s².`,
+          `Oscila alrededor de la dirección de $\\vec g_{ef}$ como un [[f1-pendulos|péndulo simple]] con esa gravedad: $T = 2\\pi\\sqrt{\\frac{L}{g_{ef}}} \\approx ${dn(Tp, 3)}$ s, un poco menos que en reposo.`],
+        // verificación: ecuación angular completa en el vagón, L θ'' = −g sen θ − a cos θ, simulada alrededor del equilibrio
+        verify: { kind: "ode", f: (_, y) => { const th = y[0] - the; return [y[1], -(g * Math.sin(th) + a * Math.cos(th)) / L]; }, y0: [0, 1e-3],
+          t1: 0, until: (t, y) => t > 0.75 * Tp && y[0] >= 0 && y[1] > 0, g: (_, y) => y[0], dt: Tp / 20000, out: t => t, tol: 1e-4 } };
+    }
+  };
+  const SIT = [
+    { txt: "un colectivo que arranca hacia adelante", pos: t => [t * t, 0, 0] },
+    { txt: "un colectivo que, yendo hacia adelante, frena", pos: t => [10 * t - t * t, 0, 0] },
+    { txt: "un auto que dobla hacia la izquierda con rapidez constante", pos: t => [20 * Math.sin(t / 2), 20 * (1 - Math.cos(t / 2)), 0] },
+    { txt: "un auto que dobla hacia la derecha con rapidez constante", pos: t => [20 * Math.sin(t / 2), -20 * (1 - Math.cos(t / 2)), 0] },
+    { txt: "un ascensor que arranca subiendo", pos: t => [0, 0, t * t] },
+    { txt: "un ascensor que, mientras baja, frena", pos: t => [0, 0, -3 * t + t * t] },
+    { txt: "un ascensor que arranca bajando", pos: t => [0, 0, -t * t] }
+  ];
+  const DIRS = ["hacia adelante", "hacia atrás", "hacia la izquierda", "hacia la derecha", "hacia arriba", "hacia abajo"];
+  // dirección dominante de un vector (x adelante, y izquierda, z arriba)
+  const dirOf = v => { const i = [0, 1, 2].reduce((b, j) => (Math.abs(v[j]) > Math.abs(v[b]) ? j : b), 0); return DIRS[2 * i + (v[i] > 0 ? 0 : 1)]; };
+  T["f1-pseudo-mc"] = {
+    type: "mc", concepts: ["f1-noinercial"], difficulty: 1,
+    generate(r) {
+      const k = r.int(0, SIT.length - 1), s = SIT[k];
+      const correct = ["hacia atrás", "hacia adelante", "hacia la derecha", "hacia la izquierda", "hacia abajo", "hacia abajo", "hacia arriba"][k];
+      const m = r.int(40, 90);
+      return {
+        prompt: `Un pasajero de $${m}$ kg viaja en ${s.txt}. En el sistema de referencia del vehículo, ¿hacia dónde apunta la fuerza de inercia que siente?`,
+        ...H.mc(r, correct, r.shuffle(DIRS.filter(d => d !== correct)), { text: true }),
+        solution: [`La [[f1-noinercial|fuerza de inercia]] es $-m\\vec a_O$: opuesta a la aceleración del vehículo (no a su velocidad).`,
+          `Acá la aceleración del vehículo apunta ${dirOf(acc(s.pos, 0))}, así que la fuerza de inercia apunta **${correct}**. Por eso ${k < 2 ? "el cuerpo \"se va\" en ese sentido" : k < 4 ? "en una curva uno se siente empujado hacia afuera" : "uno se siente más pesado o más liviano"}.`],
+        // verificación: aceleración del vehículo por diferencias finitas sobre su trayectoria, y dirección de −a
+        verify: { kind: "truth", target: true, fn: () => dirOf(acc(s.pos, 0).map(x => -x)) === correct }
+      };
+    }
+  };
+  T["f1-desliza-vf"] = {
+    type: "tf", concepts: ["f1-rotante"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["plataforma", "colectivo"]);
+      if (v === "plataforma") {
+        const l = r.int(5, 30) / 10, rpm = r.int(10, 60), mu = r.int(2, 8) / 10, w = rpm * 2 * Math.PI / 60;
+        if (Math.abs(w * w * l / (mu * g) - 1) < 0.1) return null;
+        return { prompt: `Un paquete está apoyado a $${dn(l, 1)}$ m del centro de una plataforma horizontal que gira a $${rpm}$ rpm. El coeficiente de rozamiento estático es $\\mu_e = ${dn(mu, 1)}$. <b>Verdadero o falso:</b> el paquete desliza. ($g = 9{,}8$ m/s²)`,
+          answer: w * w * l > mu * g,
+          explanation: `En el sistema de la plataforma, el rozamiento tiene que equilibrar la [[f1-rotante|fuerza centrífuga]] $m\\omega^2 l$, y como mucho vale $\\mu_e mg$. Con $\\omega = ${dn(w, 3)}$ rad/s: $\\omega^2 l = ${dn(w * w * l, 2)}$ m/s² frente a $\\mu_e g = ${dn(mu * g, 2)}$ m/s², así que ${w * w * l > mu * g ? "**desliza**" : "**no desliza**"}.`,
+          solution: [`Condición para no deslizar: $\\omega^2 l \\le \\mu_e g$. Desde afuera es lo mismo: el rozamiento es la [[f1-dinamica-circular|fuerza centrípeta]].`],
+          // verificación: aceleración del paquete (si acompaña a la plataforma) por diferencias finitas sobre la circunferencia
+          verify: { kind: "truth", fn: () => Math.hypot(...acc(t => [l * Math.cos(w * t), l * Math.sin(w * t), 0], 0.3, 1e-4)) > mu * g } };
+      }
+      const a = r.int(5, 60) / 10, mu = r.int(1, 6) / 10;
+      if (Math.abs(a / (mu * g) - 1) < 0.1) return null;
+      return { prompt: `Un paquete está apoyado en el piso de un colectivo que arranca con aceleración $${dn(a, 1)}$ m/s². El rozamiento estático paquete-piso es $\\mu_e = ${dn(mu, 1)}$. <b>Verdadero o falso:</b> el paquete desliza respecto del piso. ($g = 9{,}8$ m/s²)`,
+        answer: a > mu * g,
+        explanation: `En el colectivo, el rozamiento tiene que compensar la [[f1-noinercial|fuerza de inercia]] $ma$, y como mucho da $\\mu_e mg$: $a = ${dn(a, 1)}$ frente a $\\mu_e g = ${dn(mu * g, 2)}$ m/s². ${a > mu * g ? "**Desliza** hacia atrás." : "**No desliza**."}`,
+        solution: [`El paquete acompaña al colectivo solo si $a \\le \\mu_e g$.`],
+        verify: { kind: "truth", fn: () => Math.abs(acc(t => [a * t * t / 2, 0, 0], 1)[0]) > mu * g } };
+    }
+  };
+  T["f1-silla-num"] = {
+    type: "numeric", concepts: ["f1-rotante"], difficulty: 3,
+    generate(r) {
+      const Rd = r.int(3, 8), L = r.int(3, 8), th = r.pick([20, 25, 30, 35, 40, 45, 50]), ask = r.pick(["w", "rpm"]);
+      const rr = Rd + L * Math.sin(rad(th)), w = Math.sqrt(g * Math.tan(rad(th)) / rr), ans = ask === "w" ? w : w * 60 / (2 * Math.PI);
+      return {
+        prompt: `En unas sillas voladoras, cada silla cuelga de un cable de $${L}$ m atado al borde de un disco de radio $${Rd}$ m que gira con velocidad angular constante. Si los cables forman $${th}^\\circ$ con la vertical, ¿${ask === "w" ? "cuál es la velocidad angular (rad/s)" : "a cuántas vueltas por minuto gira el disco"}? ($g = 9{,}8$ m/s²)`,
+        answer: ans,
+        solution: [
+          `En el sistema que gira con el disco, la silla está en equilibrio bajo el peso, la tensión y la [[f1-rotante|fuerza centrífuga]] $m\\omega^2 r$, con $r = R + L\\sin\\theta = ${dn(rr, 3)}$ m.`,
+          `$T\\cos\\theta = mg$ y $T\\sin\\theta = m\\omega^2 r$, así que $\\tan\\theta = \\frac{\\omega^2 r}{g}$.`,
+          `$\\omega = \\sqrt{\\frac{g\\tan\\theta}{r}} \\approx ${dn(w, 4)}$ rad/s${ask === "rpm" ? ` $\\approx ${dn(ans, 3)}$ rpm` : ""}. No depende de la masa: todas las sillas quedan con el mismo ángulo.`
+        ],
+        // verificación: en el sistema inercial, la resultante (tensión + peso) tiene que ser la fuerza centrípeta, con m = 1
+        verify: { kind: "zero", fn: x => { const ww = ask === "w" ? x : x * 2 * Math.PI / 60, Tn = g / Math.cos(rad(th)); return [(Tn * Math.sin(rad(th)) - ww * ww * rr) / g]; }, tol: 1e-9 }
+      };
+    }
+  };
+  T["f1-coriolis-num"] = {
+    type: "numeric", concepts: ["f1-rotante"], difficulty: 3,
+    generate(r) {
+      const Om = 7.292e-5, lat = r.pick([["Mendoza", -32.9], ["Buenos Aires", -34.6], ["Quito", -0.2], ["Madrid", 40.4], ["Ushuaia", -54.8], ["Ciudad de México", 19.4]]);
+      const ask = r.pick(["desvio", "desvio", "fuerza"]);
+      if (ask === "desvio") {
+        const h = r.pick([50, 80, 100, 150, 200, 300, 450]), t = Math.sqrt(2 * h / g), d = Om * g * t ** 3 * Math.cos(rad(lat[1])) / 3;
+        return { prompt: `En ${lat[0]} (latitud $${dn(Math.abs(lat[1]), 1)}^\\circ$ ${lat[1] < 0 ? "S" : "N"}) se deja caer una piedra desde $${h}$ m de altura, sin rozamiento. Por la rotación de la Tierra ($\\Omega = 7{,}292\\times10^{-5}$ rad/s), ¿cuántos centímetros se desvía hacia el este al llegar al suelo? ($g = 9{,}8$ m/s²)`, answer: 100 * d,
+          solution: [`En la Tierra (sistema rotante) aparece la [[f1-rotante|fuerza de Coriolis]] $-2m\\vec\\Omega\\times\\vec v$. Para un cuerpo que cae, apunta hacia el **este** con módulo $2m\\Omega v\\cos\\lambda$.`,
+            `Con $v = gt$: $a_E = 2\\Omega g t\\cos\\lambda$. Integrando dos veces, $x_E = \\frac13\\Omega g t^3\\cos\\lambda$, con $t = \\sqrt{2h/g} \\approx ${dn(t, 3)}$ s.`,
+            `$x_E \\approx ${dn(100 * d, 3)}$ cm: chico, pero medible (lo midieron en el siglo XIX tirando cosas por pozos de mina).`],
+          // verificación: caída simulada en 3D en el sistema local (x este, y norte, z arriba) con la fuerza de Coriolis completa
+          verify: (() => { const c = Math.cos(rad(lat[1])), s = Math.sin(rad(lat[1])), W = [0, Om * c, Om * s];
+            return { kind: "ode", f: (_, u) => { const v = u.slice(3), cx = [W[1] * v[2] - W[2] * v[1], W[2] * v[0] - W[0] * v[2], W[0] * v[1] - W[1] * v[0]];
+              return [v[0], v[1], v[2], -2 * cx[0], -2 * cx[1], -g - 2 * cx[2]]; }, y0: [0, 0, h, 0, 0, 0], t1: 0, until: (_, u) => u[2] <= 0, g: (_, u) => u[2], dt: t / 20000, tmax: 2 * t, out: (_, u) => 100 * u[0], tol: 2e-3 }; })() };
+      }
+      const m = r.int(8, 20) * 100, vk = r.pick([60, 80, 100, 120]), v = vk / 3.6, F = 2 * m * Om * v * Math.abs(Math.sin(rad(lat[1])));
+      if (Math.abs(lat[1]) < 5) return null;
+      return { prompt: `Un auto de $${m}$ kg va hacia el norte a $${vk}$ km/h en ${lat[0]} (latitud $${dn(Math.abs(lat[1]), 1)}^\\circ$ ${lat[1] < 0 ? "S" : "N"}). ¿Cuánto vale la componente horizontal de la fuerza de Coriolis sobre el auto (en N)? ($\\Omega = 7{,}292\\times10^{-5}$ rad/s)`, answer: F,
+        solution: [`[[f1-rotante|Fuerza de Coriolis]]: $\\vec F = -2m\\vec\\Omega\\times\\vec v$. Para movimiento horizontal, la parte horizontal vale $2m\\Omega v|\\sin\\lambda|$ y empuja hacia la ${lat[1] < 0 ? "izquierda (hemisferio sur)" : "derecha (hemisferio norte)"}.`,
+          `$F = 2\\cdot${m}\\cdot7{,}292\\times10^{-5}\\cdot${dn(v, 2)}\\cdot|\\sin ${dn(lat[1], 1)}^\\circ| \\approx ${dn(F, 3)}$ N: casi nada frente al peso. En un huracán, que dura días y abarca cientos de km, sí decide el sentido de giro.`],
+        // verificación: producto vectorial componente a componente en el sistema local y proyección horizontal
+        verify: { kind: "value", tol: 1e-6, fn: () => { const W = [0, Om * Math.cos(rad(lat[1])), Om * Math.sin(rad(lat[1]))], vv = [0, v, 0];
+          const cx = [W[1] * vv[2] - W[2] * vv[1], W[2] * vv[0] - W[0] * vv[2], W[0] * vv[1] - W[1] * vv[0]]; return 2 * m * Math.hypot(cx[0], cx[1]); } } };
+    }
+  };
+
+  const cards = {
+    "f1-noinercial": {
+      title: "Sistemas no inerciales y fuerzas de inercia", aliases: ["sistema no inercial", "sistemas no inerciales", "fuerza de inercia", "fuerzas de inercia", "pseudofuerza", "pseudofuerzas", "gravedad efectiva", "peso aparente en un ascensor"], concepts: ["f1-noinercial"],
+      summary: "En un sistema que acelera con a_O, las leyes de Newton valen si se agrega la fuerza de inercia −m a_O, que no tiene par de reacción.",
+      def: [R`Un [[f1-relativo|sistema de referencia]] es **inercial** si en él vale la [[f1-newton|primera ley de Newton]]. Un sistema cuyo origen acelera con $\vec a_O$ respecto de uno inercial (sin rotar) es **no inercial**.`,
+        R`Como $\vec a = \vec a' + \vec a_O$, la segunda ley vista desde el sistema acelerado queda $$m\vec a' = \sum\vec F - m\vec a_O.$$ El término $-m\vec a_O$ es la **fuerza de inercia** (o pseudofuerza): no la ejerce ningún cuerpo y **no tiene par de acción y reacción**.`,
+        R`**Gravedad efectiva:** en el sistema acelerado, peso y fuerza de inercia se suman como si hubiera una gravedad $\vec g_{ef} = \vec g - \vec a_O$. Una plomada se alinea con $\vec g_{ef}$, y un péndulo oscila con $T = 2\pi\sqrt{L/g_{ef}}$.`],
+      idea: [R`La fuerza de inercia es la forma de "contabilizar" desde adentro que el sistema acelera. Desde afuera (sistema inercial) no hay ninguna fuerza nueva: el pasajero que "se va para atrás" cuando arranca el colectivo, en realidad se queda donde estaba mientras el colectivo avanza.`,
+        R`**Principio de equivalencia:** dentro de una caja cerrada, ningún experimento mecánico distingue una gravedad $g$ de una aceleración $g$ hacia arriba. En un ascensor en caída libre ($\vec a_O = \vec g$) la gravedad efectiva es cero: todo flota. Es el punto de partida de la relatividad general.`],
+      demo: [R`**Paso 1 (posiciones).** Llamamos $O'$ al origen del sistema que acelera. Como sus ejes no giran, la posición del cuerpo vista desde el sistema inercial es la del origen $O'$ más la posición vista desde adentro: $\vec r = \vec R_O + \vec r\,'$.`,
+        R`**Paso 2 (derivar dos veces).** En mecánica clásica el tiempo es el mismo para los dos observadores, así que podemos derivar término a término: $\vec v = \vec V_O + \vec v\,'$ y $\vec a = \vec a_O + \vec a\,'$.`,
+        R`**Paso 3 (Newton donde vale).** La segunda ley solo vale en el sistema inercial: $\sum\vec F = m\vec a$. Reemplazamos $\vec a$ por lo del paso 2: $\sum\vec F = m\vec a_O + m\vec a\,'$.`,
+        R`**Paso 4 (despejar).** $m\vec a\,' = \sum\vec F - m\vec a_O$. Desde adentro el cuerpo acelera como si, además de las fuerzas reales, actuara $-m\vec a_O$: esa es la fuerza de inercia. $\blacksquare$`],
+      examples: [{ q: R`Una persona de 70 kg en un ascensor que sube acelerando a 2 m/s². ¿Qué marca la balanza (en N)?`, steps: [R`En el ascensor: $N - mg - ma = 0$, así que $N = m(g + a) = 70\cdot 11{,}8 = 826$ N.`, R`Se siente más pesada. Si el ascensor cayera libremente, $N = 0$.`] }],
+      tips: [R`La fuerza de inercia apunta **opuesta a la aceleración** del sistema, no a su velocidad: en un colectivo que frena (va hacia adelante y acelera hacia atrás), apunta hacia adelante.`,
+        R`Elegí un sistema y mantenelo: o resolvés todo desde afuera (sin fuerzas de inercia) o desde adentro (con ellas). Mezclar los dos es el error más común.`],
+      see: ["f1-rotante", "f1-newton", "f1-relativo"]
+    },
+    "f1-rotante": {
+      title: "Sistemas en rotación: fuerza centrífuga y de Coriolis", aliases: ["fuerza centrífuga", "fuerza de Coriolis", "Coriolis", "sistema rotante", "sistemas rotantes"], concepts: ["f1-rotante"],
+      summary: "En un sistema que gira con Ω constante aparecen la fuerza centrífuga mΩ²r (hacia afuera del eje) y la de Coriolis −2m Ω×v′ (solo si el cuerpo se mueve respecto del sistema).",
+      def: [R`Si el sistema gira con velocidad angular constante $\vec\Omega$ alrededor de un eje fijo, la segunda ley vista desde adentro es $$m\vec a\,' = \sum\vec F - m\vec\Omega\times(\vec\Omega\times\vec r\,') - 2m\vec\Omega\times\vec v\,'.$$`,
+        R`**Fuerza centrífuga:** $-m\vec\Omega\times(\vec\Omega\times\vec r\,')$, de módulo $m\Omega^2\rho$ ($\rho$: distancia al eje), apunta hacia afuera del eje. Actúa aunque el cuerpo esté quieto en el sistema.`,
+        R`**Fuerza de Coriolis:** $-2m\vec\Omega\times\vec v\,'$. Solo actúa sobre cuerpos que se mueven respecto del sistema rotante; es perpendicular a $\vec v\,'$, así que **no hace trabajo**.`],
+      idea: [R`La centrífuga no es "la reacción de la centrípeta": la [[f1-dinamica-circular|fuerza centrípeta]] es una fuerza real (tensión, rozamiento, normal…) vista desde afuera; la centrífuga es una fuerza de inercia que aparece solo en el sistema que gira.`,
+        R`En la Tierra ($\Omega = 7{,}29\times10^{-5}$ rad/s) la centrífuga hace que $g$ sea un poco menor en el ecuador y aplana el planeta; Coriolis desvía los vientos (hacia la izquierda en el hemisferio sur, hacia la derecha en el norte), hace girar los huracanes y el péndulo de Foucault.`,
+        R`**Coriolis en una plataforma.** Una bolita que se aleja del centro pasa a zonas donde el piso se mueve más rápido ($\Omega r$). Vista desde la plataforma, se queda atrás y su camino se curva en sentido contrario al giro: esa curvatura es la fuerza de Coriolis.`],
+      demo: [R`**Paso 1 (vectores que giran).** Un vector $\vec u$ fijo en el sistema que gira con $\vec\Omega$, visto desde el sistema inercial, cambia como $\frac{d\vec u}{dt} = \vec\Omega\times\vec u$: su punta describe una circunferencia con esa velocidad.`,
+        R`**Paso 2 (regla de derivación).** Un vector cualquiera es $\vec A = \sum A_i'\,\hat e_i'$, con los versores del sistema que gira. Al derivar desde afuera cambian las componentes y también los versores (paso 1), así que $\left(\frac{d\vec A}{dt}\right)_{in} = \left(\frac{d\vec A}{dt}\right)_{rot} + \vec\Omega\times\vec A$.`,
+        R`**Paso 3 (velocidad).** Aplicando la regla a la posición: $\vec v = \vec v\,' + \vec\Omega\times\vec r$.`,
+        R`**Paso 4 (aceleración).** Aplicándola otra vez a $\vec v$, con $\vec\Omega$ constante: $\vec a = \vec a\,' + \vec\Omega\times\vec v\,' + \vec\Omega\times(\vec v\,' + \vec\Omega\times\vec r) = \vec a\,' + 2\vec\Omega\times\vec v\,' + \vec\Omega\times(\vec\Omega\times\vec r)$. El término de Coriolis aparece dos veces: una por la derivada de $\vec v\,'$ y otra por la de $\vec\Omega\times\vec r$.`,
+        R`**Paso 5 (Newton).** Con $\sum\vec F = m\vec a$ y despejando: $m\vec a\,' = \sum\vec F - m\vec\Omega\times(\vec\Omega\times\vec r) - 2m\vec\Omega\times\vec v\,'$. El segundo término es la centrífuga y el tercero, Coriolis. $\blacksquare$`],
+      examples: [{ q: R`Una moneda a 20 cm del centro de un disco que gira a 45 rpm. ¿Qué $\mu_e$ mínimo necesita para no deslizar?`, steps: [R`$\omega = 45\cdot\frac{2\pi}{60} \approx 4{,}71$ rad/s. En el disco, el rozamiento equilibra la centrífuga: $\mu_e mg \ge m\omega^2 r$.`, R`$\mu_e \ge \frac{\omega^2 r}{g} = \frac{22{,}2\cdot0{,}2}{9{,}8} \approx 0{,}45$.`] }],
+      see: ["f1-noinercial", "f1-dinamica-circular", "f1-circular"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-noinercial": { name: "Sistemas no inerciales" }, "f1-rotante": { name: "Centrífuga y Coriolis" } },
+    templates: T,
+    units: [{
+      id: "f1-noinercial-u", order: 11, program: "Extra UBA", title: "Sistemas no inerciales", icon: "rotate-ccw",
+      diagnostic: ["f1-ascensor-num", "f1-plomada-num", "f1-silla-num"],
+      lessons: [
+        { id: "f1-noinercial", title: "Fuerzas de inercia", templates: ["f1-pseudo-mc", "f1-ascensor-num", "f1-plomada-num"], theory: ["f1-noinercial"],
+          intro: R`En un sistema que acelera con $\vec a_O$ se agrega la fuerza de inercia $-m\vec a_O$. Gravedad efectiva: $\vec g_{ef} = \vec g - \vec a_O$.` },
+        { id: "f1-rotante", title: "Centrífuga y Coriolis", templates: ["f1-desliza-vf", "f1-silla-num", "f1-coriolis-num"], theory: ["f1-rotante", "f1-noinercial"],
+          intro: R`Girando con $\Omega$: centrífuga $m\Omega^2\rho$ hacia afuera y Coriolis $-2m\vec\Omega\times\vec v\,'$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · ESTABILIDAD, PEQUEÑAS OSCILACIONES Y POTENCIAL EFECTIVO
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  const periodOf = (f, y0, Test) => ({ kind: "ode", f, y0, t1: 0, until: (t, y) => t > 0.75 * Test && y[0] >= 0 && y[1] > 0, g: (_, y) => y[0], dt: Test / 20000, out: t => t, tol: 1e-4 });
+  const dU = (U, x, h = 1e-6) => (U(x + h) - U(x - h)) / (2 * h);
+
+  T["f1-peqosc-num"] = {
+    type: "numeric", concepts: ["f1-estabilidad"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["doble", "coseno", "pozo"]), m = r.int(1, 8) / 2, U0 = r.int(1, 20), a = r.int(2, 10) / 10;
+      let U, x0, k, tex, eq;
+      if (v === "doble") { U = x => U0 * ((x / a) ** 4 - 2 * (x / a) ** 2); x0 = a; k = 8 * U0 / (a * a); tex = `U(x) = ${U0}\\left[\\left(\\frac{x}{${dn(a, 1)}}\\right)^4 - 2\\left(\\frac{x}{${dn(a, 1)}}\\right)^2\\right]`; eq = `x_0 = ${dn(a, 1)}`; }
+      else if (v === "coseno") { U = x => -U0 * Math.cos(x / a); x0 = 0; k = U0 / (a * a); tex = `U(x) = -${U0}\\cos\\frac{x}{${dn(a, 1)}}`; eq = `x_0 = 0`; }
+      else { U = x => -U0 / Math.cosh(x / a) ** 2; x0 = 0; k = 2 * U0 / (a * a); tex = `U(x) = -\\frac{${U0}}{\\cosh^2(x/${dn(a, 1)})}`; eq = `x_0 = 0`; }
+      const w = Math.sqrt(k / m), Tp = 2 * Math.PI / w;
+      return {
+        prompt: `Una partícula de $${dn(m, 1)}$ kg se mueve en una dimensión con energía potencial $${tex}$ (U en J, x en m). ¿Cuál es el período (s) de las oscilaciones chicas alrededor del equilibrio estable${v === "doble" ? " con $x > 0$" : ""}?`,
+        answer: Tp,
+        solution: [
+          `El equilibrio estable es un **mínimo** de $U$: $U'(x_0) = 0$, $U''(x_0) > 0$. Acá $${eq}$ ([[f1-estabilidad|estabilidad del equilibrio]]).`,
+          `Cerca del mínimo, $U(x) \\approx U(x_0) + \\frac12U''(x_0)(x - x_0)^2$: es un [[f1-mas|oscilador armónico]] con $k_{ef} = U''(x_0) = ${dn(k, 3)}$ N/m.`,
+          `$T = 2\\pi\\sqrt{\\frac{m}{k_{ef}}} \\approx ${dn(Tp, 4)}$ s.`
+        ],
+        // verificación: movimiento simulado con la fuerza −U′ calculada por diferencias finitas, con amplitud muy chica
+        verify: periodOf((_, y) => [y[1], -dU(U, x0 + y[0]) / m], [0, 1e-4 * a * w], Tp)
+      };
+    }
+  };
+  T["f1-eqtipo-mc"] = {
+    testN: 120, // simulación algo cara: menos instancias en los tests
+    type: "mc", concepts: ["f1-estabilidad"], difficulty: 2,
+    generate(r) {
+      const [p, q] = r.distinct(2, -4, 5).sort((x, y) => x - y), kk = r.pick([1, 2, -1, -2]), want = r.pick(["estable", "inestable"]);
+      const c = 6 * kk, U = x => c * (x ** 3 / 3 - (p + q) * x * x / 2 + p * q * x);
+      // U'' = c(2x − p − q): en q (> p) vale c(q − p), positivo si c > 0
+      const stable = kk > 0 ? q : p, unstable = kk > 0 ? p : q, ans = want === "estable" ? stable : unstable;
+      if (p === 0 || q === 0) return null;
+      const opts = [ans, want === "estable" ? unstable : stable, (p + q) / 2, 0, p + q, -ans];
+      return {
+        prompt: `Una partícula se mueve sobre el eje $x$ con energía potencial $U(x) = ${H.poly([[2 * kk, "x^{3}"], [-3 * kk * (p + q), "x^{2}"], [6 * kk * p * q, "x"]])}$ (en J, con x en m). ¿Dónde está su equilibrio **${want}**?`,
+        ...H.mc(r, `x = ${dn(ans, 1)}`, opts.slice(1).map(x => `x = ${dn(x, 1)}`), { fallback: ["x = 10", "x = -10"] }),
+        solution: [
+          `Equilibrios: $U'(x) = ${6 * kk}(x${H.sg(-p)})(x${H.sg(-q)}) = 0$, o sea $x = ${p}$ y $x = ${q}$.`,
+          `[[f1-estabilidad|Estabilidad]]: $U''(x) = ${6 * kk}(2x${p + q === 0 ? "" : H.sg(-(p + q))})$. Es estable donde $U'' > 0$ (mínimo de $U$) e inestable donde $U'' < 0$ (máximo).`,
+          `$U''(${stable}) > 0$: estable en $x = ${stable}$; inestable en $x = ${unstable}$.`
+        ],
+        // verificación: se suelta la partícula (m = 1 kg) muy cerca de cada equilibrio y se ve si se queda cerca o se escapa
+        verify: { kind: "truth", target: true, fn: () => {
+          const stays = x0 => { let x = x0 + 1e-4, v = 0; const dt = 1e-4; for (let i = 0; i < 40000; i++) { v += -dU(U, x, 1e-5) * dt; x += v * dt; if (Math.abs(x - x0) > 1e-2) return false; } return true; };
+          return want === "estable" ? stays(ans) && !stays(want === "estable" ? unstable : stable) : !stays(ans) && stays(stable);
+        } }
+      };
+    }
+  };
+  T["f1-aro-vf"] = {
+    testN: 40, // simulación algo cara: menos instancias en los tests
+    type: "tf", concepts: ["f1-estabilidad"], difficulty: 3,
+    generate(r) {
+      const Rr = r.int(2, 10) / 10, fac = r.pick([0.5, 0.7, 0.85, 1.2, 1.5, 2]), w0 = Math.sqrt(g / Rr), w = fac * w0, q = r.pick(["fondo", "otro"]);
+      const truth = q === "fondo" ? fac < 1 : fac > 1;
+      return {
+        prompt: `Una bolita está enhebrada sin rozamiento en un aro vertical de radio $${dn(Rr, 1)}$ m que gira alrededor de su diámetro vertical a $\\omega = ${dn(w, 2)}$ rad/s. <b>Verdadero o falso:</b> ${q === "fondo" ? "el punto más bajo del aro es un equilibrio estable" : "existe una posición de equilibrio estable fuera del punto más bajo"}. ($g = 9{,}8$ m/s²)`,
+        answer: truth,
+        explanation: `En el sistema del aro, con $\\theta$ medido desde abajo: $R\\theta'' = \\sin\\theta\\,(\\omega^2R\\cos\\theta - g)$. El fondo es estable solo si $\\omega^2 < \\frac gR$ (acá $\\frac gR = ${dn(w0 * w0, 2)}$ s⁻² y $\\omega^2 = ${dn(w * w, 2)}$ s⁻²). Si $\\omega^2 > \\frac gR$, el fondo se vuelve inestable y aparecen dos equilibrios estables en $\\cos\\theta = \\frac{g}{\\omega^2R}$ ([[f1-estabilidad]], [[f1-rotante|fuerza centrífuga]]).`,
+        solution: [`Es una **bifurcación**: al pasar $\\omega$ por $\\sqrt{g/R}$, el mínimo del potencial efectivo se parte en dos.`],
+        // verificación: se suelta la bolita casi en el fondo y se mide cuánto se aleja; si se aleja, se busca dónde termina oscilando
+        verify: { kind: "truth", fn: () => {
+          let th = 1e-3, v = 0, mx = 0; const dt = 2e-4 / w0;
+          for (let i = 0; i < 2e5; i++) { v += Math.sin(th) * (w * w * Math.cos(th) - g / Rr) * dt; th += v * dt; mx = Math.max(mx, Math.abs(th)); }
+          const bottomStable = mx < 1e-2;
+          return q === "fondo" ? bottomStable : !bottomStable && mx < Math.PI - 0.1;
+        } }
+      };
+    }
+  };
+  T["f1-apogeo-num"] = {
+    testN: 120, // simulación algo cara: menos instancias en los tests
+    type: "numeric", concepts: ["f1-potencial-efectivo"], difficulty: 3,
+    generate(r) {
+      const GM = 3.986e14, RT = 6.371e6, hp = r.pick([200, 300, 500, 800, 1000]) * 1000, rp = RT + hp, fac = r.pick([1.03, 1.05, 1.1, 1.15, 1.2, 1.3]);
+      const vp = Math.round(fac * Math.sqrt(GM / rp)), ra = rp / (2 * GM / (rp * vp * vp) - 1), va = vp * rp / ra, ask = r.pick(["h", "v"]);
+      const a = (rp + ra) / 2, Tp = 2 * Math.PI * Math.sqrt(a ** 3 / GM);
+      return {
+        prompt: `Un satélite pasa por el perigeo de su órbita a $${hp / 1000}$ km de altura con velocidad $${dn(vp / 1000, 3)}$ km/s. ¿${ask === "h" ? "A qué altura (km) está su apogeo" : "Qué velocidad (km/s) tiene en el apogeo"}? ($GM_T = 3{,}986\\times10^{14}$ m³/s², $R_T = 6371$ km)`,
+        answer: ask === "h" ? (ra - RT) / 1000 : va / 1000,
+        solution: [
+          `Se conservan la energía y el [[f1-momento-angular|momento angular]]. En perigeo y apogeo la velocidad es perpendicular al radio: $r_pv_p = r_av_a$ ([[f1-potencial-efectivo|potencial efectivo]]).`,
+          `$\\frac12v_p^2 - \\frac{GM}{r_p} = \\frac12v_a^2 - \\frac{GM}{r_a}$ con $v_a = \\frac{r_pv_p}{r_a}$ da $r_a = \\frac{r_p}{\\frac{2GM}{r_pv_p^2} - 1} \\approx ${dn(ra / 1000, 0)}$ km (desde el centro).`,
+          ask === "h" ? `Altura del apogeo: $r_a - R_T \\approx ${dn((ra - RT) / 1000, 1)}$ km.` : `$v_a = \\frac{r_pv_p}{r_a} \\approx ${dn(va / 1000, 4)}$ km/s.`
+        ],
+        // verificación: se integra la órbita desde el perigeo hasta que la velocidad radial cambia de signo (apogeo)
+        verify: { kind: "ode", f: (_, s) => { const r3 = Math.hypot(s[0], s[1]) ** 3; return [s[2], s[3], -GM * s[0] / r3, -GM * s[1] / r3]; }, y0: [rp, 0, 0, vp],
+          t1: 0, until: (t, s) => t > 0.1 * Tp && s[0] * s[2] + s[1] * s[3] <= 0, g: (_, s) => s[0] * s[2] + s[1] * s[3], dt: Tp / 40000, tmax: Tp,
+          out: (_, s) => (ask === "h" ? (Math.hypot(s[0], s[1]) - RT) / 1000 : Math.hypot(s[2], s[3]) / 1000), tol: 1e-4 }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-estabilidad": {
+      title: "Estabilidad del equilibrio y pequeñas oscilaciones", aliases: ["equilibrio estable", "equilibrio inestable", "pequeñas oscilaciones", "curva de energía potencial", "bifurcación"], concepts: ["f1-estabilidad"],
+      summary: "Con F = −U′(x): los equilibrios son los puntos con U′ = 0; son estables si U″ > 0. Cerca de un mínimo se oscila con ω = √(U″(x₀)/m).",
+      def: [R`Si la fuerza es conservativa, $F(x) = -U'(x)$ ([[f1-energia|energía potencial]]). Un punto $x_0$ es de **equilibrio** si $U'(x_0) = 0$.`,
+        R`Es **estable** si al apartarlo un poco la fuerza lo devuelve: $U''(x_0) > 0$ (mínimo de $U$). Es **inestable** si $U''(x_0) < 0$ (máximo). Si $U'' = 0$ hay que mirar términos de orden superior.`,
+        R`**Pequeñas oscilaciones:** con el [[c2-taylor|desarrollo de Taylor]] $U(x) \approx U(x_0) + \frac12U''(x_0)(x - x_0)^2$, el movimiento cerca de un mínimo es un [[f1-mas|MAS]] con $$\omega = \sqrt{\frac{U''(x_0)}{m}}.$$`],
+      idea: [R`Pensalo como una bolita en un paisaje con la forma de $U(x)$: se queda en los valles (estable) y se cae de las lomas (inestable). Con energía $E$, solo puede estar donde $U(x) \le E$; los puntos con $U = E$ son los **puntos de retorno**.`,
+        { graph: { fns: [x => x ** 4 - 2 * x * x], xr: [-1.8, 1.8], yr: [-1.5, 2] }, caption: R`Doble pozo $U = x^4 - 2x^2$: mínimos estables en $x = \pm1$ y máximo inestable en $x = 0$.` },
+        R`Casi todo sistema cerca de un equilibrio estable oscila armónicamente: por eso el [[f1-mas|oscilador armónico]] está en todos lados (moléculas, circuitos, estructuras).`],
+      demo: [R`**Paso 1 (fuerza cerca del equilibrio).** Desarrollamos $U'$ alrededor de $x_0$ con Taylor a primer orden: $U'(x) \approx U'(x_0) + U''(x_0)(x - x_0)$. Como $x_0$ es equilibrio, $U'(x_0) = 0$, así que $F(x) = -U'(x) \approx -U''(x_0)(x - x_0)$.`,
+        R`**Paso 2 (si U″ > 0).** La fuerza es proporcional al apartamiento y de signo contrario: es una fuerza de [[f1-hooke|Hooke]] con $k = U''(x_0)$. La ecuación $m\ddot x = -k(x - x_0)$ es la de un MAS con $\omega = \sqrt{k/m}$, y la partícula se queda cerca de $x_0$: equilibrio estable.`,
+        R`**Paso 3 (si U″ < 0).** Con $\kappa = -U''(x_0) > 0$ queda $m\ddot x = \kappa(x - x_0)$, cuyas soluciones contienen $e^{\sqrt{\kappa/m}\,t}$: cualquier apartamiento, por chico que sea, crece exponencialmente. Equilibrio inestable. $\blacksquare$`],
+      examples: [{ q: R`Una partícula de 2 kg con $U(x) = 3x^2 - x^3$ (J). ¿Período cerca del equilibrio estable?`, steps: [R`$U' = 6x - 3x^2 = 0$ en $x = 0$ y $x = 2$. $U'' = 6 - 6x$: $U''(0) = 6 > 0$ (estable), $U''(2) = -6$ (inestable).`, R`$\omega = \sqrt{6/2} = \sqrt3$ rad/s, $T = \frac{2\pi}{\sqrt3} \approx 3{,}63$ s.`] }],
+      see: ["f1-mas", "f1-energia", "f1-potencial-efectivo", "f1-equilibrio"]
+    },
+    "f1-potencial-efectivo": {
+      title: "Fuerzas centrales y potencial efectivo", aliases: ["potencial efectivo", "fuerza central", "fuerzas centrales", "perigeo", "apogeo", "órbita elíptica"], concepts: ["f1-potencial-efectivo"],
+      summary: "Con fuerza central se conservan E y L. El movimiento radial es 1D con U_ef(r) = U(r) + L²/(2mr²): las órbitas circulares están en sus mínimos.",
+      def: [R`Una **fuerza central** apunta siempre hacia (o desde) un centro fijo y depende solo de $r$. Su torque respecto del centro es nulo, así que se conserva el [[f1-momento-angular|momento angular]] $L = mr^2\dot\theta$ y el movimiento es plano.`,
+        R`La energía se escribe $E = \frac12m\dot r^2 + U_{ef}(r)$ con el **potencial efectivo** $$U_{ef}(r) = U(r) + \frac{L^2}{2mr^2}.$$ El segundo término es la "barrera centrífuga": el radio se mueve como una partícula en 1D con ese potencial.`,
+        R`**Gravitación:** $U = -\frac{GMm}{r}$. Si $E < 0$ la órbita es una elipse acotada entre el **perigeo** $r_p$ y el **apogeo** $r_a$, que son los puntos de retorno ($U_{ef} = E$). Si $E \ge 0$, la partícula escapa.`],
+      idea: [R`En perigeo y apogeo la velocidad es perpendicular al radio, así que $L = mr_pv_p = mr_av_a$: el satélite va más rápido cuando está más cerca (es la segunda [[f1-orbitas|ley de Kepler]]).`,
+        { graph: { fns: [r => -2 / r + 1 / (r * r)], xr: [0.25, 6], yr: [-1.3, 1.5] }, caption: R`$U_{ef}(r) = -\frac{2}{r} + \frac{1}{r^2}$: el mínimo es la órbita circular; con más energía, el radio oscila entre dos puntos de retorno.` }],
+      demo: [R`**Paso 1 (velocidad en polares).** La velocidad tiene una parte radial $\dot r$ y una perpendicular $r\dot\theta$. Son perpendiculares, así que por Pitágoras $v^2 = \dot r^2 + r^2\dot\theta^2$.`,
+        R`**Paso 2 (usar el momento angular).** La fuerza central no hace torque respecto del centro, así que $L = mr^2\dot\theta$ es constante. Despejamos $\dot\theta = \frac{L}{mr^2}$.`,
+        R`**Paso 3 (reemplazar).** $\frac12mv^2 = \frac12m\dot r^2 + \frac12mr^2\frac{L^2}{m^2r^4} = \frac12m\dot r^2 + \frac{L^2}{2mr^2}$.`,
+        R`**Paso 4 (energía).** Sumando $U(r)$: $E = \frac12m\dot r^2 + U_{ef}(r)$. Es la energía de una partícula en una dimensión (la coordenada $r$) con potencial $U_{ef}$, y por eso sus puntos de retorno son los $r$ con $U_{ef}(r) = E$. $\blacksquare$`],
+      examples: [{ q: R`Un satélite en perigeo a $r_p = 7000$ km con $v_p = 8$ km/s. ¿$r_a$?`, steps: [R`$\frac{2GM}{r_pv_p^2} = \frac{7{,}972\times10^{14}}{7\times10^6\cdot6{,}4\times10^7} \approx 1{,}78$.`, R`$r_a = \frac{r_p}{1{,}78 - 1} \approx 8980$ km desde el centro.`] }],
+      see: ["f1-orbitas", "f1-momento-angular", "f1-estabilidad"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-estabilidad": { name: "Estabilidad y pequeñas oscilaciones" }, "f1-potencial-efectivo": { name: "Fuerzas centrales y potencial efectivo" } },
+    templates: T,
+    units: [{
+      id: "f1-estabilidad-u", order: 12, program: "Extra UBA", title: "Estabilidad y potencial efectivo", icon: "target",
+      diagnostic: ["f1-peqosc-num", "f1-eqtipo-mc", "f1-apogeo-num"],
+      lessons: [
+        { id: "f1-estabilidad", title: "Equilibrio y pequeñas oscilaciones", templates: ["f1-eqtipo-mc", "f1-peqosc-num", "f1-aro-vf"], theory: ["f1-estabilidad"],
+          intro: R`Equilibrio: $U'(x_0) = 0$. Estable si $U''(x_0) > 0$, y ahí $\omega = \sqrt{U''(x_0)/m}$.` },
+        { id: "f1-potencial-efectivo", title: "Fuerzas centrales", templates: ["f1-apogeo-num"], theory: ["f1-potencial-efectivo"],
+          intro: R`Se conservan $E$ y $L$. Radialmente: $U_{ef} = U(r) + \frac{L^2}{2mr^2}$. En perigeo y apogeo, $r_pv_p = r_av_a$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · RELATIVIDAD ESPECIAL
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  const gam = b => 1 / Math.sqrt(1 - b * b);
+  // boost de Lorentz en coordenadas (ct, x) construido como exponencial de la rapidez (serie de Taylor de la matriz),
+  // sin usar γ: sirve de camino independiente para verificar. toS(β) pasa de S′ (que se mueve a +β) a S.
+  const expK = phi => { let M = [[1, 0], [0, 1]], P = [[1, 0], [0, 1]];
+    for (let n = 1; n < 80; n++) { P = [[P[0][1] * phi / n, P[0][0] * phi / n], [P[1][1] * phi / n, P[1][0] * phi / n]]; M = [[M[0][0] + P[0][0], M[0][1] + P[0][1]], [M[1][0] + P[1][0], M[1][1] + P[1][1]]]; }
+    return M; };
+  const toS = b => expK(Math.atanh(b)), toP = b => expK(-Math.atanh(b));
+  const app = (M, ev) => [M[0][0] * ev[0] + M[0][1] * ev[1], M[1][0] * ev[0] + M[1][1] * ev[1]];
+  const BETAS = [0.5, 0.6, 0.8, 0.9, 0.95, 0.99, 0.995, 0.999];
+
+  T["f1-dilatacion-num"] = {
+    type: "numeric", concepts: ["f1-relatividad"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["particula", "viaje", "ritmo"]);
+      if (v === "particula") {
+        const [nm, tau, unit] = r.pick([["piones", 26e-9, "26\\ \\text{ns}"], ["muones", 2.2e-6, "2{,}2\\ \\mu\\text{s}"], ["kaones", 12.4e-9, "12{,}4\\ \\text{ns}"]]), b = r.pick(BETAS), c = 3e8, d = gam(b) * b * c * tau;
+        return { prompt: `La vida media de los ${nm} en reposo es $${unit}$. ¿Qué distancia (m) recorren en promedio, medida en el laboratorio, si se mueven a $${dn(b, 3)}c$? ($c = 3\\times10^8$ m/s)`, answer: d,
+          solution: [`La vida media es un [[f1-relatividad|tiempo propio]]: en el laboratorio se dilata a $\\gamma\\tau_0$, con $\\gamma = \\frac{1}{\\sqrt{1 - \\beta^2}} \\approx ${dn(gam(b), 3)}$.`,
+            `$d = v\\,\\gamma\\tau_0 = ${dn(b, 3)}\\cdot3\\times10^8\\cdot${dn(gam(b), 3)}\\cdot\\tau_0 \\approx ${dn(d, 1)}$ m${b > 0.9 ? `, unas $${dn(gam(b), 1)}$ veces más de lo que daría la física clásica` : ""}.`],
+          // verificación: el evento "decae" en el sistema de la partícula (ct′ = cτ, x′ = 0) llevado al laboratorio con el boost
+          verify: { kind: "value", tol: 1e-6, fn: () => app(toS(b), [c * tau, 0])[1] } };
+      }
+      if (v === "viaje") {
+        const D = r.pick([4.2, 8.6, 10, 25, 100]), b = r.pick(BETAS), tp = D / (b * gam(b));
+        return { prompt: `Una nave viaja a $${dn(b, 3)}c$ hasta una estrella que está a $${dn(D, 1)}$ años luz de la Tierra (en el sistema de la Tierra). ¿Cuántos años pasan para los tripulantes durante el viaje?`, answer: tp,
+          solution: [`Para la Tierra el viaje dura $\\frac{D}{v} = ${dn(D / b, 3)}$ años. Partida y llegada ocurren en el mismo lugar de la nave: los tripulantes miden el [[f1-relatividad|tiempo propio]].`,
+            `$\\tau = \\frac{D/v}{\\gamma} = \\frac{${dn(D / b, 3)}}{${dn(gam(b), 3)}} \\approx ${dn(tp, 3)}$ años. (Para ellos la distancia está contraída en el mismo factor.)`],
+          // verificación: el evento llegada (ct = D/β, x = D) llevado al sistema de la nave
+          verify: { kind: "value", tol: 1e-6, fn: () => app(toP(b), [D / b, D])[0] } };
+      }
+      const f = r.pick([0.5, 0.25, 0.6, 0.8, 0.9, 0.1]), b = Math.sqrt(1 - f * f);
+      return { prompt: `¿A qué velocidad (en unidades de $c$) tiene que moverse un reloj para que, visto desde la Tierra, avance a $${dn(f, 2)}$ veces el ritmo de los relojes terrestres?`, answer: b,
+        solution: [`[[f1-relatividad|Dilatación del tiempo]]: el reloj en movimiento marca $\\Delta\\tau = \\frac{\\Delta t}{\\gamma}$, así que hace falta $\\frac1\\gamma = ${dn(f, 2)}$.`,
+          `$\\sqrt{1 - \\beta^2} = ${dn(f, 2)} \\Rightarrow \\beta = \\sqrt{1 - ${dn(f * f, 4)}} \\approx ${dn(b, 4)}$.`],
+        // verificación: un tic del reloj (ct′ = 1, x′ = 0) visto desde la Tierra tiene que durar 1/f
+        verify: { kind: "zero", fn: bb => [1 / app(toS(bb), [1, 0])[0] - f], tol: 1e-6 } };
+    }
+  };
+  T["f1-contraccion-num"] = {
+    type: "numeric", concepts: ["f1-relatividad"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["L", "L", "beta"]);
+      // largo en S de una regla de largo propio L0 en reposo en S′: posiciones de sus extremos en un mismo instante t = 0 de S
+      const lengthInS = (L0, b) => { const M = toS(b), ctp = -M[0][1] * L0 / M[0][0]; return app(M, [ctp, L0])[1] - app(M, [0, 0])[1]; };
+      if (v === "L") {
+        const L0 = r.pick([20, 50, 100, 150, 300]), b = r.pick(BETAS), L = L0 / gam(b), obj = r.pick(["un tren", "una nave", "un colectivo"]);
+        return { prompt: `${obj[0].toUpperCase() + obj.slice(1)} de largo propio $${L0}$ m pasa a $${dn(b, 3)}c$ frente a un observador. ¿Qué largo (m) le mide ese observador?`, answer: L,
+          solution: [`[[f1-relatividad|Contracción de la longitud]]: el largo medido en el sistema donde el objeto se mueve es $L = \\frac{L_0}{\\gamma} = L_0\\sqrt{1 - \\beta^2}$.`,
+            `$L = ${L0}\\sqrt{1 - ${dn(b * b, 6)}} \\approx ${dn(L, 3)}$ m. Solo se contrae en la dirección del movimiento.`],
+          verify: { kind: "value", tol: 1e-6, fn: () => lengthInS(L0, b) } };
+      }
+      const f = r.pick([0.5, 0.25, 0.6, 0.8, 0.9]), b = Math.sqrt(1 - f * f);
+      return { prompt: `¿A qué velocidad (en unidades de $c$) tiene que pasar una regla para que su largo medido sea $${dn(f, 2)}$ veces su largo propio?`, answer: b,
+        solution: [`$\\frac{L}{L_0} = \\frac1\\gamma = \\sqrt{1 - \\beta^2} = ${dn(f, 2)}$ ([[f1-relatividad|contracción de la longitud]]).`, `$\\beta = \\sqrt{1 - ${dn(f * f, 4)}} \\approx ${dn(b, 4)}$.`],
+        verify: { kind: "zero", fn: bb => [lengthInS(1, bb) - f], tol: 1e-6 } };
+    }
+  };
+  T["f1-velrel-num"] = {
+    type: "numeric", concepts: ["f1-lorentz"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["sonda", "naves"]);
+      if (v === "sonda") {
+        const V = r.pick([0.5, 0.6, 0.8, 0.9]), up = r.pick([0.3, 0.5, 0.7, 0.9, -0.5, -0.8]), u = (up + V) / (1 + up * V);
+        if (Math.abs(u) < 0.05) return null;
+        return { prompt: `Una nave se aleja de la Tierra a $${dn(V, 1)}c$ y lanza una sonda ${up > 0 ? "hacia adelante" : "hacia atrás"} a $${dn(Math.abs(up), 1)}c$ respecto de la nave. ¿Cuál es la velocidad de la sonda respecto de la Tierra, en unidades de $c$ (positiva si se aleja de la Tierra)?`, answer: u,
+          solution: [`[[f1-lorentz|Suma relativista de velocidades]]: $u = \\frac{u' + V}{1 + u'V/c^2}$, con $u' = ${dn(up, 1)}c$ y $V = ${dn(V, 1)}c$.`,
+            `$u = \\frac{${dn(up + V, 2)}}{1 ${up * V < 0 ? "-" : "+"} ${dn(Math.abs(up * V), 2)}}c \\approx ${dn(u, 4)}c$. ${up > 0 ? "Nunca supera $c$, aunque la suma clásica daría $" + dn(up + V, 1) + "c$." : ""}`],
+          // verificación: dos eventos de la línea de universo de la sonda en S′, llevados a S con el boost
+          verify: { kind: "value", tol: 1e-6, fn: () => { const a = app(toS(V), [0, 0]), b2 = app(toS(V), [1, up]); return (b2[1] - a[1]) / (b2[0] - a[0]); } } };
+      }
+      const b1 = r.pick([0.5, 0.6, 0.7, 0.8, 0.9, 0.95]), b2 = r.pick([0.5, 0.6, 0.7, 0.8, 0.9, 0.95]), u = (b1 + b2) / (1 + b1 * b2);
+      return { prompt: `Dos naves se acercan de frente: respecto de la Tierra, una va a $${dn(b1, 2)}c$ hacia la derecha y la otra a $${dn(b2, 2)}c$ hacia la izquierda. ¿A qué velocidad (en unidades de $c$) ve acercarse a la otra cada tripulación?`, answer: u,
+        solution: [`Desde la primera nave, la Tierra se aleja a $${dn(b1, 2)}c$ hacia la izquierda, y la otra nave va a $${dn(b2, 2)}c$ hacia la izquierda respecto de la Tierra: hay que componer esas dos velocidades con la [[f1-lorentz|suma relativista de velocidades]].`,
+          `$u = \\frac{${dn(b1, 2)} + ${dn(b2, 2)}}{1 + ${dn(b1, 2)}\\cdot${dn(b2, 2)}}c \\approx ${dn(u, 4)}c$, menor que $c$ (la suma clásica daría $${dn(b1 + b2, 2)}c$).`],
+        // verificación: la línea de universo de la segunda nave (x = −β₂ ct en la Tierra) vista desde la primera
+        verify: { kind: "value", tol: 1e-6, fn: () => { const M = toP(b1), a = app(M, [0, 0]), q = app(M, [1, -b2]); return -(q[1] - a[1]) / (q[0] - a[0]); } } };
+    }
+  };
+  T["f1-simult-vf"] = {
+    type: "tf", concepts: ["f1-lorentz"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["rayos", "causal"]);
+      if (v === "rayos") {
+        const L = r.pick([100, 200, 500, 1000]), b = r.pick([0.3, 0.5, 0.8, 0.9]), q = r.pick(["B", "A", "simult"]);
+        return { prompt: `Caen dos rayos a la vez (según el andén) en los extremos A y B de un andén de $${L}$ m. Un tren pasa a $${dn(b, 1)}c$ yendo de A hacia B. <b>Verdadero o falso:</b> para los pasajeros del tren, ${q === "B" ? "el rayo en B cae antes que el rayo en A" : q === "A" ? "el rayo en A cae antes que el rayo en B" : "los dos rayos también son simultáneos"}.`,
+          answer: q === "B",
+          explanation: `[[f1-relatividad|Relatividad de la simultaneidad]]: con las [[f1-lorentz|transformaciones de Lorentz]], $\\Delta t' = \\gamma\\left(\\Delta t - \\frac{V\\Delta x}{c^2}\\right)$. Con $\\Delta t = 0$ y $\\Delta x = x_B - x_A > 0$, queda $t'_B - t'_A < 0$: para el tren **B ocurre primero**, por $\\frac{\\gamma V L}{c^2} \\approx ${dn(gam(b) * b * L / 3e8 * 1e9, 1)}$ ns.`,
+          solution: [`Eventos simultáneos en un sistema y separados en el espacio no son simultáneos en otro sistema que se mueve en esa dirección: el de adelante pasa primero.`],
+          // verificación: los dos eventos (en metros: ct = 0, x = 0 y x = L) llevados al sistema del tren con el boost
+          verify: { kind: "truth", fn: () => { const tA = app(toP(b), [0, 0])[0], tB = app(toP(b), [0, L])[0]; return q === "B" ? tB < tA - 1e-9 : q === "A" ? tA < tB - 1e-9 : Math.abs(tA - tB) < 1e-9; } } };
+      }
+      const dt = r.int(1, 10), dx = r.int(1, 20) / 2, unit = r.pick(["años luz y años", "segundos luz y segundos"]);
+      if (Math.abs(dx - dt) < 0.4) return null;
+      const [ul, ut] = unit === "años luz y años" ? ["años luz", "años"] : ["segundos luz", "s"];
+      return { prompt: `Un evento B ocurre $${dt}$ ${ut} después que un evento A y a $${dn(dx, 1)}$ ${ul} de distancia (en el sistema de la Tierra). <b>Verdadero o falso:</b> algún observador inercial ve que B ocurre antes que A.`,
+        answer: dx > dt,
+        explanation: `Depende del [[f1-lorentz|intervalo espaciotemporal]] $s^2 = (c\\Delta t)^2 - \\Delta x^2 = ${dn(dt * dt - dx * dx, 2)}$ (en ${ul}²). ${dx > dt ? "Es negativo (separación **espacial**): la luz no llega de A a B, no puede haber relación causal y el orden temporal depende del observador. Basta moverse a $V > c\\,\\Delta t/\\Delta x$." : "Es positivo (separación **temporal**): A puede causar B y **todos** los observadores los ven en el mismo orden."}`,
+        solution: [`El orden de dos eventos solo puede invertirse si $|\\Delta x| > c|\\Delta t|$.`],
+        // verificación: se prueban muchos boosts entre −0,999c y 0,999c y se mira si alguno invierte el orden
+        verify: { kind: "truth", fn: () => { for (let k = -999; k <= 999; k += 3) { const M = toP(k / 1000), tA = app(M, [0, 0])[0], tB = app(M, [dt, dx])[0]; if (tB < tA) return true; } return false; } } };
+    }
+  };
+  T["f1-erel-num"] = {
+    testN: 120, // simulación algo cara: menos instancias en los tests
+    type: "numeric", concepts: ["f1-dinamica-rel"], difficulty: 2,
+    generate(r) {
+      const [nm, mc2] = r.pick([["un electrón", 0.511], ["un protón", 938.3]]), b = r.pick(BETAS.concat([0.1, 0.3])), ask = r.pick(["K", "p", "E"]);
+      const G = gam(b), ans = { K: (G - 1) * mc2, p: G * b * mc2, E: G * mc2 }[ask];
+      return {
+        prompt: `${nm[0].toUpperCase() + nm.slice(1)} ($mc^2 = ${dn(mc2, 3)}$ MeV) se mueve a $${dn(b, 3)}c$. ¿Cuánto vale su ${{ K: "energía cinética (MeV)", p: "cantidad de movimiento (en MeV/c)", E: "energía total (MeV)" }[ask]}?`,
+        answer: ans,
+        solution: [
+          `[[f1-dinamica-rel|Dinámica relativista]]: $\\gamma = \\frac{1}{\\sqrt{1 - \\beta^2}} \\approx ${dn(G, 4)}$, $E = \\gamma mc^2$, $p = \\gamma mv$, $K = (\\gamma - 1)mc^2$.`,
+          `$${{ K: "K", p: "pc", E: "E" }[ask]} \\approx ${dn(ans, 4)}$ MeV.${ask === "K" && b <= 0.3 ? ` (La fórmula clásica $\\frac12mv^2$ daría $${dn(0.5 * b * b * mc2, 4)}$ MeV: a baja velocidad casi coinciden.)` : ""}`
+        ],
+        // verificación: se acelera la partícula desde el reposo con fuerza constante (dp/dt = F), con v = p/√(m² + p²/c²),
+        // hasta que llega a β; el trabajo F·x es la energía cinética. Unidades: c = 1, m = 1, F = 1.
+        verify: { kind: "ode", f: (_, y) => [1, y[0] / Math.sqrt(1 + y[0] * y[0])], y0: [0, 0], t1: 0,
+          until: (_, y) => y[0] / Math.sqrt(1 + y[0] * y[0]) >= b, g: (_, y) => y[0] / Math.sqrt(1 + y[0] * y[0]) - b, dt: b * G / 40000, tmax: 1e3,
+          out: (_, y) => ({ K: y[1], p: y[0], E: y[1] + 1 }[ask]) * mc2, tol: 1e-4 }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-relatividad": {
+      title: "Relatividad especial: postulados, tiempo y longitud", aliases: ["relatividad especial", "dilatación del tiempo", "contracción de la longitud", "factor de Lorentz", "tiempo propio", "longitud propia", "relatividad de la simultaneidad"], concepts: ["f1-relatividad"],
+      summary: "Las leyes de la física y c son iguales en todo sistema inercial. Consecuencia: los relojes en movimiento atrasan (Δt = γΔτ) y las longitudes se contraen (L = L₀/γ).",
+      def: [R`**Postulados (Einstein, 1905):** 1) las leyes de la física son las mismas en todos los sistemas inerciales; 2) la velocidad de la luz en el vacío, $c \approx 3\times10^8$ m/s, es la misma para todos, sin importar el movimiento de la fuente.`,
+        R`**Factor de Lorentz:** $\gamma = \frac{1}{\sqrt{1 - v^2/c^2}} \ge 1$.`,
+        R`**Dilatación del tiempo:** el **tiempo propio** $\Delta\tau$ es el que mide un reloj presente en los dos eventos (que ocurren en el mismo lugar para él). Cualquier otro observador inercial mide $\Delta t = \gamma\Delta\tau$, más largo.`,
+        R`**Contracción de la longitud:** la **longitud propia** $L_0$ se mide en el sistema donde el objeto está quieto. Moviéndose a $v$ en la dirección de su largo, se mide $L = \frac{L_0}{\gamma}$.`,
+        R`**Simultaneidad:** dos eventos simultáneos en un sistema y separados en la dirección del movimiento no son simultáneos en otro.`],
+      idea: [R`**Reloj de luz:** un pulso rebota entre dos espejos a distancia $d$. Quieto, cada tic dura $2d/c$. Visto moverse, el pulso recorre diagonales más largas a la misma velocidad $c$: cada tic dura más. Esa es toda la dilatación del tiempo.`,
+        R`**Muones:** se crean a unos 15 km de altura y viven $2{,}2\ \mu$s en reposo: a $0{,}999c$ recorrerían clásicamente 660 m. Llegan al suelo porque, para nosotros, su reloj atrasa ($\gamma \approx 22$); para ellos, la atmósfera está contraída. Es la confirmación experimental más clásica.`,
+        R`Para $v \ll c$, $\gamma \approx 1 + \frac{v^2}{2c^2}$: todo se reduce a la mecánica de Newton y la [[f1-relativo|velocidad relativa]] de Galileo.`],
+      demo: [R`**Paso 1 (reloj en reposo).** En el sistema del reloj, el pulso de luz sube y baja entre espejos separados por $d$: cada tic dura $\Delta\tau = \frac{2d}{c}$.`,
+        R`**Paso 2 (visto en movimiento).** Para quien ve el reloj moverse a $v$, durante medio tic $\frac{\Delta t}{2}$ los espejos avanzan $\frac{v\Delta t}{2}$, y el pulso recorre la hipotenusa de un triángulo de catetos $d$ y $\frac{v\Delta t}{2}$. La distancia $d$ es perpendicular al movimiento y no cambia.`,
+        R`**Paso 3 (segundo postulado).** La luz va a $c$ también en este sistema, así que la hipotenusa mide $\frac{c\Delta t}{2}$: $\left(\frac{c\Delta t}{2}\right)^2 = d^2 + \left(\frac{v\Delta t}{2}\right)^2$.`,
+        R`**Paso 4 (despejar).** $\Delta t^2(c^2 - v^2) = 4d^2$, así que $\Delta t = \frac{2d/c}{\sqrt{1 - v^2/c^2}} = \gamma\Delta\tau$.`,
+        R`**Paso 5 (contracción).** Una regla de largo propio $L_0$ pasa a velocidad $v$ frente a un reloj quieto en $S$. Ese reloj está en los dos eventos (pasa la punta, pasa la cola) y mide el tiempo propio $\Delta\tau = \frac{L}{v}$, donde $L$ es el largo en $S$. Para la regla, el reloj recorre $L_0$ en $\Delta t' = \frac{L_0}{v}$, que por el paso 4 vale $\gamma\Delta\tau$. Igualando: $\frac{L_0}{v} = \gamma\frac{L}{v}$, o sea $L = \frac{L_0}{\gamma}$. $\blacksquare$`],
+      examples: [{ q: R`Un reloj atrasa 1 s por día respecto de uno terrestre. ¿A qué velocidad viaja?`, steps: [R`$1 - \frac1\gamma = \frac{1}{86400}$. Como $v \ll c$: $\frac{v^2}{2c^2} \approx 1{,}16\times10^{-5}$.`, R`$\frac vc \approx 4{,}8\times10^{-3}$, o sea $v \approx 1440$ km/s.`] }],
+      tips: [R`Antes de usar $\gamma$, preguntate **quién mide el tiempo propio** (el que está en los dos eventos) y **quién la longitud propia** (el que ve el objeto quieto). Ahí se decide si multiplicar o dividir.`],
+      see: ["f1-lorentz", "f1-dinamica-rel", "f1-relativo"]
+    },
+    "f1-lorentz": {
+      title: "Transformaciones de Lorentz e intervalo", aliases: ["transformaciones de Lorentz", "transformación de Lorentz", "suma relativista de velocidades", "intervalo espaciotemporal", "cono de luz", "diagrama de Minkowski"], concepts: ["f1-lorentz"],
+      summary: "x′ = γ(x − Vt), t′ = γ(t − Vx/c²). Las velocidades se componen como u = (u′ + V)/(1 + u′V/c²). El intervalo s² = c²Δt² − Δx² es el mismo para todos.",
+      def: [R`Si $S'$ se mueve a velocidad $V$ en la dirección $x$ respecto de $S$ (con orígenes coincidentes en $t = t' = 0$): $$x' = \gamma(x - Vt), \qquad t' = \gamma\left(t - \frac{Vx}{c^2}\right), \qquad y' = y,\ z' = z.$$ La inversa se obtiene cambiando $V$ por $-V$.`,
+        R`**Suma de velocidades:** si un cuerpo se mueve a $u'$ en $S'$, en $S$ se mueve a $$u = \frac{u' + V}{1 + u'V/c^2}.$$ Si $u' = c$, da $u = c$: nada material supera a la luz.`,
+        R`**Intervalo:** $s^2 = (c\Delta t)^2 - \Delta x^2 - \Delta y^2 - \Delta z^2$ vale lo mismo en todo sistema inercial. Si $s^2 > 0$ (separación **temporal**) los eventos pueden estar causalmente conectados y su orden es el mismo para todos; si $s^2 < 0$ (separación **espacial**), el orden depende del observador.`],
+      idea: [R`Una transformación de Lorentz es una "rotación hiperbólica" del espacio-tiempo: con la rapidez $\varphi$ definida por $\tanh\varphi = V/c$, queda $ct' = ct\cosh\varphi - x\sinh\varphi$ y $x' = -ct\sinh\varphi + x\cosh\varphi$. Las rapideces se **suman** al componer boosts, y por eso las velocidades se componen con la fórmula de arriba.`,
+        R`En un **diagrama de Minkowski** ($ct$ vertical, $x$ horizontal) la luz va a $45^\circ$. Lo que está dentro del **cono de luz** de un evento es su pasado o futuro causal.`],
+      demo: [R`**Paso 1 (la partícula en S′).** Si se mueve a $u'$ y pasa por el origen en $t' = 0$, todos sus eventos cumplen $x' = u't'$.`,
+        R`**Paso 2 (llevarla a S).** Usamos la transformación inversa (la misma con $V$ cambiado por $-V$): $x = \gamma(x' + Vt') = \gamma t'(u' + V)$ y $t = \gamma\left(t' + \frac{Vx'}{c^2}\right) = \gamma t'\left(1 + \frac{u'V}{c^2}\right)$.`,
+        R`**Paso 3 (dividir).** La velocidad en $S$ es $u = \frac xt$; el factor $\gamma t'$ se simplifica y queda $u = \frac{u' + V}{1 + u'V/c^2}$.`,
+        R`**Paso 4 (la luz).** Si $u' = c$: $u = \frac{c + V}{1 + V/c} = c$. La luz va a $c$ en los dos sistemas, como pide el segundo postulado. $\blacksquare$`],
+      examples: [{ q: R`Dos naves se acercan, cada una a $0{,}8c$ respecto de la Tierra. ¿Velocidad relativa?`, steps: [R`$u = \frac{0{,}8 + 0{,}8}{1 + 0{,}64}c = \frac{1{,}6}{1{,}64}c \approx 0{,}976c$.`] }],
+      see: ["f1-relatividad", "f1-dinamica-rel"]
+    },
+    "f1-dinamica-rel": {
+      title: "Energía y cantidad de movimiento relativistas", aliases: ["energía relativista", "energía en reposo", "momento relativista", "equivalencia masa-energía"], concepts: ["f1-dinamica-rel"],
+      summary: "p = γmv, E = γmc², K = (γ − 1)mc² y E² = (pc)² + (mc²)². En reposo, E = mc².",
+      def: [R`Para que la [[f1-momento|cantidad de movimiento]] se conserve en todos los sistemas inerciales, hay que definir $\vec p = \gamma m\vec v$. La segunda ley queda $\vec F = \frac{d\vec p}{dt}$.`,
+        R`**Energía:** $E = \gamma mc^2$. En reposo vale $E_0 = mc^2$ (**energía en reposo**). La energía cinética es $K = E - mc^2 = (\gamma - 1)mc^2$.`,
+        R`**Relación energía-momento:** $E^2 = (pc)^2 + (mc^2)^2$. Para la luz ($m = 0$), $E = pc$.`],
+      idea: [R`Para $v \ll c$: $K = (\gamma - 1)mc^2 \approx \frac12mv^2 + \frac38\frac{mv^4}{c^2} + \dots$; el primer término es la energía cinética de Newton.`,
+        R`Una fuerza constante no lleva un cuerpo a $c$: $p = Ft$ crece sin límite, pero $v = \frac{pc}{\sqrt{(mc)^2 + p^2}}$ se acerca a $c$ sin alcanzarla.`,
+        R`$E = mc^2$ explica la energía de las estrellas y de los reactores: en la fusión o la fisión, los productos tienen un poco menos de masa que los reactivos, y esa diferencia sale como energía.`],
+      demo: [R`**Paso 1 (restar cuadrados).** Con $E = \gamma mc^2$ y $p = \gamma mv$: $E^2 - (pc)^2 = \gamma^2m^2c^4 - \gamma^2m^2v^2c^2 = \gamma^2m^2c^4\left(1 - \frac{v^2}{c^2}\right)$.`,
+        R`**Paso 2 (definición de γ).** $\gamma^2\left(1 - \frac{v^2}{c^2}\right) = 1$, así que $E^2 - (pc)^2 = (mc^2)^2$, que no depende de la velocidad.`,
+        R`**Paso 3 (cuánto cambia E con p).** Derivando $E = \sqrt{(pc)^2 + (mc^2)^2}$: $\frac{dE}{dp} = \frac{pc^2}{E} = \frac{\gamma mvc^2}{\gamma mc^2} = v$.`,
+        R`**Paso 4 (trabajo).** Con $\vec F = \frac{d\vec p}{dt}$, el trabajo en un tramo $dx = v\,dt$ es $F\,dx = \frac{dp}{dt}v\,dt = v\,dp = dE$ (paso 3). El trabajo de la fuerza va todo a $E$.`,
+        R`**Paso 5 (energía cinética).** Partiendo del reposo, donde $E = mc^2$, el trabajo total es $K = E - mc^2 = (\gamma - 1)mc^2$. $\blacksquare$`],
+      examples: [{ q: R`¿Qué energía cinética tiene un electrón ($mc^2 = 0{,}511$ MeV) a $0{,}99c$?`, steps: [R`$\gamma = \frac{1}{\sqrt{1 - 0{,}9801}} \approx 7{,}09$.`, R`$K = (7{,}09 - 1)\cdot0{,}511 \approx 3{,}11$ MeV.`] }],
+      see: ["f1-relatividad", "f1-momento", "f1-energia"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-relatividad": { name: "Dilatación y contracción" }, "f1-lorentz": { name: "Transformaciones de Lorentz" }, "f1-dinamica-rel": { name: "Dinámica relativista" } },
+    templates: T,
+    units: [{
+      id: "f1-relatividad-u", order: 13, program: "Extra UBA", title: "Relatividad especial", icon: "clock",
+      diagnostic: ["f1-dilatacion-num", "f1-velrel-num", "f1-erel-num"],
+      lessons: [
+        { id: "f1-relatividad", title: "Tiempo propio y longitud propia", templates: ["f1-dilatacion-num", "f1-contraccion-num"], theory: ["f1-relatividad"],
+          intro: R`$\gamma = \frac{1}{\sqrt{1 - v^2/c^2}}$. Dilatación: $\Delta t = \gamma\Delta\tau$. Contracción: $L = L_0/\gamma$.` },
+        { id: "f1-lorentz", title: "Lorentz y simultaneidad", templates: ["f1-velrel-num", "f1-simult-vf"], theory: ["f1-lorentz", "f1-relatividad"],
+          intro: R`$t' = \gamma(t - Vx/c^2)$: la simultaneidad es relativa. Velocidades: $u = \frac{u' + V}{1 + u'V/c^2}$.` },
+        { id: "f1-dinamica-rel", title: "Energía relativista", templates: ["f1-erel-num"], theory: ["f1-dinamica-rel"],
+          intro: R`$E = \gamma mc^2$, $p = \gamma mv$, $K = (\gamma - 1)mc^2$, $E^2 = (pc)^2 + (mc^2)^2$.` }
       ]
     }],
     cards
