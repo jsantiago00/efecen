@@ -5,6 +5,8 @@
  *   1 Temperatura y calor · 2 Propiedades térmicas de la materia · 3 Primera ley de la termodinámica
  *   4 Segunda ley de la termodinámica · 5 Ondas mecánicas y electromagnéticas · 6 Óptica geométrica
  *   7 Interferencia · 8 Difracción
+ * Extra UBA (temas de Física 2 de Cs. Físicas, FCEN-UBA, que no están en el programa de F102B):
+ *   Oscilaciones acopladas y modos normales · Polarización · Reflexión entre medios, Fourier y dispersión
  *
  * Constantes: R = 8,314 J/(mol K), k_B = 1,381e-23 J/K, N_A = 6,022e23, σ = 5,67e-8 W/(m² K⁴), c = 3e8 m/s.
  * Verificaciones independientes en los tests: simulaciones de intercambio de calor, ciclos de Carnot
@@ -1339,6 +1341,579 @@
           intro: R`Mínimos en $a\sin\theta = m\lambda$. Rendija más angosta, máximo central más ancho.` },
         { id: "f2b-redes", title: "Redes y rayos X", templates: ["f2b-red-num", "f2b-bragg-num"], theory: ["f2b-difraccion"],
           intro: R`Red: $d\sin\theta = m\lambda$. Bragg: $2d\sin\theta = m\lambda$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · OSCILACIONES ACOPLADAS Y MODOS NORMALES
+ *  Temas de Física 2 de la Lic. en Cs. Físicas (FCEN, UBA) que no figuran en el programa de F102B.
+ *  Solo se tomó la lista de temas; el texto y los ejercicios son originales.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  // período simulado (RK4) de la coordenada y[0]: tiempo entre dos cruces sucesivos de 0 hacia arriba
+  const simPeriod = (f, y0, Test) => {
+    let y = y0.slice(), t = 0; const h = Test / 4000, cr = [];
+    const add = (a, b, c) => a.map((v, i) => v + b[i] * c);
+    while (cr.length < 2 && t < 6 * Test) {
+      const k1 = f(y), k2 = f(add(y, k1, h / 2)), k3 = f(add(y, k2, h / 2)), k4 = f(add(y, k3, h));
+      const yn = y.map((v, i) => v + h / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+      if (y[0] < 0 && yn[0] >= 0) cr.push(t + h * (-y[0]) / (yn[0] - y[0]));
+      y = yn; t += h;
+    }
+    return cr[1] - cr[0];
+  };
+  // sistema de dos grados de libertad: ẍ₁ = −a x₁ − c(x₁ − x₂), ẍ₂ = −a x₂ − c(x₂ − x₁)
+  const two = (a, c) => y => [y[2], y[3], -a * y[0] - c * (y[0] - y[1]), -a * y[1] - c * (y[1] - y[0])];
+
+  T["f2b-2masas-num"] = {
+    type: "numeric", concepts: ["f2b-acopladas"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["resortes", "pendulos"]), modo = r.pick(["fase", "contrafase"]), unit = r.pick(["w", "f"]);
+      let a, c, prompt, sys;
+      if (v === "resortes") {
+        const m = r.int(1, 8) / 2, k = r.int(5, 40) * 10, kc = r.int(1, 20) * 10;
+        a = k / m; c = kc / m;
+        sys = `Dos carritos de $${dn(m, 1)}$ kg cada uno se mueven sin rozamiento sobre un riel. Cada uno está unido a su pared por un resorte de $k = ${k}$ N/m, y entre ellos hay otro resorte de $k' = ${kc}$ N/m.`;
+      } else {
+        const L = r.int(4, 20) / 10, m = r.int(2, 10) / 10, kc = r.int(1, 15) / 10;
+        a = g / L; c = kc / m;
+        sys = `Dos péndulos iguales de $${dn(L, 1)}$ m y $${dn(m, 1)}$ kg están unidos por un resorte liviano de $k = ${dn(kc, 1)}$ N/m, que está sin estirar cuando cuelgan verticales. Considerá oscilaciones chicas ($g = 9{,}8$ m/s²).`;
+      }
+      const w = modo === "fase" ? Math.sqrt(a) : Math.sqrt(a + 2 * c), ans = unit === "w" ? w : w / (2 * Math.PI);
+      prompt = `${sys} ¿Cuál es ${unit === "w" ? "la frecuencia angular (rad/s)" : "la frecuencia (Hz)"} del modo normal en el que se mueven ${modo === "fase" ? "en fase (los dos para el mismo lado)" : "en contrafase (uno hacia cada lado)"}?`;
+      return {
+        prompt, answer: ans,
+        solution: [
+          `Un [[f2b-acopladas|modo normal]] es un movimiento en el que todo oscila con la misma frecuencia. Sumando y restando las ecuaciones de los dos cuerpos aparecen $q_1 = x_1 + x_2$ y $q_2 = x_1 - x_2$, que oscilan solas.`,
+          modo === "fase" ? `En fase, el resorte del medio no se estira: es como si no estuviera, y $\\omega_1 = ${v === "resortes" ? "\\sqrt{k/m}" : "\\sqrt{g/L}"} = ${dn(Math.sqrt(a), 4)}$ rad/s.`
+            : `En contrafase, el resorte del medio se estira el doble que lo que se mueve cada cuerpo: $\\omega_2 = \\sqrt{${v === "resortes" ? "\\frac km" : "\\frac gL"} + \\frac{2k'}{m}} = ${dn(Math.sqrt(a + 2 * c), 4)}$ rad/s.`.replace("k'", v === "resortes" ? "k'" : "k"),
+          unit === "f" ? `$f = \\frac{\\omega}{2\\pi} \\approx ${dn(ans, 4)}$ Hz.` : `$\\omega \\approx ${dn(ans, 4)}$ rad/s.`
+        ],
+        // verificación: se simula el sistema arrancando en esa forma de modo y se mide el período
+        verify: { kind: "value", tol: 1e-5, fn: () => { const Tp = simPeriod(two(a, c), modo === "fase" ? [0, 0, 1, 1] : [0, 0, 1, -1], 2 * Math.PI / w); return unit === "w" ? 2 * Math.PI / Tp : 1 / Tp; } }
+      };
+    }
+  };
+  T["f2b-batido-num"] = {
+    type: "numeric", concepts: ["f2b-acopladas"], difficulty: 3,
+    generate(r) {
+      const L = r.int(5, 20) / 10, m = r.int(2, 10) / 10, kc = r.pick([0.02, 0.05, 0.1, 0.2, 0.3]), ask = r.pick(["transfer", "vuelta"]);
+      const a = g / L, c = kc / m, w1 = Math.sqrt(a), w2 = Math.sqrt(a + 2 * c), Tb = 2 * Math.PI / (w2 - w1), ans = ask === "transfer" ? Tb / 2 : Tb;
+      return {
+        prompt: `Dos péndulos iguales ($L = ${dn(L, 1)}$ m, $m = ${dn(m, 1)}$ kg) están unidos por un resorte débil de $k = ${dn(kc, 2)}$ N/m. Se aparta uno de ellos y se suelta desde el reposo con el otro quieto. ¿${ask === "transfer" ? "Cuánto tarda (s) en pasar toda la oscilación al otro péndulo" : "Cada cuánto tiempo (s) la oscilación vuelve a estar toda en el primer péndulo"}? ($g = 9{,}8$ m/s²)`,
+        answer: ans,
+        solution: [
+          `La condición inicial es la mitad del modo en fase más la mitad del modo en contrafase: $x_1 = \\frac A2(\\cos\\omega_1t + \\cos\\omega_2t) = A\\cos\\frac{(\\omega_2 - \\omega_1)t}{2}\\cos\\frac{(\\omega_1 + \\omega_2)t}{2}$ ([[f2b-acopladas|batidos]]).`,
+          `$\\omega_1 = \\sqrt{g/L} = ${dn(w1, 4)}$ rad/s y $\\omega_2 = \\sqrt{g/L + 2k/m} = ${dn(w2, 4)}$ rad/s.`,
+          `La envolvente de $x_1$ se anula cuando $\\frac{(\\omega_2 - \\omega_1)t}{2} = \\frac\\pi2$, o sea en $t = \\frac{\\pi}{\\omega_2 - \\omega_1} \\approx ${dn(Tb / 2, 2)}$ s; vuelve a estar entera en el primero cada $\\frac{2\\pi}{\\omega_2 - \\omega_1} \\approx ${dn(Tb, 2)}$ s.`
+        ],
+        // verificación: se miden por simulación los períodos de los dos modos y se arma la envolvente con ellos
+        verify: { kind: "value", tol: 1e-4, fn: () => { const T1 = simPeriod(two(a, c), [0, 0, 1, 1], 2 * Math.PI / w1), T2 = simPeriod(two(a, c), [0, 0, 1, -1], 2 * Math.PI / w2);
+          const tb = 1 / (1 / T2 - 1 / T1); return ask === "transfer" ? tb / 2 : tb; } }
+      };
+    }
+  };
+  T["f2b-modo-mc"] = {
+    type: "mc", concepts: ["f2b-acopladas"], difficulty: 2,
+    generate(r) {
+      const [m1, m2] = r.distinct(2, 1, 9), k = r.int(2, 20) * 10, want = r.pick(["oscila", "oscila", "cero"]);
+      const val = want === "cero" ? 1 : -m2 / m1, tex = want === "cero" ? "1" : H.frac(-m2, m1);
+      const opts = [H.frac(-m1, m2), H.frac(m2, m1), H.frac(m1, m2), "-1", "1", tex].filter(x => x !== tex);
+      const w2 = k * (1 / m1 + 1 / m2);
+      return {
+        prompt: `Dos cuerpos de $${m1}$ kg y $${m2}$ kg, apoyados sin rozamiento, están unidos por un resorte de $${k}$ N/m (no hay paredes). ¿Cuánto vale el cociente de amplitudes $A_1/A_2$ en el modo normal de frecuencia ${want === "cero" ? "**cero**" : "**no nula**"}?`,
+        ...H.mc(r, `\\frac{A_1}{A_2} = ${tex}`, opts.map(x => `\\frac{A_1}{A_2} = ${x}`)),
+        solution: [
+          `Con $x_j = A_j\\cos\\omega t$: $-m_1\\omega^2A_1 = -k(A_1 - A_2)$ y $-m_2\\omega^2A_2 = -k(A_2 - A_1)$. Hay solución no nula si $\\omega = 0$ o $\\omega^2 = k\\left(\\frac{1}{m_1} + \\frac{1}{m_2}\\right) = ${dn(w2, 3)}$ s⁻² ([[f2b-acopladas|modos normales]]).`,
+          want === "cero" ? `Con $\\omega = 0$ las ecuaciones dan $A_1 = A_2$: es una **traslación** rígida, sin estirar el resorte.`
+            : `Sumando las ecuaciones: $m_1A_1 + m_2A_2 = 0$, así que $\\frac{A_1}{A_2} = -\\frac{m_2}{m_1} = ${tex}$. El centro de masa queda quieto y el más liviano se mueve más.`
+        ],
+        // verificación: el vector (A₁, A₂) propuesto tiene que ser autovector de M⁻¹K con autovalor ω²
+        verify: { kind: "eig", A: [[k / m1, -k / m1], [-k / m2, k / m2]], lambda: want === "cero" ? 0 : w2, v: [val, 1] }
+      };
+    }
+  };
+  T["f2b-triatomica-num"] = {
+    type: "numeric", concepts: ["f2b-cadena"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["cociente", "carritos"]);
+      if (v === "cociente") {
+        const [nm, m, M] = r.pick([["CO₂ (O = 16 u, C = 12 u)", 16, 12], ["CS₂ (S = 32 u, C = 12 u)", 32, 12], ["una molécula A–B–A con A = 1 u y B = 12 u", 1, 12], ["una molécula A–B–A con A = 35 u y B = 24 u", 35, 24]]);
+        const ratio = Math.sqrt(1 + 2 * m / M);
+        return { prompt: `Modelá ${nm} como tres masas en línea unidas por dos resortes iguales. ¿Cuánto vale el cociente entre la frecuencia del modo asimétrico y la del modo simétrico (estiramiento)?`, answer: ratio,
+          solution: [`[[f2b-cadena|Molécula triatómica]]: hay tres modos longitudinales. Uno es la traslación ($\\omega = 0$).`,
+            `Modo **simétrico**: el átomo central queda quieto y los extremos se mueven opuestos: $\\omega_s = \\sqrt{k/m}$.`,
+            `Modo **asimétrico**: los extremos van juntos y el centro al revés (el centro de masa no se mueve): $\\omega_a = \\sqrt{\\frac km\\left(1 + \\frac{2m}{M}\\right)}$.`,
+            `$\\frac{\\omega_a}{\\omega_s} = \\sqrt{1 + \\frac{2\\cdot${m}}{${M}}} \\approx ${dn(ratio, 4)}$.`],
+          // verificación: ω² = cociente² tiene que anular det(M⁻¹K − ω²I) con k = m = 1 (Gauss)
+          verify: { kind: "eig", A: [[1, -1, 0], [-m / M, 2 * m / M, -m / M], [0, -1, 1]], lambda: ratio * ratio } };
+      }
+      const m = r.int(1, 6) / 2, M = r.int(1, 8) / 2, k = r.int(5, 40) * 10, ask = r.pick(["s", "a"]);
+      const w = ask === "s" ? Math.sqrt(k / m) : Math.sqrt(k / m * (1 + 2 * m / M)), f = w / (2 * Math.PI);
+      if (m === M) return null;
+      return { prompt: `Tres carritos en línea (de $${dn(m, 1)}$ kg, $${dn(M, 1)}$ kg y $${dn(m, 1)}$ kg) están unidos por dos resortes de $${k}$ N/m y se mueven sin rozamiento, sin paredes. ¿Cuál es la frecuencia (Hz) del modo ${ask === "s" ? "en el que el carrito del medio queda quieto" : "en el que los dos de los extremos se mueven juntos y el del medio al revés"}?`, answer: f,
+        solution: [`Es el modelo de una [[f2b-cadena|molécula triatómica]]. ${ask === "s" ? "Con el del medio quieto, cada extremo oscila con su resorte: $\\omega = \\sqrt{k/m}$." : "Como el centro de masa no se mueve, $2mA_1 + MA_2 = 0$; reemplazando, $\\omega = \\sqrt{\\frac km\\left(1 + \\frac{2m}{M}\\right)}$."}`,
+          `$\\omega \\approx ${dn(w, 4)}$ rad/s, $f = \\frac{\\omega}{2\\pi} \\approx ${dn(f, 4)}$ Hz.`],
+        verify: { kind: "eig", A: [[k / m, -k / m, 0], [-k / M, 2 * k / M, -k / M], [0, -k / m, k / m]], lambda: (2 * Math.PI * f) ** 2 } };
+    }
+  };
+  T["f2b-cadena-num"] = {
+    type: "numeric", concepts: ["f2b-cadena"], difficulty: 3,
+    generate(r) {
+      const N = r.int(2, 6), n = r.int(1, N), m = r.int(1, 10) / 10, k = r.int(2, 30) * 10;
+      const w = 2 * Math.sqrt(k / m) * Math.sin(n * Math.PI / (2 * (N + 1))), f = w / (2 * Math.PI);
+      const A = Array.from({ length: N }, (_, i) => Array.from({ length: N }, (_, j) => (i === j ? 2 * k / m : Math.abs(i - j) === 1 ? -k / m : 0)));
+      return {
+        prompt: `Entre dos paredes hay $${N}$ masas de $${dn(m, 1)}$ kg en línea, unidas entre sí y a las paredes por $${N + 1}$ resortes iguales de $${k}$ N/m. Para oscilaciones longitudinales, ¿cuál es la frecuencia (Hz) del modo normal número $${n}$ (ordenados de menor a mayor frecuencia)?`,
+        answer: f,
+        solution: [
+          `[[f2b-cadena|Cadena de osciladores]]: los modos son $x_j = A\\sin\\frac{jn\\pi}{N + 1}\\cos\\omega_nt$, con $$\\omega_n = 2\\sqrt{\\frac km}\\sin\\frac{n\\pi}{2(N + 1)}.$$`,
+          `$\\omega_{${n}} = 2\\sqrt{\\frac{${k}}{${dn(m, 1)}}}\\sin\\frac{${n}\\pi}{${2 * (N + 1)}} \\approx ${dn(w, 4)}$ rad/s, así que $f \\approx ${dn(f, 4)}$ Hz.`,
+          `Ninguna frecuencia supera $2\\sqrt{k/m}$: es la máxima que deja pasar la cadena.`
+        ],
+        // verificación: ω² tiene que ser autovalor de la matriz tridiagonal M⁻¹K (determinante por Gauss)
+        verify: { kind: "eig", A, lambda: w * w }
+      };
+    }
+  };
+
+  const cards = {
+    "f2b-acopladas": {
+      title: "Oscilaciones acopladas, modos normales y batidos", aliases: ["oscilaciones acopladas", "osciladores acoplados", "péndulos acoplados", "modos normales", "modo normal", "frecuencias propias", "batidos", "pulsaciones"], concepts: ["f2b-acopladas"],
+      summary: "Un sistema de N grados de libertad tiene N modos normales: movimientos en los que todo oscila con la misma frecuencia. Cualquier movimiento es una superposición de modos.",
+      def: [R`Dos cuerpos de masa $m$ unidos a paredes por resortes $k$ y entre sí por un resorte $k'$ cumplen $$m\ddot x_1 = -kx_1 - k'(x_1 - x_2), \qquad m\ddot x_2 = -kx_2 - k'(x_2 - x_1).$$`,
+        R`Un **modo normal** es una solución $x_j = A_j\cos(\omega t + \varphi)$ con la misma $\omega$ para todos. Reemplazando queda $(K - \omega^2M)\vec A = 0$, que tiene solución no nula solo si $\det(K - \omega^2M) = 0$: las $\omega$ son las **frecuencias propias** y los $\vec A$, las formas de los modos (ver [[al-autovalores|autovalores]]).`,
+        R`En el caso simétrico: modo **en fase** ($A_1 = A_2$), con $\omega_1 = \sqrt{k/m}$; modo **en contrafase** ($A_1 = -A_2$), con $\omega_2 = \sqrt{(k + 2k')/m}$.`,
+        R`**Batidos:** si se suelta uno solo, $x_1 = A\cos\frac{(\omega_2 - \omega_1)t}{2}\cos\frac{(\omega_1 + \omega_2)t}{2}$. Con acople débil, la oscilación pasa de un cuerpo al otro y vuelve cada $\frac{2\pi}{\omega_2 - \omega_1}$.`],
+      idea: [R`En un modo normal el sistema se comporta como un único oscilador. Encontrar los modos es "desacoplar" el problema: en las coordenadas $q_1 = x_1 + x_2$ y $q_2 = x_1 - x_2$, cada una oscila sola.`,
+        R`Los batidos se oyen al afinar una guitarra: dos cuerdas casi iguales suenan con un volumen que sube y baja a la frecuencia $|f_1 - f_2|$.`,
+        { graph: { fns: [t => Math.cos(0.15 * t) * Math.cos(3 * t), t => Math.sin(0.15 * t) * Math.sin(3 * t)], xr: [0, 42], yr: [-1.2, 1.2] }, caption: R`Batidos en dos péndulos acoplados: la oscilación del primero (violeta) pasa al segundo (naranja) y vuelve.` }],
+      demo: [R`**Paso 1 (coordenadas normales).** Sumamos las dos ecuaciones: $m(\ddot x_1 + \ddot x_2) = -k(x_1 + x_2)$, porque los términos de $k'$ se cancelan. Restándolas: $m(\ddot x_1 - \ddot x_2) = -(k + 2k')(x_1 - x_2)$.`,
+        R`**Paso 2 (cada una oscila sola).** Con $q_1 = x_1 + x_2$ y $q_2 = x_1 - x_2$ quedan dos [[f1-mas|MAS]] independientes: $\ddot q_1 = -\frac km q_1$ y $\ddot q_2 = -\frac{k + 2k'}{m}q_2$, de frecuencias $\omega_1$ y $\omega_2$.`,
+        R`**Paso 3 (soltar uno solo).** Con $x_1(0) = A$, $x_2(0) = 0$ y velocidades nulas: $q_1 = A\cos\omega_1t$ y $q_2 = A\cos\omega_2t$. Volviendo, $x_1 = \frac{q_1 + q_2}{2} = \frac A2(\cos\omega_1t + \cos\omega_2t)$.`,
+        R`**Paso 4 (suma de cosenos).** Con $\cos a + \cos b = 2\cos\frac{a - b}{2}\cos\frac{a + b}{2}$ queda $x_1 = A\cos\frac{(\omega_2 - \omega_1)t}{2}\cos\frac{(\omega_1 + \omega_2)t}{2}$: una oscilación rápida con una envolvente lenta, que se anula por primera vez en $t = \frac{\pi}{\omega_2 - \omega_1}$. $\blacksquare$`],
+      examples: [{ q: R`Dos péndulos de 1 m unidos por un resorte con $2k/m = 0{,}2$ s⁻². ¿Cuánto tarda en pasar la oscilación de uno al otro?`, steps: [R`$\omega_1 = \sqrt{9{,}8} \approx 3{,}130$ rad/s y $\omega_2 = \sqrt{10} \approx 3{,}162$ rad/s.`, R`$t = \frac{\pi}{\omega_2 - \omega_1} \approx \frac{\pi}{0{,}032} \approx 98$ s.`] }],
+      see: ["f2b-cadena", "f1-mas", "al-autovalores"]
+    },
+    "f2b-cadena": {
+      title: "Cadenas de osciladores y molécula triatómica", aliases: ["cadena de osciladores", "cadena de masas y resortes", "molécula triatómica", "relación de dispersión", "límite continuo"], concepts: ["f2b-cadena"],
+      summary: "N masas iguales entre paredes: ω_n = 2√(k/m) sen(nπ/(2(N+1))). Hay una frecuencia máxima, y para N grande se recupera la ecuación de ondas.",
+      def: [R`Con $N$ masas $m$ entre paredes y $N + 1$ resortes $k$: $m\ddot x_j = k(x_{j+1} - 2x_j + x_{j-1})$, con $x_0 = x_{N+1} = 0$.`,
+        R`Los modos son $x_j = A\sin\frac{jn\pi}{N + 1}\cos\omega_nt$ ($n = 1, \dots, N$), con $$\omega_n = 2\sqrt{\frac km}\sin\frac{n\pi}{2(N + 1)}.$$`,
+        R`**Relación de dispersión:** para una cadena larga con separación $a$, una onda $e^{i(qja - \omega t)}$ cumple $\omega = 2\sqrt{k/m}\,|\sin(qa/2)|$. Para longitudes de onda largas, $\omega \approx a\sqrt{k/m}\,q$: es una onda con rapidez $a\sqrt{k/m}$ (el [[f2b-sonido|sonido]] en un sólido).`,
+        R`**Molécula triatómica** $A$–$B$–$A$ (masas $m$, $M$, $m$): una traslación ($\omega = 0$), el modo simétrico $\omega_s = \sqrt{k/m}$ (el centro quieto) y el asimétrico $\omega_a = \sqrt{\frac km\left(1 + \frac{2m}{M}\right)}$.`],
+      idea: [R`Una cadena discreta no transmite cualquier frecuencia: por encima de $2\sqrt{k/m}$ no hay modos. Ondas más cortas que $2a$ no tienen sentido, porque no hay nada entre las masas.`,
+        R`Las frecuencias de la molécula triatómica son las que absorbe en el infrarrojo: el modo asimétrico del CO₂ (unos 70 THz) es el que lo vuelve un gas de efecto invernadero.`,
+        { graph: { fns: [q => 2 * Math.abs(Math.sin(q / 2)), q => Math.abs(q)], xr: [-3.3, 3.3], yr: [0, 2.6] }, caption: R`Relación de dispersión de la cadena (violeta) y la de una cuerda continua (naranja): coinciden para $qa$ chico.` }],
+      demo: [R`**Paso 1 (proponer un modo).** Con $x_j = A_j\cos\omega t$, cada ecuación queda $-m\omega^2A_j = k(A_{j+1} - 2A_j + A_{j-1})$.`,
+        R`**Paso 2 (probar con senos).** Proponemos $A_j = \sin(j\theta)$. Por la suma de senos, $A_{j+1} + A_{j-1} = \sin((j + 1)\theta) + \sin((j - 1)\theta) = 2\sin(j\theta)\cos\theta$.`,
+        R`**Paso 3 (la frecuencia).** Reemplazando y dividiendo por $\sin(j\theta)$: $-m\omega^2 = k(2\cos\theta - 2)$, o sea $\omega^2 = \frac{2k}{m}(1 - \cos\theta) = \frac{4k}{m}\sin^2\frac\theta2$.`,
+        R`**Paso 4 (las paredes).** $A_0 = \sin 0 = 0$ se cumple solo. Para $A_{N+1} = 0$ hace falta $\sin((N + 1)\theta) = 0$, o sea $\theta = \frac{n\pi}{N + 1}$, y queda $\omega_n = 2\sqrt{k/m}\sin\frac{n\pi}{2(N + 1)}$. $\blacksquare$`],
+      examples: [{ q: R`Tres masas de 0,5 kg con cuatro resortes de 50 N/m. ¿Frecuencias propias?`, steps: [R`$2\sqrt{k/m} = 20$ rad/s. $\omega_n = 20\sin\frac{n\pi}{8}$: $7{,}65$, $14{,}1$ y $18{,}5$ rad/s.`] }],
+      see: ["f2b-acopladas", "f2b-ondas"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-acopladas": { name: "Oscilaciones acopladas" }, "f2b-cadena": { name: "Cadenas y moléculas" } },
+    templates: T,
+    units: [{
+      id: "f2b-acopladas-u", order: 9, program: "Extra UBA", title: "Oscilaciones acopladas y modos normales", icon: "rotate-ccw",
+      diagnostic: ["f2b-2masas-num", "f2b-batido-num", "f2b-cadena-num"],
+      lessons: [
+        { id: "f2b-acopladas", title: "Dos osciladores acoplados", templates: ["f2b-2masas-num", "f2b-modo-mc", "f2b-batido-num"], theory: ["f2b-acopladas"],
+          intro: R`Modos normales: todo oscila con la misma $\omega$, dada por $\det(K - \omega^2M) = 0$. Soltando uno solo hay batidos.` },
+        { id: "f2b-cadena", title: "Cadenas y moléculas", templates: ["f2b-triatomica-num", "f2b-cadena-num"], theory: ["f2b-cadena", "f2b-acopladas"],
+          intro: R`$N$ masas: $\omega_n = 2\sqrt{k/m}\sin\frac{n\pi}{2(N + 1)}$. Triatómica: $0$, $\sqrt{k/m}$ y $\sqrt{\frac km(1 + \frac{2m}{M})}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · POLARIZACIÓN
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180, deg = x => x * 180 / Math.PI;
+  // cálculo de Jones con números complejos [re, im]
+  const cm = (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]], ca = (a, b) => [a[0] + b[0], a[1] + b[1]];
+  const apply = (J, v) => [ca(cm(J[0][0], v[0]), cm(J[0][1], v[1])), ca(cm(J[1][0], v[0]), cm(J[1][1], v[1]))];
+  const pol = th => { const c = Math.cos(rad(th)), s = Math.sin(rad(th)); return [[[c * c, 0], [c * s, 0]], [[c * s, 0], [s * s, 0]]]; };
+  // lámina con eje rápido a α y retardo δ: R(−α)·diag(1, e^{iδ})·R(α)
+  const plate = (al, dl) => { const c = Math.cos(rad(al)), s = Math.sin(rad(al)), e = [Math.cos(dl), Math.sin(dl)];
+    return [[ca([c * c, 0], cm([s * s, 0], e)), ca([c * s, 0], cm([-c * s, 0], e))], [ca([c * s, 0], cm([-c * s, 0], e)), ca([s * s, 0], cm([c * c, 0], e))]]; };
+  const inten = v => v[0][0] ** 2 + v[0][1] ** 2 + v[1][0] ** 2 + v[1][1] ** 2;
+  // luz natural: promedio sobre 720 polarizaciones lineales de entrada
+  const natural = els => { let s = 0; for (let i = 0; i < 720; i++) { const a = i * Math.PI / 720; let v = [[Math.cos(a), 0], [Math.sin(a), 0]]; for (const J of els) v = apply(J, v); s += inten(v); } return s / 720; };
+
+  T["f2b-malus-num"] = {
+    type: "numeric", concepts: ["f2b-polarizacion"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["dos", "tres", "angulo"]), I0 = r.int(2, 20) * 10;
+      if (v === "dos") {
+        const th = r.pick([15, 20, 30, 37, 45, 53, 60, 70]), I = I0 / 2 * Math.cos(rad(th)) ** 2;
+        return { prompt: `Un haz de luz natural de $${I0}$ W/m² atraviesa dos polarizadores ideales cuyos ejes forman $${th}^\\circ$. ¿Qué intensidad (W/m²) sale?`, answer: I,
+          solution: [`El primero deja pasar la mitad de la luz natural: $\\frac{I_0}{2} = ${dn(I0 / 2, 1)}$ W/m², linealmente polarizada según su eje.`, `El segundo cumple la [[f2b-polarizacion|ley de Malus]]: $I = \\frac{I_0}{2}\\cos^2 ${th}^\\circ \\approx ${dn(I, 3)}$ W/m².`],
+          verify: { kind: "value", tol: 1e-6, fn: () => I0 * natural([pol(0), pol(th)]) } };
+      }
+      if (v === "tres") {
+        const th = r.pick([15, 20, 30, 45, 60, 75]), I = I0 / 2 * (Math.cos(rad(th)) * Math.sin(rad(th))) ** 2;
+        return { prompt: `Entre dos polarizadores cruzados (ejes a $90^\\circ$) se coloca un tercero, con su eje a $${th}^\\circ$ del primero. Si incide luz natural de $${I0}$ W/m², ¿qué intensidad (W/m²) sale?`, answer: I,
+          solution: [`Sin el del medio no pasaría nada. Con él: $\\frac{I_0}{2}$ después del primero, $\\frac{I_0}{2}\\cos^2 ${th}^\\circ$ después del segundo y $\\frac{I_0}{2}\\cos^2 ${th}^\\circ\\cos^2 ${90 - th}^\\circ$ al final ([[f2b-polarizacion|Malus]]).`,
+            `$I = \\frac{I_0}{8}\\sin^2(2\\cdot${th}^\\circ) \\approx ${dn(I, 3)}$ W/m². Agregar un filtro **aumenta** la luz que pasa.`],
+          verify: { kind: "value", tol: 1e-6, fn: () => I0 * natural([pol(0), pol(th), pol(90)]) } };
+      }
+      const f = r.pick([0.1, 0.2, 0.25, 0.3, 0.375, 0.4]), th = deg(Math.acos(Math.sqrt(2 * f)));
+      return { prompt: `Luz natural atraviesa dos polarizadores ideales y sale el $${dn(100 * f, 1)}\\,\\%$ de la intensidad incidente. ¿Qué ángulo (en grados, entre 0° y 90°) forman sus ejes?`, answer: th,
+        solution: [`$\\frac{I}{I_0} = \\frac12\\cos^2\\theta$ ([[f2b-polarizacion|Malus]], con la mitad que se pierde en el primero).`, `$\\cos^2\\theta = 2\\cdot${dn(f, 3)} = ${dn(2 * f, 3)}$, así que $\\theta \\approx ${dn(th, 2)}^\\circ$.`],
+        verify: { kind: "zero", fn: x => [natural([pol(0), pol(x)]) - f], tol: 1e-6 } };
+    }
+  };
+  const PAIRS = [["aire", 1, "vidrio", 1.5], ["aire", 1, "agua", 1.33], ["agua", 1.33, "vidrio", 1.5], ["aire", 1, "diamante", 2.42], ["vidrio", 1.5, "aire", 1], ["aire", 1, "un plástico", 1.59]];
+  // coeficiente de reflexión de Fresnel para la polarización paralela al plano de incidencia, con Snell
+  const rp = (n1, n2, th) => { const st = n1 * Math.sin(th) / n2, ct = Math.sqrt(1 - st * st), ci = Math.cos(th); return (n2 * ci - n1 * ct) / (n2 * ci + n1 * ct); };
+  T["f2b-brewster-num"] = {
+    type: "numeric", concepts: ["f2b-brewster"], difficulty: 2,
+    generate(r) {
+      const [m1, n1, m2, n2] = r.pick(PAIRS), ask = r.pick(["B", "t"]), thB = deg(Math.atan(n2 / n1)), tht = 90 - thB;
+      return {
+        prompt: `Luz que viaja por ${m1} ($n = ${dn(n1, 2)}$) incide sobre ${m2} ($n = ${dn(n2, 2)}$). ¿${ask === "B" ? "Con qué ángulo de incidencia (grados) la luz reflejada sale totalmente polarizada" : "Qué ángulo (grados) forma con la normal el rayo refractado cuando se incide con el ángulo de Brewster"}?`,
+        answer: ask === "B" ? thB : tht,
+        solution: [`[[f2b-brewster|Ángulo de Brewster]]: la componente polarizada en el plano de incidencia no se refleja cuando el rayo reflejado y el refractado son perpendiculares.`,
+          `Con Snell y $\\theta_B + \\theta_t = 90^\\circ$: $\\tan\\theta_B = \\frac{n_2}{n_1} = ${dn(n2 / n1, 4)}$, así que $\\theta_B \\approx ${dn(thB, 2)}^\\circ$.`,
+          ask === "t" ? `El refractado forma $\\theta_t = 90^\\circ - \\theta_B \\approx ${dn(tht, 2)}^\\circ$.` : `La luz reflejada queda polarizada perpendicular al plano de incidencia: por eso los anteojos polarizados cortan los reflejos del agua.`],
+        // verificación: el coeficiente de Fresnel r_p, calculado con Snell, se anula en ese ángulo
+        verify: { kind: "zero", fn: x => [rp(n1, n2, rad(ask === "B" ? x : deg(Math.asin(n2 * Math.sin(rad(x)) / n1))))], tol: 1e-9 }
+      };
+    }
+  };
+  const MATS = [["cuarzo", 1.544, 1.553], ["calcita", 1.658, 1.486], ["rutilo", 2.616, 2.903], ["un plástico estirado", 1.5, 1.505]];
+  T["f2b-lamina-num"] = {
+    type: "numeric", concepts: ["f2b-laminas"], difficulty: 2,
+    generate(r) {
+      const [nm, no, ne] = r.pick(MATS), lam = r.pick([450, 500, 550, 589, 633, 700]), q = r.pick([4, 2]), dnI = Math.abs(ne - no);
+      const d = lam * 1e-9 / (q * dnI);
+      return {
+        prompt: `¿Qué espesor mínimo (en μm) tiene que tener una lámina de ${nm} ($n_o = ${dn(no, 3)}$, $n_e = ${dn(ne, 3)}$) para funcionar como lámina de ${q === 4 ? "cuarto de" : "media"} onda con luz de $${lam}$ nm?`,
+        answer: d * 1e6,
+        solution: [`En una [[f2b-laminas|lámina retardadora]], las dos componentes viajan con índices distintos y salen desfasadas $\\delta = \\frac{2\\pi}{\\lambda}|n_e - n_o|\\,d$.`,
+          `${q === 4 ? "Cuarto de onda: $\\delta = \\frac\\pi2$" : "Media onda: $\\delta = \\pi$"}, o sea $d = \\frac{\\lambda}{${q}|n_e - n_o|} = \\frac{${lam}\\ \\text{nm}}{${q}\\cdot${dn(dnI, 3)}} \\approx ${dn(d * 1e6, 3)}\\ \\mu\\text{m}$.`],
+        // verificación: con luz lineal a 45° del eje, se sigue el vector campo a la salida durante un período:
+        // con λ/4 tiene que dar módulo constante (circular); con λ/2, lineal a −45° (Ex + Ey ≡ 0)
+        verify: { kind: "zero", fn: x => { const delta = 2 * Math.PI * dnI * x * 1e-6 / (lam * 1e-9); let mx = 0, mn = 9, s = 0;
+          for (let i = 0; i < 360; i++) { const t = i * Math.PI / 180, ex = Math.cos(t), ey = Math.cos(t - delta), m = Math.hypot(ex, ey); mx = Math.max(mx, m); mn = Math.min(mn, m); s = Math.max(s, Math.abs(ex + ey)); }
+          return [q === 4 ? mx - mn : s]; }, tol: 1e-6 }
+      };
+    }
+  };
+  const PHI = [[0, "0"], [Math.PI, "\\pi"], [Math.PI / 2, "\\frac{\\pi}{2}"], [-Math.PI / 2, "-\\frac{\\pi}{2}"], [Math.PI / 3, "\\frac{\\pi}{3}"], [Math.PI / 4, "\\frac{\\pi}{4}"], [3 * Math.PI / 4, "\\frac{3\\pi}{4}"]];
+  const STATES = ["Lineal", "Circular", "Elíptica", "No polarizada"];
+  T["f2b-polestado-mc"] = {
+    type: "mc", concepts: ["f2b-polarizacion"], difficulty: 1,
+    generate(r) {
+      const [phi, ptex] = r.pick(PHI), A = r.int(1, 5), B = r.bool() ? A : r.int(1, 5);
+      const correct = Math.abs(Math.sin(phi)) < 1e-12 ? "Lineal" : A === B && Math.abs(Math.abs(phi) - Math.PI / 2) < 1e-12 ? "Circular" : "Elíptica";
+      const amp = a => (a === 1 ? "" : String(a)), ph = phi === 0 ? "" : ptex.startsWith("-") ? ` - ${ptex.slice(1)}` : ` + ${ptex}`;
+      return {
+        prompt: `Una onda luminosa que avanza en $z$ tiene campo eléctrico $E_x = ${amp(A)}\\cos(kz - \\omega t)$, $E_y = ${amp(B)}\\cos(kz - \\omega t${ph})$. ¿Qué [[f2b-polarizacion|polarización]] tiene?`,
+        ...H.mc(r, correct, STATES.filter(s => s !== correct), { text: true, keepOrder: false }),
+        solution: [`En un punto fijo, la punta de $\\vec E$ recorre una curva. Si el desfasaje es $0$ o $\\pi$, las componentes son proporcionales y $\\vec E$ oscila sobre una recta: **lineal**.`,
+          `Si el desfasaje es $\\pm\\frac\\pi2$ y las amplitudes son iguales, $|\\vec E|$ es constante y gira: **circular**. Cualquier otro caso es **elíptica**. Acá: **${correct.toLowerCase()}**.`],
+        // verificación: se sigue la punta de E durante un período: área barrida (fórmula del zapatero) y variación del módulo
+        verify: { kind: "truth", target: true, fn: () => { let area = 0, mx = 0, mn = 99; const P = [];
+          for (let i = 0; i < 720; i++) { const t = i * Math.PI / 360; P.push([A * Math.cos(-t), B * Math.cos(-t + phi)]); }
+          P.forEach((p, i) => { const q = P[(i + 1) % P.length]; area += p[0] * q[1] - q[0] * p[1]; const m = Math.hypot(p[0], p[1]); mx = Math.max(mx, m); mn = Math.min(mn, m); });
+          const cls = Math.abs(area) < 1e-9 ? "Lineal" : mx - mn < 1e-9 ? "Circular" : "Elíptica"; return cls === correct; } }
+      };
+    }
+  };
+  T["f2b-pol-vf"] = {
+    type: "tf", concepts: ["f2b-laminas"], difficulty: 3,
+    generate(r) {
+      const q = r.pick([4, 2]), al = r.pick([45, 45, 30, 22.5, 0]), claim = r.pick([0, 0.125, 0.25, 0.5]);
+      const Iout = natural([pol(0), plate(al, 2 * Math.PI / q), pol(90)]);
+      return {
+        prompt: `Luz natural de intensidad $I_0$ atraviesa un polarizador con eje horizontal, después una lámina de ${q === 4 ? "cuarto de" : "media"} onda con su eje a $${dn(al, 1)}^\\circ$ de la horizontal y por último un polarizador con eje vertical. <b>Verdadero o falso:</b> sale una intensidad de ${claim === 0 ? "cero" : `$${H.frac(Math.round(claim * 8), 8)}\\,I_0$`}.`,
+        answer: Math.abs(Iout - claim) < 1e-9,
+        explanation: `Después del primero queda $\\frac{I_0}{2}$, lineal horizontal. Una [[f2b-laminas|lámina de ${q === 4 ? "cuarto de" : "media"} onda]] con el eje a $\\alpha = ${dn(al, 1)}^\\circ$ ${q === 4 ? "la vuelve elíptica (circular si $\\alpha = 45^\\circ$), y el último polarizador deja pasar la parte vertical: $\\frac{I_0}{2}\\cdot\\frac{\\sin^2 2\\alpha}{2}$" : "la rota $2\\alpha$, y el último deja pasar $\\frac{I_0}{2}\\sin^2 2\\alpha$"}. Sale $${dn(Iout, 4)}\\,I_0$.`,
+        solution: [`Sin la lámina, dos polarizadores cruzados no dejan pasar nada; la lámina cambia el estado de polarización en el medio.`],
+        // verificación: matrices de Jones complejas, promediando sobre las polarizaciones de la luz natural
+        verify: { kind: "truth", fn: () => { let s = 0; for (let i = 0; i < 360; i++) { const a = i * Math.PI / 360; let v = [[Math.cos(a), 0], [Math.sin(a), 0]];
+          v = apply(pol(0), v); v = apply(plate(al, 2 * Math.PI / q), v); v = apply(pol(90), v); s += inten(v); } return Math.abs(s / 360 - claim) < 1e-6; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2b-polarizacion": {
+      title: "Polarización y ley de Malus", aliases: ["luz polarizada", "polarizador", "polarizadores", "ley de Malus", "Malus", "luz natural", "polarización lineal", "polarización circular", "polarización elíptica"], concepts: ["f2b-polarizacion"],
+      summary: "La polarización es la dirección en la que oscila E. Un polarizador ideal deja pasar la componente sobre su eje: I = I₀cos²θ (Malus). La luz natural pierde la mitad.",
+      def: [R`En una [[f2b-em|onda electromagnética]] que avanza en $z$, $\vec E = (E_x, E_y)$ con $E_x = A\cos(kz - \omega t)$ y $E_y = B\cos(kz - \omega t + \varphi)$. La curva que describe la punta de $\vec E$ define la **polarización**: **lineal** si $\varphi = 0$ o $\pi$; **circular** si $A = B$ y $\varphi = \pm\frac\pi2$; **elíptica** en los demás casos.`,
+        R`La **luz natural** (de una lamparita o del Sol) cambia de polarización al azar millones de veces por segundo: en promedio no tiene dirección preferida.`,
+        R`Un **polarizador** ideal deja pasar solo la componente de $\vec E$ sobre su eje de transmisión. **Ley de Malus:** si incide luz lineal a un ángulo $\theta$ del eje, sale $I = I_0\cos^2\theta$. Con luz natural sale $\frac{I_0}{2}$.`],
+      idea: [R`Dos polarizadores cruzados no dejan pasar nada; poner un tercero **en el medio**, inclinado, hace que pase luz. El del medio no "agrega" luz: cambia la dirección de polarización para que el último tenga algo que dejar pasar.`,
+        R`Las pantallas LCD funcionan así: una capa de cristal líquido entre polarizadores cruzados rota (o no) la polarización según el voltaje.`],
+      demo: [R`**Paso 1 (descomponer).** Ponemos el eje $x$ sobre el eje del polarizador. La luz lineal que llega es $\vec E = E_0(\cos\theta, \sin\theta)\cos(kz - \omega t)$.`,
+        R`**Paso 2 (filtrar).** El polarizador deja pasar solo la componente sobre su eje: sale $E_0\cos\theta\cos(kz - \omega t)$, polarizada según $x$.`,
+        R`**Paso 3 (intensidad).** La intensidad es proporcional al cuadrado de la amplitud: $I = I_0\cos^2\theta$.`,
+        R`**Paso 4 (luz natural).** Si $\theta$ cambia al azar, la intensidad que pasa es $I_0$ por el promedio de $\cos^2\theta$ sobre todos los ángulos, que vale $\frac12$ (porque $\cos^2\theta + \sin^2\theta = 1$ y en promedio los dos pesan igual). $\blacksquare$`],
+      examples: [{ q: R`Luz natural atraviesa tres polarizadores a $0^\circ$, $45^\circ$ y $90^\circ$. ¿Qué fracción sale?`, steps: [R`$\frac12\cdot\cos^2 45^\circ\cdot\cos^2 45^\circ = \frac12\cdot\frac12\cdot\frac12 = \frac18$.`] }],
+      see: ["f2b-brewster", "f2b-laminas", "f2b-em"]
+    },
+    "f2b-brewster": {
+      title: "Polarización por reflexión: ángulo de Brewster", aliases: ["ángulo de Brewster", "Brewster", "ángulo de polarización", "polarización por reflexión"], concepts: ["f2b-brewster"],
+      summary: "Con incidencia a θ_B, con tan θ_B = n₂/n₁, la luz reflejada sale totalmente polarizada perpendicular al plano de incidencia, y el rayo reflejado es perpendicular al refractado.",
+      def: [R`Al reflejarse, las dos componentes de la luz (en el plano de incidencia, $p$, y perpendicular, $s$) se reflejan con coeficientes distintos. Para $p$, el coeficiente de Fresnel es $$r_p = \frac{n_2\cos\theta_i - n_1\cos\theta_t}{n_2\cos\theta_i + n_1\cos\theta_t}.$$`,
+        R`**Ángulo de Brewster:** $r_p = 0$ cuando $\tan\theta_B = \frac{n_2}{n_1}$. A ese ángulo, la luz reflejada está polarizada linealmente, perpendicular al plano de incidencia, y $\theta_B + \theta_t = 90^\circ$.`],
+      idea: [R`Por eso los reflejos en el agua o en una ruta están parcialmente polarizados (horizontal), y un anteojo polarizado con eje vertical los corta.`,
+        R`Las ventanas de Brewster de los láseres de gas están inclinadas a $\theta_B$: la componente $p$ pasa sin perder nada al reflejarse, y el láser sale polarizado.`],
+      demo: [R`**Paso 1 (quién emite el reflejo).** La luz reflejada la emiten los electrones del medio 2, que oscilan siguiendo el campo $\vec E$ de la onda refractada, perpendicular al rayo refractado.`,
+        R`**Paso 2 (un dipolo no emite a lo largo de su eje).** Para la componente $p$, esos electrones oscilan en el plano de incidencia. Si la dirección del rayo reflejado coincide con la de su oscilación, no emiten nada en esa dirección y no hay reflejo $p$.`,
+        R`**Paso 3 (condición geométrica).** Eso pasa cuando el reflejado es perpendicular al refractado: $\theta_B + \theta_t = 90^\circ$.`,
+        R`**Paso 4 (con Snell).** $n_1\sin\theta_B = n_2\sin\theta_t = n_2\sin(90^\circ - \theta_B) = n_2\cos\theta_B$, así que $\tan\theta_B = \frac{n_2}{n_1}$. $\blacksquare$`],
+      examples: [{ q: R`¿Ángulo de Brewster para luz del aire sobre agua?`, steps: [R`$\theta_B = \arctan 1{,}33 \approx 53{,}1^\circ$.`] }],
+      see: ["f2b-polarizacion", "f2b-optica"]
+    },
+    "f2b-laminas": {
+      title: "Birrefringencia y láminas retardadoras", aliases: ["birrefringencia", "material birrefringente", "lámina retardadora", "láminas retardadoras", "lámina de cuarto de onda", "lámina de media onda"], concepts: ["f2b-laminas"],
+      summary: "Un cristal birrefringente tiene dos índices. Una lámina de espesor d desfasa las componentes δ = 2π|nₑ − n₀|d/λ: λ/4 vuelve circular la luz lineal a 45°; λ/2 refleja la polarización respecto del eje.",
+      def: [R`En un material **birrefringente** (cuarzo, calcita, plásticos estirados), la luz polarizada a lo largo del eje óptico ve un índice $n_e$, y la perpendicular, otro índice $n_o$.`,
+        R`Una **lámina retardadora** de espesor $d$ introduce un desfasaje $$\delta = \frac{2\pi}{\lambda}|n_e - n_o|\,d$$ entre las dos componentes.`,
+        R`**Cuarto de onda** ($\delta = \frac\pi2$): luz lineal a $45^\circ$ del eje sale **circular** (y al revés). **Media onda** ($\delta = \pi$): luz lineal a un ángulo $\alpha$ del eje sale lineal a $-\alpha$; la polarización gira $2\alpha$.`],
+      idea: [R`La lámina no absorbe luz: solo atrasa una componente respecto de la otra. Por eso cambia la polarización sin cambiar la intensidad.`,
+        R`Entre polarizadores cruzados, un plástico estirado se ve de colores: el desfasaje depende de $\lambda$ y de la tensión, y así se ven las tensiones internas (fotoelasticidad).`],
+      demo: [R`**Paso 1 (descomponer).** Ponemos $x$ sobre el eje rápido de la lámina. La luz lineal a $45^\circ$ tiene componentes iguales: $E_x = E_y = \frac{E_0}{\sqrt2}\cos(\omega t)$ a la entrada.`,
+        R`**Paso 2 (cada componente con su índice).** Al atravesar el espesor $d$, cada una acumula la fase $\frac{2\pi}{\lambda}nd$ con su propio índice. Lo único que cambia la polarización es la diferencia, $\delta = \frac{2\pi}{\lambda}|n_e - n_o|d$.`,
+        R`**Paso 3 (cuarto de onda).** Con $\delta = \frac\pi2$: $E_x \propto \cos\omega t$ y $E_y \propto \cos(\omega t - \frac\pi2) = \sin\omega t$. Como $E_x^2 + E_y^2$ es constante, la punta de $\vec E$ gira en un círculo: polarización circular.`,
+        R`**Paso 4 (media onda).** Con $\delta = \pi$: $E_y \to -E_y$. La componente sobre el eje queda igual y la perpendicular cambia de signo: es la reflexión respecto del eje, que lleva el ángulo $\alpha$ a $-\alpha$. $\blacksquare$`],
+      examples: [{ q: R`¿Espesor mínimo de una lámina λ/4 de cuarzo ($|n_e - n_o| = 0{,}009$) para 589 nm?`, steps: [R`$d = \frac{589\ \text{nm}}{4\cdot0{,}009} \approx 16{,}4\ \mu\text{m}$.`] }],
+      see: ["f2b-polarizacion", "f2b-brewster"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-polarizacion": { name: "Polarización y Malus" }, "f2b-brewster": { name: "Ángulo de Brewster" }, "f2b-laminas": { name: "Láminas retardadoras" } },
+    templates: T,
+    units: [{
+      id: "f2b-polarizacion-u", order: 10, program: "Extra UBA", title: "Polarización", icon: "lightbulb",
+      diagnostic: ["f2b-malus-num", "f2b-brewster-num", "f2b-lamina-num"],
+      lessons: [
+        { id: "f2b-polarizacion", title: "Estados de polarización y Malus", templates: ["f2b-polestado-mc", "f2b-malus-num"], theory: ["f2b-polarizacion"],
+          intro: R`Lineal, circular o elíptica, según el desfasaje entre $E_x$ y $E_y$. Malus: $I = I_0\cos^2\theta$; la luz natural pierde la mitad.` },
+        { id: "f2b-brewster-laminas", title: "Brewster y láminas", templates: ["f2b-brewster-num", "f2b-lamina-num", "f2b-pol-vf"], theory: ["f2b-brewster", "f2b-laminas"],
+          intro: R`$\tan\theta_B = n_2/n_1$. Láminas: $\delta = \frac{2\pi}{\lambda}|n_e - n_o|d$; λ/4 da circular, λ/2 rota $2\alpha$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · REFLEXIÓN ENTRE MEDIOS, FOURIER Y DISPERSIÓN
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  const rad = d => d * Math.PI / 180, deg = x => x * 180 / Math.PI;
+
+  // cuerda con dos densidades simulada por diferencias finitas (salto leapfrog): un pulso gaussiano llega a la unión;
+  // devuelve la amplitud (con signo) del reflejado y del transmitido, y la fracción de energía transmitida
+  const junction = ratio => {
+    const N = 1600, J = 800, c2 = 1 / Math.sqrt(ratio), dt = 0.5 / Math.max(1, c2), sg = 25, x0 = 400;
+    const mu = i => (i < J ? 1 : ratio), G = x => Math.exp(-((x - x0) ** 2) / (2 * sg * sg));
+    let u = new Float64Array(N), up = new Float64Array(N);
+    for (let i = 0; i < N; i++) { u[i] = G(i); up[i] = G(i + dt); }
+    const steps = Math.round(650 / dt);
+    for (let s = 0; s < steps; s++) { const un = new Float64Array(N);
+      for (let i = 1; i < N - 1; i++) un[i] = 2 * u[i] - up[i] + dt * dt / mu(i) * (u[i + 1] - 2 * u[i] + u[i - 1]);
+      up = u; u = un; }
+    let ar = 0, at = 0, er = 0, et = 0;
+    for (let i = 1; i < N - 1; i++) { const v = (u[i] - up[i]) / dt, e = 0.5 * mu(i) * v * v + 0.5 * (u[i + 1] - u[i]) ** 2;
+      if (i < J) { if (Math.abs(u[i]) > Math.abs(ar)) ar = u[i]; er += e; } else { if (Math.abs(u[i]) > Math.abs(at)) at = u[i]; et += e; } }
+    return { r: ar, t: at, P: et / (er + et) };
+  };
+  T["f2b-union-num"] = {
+    testN: 20, // simulación cara: menos instancias en los tests
+    type: "numeric", concepts: ["f2b-impedancia"], difficulty: 3,
+    generate(r) {
+      const [m1, m2] = r.pick([[2, 8], [8, 2], [5, 20], [20, 5], [3, 12], [10, 40], [40, 10], [4, 9], [9, 4], [10, 2], [6, 30]]), A = r.int(1, 5), ask = r.pick(["r", "t", "P"]);
+      const z1 = Math.sqrt(m1), z2 = Math.sqrt(m2), rr = (z1 - z2) / (z1 + z2), tt = 2 * z1 / (z1 + z2), P = 4 * z1 * z2 / (z1 + z2) ** 2;
+      const ans = { r: rr * A, t: tt * A, P: 100 * P }[ask];
+      return {
+        prompt: `Una cuerda de $${m1}$ g/m está atada a otra de $${m2}$ g/m, con la misma tensión. Por la primera llega a la unión un pulso de $${A}$ cm de altura. ¿${{ r: "Qué altura (cm) tiene el pulso reflejado? (negativa si vuelve invertido)", t: "Qué altura (cm) tiene el pulso transmitido?", P: "Qué porcentaje de la energía del pulso pasa a la segunda cuerda?" }[ask]}`,
+        answer: ans,
+        solution: [
+          `La [[f2b-impedancia|impedancia]] de cada cuerda es $Z = \\sqrt{T\\mu}$; con la misma tensión, el cociente es $\\frac{Z_2}{Z_1} = \\sqrt{\\frac{${m2}}{${m1}}} \\approx ${dn(z2 / z1, 4)}$.`,
+          `$r = \\frac{Z_1 - Z_2}{Z_1 + Z_2} \\approx ${dn(rr, 4)}$ y $t = \\frac{2Z_1}{Z_1 + Z_2} \\approx ${dn(tt, 4)}$. ${rr < 0 ? "El reflejado vuelve **invertido**, como en un extremo fijo." : "El reflejado vuelve derecho, como en un extremo libre."}`,
+          ask === "P" ? `Fracción de energía transmitida: $\\frac{Z_2}{Z_1}t^2 = \\frac{4Z_1Z_2}{(Z_1 + Z_2)^2} \\approx ${dn(P, 4)}$, o sea $${dn(100 * P, 2)}\\,\\%$.` : `Altura: $${ask === "r" ? "r" : "t"}\\cdot${A}$ cm $\\approx ${dn(ans, 3)}$ cm.`
+        ],
+        // verificación: simulación de la cuerda por diferencias finitas con el pulso real
+        verify: { kind: "value", tol: 4e-3, fn: () => { const s = junction(m2 / m1); return { r: s.r * A, t: s.t * A, P: 100 * s.P }[ask]; } }
+      };
+    }
+  };
+  T["f2b-fourier-num"] = {
+    type: "numeric", concepts: ["f2b-fourier-cuerda"], difficulty: 3,
+    generate(r) {
+      const [fr, ftex] = r.pick([[1 / 2, "en el medio"], [1 / 3, "a un tercio de un extremo"], [1 / 4, "a un cuarto de un extremo"], [1 / 5, "a un quinto de un extremo"], [2 / 5, "a dos quintos de un extremo"]]);
+      const L = r.int(4, 10) / 10, h = r.int(2, 10), n = r.int(1, 3), a = fr * L, s = Math.sin(n * Math.PI * fr);
+      if (Math.abs(s) < 1e-9) return null;
+      const bn = 2 * h * L * L / (n * n * Math.PI * Math.PI * a * (L - a)) * s;
+      return {
+        prompt: `Una cuerda de $${dn(L, 1)}$ m con los extremos fijos se tira desde un punto ${ftex}, hasta formar un triángulo de $${h}$ mm de altura, y se suelta desde el reposo. ¿Cuánto vale (en mm) la amplitud $b_{${n}}$ del modo ${n === 1 ? "fundamental" : `número ${n}`} en el desarrollo $y(x, 0) = \\sum b_n\\sin\\frac{n\\pi x}{L}$?`,
+        answer: bn,
+        solution: [
+          `Cada [[f2b-fourier-cuerda|modo]] evoluciona solo, y los coeficientes salen de la [[c2-fourier|serie de Fourier]] en senos: $b_n = \\frac2L\\int_0^Ly(x, 0)\\sin\\frac{n\\pi x}{L}\\,dx$.`,
+          `Para un triángulo de altura $h$ con el vértice en $x = a$: $b_n = \\frac{2hL^2}{n^2\\pi^2a(L - a)}\\sin\\frac{n\\pi a}{L}$.`,
+          `Con $a = ${dn(a, 3)}$ m: $b_{${n}} \\approx ${dn(bn, 3)}$ mm. Los modos con un nodo justo en el punto donde se tiró no se excitan.`
+        ],
+        // verificación: la integral de Fourier del triángulo, por Simpson
+        verify: { kind: "integral", f: x => (2 / L) * (x < a ? h * x / a : h * (L - x) / (L - a)) * Math.sin(n * Math.PI * x / L), a: 0, b: L }
+      };
+    }
+  };
+  const DISP = [
+    { id: "profunda", txt: "olas en aguas profundas", rel: "\\omega = \\sqrt{gk}", w: k => Math.sqrt(g * k) },
+    { id: "capilar", txt: "ondas capilares en agua (tensión superficial $0{,}073$ N/m)", rel: "\\omega = \\sqrt{\\frac{\\sigma k^3}{\\rho}}", w: k => Math.sqrt(0.073 * k ** 3 / 1000) },
+    { id: "plasma", txt: "ondas electromagnéticas en un plasma con $\\omega_p = 5\\times10^{7}$ rad/s", rel: "\\omega^2 = \\omega_p^2 + c^2k^2", w: k => Math.sqrt(2.5e15 + 9e16 * k * k) }
+  ];
+  T["f2b-grupo-num"] = {
+    type: "numeric", concepts: ["f2b-dispersion"], difficulty: 2,
+    generate(r) {
+      const D = r.pick(DISP);
+      const lam = D.id === "profunda" ? r.pick([1, 2, 5, 10, 20, 50, 100]) : D.id === "capilar" ? r.pick([2, 3, 5, 8, 10]) / 1000 : r.pick([5, 10, 20, 30, 50]);
+      const k = 2 * Math.PI / lam, h = 1e-6 * k, vg = (D.w(k + h) - D.w(k - h)) / (2 * h);
+      const vgx = D.id === "profunda" ? 0.5 * Math.sqrt(g / k) : D.id === "capilar" ? 1.5 * D.w(k) / k : 9e16 * k / D.w(k);
+      return {
+        prompt: `Para ${D.txt}, la relación de dispersión es $${D.rel}$. ¿Cuál es la velocidad de grupo (m/s) de un paquete con longitud de onda $${D.id === "capilar" ? `${dn(lam * 1000, 1)}$ mm` : `${lam}$ m`}${D.id === "plasma" ? " (respondé en unidades de $10^8$ m/s)" : ""}?`,
+        answer: D.id === "plasma" ? vgx / 1e8 : vgx,
+        solution: [
+          `La [[f2b-dispersion|velocidad de grupo]] es $v_g = \\frac{d\\omega}{dk}$, y la de fase, $v_f = \\frac\\omega k$. Con $k = \\frac{2\\pi}{\\lambda} \\approx ${dn(k, 4)}$ m⁻¹:`,
+          D.id === "profunda" ? `$v_g = \\frac12\\sqrt{\\frac gk} = \\frac{v_f}{2} \\approx ${dn(vgx, 4)}$ m/s: las crestas avanzan más rápido que el grupo, nacen atrás y mueren adelante.`
+            : D.id === "capilar" ? `$v_g = \\frac32\\sqrt{\\frac{\\sigma k}{\\rho}} = \\frac32v_f \\approx ${dn(vgx, 4)}$ m/s: acá el grupo va más rápido que las crestas.`
+            : `$v_g = \\frac{c^2k}{\\omega} \\approx ${dn(vgx / 1e8, 4)}\\times10^8$ m/s, menor que $c$ (y $v_fv_g = c^2$, así que la de fase supera a $c$ sin llevar información).`
+        ],
+        // verificación: derivada numérica de la relación de dispersión
+        verify: { kind: "deriv", f: kk => D.w(kk) / (D.id === "plasma" ? 1e8 : 1), x0: k }
+      };
+    }
+  };
+  // desviación de un prisma de ángulo A trazando el rayo con Snell; mínimo por sección áurea
+  const dev = (n, A, th) => { const t1 = Math.asin(Math.sin(th) / n), t2 = A - t1, s = n * Math.sin(t2); return Math.abs(s) >= 1 ? NaN : th + Math.asin(s) - A; };
+  const minDev = (n, A) => { let a = 0.01, b = Math.PI / 2 - 0.001; const gr = (Math.sqrt(5) - 1) / 2; const f = x => { const d = dev(n, A, x); return isNaN(d) ? 99 : d; };
+    for (let i = 0; i < 200; i++) { const c = b - gr * (b - a), d = a + gr * (b - a); if (f(c) < f(d)) b = d; else a = c; } return f((a + b) / 2); };
+  T["f2b-prisma-num"] = {
+    type: "numeric", concepts: ["f2b-dispersion"], difficulty: 2,
+    generate(r) {
+      const A = r.pick([30, 40, 45, 50, 60]), ask = r.pick(["dmin", "n", "disp"]);
+      if (ask === "dmin") {
+        const n = r.pick([1.45, 1.5, 1.52, 1.6, 1.65, 1.7]), d = 2 * deg(Math.asin(n * Math.sin(rad(A / 2)))) - A;
+        return { prompt: `¿Cuál es la desviación mínima (en grados) de un prisma de ángulo $${A}^\\circ$ e índice $${dn(n, 2)}$ en aire?`, answer: d,
+          solution: [`En la [[f2b-dispersion|desviación mínima]] el rayo atraviesa el prisma simétricamente: adentro forma $\\frac A2$ con cada cara.`, `$n = \\frac{\\sin\\frac{A + \\delta}{2}}{\\sin\\frac A2} \\Rightarrow \\delta = 2\\arcsin\\left(n\\sin\\frac A2\\right) - A \\approx ${dn(d, 2)}^\\circ$.`],
+          verify: { kind: "value", tol: 1e-6, fn: () => deg(minDev(n, rad(A))) } };
+      }
+      if (ask === "n") {
+        const d = r.pick([20, 25, 30, 35, 40]), n = Math.sin(rad((A + d) / 2)) / Math.sin(rad(A / 2));
+        if (n > 1.9 || n < 1.2) return null;
+        return { prompt: `Un prisma de $${A}^\\circ$ tiene, para cierta luz, una desviación mínima de $${d}^\\circ$. ¿Cuál es su índice de refracción?`, answer: n,
+          solution: [`Con la fórmula de la [[f2b-dispersion|desviación mínima]]: $n = \\frac{\\sin\\frac{A + \\delta}{2}}{\\sin\\frac A2} = \\frac{\\sin ${dn((A + d) / 2, 1)}^\\circ}{\\sin ${dn(A / 2, 1)}^\\circ} \\approx ${dn(n, 4)}$.`, `Es la forma clásica de medir índices: se busca a mano el ángulo donde la desviación deja de bajar.`],
+          verify: { kind: "zero", fn: x => [deg(minDev(x, rad(A))) - d], tol: 1e-6, scale: d } };
+      }
+      const nr = r.pick([1.51, 1.52, 1.61]), nv = nr + r.pick([0.01, 0.02, 0.03]), dr = 2 * deg(Math.asin(nr * Math.sin(rad(A / 2)))) - A, dv = 2 * deg(Math.asin(nv * Math.sin(rad(A / 2)))) - A;
+      return { prompt: `Un prisma de $${A}^\\circ$ tiene índice $${dn(nr, 2)}$ para el rojo y $${dn(nv, 2)}$ para el violeta. Trabajando cerca de la desviación mínima, ¿cuántos grados separan los dos colores a la salida?`, answer: dv - dr,
+        solution: [`La [[f2b-dispersion|dispersión de la luz]]: el índice depende de $\\lambda$, así que cada color tiene su desviación mínima, $\\delta = 2\\arcsin(n\\sin\\frac A2) - A$.`, `$\\delta_v - \\delta_r \\approx ${dn(dv, 3)}^\\circ - ${dn(dr, 3)}^\\circ = ${dn(dv - dr, 3)}^\\circ$. Así se separa la luz blanca en el arco iris.`],
+        verify: { kind: "value", tol: 1e-5, fn: () => deg(minDev(nv, rad(A)) - minDev(nr, rad(A))) } };
+    }
+  };
+  T["f2b-dispersion-vf"] = {
+    type: "tf", concepts: ["f2b-dispersion"], difficulty: 2,
+    generate(r) {
+      const D = r.pick(DISP.concat([{ id: "vacio", txt: "la luz en el vacío", rel: "\\omega = ck", w: k => 3e8 * k }])), q = r.pick(["mayor", "menor", "igual"]);
+      const truth = D.id === "vacio" ? q === "igual" : D.id === "capilar" ? q === "mayor" : q === "menor";
+      return {
+        prompt: `Para ${D.txt} ($${D.rel}$). <b>Verdadero o falso:</b> la velocidad de grupo es ${q === "igual" ? "igual a" : `${q} que`} la velocidad de fase.`,
+        answer: truth,
+        explanation: `Con $v_g = \\frac{d\\omega}{dk}$ y $v_f = \\frac\\omega k$ ([[f2b-dispersion]]): ${D.id === "profunda" ? "$v_g = \\frac{v_f}{2}$" : D.id === "capilar" ? "$v_g = \\frac32v_f$" : D.id === "vacio" ? "el medio no es dispersivo y $v_g = v_f = c$" : "$v_g = \\frac{c^2}{v_f} < c < v_f$"}.${D.id === "vacio" ? "" : " El medio es dispersivo: un paquete se deforma al avanzar."}`,
+        solution: [`Si $\\omega$ es proporcional a $k$, las dos velocidades coinciden; si no, el medio es dispersivo.`],
+        // verificación: se comparan la derivada numérica de ω(k) y ω/k en una longitud de onda típica
+        verify: { kind: "truth", fn: () => { const k = D.id === "capilar" ? 1000 : D.id === "profunda" ? 1 : 0.5, h = 1e-6 * k, g2 = (D.w(k + h) - D.w(k - h)) / (2 * h), f2 = D.w(k) / k, rel = g2 / f2;
+          return q === "igual" ? Math.abs(rel - 1) < 1e-6 : q === "mayor" ? rel > 1 + 1e-6 : rel < 1 - 1e-6; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2b-impedancia": {
+      title: "Reflexión y transmisión entre dos medios: impedancia", aliases: ["impedancia de una cuerda", "impedancia mecánica", "coeficiente de reflexión", "coeficiente de transmisión", "unión de dos cuerdas"], concepts: ["f2b-impedancia"],
+      summary: "En la unión de dos cuerdas, r = (Z₁ − Z₂)/(Z₁ + Z₂) y t = 2Z₁/(Z₁ + Z₂), con Z = √(Tμ). Si Z₂ > Z₁ el reflejado se invierte.",
+      def: [R`La **impedancia** de una cuerda es $Z = \sqrt{T\mu} = \frac Tv = \mu v$: mide cuánta fuerza hace falta para moverla transversalmente con cierta velocidad.`,
+        R`Cuando una onda que viaja por un medio de impedancia $Z_1$ llega a otro de impedancia $Z_2$, se parte en una reflejada y una transmitida, con amplitudes $$r = \frac{Z_1 - Z_2}{Z_1 + Z_2}, \qquad t = \frac{2Z_1}{Z_1 + Z_2}.$$`,
+        R`La energía se conserva: la fracción reflejada es $r^2$ y la transmitida, $\frac{Z_2}{Z_1}t^2 = \frac{4Z_1Z_2}{(Z_1 + Z_2)^2}$.`],
+      idea: [R`Los casos extremos son conocidos: $Z_2 \to \infty$ es un extremo fijo ($r = -1$, el pulso vuelve invertido); $Z_2 \to 0$ es un extremo libre ($r = 1$). Si $Z_1 = Z_2$ no hay reflejo: por eso se "adaptan impedancias" en cables, parlantes y en el gel de las ecografías.`],
+      demo: [R`**Paso 1 (las tres ondas).** Con la unión en $x = 0$: incidente $f(x - v_1t)$ y reflejada $g(x + v_1t)$ a la izquierda, transmitida $h(x - v_2t)$ a la derecha.`,
+        R`**Paso 2 (la cuerda no se corta).** En $x = 0$ el desplazamiento es el mismo de los dos lados: $f + g = h$.`,
+        R`**Paso 3 (el nudo no tiene masa).** Las fuerzas transversales sobre el punto de unión se equilibran: $T\frac{\partial y_1}{\partial x} = T\frac{\partial y_2}{\partial x}$ en $x = 0$.`,
+        R`**Paso 4 (pasar a derivadas temporales).** Para una onda hacia la derecha $\frac{\partial y}{\partial x} = -\frac1v\frac{\partial y}{\partial t}$, y hacia la izquierda $+\frac1v\frac{\partial y}{\partial t}$. Integrando en el tiempo, el paso 3 queda $\frac{f - g}{v_1} = \frac{h}{v_2}$, o sea $Z_1(f - g) = Z_2h$ (con $Z = T/v$).`,
+        R`**Paso 5 (resolver).** De $f + g = h$ y $Z_1(f - g) = Z_2h$: $g = \frac{Z_1 - Z_2}{Z_1 + Z_2}f$ y $h = \frac{2Z_1}{Z_1 + Z_2}f$. $\blacksquare$`],
+      examples: [{ q: R`Una cuerda de 4 g/m unida a una de 16 g/m (misma tensión). ¿Coeficientes?`, steps: [R`$\frac{Z_2}{Z_1} = 2$: $r = \frac{1 - 2}{3} = -\frac13$ y $t = \frac23$.`, R`Se refleja $\frac19$ de la energía y pasa $\frac89$.`] }],
+      see: ["f2b-ondas", "f2b-fourier-cuerda"]
+    },
+    "f2b-fourier-cuerda": {
+      title: "Superposición de modos en una cuerda", aliases: ["cuerda pulsada", "superposición de modos", "desarrollo en modos normales"], concepts: ["f2b-fourier-cuerda"],
+      summary: "Cualquier movimiento de una cuerda fija en los extremos es una suma de modos: y = Σ bₙ sen(nπx/L) cos(ωₙt), con bₙ = (2/L)∫ y(x, 0) sen(nπx/L) dx.",
+      def: [R`Cada [[f2b-ondas|onda estacionaria]] $\sin\frac{n\pi x}{L}\cos\omega_nt$, con $\omega_n = \frac{n\pi v}{L}$, cumple la ecuación de ondas y las condiciones de borde. Como la ecuación es lineal, la suma también la cumple: $$y(x, t) = \sum_{n=1}^{\infty}b_n\sin\frac{n\pi x}{L}\cos\omega_nt$$ (si se suelta desde el reposo).`,
+        R`Los coeficientes salen de la forma inicial, con la [[c2-fourier|serie de Fourier]] en senos: $b_n = \frac2L\int_0^Ly(x, 0)\sin\frac{n\pi x}{L}\,dx$.`,
+        R`**Cuerda pulsada** en $x = a$ con altura $h$: $b_n = \frac{2hL^2}{n^2\pi^2a(L - a)}\sin\frac{n\pi a}{L}$. Los armónicos decaen como $\frac{1}{n^2}$, y los que tienen un nodo en $a$ no aparecen.`],
+      idea: [R`El timbre de un instrumento es la mezcla de armónicos: pulsar una guitarra cerca del puente excita más armónicos altos (sonido brillante) que pulsarla en el medio (sonido redondo, sin armónicos pares).`],
+      demo: [R`**Paso 1 (cada modo funciona).** $y_n = \sin\frac{n\pi x}{L}\cos\omega_nt$ se anula en $x = 0$ y $x = L$, y cumple $y_{tt} = v^2y_{xx}$ si $\omega_n = \frac{n\pi v}{L}$.`,
+        R`**Paso 2 (superponer).** La ecuación es lineal, así que $\sum b_ny_n$ también es solución. En $t = 0$ vale $\sum b_n\sin\frac{n\pi x}{L}$, y su velocidad es cero.`,
+        R`**Paso 3 (ortogonalidad).** $\int_0^L\sin\frac{n\pi x}{L}\sin\frac{m\pi x}{L}\,dx$ vale $\frac L2$ si $n = m$ y $0$ si no. Multiplicando la condición inicial por $\sin\frac{m\pi x}{L}$ e integrando, solo sobrevive $b_m\frac L2$: $b_m = \frac2L\int_0^Ly(x, 0)\sin\frac{m\pi x}{L}\,dx$.`,
+        R`**Paso 4 (el triángulo).** Integrando por partes en $[0, a]$ y en $[a, L]$ (en cada tramo $y$ es lineal), los términos de borde se cancelan y queda $b_n = \frac{2hL^2}{n^2\pi^2a(L - a)}\sin\frac{n\pi a}{L}$. $\blacksquare$`],
+      examples: [{ q: R`Cuerda pulsada en el medio con $h = 5$ mm. ¿$b_1$ y $b_2$?`, steps: [R`$b_1 = \frac{2\cdot5\cdot L^2}{\pi^2\cdot L^2/4} = \frac{40}{\pi^2} \approx 4{,}05$ mm.`, R`$b_2 = 0$: el medio es un nodo del segundo armónico.`] }],
+      see: ["f2b-ondas", "c2-fourier", "f2b-impedancia"]
+    },
+    "f2b-dispersion": {
+      title: "Dispersión: velocidad de fase y de grupo, prismas", aliases: ["velocidad de grupo", "velocidad de fase", "medio dispersivo", "medios dispersivos", "paquete de ondas", "desviación mínima", "dispersión de la luz"], concepts: ["f2b-dispersion"],
+      summary: "Si ω no es proporcional a k, cada longitud de onda viaja a su velocidad: las crestas van a v_f = ω/k y la envolvente a v_g = dω/dk. En un prisma, la desviación mínima da n = sen((A+δ)/2)/sen(A/2).",
+      def: [R`La **relación de dispersión** $\omega(k)$ dice con qué frecuencia oscila cada longitud de onda. Las crestas avanzan a la **velocidad de fase** $v_f = \frac\omega k$; un paquete (grupo de ondas), a la **velocidad de grupo** $v_g = \frac{d\omega}{dk}$.`,
+        R`El medio es **dispersivo** si $v_f$ depende de $k$; ahí $v_g \ne v_f$ y los paquetes se deforman. Ejemplos: olas en aguas profundas ($\omega = \sqrt{gk}$, $v_g = \frac{v_f}{2}$), ondas capilares ($v_g = \frac32v_f$), la luz en el vidrio ($n$ depende de $\lambda$).`,
+        R`**Prisma:** la desviación de un rayo depende del ángulo de incidencia y tiene un mínimo cuando lo atraviesa simétricamente: $$n = \frac{\sin\frac{A + \delta_{min}}{2}}{\sin\frac A2}.$$ Como $n$ depende del color, cada color sale con otro ángulo (**dispersión de la luz**).`],
+      idea: [R`Tirá una piedra al agua: el anillo de olas avanza más lento que las crestas, que aparecen atrás del grupo, lo cruzan y desaparecen adelante. Es $v_g = \frac{v_f}{2}$ a la vista.`,
+        R`La energía y la información viajan con el grupo. En un plasma la velocidad de fase supera a $c$, pero la de grupo no: no hay contradicción con la [[f1-relatividad|relatividad especial]].`],
+      demo: [R`**Paso 1 (dos ondas).** Sumamos dos ondas de igual amplitud y números de onda cercanos: $\cos(k_1x - \omega_1t) + \cos(k_2x - \omega_2t) = 2\cos\left(\frac{\Delta k}{2}x - \frac{\Delta\omega}{2}t\right)\cos(\bar kx - \bar\omega t)$, por la suma de cosenos.`,
+        R`**Paso 2 (la envolvente).** El primer factor es una envolvente lenta que avanza a $\frac{\Delta\omega}{\Delta k}$; el segundo, las crestas, a $\frac{\bar\omega}{\bar k}$. En el límite $\Delta k \to 0$, la envolvente va a $v_g = \frac{d\omega}{dk}$.`,
+        R`**Paso 3 (prisma, simetría).** Si se invierte el rayo, la desviación es la misma. Entonces, si el mínimo fuera único y asimétrico, habría dos ángulos con la misma desviación mínima; por eso en el mínimo el recorrido es simétrico y el rayo forma adentro el mismo ángulo con las dos caras.`,
+        R`**Paso 4 (prisma, geometría).** Los dos ángulos internos suman $A$, así que cada uno vale $\frac A2$. La desviación es $\delta = 2\theta_i - A$, de donde $\theta_i = \frac{A + \delta}{2}$, y con Snell, $\sin\frac{A + \delta}{2} = n\sin\frac A2$. $\blacksquare$`],
+      examples: [{ q: R`Olas de 10 m de longitud de onda en alta mar. ¿$v_f$ y $v_g$?`, steps: [R`$k = 0{,}628$ m⁻¹, $v_f = \sqrt{g/k} \approx 3{,}95$ m/s y $v_g = \frac{v_f}{2} \approx 1{,}98$ m/s.`] }],
+      see: ["f2b-ondas", "f2b-optica", "f2b-cadena"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-impedancia": { name: "Reflexión entre medios" }, "f2b-fourier-cuerda": { name: "Superposición de modos" }, "f2b-dispersion": { name: "Dispersión y grupo" } },
+    templates: T,
+    units: [{
+      id: "f2b-ondas-extra-u", order: 11, program: "Extra UBA", title: "Reflexión entre medios, Fourier y dispersión", icon: "volume-2",
+      diagnostic: ["f2b-fourier-num", "f2b-grupo-num", "f2b-prisma-num"],
+      lessons: [
+        { id: "f2b-impedancia", title: "Impedancia y modos de una cuerda", templates: ["f2b-union-num", "f2b-fourier-num"], theory: ["f2b-impedancia", "f2b-fourier-cuerda"],
+          intro: R`$r = \frac{Z_1 - Z_2}{Z_1 + Z_2}$, $t = \frac{2Z_1}{Z_1 + Z_2}$ con $Z = \sqrt{T\mu}$. Modos: $b_n = \frac2L\int_0^Ly_0\sin\frac{n\pi x}{L}dx$.` },
+        { id: "f2b-dispersion", title: "Dispersión y prismas", templates: ["f2b-grupo-num", "f2b-dispersion-vf", "f2b-prisma-num"], theory: ["f2b-dispersion"],
+          intro: R`$v_f = \omega/k$, $v_g = d\omega/dk$. Prisma: $n = \frac{\sin\frac{A + \delta_{min}}{2}}{\sin\frac A2}$.` }
       ]
     }],
     cards

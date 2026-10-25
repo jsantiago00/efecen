@@ -11,7 +11,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 1 | M101 Cálculo I | **completa**: las 5 unidades del programa (7 unidades en la app) | 105 | 64 |
 | 2 | M104 Introducción al Álgebra Lineal | **completa**: las 6 unidades del programa (repasada el 21/10) | 39 | 21 |
 | 3 | F101 Física General I | **completa**: unidad transversal y 10 unidades, más 3 unidades «Extra UBA» | 77 | 41 |
-| 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción; repasada el 21/10) | 42 | 20 |
+| 4 | F102B Física General II B | **completa**: las 8 unidades del programa (termodinámica, ondas, óptica geométrica, interferencia y difracción; repasada el 21/10), más 3 unidades «Extra UBA» | 57 | 28 |
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa (repasada el 21/10) | 52 | 26 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa (repasada el 24/10) | 61 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado; repasada el 24/10) | 56 | 33 |
@@ -43,8 +43,10 @@ Pedido del usuario: sumar a cada materia los temas que la Lic. en Cs. Físicas d
 | Materia | Extra UBA hecho | Extra UBA pendiente |
 |---|---|---|
 | F101 | **Sistemas no inerciales:** fuerzas de inercia, centrífuga y Coriolis. **Estabilidad:** pequeñas oscilaciones y potencial efectivo. **Relatividad especial:** dilatación, contracción, Lorentz, simultaneidad y energía. | Sistemas de masa variable (cohete) |
-| F102B, F102A, M101, M104, M102, M106, M105 | — | Por relevar contra las guías UBA |
+| F102B | **Oscilaciones acopladas:** modos normales, batidos, molécula triatómica y cadena de N masas. **Polarización:** estados, Malus, Brewster y láminas retardadoras. **Ondas:** reflexión y transmisión entre medios (impedancia), Fourier en una cuerda, velocidad de grupo y prismas. | Instrumentos ópticos (microscopio y telescopio con aumentos), coherencia |
+| F102A, M101, M104, M102, M106, M105 | — | Por relevar contra las guías UBA |
 
+- **F102B: verificaciones.** Los modos se verifican simulando el sistema y midiendo períodos, o con $\det(M^{-1}K - \omega^2I) = 0$ por Gauss. La polarización, con matrices de Jones complejas y promediando 720 polarizaciones de entrada para la luz natural. Brewster, con el coeficiente de Fresnel $r_p$. La unión de cuerdas, con una simulación por diferencias finitas del pulso. El prisma, trazando el rayo y minimizando la desviación por sección áurea.
 - **Relatividad: verificación con rapidez.** Las plantillas se verifican con un boost construido como exponencial de la matriz de rapidez (serie de Taylor), sin usar γ, aplicado a los eventos.
 
 ## Hecho
@@ -358,5 +360,6 @@ Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Fí
 - **F102B Física General II B:** programa oficial 2026, en la carpeta de programas 2026 de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `16hZ72EbvPHfhWjXEY54p2Vi6ThuxTNvt`).
 - **Plan de estudios y trayecto sugerido:** el que indicó el usuario, consistente con la [distribución curricular](https://fcen.uncuyo.edu.ar/distribucion-curricular) de la facultad.
 - **Extra UBA de F101:** guías de Física 1 de Cs. Físicas (FCEN-UBA), 1.er cuatrimestre de 2023: prácticas 4 (oscilaciones y estabilidad), 5 (sistemas no inerciales), 10 (gravitación) y 13 (relatividad, optativa). Están en la carpeta local de bibliografía, en `Física 1/03 - Ejercicios/F1 - Guía de ejs (2023)`.
+- **Extra UBA de F102B:** guías de Física 2 de Cs. Físicas (FCEN-UBA), 2.º cuatrimestre de 2011: 1 (oscilaciones libres, forzadas y acopladas, y modos de cuerdas y tubos), 3 (óptica geométrica), 4 (polarización) y 5 (interferencia y difracción). Están en `Física 2/02 - Ejercicios/Guia de Ejercicios (2011)`. Los parciales recientes están escaneados y no se usaron.
 
 De los programas solo se tomó la lista de temas. Todo el texto y todos los ejercicios son originales.
