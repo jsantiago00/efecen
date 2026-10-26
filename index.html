@@ -412,6 +412,19 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .heat-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .weak { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 2px solid var(--line); }
 .weak:first-child { border-top: 0; }
+/* mapa de temas (Estadísticas) */
+.cmap-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.cmap-legend .cchip { font-size: .72rem; padding: 2px 8px; cursor: default; }
+.cmap-u { margin-top: 12px; }
+.cmap-t { font-weight: 800; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+.cmap-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.cchip { border: 2px solid var(--line); background: var(--card); color: var(--ink); font-weight: 700; font-size: .8rem; padding: 4px 10px; border-radius: 999px; text-align: left; }
+.cchip[data-l="0"] { color: var(--muted); border-style: dashed; }
+.cchip[data-l="1"] { background: var(--bad-soft); border-color: var(--bad); }
+.cchip[data-l="2"] { background: color-mix(in srgb, var(--gold) 22%, var(--card)); border-color: var(--gold-d); }
+.cchip[data-l="3"] { background: var(--ok-soft); border-color: var(--ok); }
+.cchip[data-few] { border-style: dotted; }
+.cchip:disabled { opacity: .45; }
 .log-row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 2px solid var(--line); font-size: .9rem; }
 .log-row:first-child { border-top: 0; }
 .tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .8rem; font-weight: 700; padding: 4px 8px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -120%); }
@@ -1935,6 +1948,7 @@ body.board-split .nav { padding-bottom: 0; }
         <div class="solution" id="sol" ${ok ? "hidden" : ""}><ol>${sol.map(x => `<li>${texL(x)}</li>`).join("")}</ol></div>` : ""}
         ${theoryChips(icid, t.concepts, ok ? "Teoría:" : "Repasá la teoría:")}
         ${askBtn(`data-ex="1"`, "Preguntar sobre este ejercicio")}
+        ${reportBtn(`data-ex="1"`)}
       </div>
       <button class="btn block ${ok ? "ok" : "bad"}" data-act="next">Continuar</button></div>`;
     $(".ses-foot").style.visibility = "hidden";
@@ -2105,6 +2119,30 @@ body.board-split .nav { padding-bottom: 0; }
   }
 
   // ---------- ESTADÍSTICAS ----------
+  // temas flojos: practicados al menos 2 veces y con menos de 80 % de acierto (o un repaso que viene costando)
+  const weakTopics = cid => weakConcepts(cid).filter(x => x.card.seen >= 2 && (x.card.ok / x.card.seen < 0.8 || x.card.ef < 2.2));
+  // mapa de temas: los conceptos de cada unidad, coloreados según cuánto se acertaron (gris: todavía sin datos)
+  function conceptMapHtml(cid) {
+    const c = course(cid);
+    const level = cd => (!cd || !cd.seen ? 0 : cd.ok / cd.seen < 0.6 ? 1 : cd.ok / cd.seen < 0.8 ? 2 : 3);
+    return realUnits(c).map(u => {
+      const ks = [...new Set(u.lessons.flatMap(l => l.concepts))].filter(k => c.conceptUnit[k] === u);
+      if (!ks.length) return "";
+      return `<div class="cmap-u"><div class="cmap-t">${esc(u.title)}</div><div class="cmap-row">${ks.map(k => {
+        const cd = S.srs[ckey(cid, k)], can = templatesFor(cid, k).length > 0;
+        const tip = `${c.concepts[k].name}: ${cd && cd.seen ? `${Math.round(cd.ok / cd.seen * 100)}% de ${cd.seen}` : can ? "sin datos" : "todavía bloqueado"}`;
+        return `<button class="cchip" data-l="${level(cd)}" ${cd && cd.seen && cd.seen < 3 ? 'data-few="1"' : ""} ${can ? `data-act="practice" data-cid="${cid}" data-k="${k}"` : "disabled"} data-tip="${esc(tip)}" aria-label="${esc(tip)}">${esc(c.concepts[k].name)}</button>`;
+      }).join("")}</div></div>`;
+    }).join("");
+  }
+  // sesión con los temas más flojos de la materia: hasta 4 temas, 8 ejercicios mezclados
+  function startWeak(cid) {
+    const weak = weakTopics(cid).slice(0, 4).filter(x => templatesFor(cid, x.k).length);
+    if (!weak.length) return;
+    const r = E.rng(E.newSeed());
+    const items = Array.from({ length: 8 }, (_, i) => { const x = weak[i % weak.length]; return { cid, tpl: r.pick(templatesFor(cid, x.k)), seed: E.newSeed(), src: "review", focus: x.k }; });
+    startSession({ kind: "practice", cid, items: r.shuffle(items), title: "Lo más flojo" });
+  }
   function renderStats() {
     const cid = activeCourse(), c = course(cid), t = today();
     const acc = S.answered ? Math.round(S.answeredOk / S.answered * 100) : 0;
@@ -2114,7 +2152,7 @@ body.board-split .nav { padding-bottom: 0; }
       for (const l of u.lessons) for (const k of l.concepts) if (c.conceptUnit[k] === u) { const cd = S.srs[ckey(cid, k)]; if (cd) { seen += cd.seen; ok += cd.ok; } }
       return { u, seen, ok };
     });
-    const weak = weakConcepts(cid).filter(x => x.card.seen >= 2 && (x.card.ok / x.card.seen < 0.8 || x.card.ef < 2.2)).slice(0, 5);
+    const weak = weakTopics(cid).slice(0, 5);
     const dm = d => { const [, m, dd] = d.split("-"); return d === t ? "hoy" : `${+dd}/${+m}`; };
     // heatmap: 12 semanas, columnas = semanas (lunes arriba)
     const goal = E.DAILY_GOAL, cells = [];
@@ -2148,7 +2186,12 @@ body.board-split .nav { padding-bottom: 0; }
           return `<span class="name">${esc(x.u.title)}</span><span class="v">${x.seen ? Math.round(p * 100) + "% · " + x.seen : "sin datos"}</span>
             <span class="bar" data-tip="${esc(x.u.title)}: ${x.ok}/${x.seen} correctas"><i style="width:${p * 100}%"></i></span>`;
         }).join("")}</div></section>
+      <section class="card"><h2 class="section-title">Mapa de temas · ${esc(c.title)}</h2>
+        <p class="muted small" style="margin:6px 0 0">Cada tema, según cuánto lo acertaste (con borde punteado, si todavía hay pocos datos). Tocalo para practicarlo.</p>
+        <div class="cmap-legend"><span class="cchip" data-l="3">firme</span><span class="cchip" data-l="2">en camino</span><span class="cchip" data-l="1">flojo</span><span class="cchip" data-l="0">sin datos</span></div>
+        ${conceptMapHtml(cid)}</section>
       <section class="card"><h2 class="section-title">Temas débiles</h2>
+        ${weak.length ? `<button class="btn sm block" style="margin-top:10px" data-act="weak-practice" data-cid="${cid}">${icon("target")}Practicar lo más flojo</button>` : ""}
         ${weak.length ? weak.map(x => `<div class="weak"><div class="grow"><b>${esc(c.concepts[x.k].name)}</b>
           <div class="muted small">${Math.round(x.card.ok / x.card.seen * 100)}% de ${x.card.seen} · próximo repaso ${x.card.due <= t ? "hoy" : dm(x.card.due)}</div></div>
           <button class="btn sm" data-act="practice" data-cid="${cid}" data-k="${x.k}">Practicar</button></div>`).join("")
@@ -2450,6 +2493,35 @@ body.board-split .nav { padding-bottom: 0; }
     window.open("https://claude.ai/new?q=" + encodeURIComponent(q), "_blank", "noopener");
     toast("Abrí Claude con tu pregunta (también quedó copiada)");
   }
+  // ---------- reportar un error: abre un issue de GitHub ya armado, con lo necesario para reproducirlo ----------
+  const ISSUES_URL = "https://github.com/jsantiago00/efecen/issues/new";
+  const reportBtn = data => `<button class="linkbtn ask-btn" data-act="report" ${data}>${icon("flag")} Reportar un error</button>`;
+  // lo que respondió la persona, en texto llano
+  function userPlain(inst, a) {
+    if (!a) return "—";
+    switch (inst.type) {
+      case "numeric": case "expr": return a.v ? "`" + a.v + "`" : "—";
+      case "mc": return a.v != null ? plainOf(inst.options[a.v]) : "—";
+      case "tf": return a.v == null ? "—" : a.v ? "Verdadero" : "Falso";
+      case "error": return a.v != null ? `el paso ${a.v + 1}` : "—";
+      case "multi": return "\n" + ui.session.multi.res.map((r, i) => `${i + 1}. ${userPlain(E.subInst(inst, i), r.a)} ${r.ok ? "(bien)" : "(mal)"}`).join("\n");
+    }
+    return "—";
+  }
+  function reportIssue(d) {
+    let title, body;
+    if (d.ex) {
+      const s = ui.session, item = s.items[s.i], inst = s.inst, c = course(item.cid || s.cid);
+      title = `[${c.code}] Error en el ejercicio ${item.tpl}`;
+      body = `**Materia:** ${c.code} ${c.title}\n**Plantilla:** \`${item.tpl}\`, semilla \`${item.seed}\`\n**Para verlo en la consola:** \`efecenDebug.preview("${item.tpl}", ${item.seed}, "${c.id}")\`\n\n**Enunciado:**\n${plainOf(inst.prompt)}\n\n**Respuesta de la app:** ${answerPlain(inst)}\n**Lo que respondí:** ${userPlain(inst, s.ans)}\n\n**Qué está mal:**\n(contalo acá)`;
+    } else {
+      const card = cardOf(d.card), c = course(card.course);
+      title = `[${c.code}] Error en el apunte «${card.title}»`;
+      body = `**Materia:** ${c.code} ${c.title}\n**Apunte:** \`${card.id}\` (${card.title})\n**Para verlo en la consola:** \`efecenDebug.learn("${card.id}")\`\n\n**Qué parte y qué está mal:**\n(contalo acá)`;
+    }
+    body += `\n\n<sub>Desde efecen, ${today()}.</sub>`;
+    window.open(`${ISSUES_URL}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body.slice(0, 6000))}`, "_blank", "noopener");
+  }
   function cardHtml(card) {
     const c = course(card.course);
     const gu = c.units.find(u => u.id === card.group);
@@ -2477,6 +2549,7 @@ body.board-split .nav { padding-bottom: 0; }
       ${card.see && card.see.length ? `<div class="learn-see"><div class="muted small" style="font-weight:800">Ver también</div>${card.see.map(id => `<button class="chip-link" data-act="learn" data-id="${id}">${esc(cardOf(id).title)}</button>`).join("")}</div>` : ""}
       ${lessons.length ? `<div class="learn-see"><div class="muted small" style="font-weight:800">Aparece en</div>${lessons.map(l => `<button class="chip-link" data-act="learn" data-id="lesson:${l.id}">${icon("map")} ${esc(l.title)}</button>`).join("")}</div>` : ""}
       ${practice || lockedNote ? `<div class="learn-actions">${practice}${lockedNote}</div>` : ""}
+      ${reportBtn(`data-card="${card.id}"`)}
     </div>`;
   }
   function lessonNotesHtml(lessonId) {
@@ -2779,6 +2852,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "learn-back": history.back(); break;
       case "learn-close": closeLearn(); break;
       case "ask": askClaude(el.dataset); break;
+      case "report": reportIssue(el.dataset); break;
       case "learn-practice": { const { cid, k } = el.dataset; closeLearn(() => startPractice(cid, k)); break; }
       case "learn-lesson": { const { cid, id } = el.dataset; closeLearn(() => startLesson(cid, id)); break; }
       case "daily": startDaily(); break;
@@ -2786,6 +2860,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "diag": if (el.closest(".screen") && ui.route === "settings" && !confirm("¿Rehacer el diagnóstico? Lo que ya tengas desbloqueado se mantiene.")) break; startDiagnostic(el.dataset.cid); break;
       case "skipdiag": cState(el.dataset.cid).diag = "skipped"; save(); render(); break;
       case "practice": startPractice(el.dataset.cid, el.dataset.k); break;
+      case "weak-practice": startWeak(el.dataset.cid); break;
       case "begin": renderExercise(); break;
       case "quit":
         if (confirm("¿Salir de la sesión? Se pierde el progreso de esta sesión.")) { if (s && s.rush) { clearTimeout(s.rush.adv); clearInterval(rushTimer); } ui.session = null; history.replaceState(null, "", "#/"); fromHash(); render(); }

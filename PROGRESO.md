@@ -343,6 +343,8 @@ Pedido del usuario: aplicar las mejoras que surgieron de una revisión de la app
   - **M102:** derivadas parciales, y aproximación con el plano tangente en tres pasos.
   - **F102A:** el campo a partir del potencial; un circuito de dos fuentes por nodos (verificado por mallas); carga de un capacitor (verificada integrando el circuito).
   - **F102B:** hielo en agua en tres pasos (verificado por bisección del balance de calor).
+- **Mapa de temas (Estadísticas).** Cada concepto de cada unidad aparece como un chip: verde (firme, 80 % o más de acierto), amarillo (en camino), rojo (flojo, menos de 60 %) o gris (sin datos), con borde punteado si se practicó menos de 3 veces. Al tocarlo se practica ese tema. En «Temas débiles», el botón «Practicar lo más flojo» arma una sesión de 8 ejercicios con los 4 temas más flojos de la materia.
+- **Reportar un error.** En la corrección de cada ejercicio y al final de cada apunte hay un botón que abre un issue de GitHub ya armado: materia, plantilla y semilla (con el `efecenDebug.preview(…)` para reproducirlo), el enunciado, la respuesta de la app y lo que respondió la persona. Los `verify` controlan los números, pero no el texto de la teoría ni de los enunciados: esto cubre lo que los tests no ven.
 - **Pendiente de esta parte:** sumar `traps` a las plantillas viejas de cada materia (después de que termine Extra UBA, para no tocar los mismos archivos que la otra sesión), y más paso a paso en F102A, F102B y M104.
 
 ## Decisiones tomadas
