@@ -22,7 +22,8 @@ python -m http.server 4173
 ## Estructura
 
 ```
-index.html            shell + CSS + motor (<script id="engine">) + UI (<script id="app-script">)
+index.html            shell + CSS + UI (<script id="app-script">)
+engine.js             motor (RNG, parser, repaso espaciado, registro de materias, estado)
 content/calculo.js    curso de Cálculo: conceptos, plantillas y unidades (solo datos)
 service-worker.js     precache + stale-while-revalidate
 manifest.json         PWA

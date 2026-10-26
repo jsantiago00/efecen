@@ -327,6 +327,13 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
 - Las reglas están en `firestore.rules` y cada usuario solo accede a su documento. Para desplegarlas: `firebase deploy --only firestore:rules`.
 - Dominios autorizados en Auth: localhost, 127.0.0.1, santiagososa.com.ar, www.santiagososa.com.ar y los de Firebase.
 
+## Mejoras del motor y de la práctica (desde el 26/10)
+
+Pedido del usuario: aplicar las mejoras que surgieron de una revisión de la app. Se hacen en la rama `mejoras` (en un worktree aparte, mientras otra sesión sigue con Extra UBA) y se pushean a `main` y a `carrera-fcen` después de cada bloque.
+
+- **Motor en `engine.js`.** El `<script id="engine">` de `index.html` pasó a un archivo propio, que cargan la app y los tests (antes los tests lo recortaban del HTML con una expresión regular). Está en el precache del service worker.
+- **Sin `.gitattributes`.** En el repo todo está en LF y Git convierte a CRLF al hacer checkout en Windows (`core.autocrlf`); los avisos «LF will be replaced by CRLF» son solo informativos y no hay diffs fantasma. Forzar `eol=lf` cambiaría la copia de trabajo de otras sesiones sin ganar nada.
+
 ## Decisiones tomadas
 
 - **Temarios.**

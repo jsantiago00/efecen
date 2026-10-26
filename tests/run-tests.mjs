@@ -1,5 +1,5 @@
 // Tests del motor y del contenido. Uso:  node tests/run-tests.mjs [instancias por plantilla]
-// - Carga el <script id="engine"> de index.html y los cursos de content/ en un contexto aislado.
+// - Carga el motor (engine.js) y los cursos de content/ (en el orden de index.html) en un contexto aislado.
 // - Genera muchas instancias de cada plantilla y valida estructura, LaTeX (KaTeX estricto) y,
 //   cuando la plantilla trae `verify`, que la respuesta sea numéricamente correcta.
 import fs from "node:fs";
@@ -11,7 +11,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const N = +process.argv[2] || 300;
 const ONLY = process.argv[3] || null; // opcional: probar las plantillas de una sola materia (p. ej. m104)
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const engine = /<script id="engine">([\s\S]*?)<\/script>/.exec(html)[1];
+const engine = fs.readFileSync(path.join(root, "engine.js"), "utf8");
 const contentFiles = [...html.matchAll(/<script src="(content\/[^"]+)"><\/script>/g)].map(m => m[1]);
 
 const ctx = { console, Math, Date, JSON, TextEncoder, TextDecoder };
