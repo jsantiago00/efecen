@@ -256,3 +256,92 @@
     ]
   });
 })();
+
+/* ===== F102A · Examen Extra UBA =====
+   Temas de Física 3 de la Lic. en Cs. Físicas (FCEN, UBA) que no están en el programa de F102A: electrostática en forma
+   diferencial, imágenes y multipolos, medios materiales, Thévenin y filtros, ondas, Poynting y potencial vector.
+   Enunciados propios y datos sorteados. */
+(function () {
+  const E = window.Efecen, F = E.f2a, nf = F.nf;
+  const SELF = {};
+
+  SELF["f2a-ex-poynting-cap"] = {
+    concepts: ["f2a-ondas-maxwell", "f2a-maxwell"],
+    generate(r) {
+      const a = r.int(2, 10), d = r.int(1, 5), I = r.int(1, 20) / 10, t = r.int(1, 50);
+      const am = a / 100, dm = d / 1000, ts = t * 1e-6, Ef = I * ts / (F.e0 * Math.PI * am * am), B = F.mu0 * I / (2 * Math.PI * am), S = Ef * B / F.mu0, P = S * 2 * Math.PI * am * dm;
+      return {
+        prompt: `Un capacitor de placas circulares de radio $${a}$ cm, separadas $${d}$ mm, se carga desde cero con una corriente constante de $${String(I).replace(".", "{,}")}$ A. Despreciá los efectos de borde.<br>a) ¿Cuánto vale el campo eléctrico entre las placas a los $${t}$ μs?<br>b) ¿Cuánto vale el campo magnético en el borde de las placas en ese instante?<br>c) Calculá el vector de Poynting en la superficie lateral del volumen entre placas (módulo y sentido) y mostrá que su flujo es el ritmo al que crece la energía eléctrica guardada.`,
+        rubric: [
+          { text: `a) $Q = It$ y $E = \\frac{Q}{\\varepsilon_0\\pi a^2} \\approx ${nf(Ef)}$ V/m.`, w: 2 },
+          { text: `b) [[f2a-maxwell|Ampère-Maxwell]] en el borde: toda la corriente de desplazamiento $\\varepsilon_0\\frac{d\\Phi_E}{dt} = I$ queda encerrada, así que $B = \\frac{\\mu_0I}{2\\pi a} \\approx ${nf(B)}$ T.`, w: 3 },
+          { text: `c) $\\vec S = \\frac{\\vec E\\times\\vec B}{\\mu_0}$ apunta **hacia adentro**, radial, con $S = \\frac{EB}{\\mu_0} \\approx ${nf(S)}$ W/m² ([[f2a-ondas-maxwell|vector de Poynting]]).`, w: 2 },
+          { text: `Flujo entrante: $S\\cdot2\\pi ad \\approx ${nf(P)}$ W, igual a $\\frac{d}{dt}\\left(\\frac12\\varepsilon_0E^2\\pi a^2d\\right) = EId$.`, w: 3 }
+        ],
+        solution: [`El campo crece linealmente: $E = \\frac{It}{\\varepsilon_0\\pi a^2}$. El campo magnético da vueltas alrededor del eje y en el borde vale $\\frac{\\mu_0I}{2\\pi a}$.`,
+          `$S\\cdot2\\pi ad = \\frac{E}{\\mu_0}\\frac{\\mu_0I}{2\\pi a}2\\pi ad = EId$, y $\\frac{dU}{dt} = \\varepsilon_0E\\dot E\\pi a^2d = EId$ porque $\\dot E = \\frac{I}{\\varepsilon_0\\pi a^2}$: la energía entra por los costados.`],
+        // otro camino: B integrando la densidad de corriente de desplazamiento sobre el disco (Simpson en polares)
+        // y dU/dt derivando numéricamente la energía guardada
+        verify: { kind: "zero", tol: 1e-6, fn: () => {
+          const jd = I / (Math.PI * am * am), Id = F.simpson(s => jd * 2 * Math.PI * s, 0, am, 400), Bn = F.mu0 * Id / (2 * Math.PI * am);
+          const U = tt => 0.5 * F.e0 * (I * tt / (F.e0 * Math.PI * am * am)) ** 2 * Math.PI * am * am * dm, h = ts * 1e-4, dU = (U(ts + h) - U(ts - h)) / (2 * h);
+          return [(Bn - B) / B, (Ef * Bn / F.mu0 * 2 * Math.PI * am * dm - dU) / dU, (P - dU) / dU];
+        } }
+      };
+    }
+  };
+
+  SELF["f2a-ex-coaxial"] = {
+    concepts: ["f2a-medios-electricos"],
+    generate(r) {
+      const a = r.int(1, 5), b = a * r.pick([2, 3, 4, 5]), er = r.pick([2, 2.25, 3, 4, 5]), lam = r.int(1, 20);
+      const am = a / 1000, bm = b / 1000, lm = lam * 1e-9, eps = er * F.e0;
+      const C = 2 * Math.PI * eps / Math.log(b / a), V = lm / C, Ea = lm / (2 * Math.PI * eps * am), sb = -(1 - 1 / er) * lm / (2 * Math.PI * am);
+      return {
+        prompt: `Un cable coaxial tiene un conductor interior de radio $${a}$ mm y uno exterior de radio interno $${b}$ mm. Entre ellos hay un dieléctrico lineal con $\\varepsilon_r = ${String(er).replace(".", "{,}")}$. El conductor interior tiene $${lam}$ nC por metro y el exterior, la carga opuesta.<br>a) Hallá $\\vec D$, $\\vec E$ y $\\vec P$ entre los conductores.<br>b) ¿Cuánto vale la diferencia de potencial y la capacidad por unidad de longitud?<br>c) ¿Qué densidad de carga de polarización aparece en la superficie del dieléctrico que toca al conductor interior?`,
+        rubric: [
+          { text: `a) [[f2a-medios-electricos|Gauss para D]] en un cilindro de radio $r$: $D = \\frac{\\lambda}{2\\pi r}$, $E = \\frac{D}{\\varepsilon_r\\varepsilon_0} = \\frac{\\lambda}{2\\pi\\varepsilon r}$ y $P = \\left(1 - \\frac{1}{\\varepsilon_r}\\right)D$, todos radiales.`, w: 3 },
+          { text: `b) $\\Delta V = \\int_a^bE\\,dr = \\frac{\\lambda}{2\\pi\\varepsilon}\\ln\\frac ba \\approx ${nf(V)}$ V y $C' = \\frac{\\lambda}{\\Delta V} = \\frac{2\\pi\\varepsilon}{\\ln(b/a)} \\approx ${nf(C * 1e12)}$ pF/m.`, w: 4 },
+          { text: `c) $\\sigma_b = \\vec P\\cdot\\hat n$ con $\\hat n$ hacia el eje: $\\sigma_b = -\\left(1 - \\frac1{\\varepsilon_r}\\right)\\frac{\\lambda}{2\\pi a} \\approx ${nf(sb * 1e9)}$ nC/m², de signo opuesto a la carga del conductor (por eso el campo se debilita).`, w: 3 }
+        ],
+        solution: [`La carga libre fija $\\vec D$ por simetría; el dieléctrico divide a $E$ por $\\varepsilon_r$ y la capacidad queda multiplicada por $\\varepsilon_r$.`,
+          `Cerca del conductor interior, $E(a) \\approx ${nf(Ea)}$ V/m.`],
+        // otro camino: se resuelve d/dr(r ε dV/dr) = 0 por diferencias finitas con V(a) = 1 y V(b) = 0, y la carga sale del flujo de D en r = a
+        verify: { kind: "zero", tol: 1e-3, fn: () => {
+          const N = 2000, h = (bm - am) / N, rr = i => am + i * h, lo = [], di = [], up = [], rhs = [];
+          for (let i = 1; i < N; i++) { const rp = rr(i) + h / 2, rmn = rr(i) - h / 2; lo.push(rmn); di.push(-(rp + rmn)); up.push(rp); rhs.push(i === 1 ? -rmn * 1 : 0); }
+          for (let i = 1; i < di.length; i++) { const m = lo[i] / di[i - 1]; di[i] -= m * up[i - 1]; rhs[i] -= m * rhs[i - 1]; }
+          const Vv = new Array(di.length); Vv[di.length - 1] = rhs[di.length - 1] / di[di.length - 1];
+          for (let i = di.length - 2; i >= 0; i--) Vv[i] = (rhs[i] - up[i] * Vv[i + 1]) / di[i];
+          const flux = -(Vv[0] - 1) / h * (am + h / 2), Cn = 2 * Math.PI * eps * flux; // carga por voltio y por metro
+          const Pa = (1 - 1 / er) * eps * (lm / Cn) * flux / am; // P = ε₀χE en r = a, con E·r constante
+          return [Cn / C - 1, -Pa / sb - 1];
+        } }
+      };
+    }
+  };
+
+  E.registerExams("f102a", {
+    self: SELF,
+    exams: [
+      { id: "uba", kind: "parcial", title: "Examen Extra UBA", topics: "Temas de Física 3 de la UBA que no están en el programa: forma diferencial, imágenes y multipolos, medios materiales, Thévenin y filtros, ondas desde Maxwell, Poynting y potencial vector.", minutes: 180, pass: 60,
+        items: [
+          { title: "Poynting en un capacitor que se carga", parts: [{ self: "f2a-ex-poynting-cap", pts: 20 }] },
+          { title: "Coaxial con dieléctrico", parts: [{ self: "f2a-ex-coaxial", pts: 20 }] },
+          { any: [
+            { title: "Electrostática en forma diferencial", parts: [{ tpl: "f2a-poisson-num", pts: 12 }, { tpl: "f2a-laplace-vf", pts: 8 }] },
+            { title: "Imágenes y multipolos", parts: [{ tpl: "f2a-imagen-num", pts: 12 }, { tpl: "f2a-multipolo-num", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Circuito magnético", parts: [{ tpl: "f2a-entrehierro-num", pts: 12 }, { tpl: "f2a-polsup-mc", pts: 8 }] },
+            { title: "Thévenin y puentes", parts: [{ tpl: "f2a-thevenin-num", pts: 12 }, { tpl: "f2a-wheatstone-num", pts: 8 }] },
+            { title: "Filtros", parts: [{ tpl: "f2a-pasabanda-num", pts: 12 }, { tpl: "f2a-filtro-vf", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Potencial vector", parts: [{ tpl: "f2a-solenoideA-num", pts: 12 }, { tpl: "f2a-potA-vf", pts: 8 }] },
+            { title: "Ondas y potencial vector", parts: [{ tpl: "f2a-ondamedio-num", pts: 12 }, { tpl: "f2a-rotA-num", pts: 8 }] }
+          ] }
+        ] }
+    ]
+  });
+})();

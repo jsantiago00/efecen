@@ -472,3 +472,100 @@
 
   E.registerExams("m104", { self: SELF, templates: T });
 })();
+
+/* ===== M104 · Examen Extra UBA =====
+   Temas de Matemática 2 de la Lic. en Cs. Físicas (FCEN, UBA) que no están en el programa de M104: producto interno
+   general, teorema espectral, Jordan y exponencial de matrices, espacios complejos. Enunciados propios y datos sorteados. */
+(function () {
+  const E = window.Efecen, H = E.H;
+  const SELF = {};
+  const nd = (x, d = 4) => String(H.num(x, d)).replace(".", "{,}");
+  const mat = M => `\\begin{pmatrix} ${M.map(r => r.join(" & ")).join(" \\\\ ")} \\end{pmatrix}`;
+  // arregla los signos dobles que quedan al reemplazar números negativos ("- -3" → "+ 3")
+  const tidy = o => { const f = t => t.replace(/\+ -/g, "- ").replace(/- -/g, "+ "); o.prompt = f(o.prompt); o.solution = o.solution.map(f); o.rubric.forEach(q => { q.text = f(q.text); }); return o; };
+  const cx = (a, b) => (b === 0 ? String(a) : `${a === 0 ? "" : a}${a === 0 ? (b < 0 ? "-" : "") : b < 0 ? " - " : " + "}${Math.abs(b) === 1 ? "" : Math.abs(b)}i`);
+
+  SELF["al-ex-hermitica"] = {
+    concepts: ["al-unitarias"],
+    generate(r) {
+      const a = r.int(-3, 4), d = r.int(-3, 4), b = r.int(-3, 3), c = r.nz(-3, 3);
+      const m = (a + d) / 2, rad = Math.sqrt(((a - d) / 2) ** 2 + b * b + c * c), l1 = m + rad, l2 = m - rad;
+      // autovector de λ: (z, λ − a), con z = b + ci
+      const n1 = Math.sqrt(b * b + c * c + (l1 - a) ** 2);
+      return tidy({
+        prompt: `Sea $H = ${mat([[a, cx(b, c)], [cx(b, -c), d]])}$.<br>a) Verificá que $H$ es hermítica y calculá sus autovalores.<br>b) Encontrá un autovector para cada autovalor y comprobá que son ortogonales con el producto interno de $\\mathbb C^2$.<br>c) Encontrá una matriz unitaria $U$ con $U^*HU$ diagonal.`,
+        rubric: [
+          { text: `a) $H^* = \\overline{H}^T = H$: es [[al-unitarias|hermítica]]. $\\det(H - \\lambda I) = \\lambda^2 - ${a + d}\\lambda + ${a * d - b * b - c * c} = 0$ da $\\lambda_1 \\approx ${nd(l1)}$ y $\\lambda_2 \\approx ${nd(l2)}$, reales.`, w: 3 },
+          { text: `b) De la primera fila, $v = (${cx(b, c)},\\ \\lambda - ${a})$ es autovector. Con $\\lambda_1$ y $\\lambda_2$: $\\langle v_1, v_2\\rangle = |z|^2 + (\\lambda_1 - ${a})(\\lambda_2 - ${a}) = ${b * b + c * c} + (${nd(l1 - a)})(${nd(l2 - a)}) = 0$.`, w: 4 },
+          { text: `c) Normalizando, $\\|v_1\\| \\approx ${nd(n1)}$, y poniendo $\\frac{v_1}{\\|v_1\\|}$ y $\\frac{v_2}{\\|v_2\\|}$ como columnas, $U$ es unitaria y $U^*HU = \\text{diag}(${nd(l1)},\\ ${nd(l2)})$ ([[al-pi-complejo|producto interno complejo]]).`, w: 3 }
+        ],
+        solution: [`Para una hermítica, los autovalores son reales y los autovectores de autovalores distintos son ortogonales: por eso alcanza con normalizarlos.`,
+          `Con $a = ${a}$: $(\\lambda_1 - a)(\\lambda_2 - a) = \\lambda_1\\lambda_2 - a(\\lambda_1 + \\lambda_2) + a^2 = -|z|^2$, que cancela $|z|^2$.`],
+        // otro camino: iteración de potencias (con corrimiento) sobre H en aritmética compleja para el mayor autovalor,
+        // y el producto interno complejo de los dos autovectores
+        verify: { kind: "zero", tol: 1e-6, fn: () => {
+          const sh = Math.abs(a) + Math.abs(d) + Math.abs(b) + Math.abs(c) + 1, Hm = (x) => [[(a + sh) * x[0][0] + b * x[1][0] - c * x[1][1], (a + sh) * x[0][1] + b * x[1][1] + c * x[1][0]], [b * x[0][0] + c * x[0][1] + (d + sh) * x[1][0], b * x[0][1] - c * x[0][0] + (d + sh) * x[1][1]]];
+          let x = [[1, 0.3], [0.7, -0.2]], lam = 0;
+          for (let i = 0; i < 3000; i++) { const y = Hm(x), nn = Math.hypot(...y[0], ...y[1]); lam = nn / Math.hypot(...x[0], ...x[1]); x = y.map(z => z.map(v => v / nn)); }
+          const v1 = [[b, c], [l1 - a, 0]], v2 = [[b, c], [l2 - a, 0]], ip = v1.reduce((s, z, k) => s + z[0] * v2[k][0] + z[1] * v2[k][1], 0);
+          return [(lam - sh) - l1, ip / (1 + b * b + c * c)];
+        } }
+      });
+    }
+  };
+
+  SELF["al-ex-jordan-ode"] = {
+    concepts: ["al-jordan", "al-exponencial"],
+    generate(r) {
+      const lam = r.pick([-2, -1, 1]), p = r.int(-2, 2), q = r.int(-2, 2), x0 = [r.nz(-3, 3), r.int(-3, 3)];
+      const P = [[1, p], [q, 1 + p * q]], Pi = [[1 + p * q, -p], [-q, 1]];
+      const J = [[lam, 1], [0, lam]], mm = (X, Y) => X.map(row => Y[0].map((_, j) => row.reduce((s, v, k) => s + v * Y[k][j], 0)));
+      const A = mm(mm(P, J), Pi);
+      const eAt = t => mm(mm(P, [[Math.exp(lam * t), t * Math.exp(lam * t)], [0, Math.exp(lam * t)]]), Pi), x1 = eAt(1).map(row => row[0] * x0[0] + row[1] * x0[1]);
+      const v = [P[0][0], P[1][0]], w = [P[0][1], P[1][1]];
+      return tidy({
+        prompt: `Sea $A = ${mat(A)}$.<br>a) Calculá sus autovalores y autovectores. ¿Es diagonalizable?<br>b) Encontrá su forma de Jordan $J$ y una matriz $P$ con $A = PJP^{-1}$.<br>c) Resolvé $\\vec x\\,' = A\\vec x$ con $\\vec x(0) = (${x0.join(", ")})$ y calculá $\\vec x(1)$.`,
+        rubric: [
+          { text: `a) $\\chi(\\lambda) = (\\lambda ${lam > 0 ? "-" : "+"} ${Math.abs(lam)})^2$: autovalor doble $${lam}$. $A - (${lam})I$ tiene rango 1, así que hay un solo autovector independiente, $(${v.join(", ")})$: no es diagonalizable.`, w: 3 },
+          { text: `b) Un [[al-jordan|autovector generalizado]] $w$ con $(A - ${lam}I)w = v$ es $w = (${w.join(", ")})$. Con $P = ${mat(P)}$, $J = ${mat(J)}$.`, w: 3 },
+          { text: `c) [[al-exponencial|Exponencial]]: $e^{Jt} = e^{${lam}t}${mat([["1", "t"], ["0", "1"]])}$ y $\\vec x(t) = Pe^{Jt}P^{-1}\\vec x(0)$.`, w: 2 },
+          { text: `$\\vec x(1) \\approx (${nd(x1[0])},\\ ${nd(x1[1])})$.`, w: 2 }
+        ],
+        solution: [`Como $J = \\lambda I + N$ con $N^2 = 0$ y las dos partes conmutan, $e^{Jt} = e^{\\lambda t}(I + Nt)$: aparece el término $te^{\\lambda t}$ típico de las raíces dobles.`,
+          `$P^{-1} = ${mat(Pi)}$ y $\\vec x(1) \\approx (${nd(x1[0])},\\ ${nd(x1[1])})$.`],
+        // otro camino: se integra el sistema con RK4 y se comprueba que w es autovector generalizado
+        verify: { kind: "zero", tol: 1e-6, fn: () => {
+          const f = y => [A[0][0] * y[0] + A[0][1] * y[1], A[1][0] * y[0] + A[1][1] * y[1]], n = 4000, h = 1 / n; let y = x0.slice();
+          for (let i = 0; i < n; i++) { const k1 = f(y), k2 = f(y.map((s, j) => s + h / 2 * k1[j])), k3 = f(y.map((s, j) => s + h / 2 * k2[j])), k4 = f(y.map((s, j) => s + h * k3[j])); y = y.map((s, j) => s + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j])); }
+          const Aw = [A[0][0] * w[0] + A[0][1] * w[1] - lam * w[0], A[1][0] * w[0] + A[1][1] * w[1] - lam * w[1]];
+          return [(y[0] - x1[0]) / (1 + Math.abs(x1[0])), (y[1] - x1[1]) / (1 + Math.abs(x1[1])), Aw[0] - v[0], Aw[1] - v[1]];
+        } }
+      });
+    }
+  };
+
+  E.registerExams("m104", {
+    self: SELF,
+    exams: [
+      { id: "uba", kind: "parcial", title: "Examen Extra UBA", topics: "Temas de Matemática 2 de la UBA que no están en el programa: producto interno general y cuadrados mínimos, teorema espectral, forma de Jordan y exponencial, espacios complejos.", minutes: 180, pass: 60,
+        items: [
+          { title: "Matriz hermítica", parts: [{ self: "al-ex-hermitica", pts: 20 }] },
+          { title: "Jordan y sistemas de ecuaciones diferenciales", parts: [{ self: "al-ex-jordan-ode", pts: 20 }] },
+          { any: [
+            { title: "Producto interno y proyección", parts: [{ tpl: "al-pi-polinomios-num", pts: 12 }, { tpl: "al-cuadratica-mc", pts: 8 }] },
+            { title: "Cuadrados mínimos y teorema espectral", parts: [{ tpl: "al-cuadmin-num", pts: 12 }, { tpl: "al-espectral-num", pts: 8 }] },
+            { title: "Proyección ortogonal", parts: [{ tpl: "al-proyeccion-num", pts: 12 }, { tpl: "al-cuadratica-mc", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Jordan y Cayley-Hamilton", parts: [{ tpl: "al-jordan-mc", pts: 12 }, { tpl: "al-jordan-vf", pts: 8 }] },
+            { title: "Cayley-Hamilton y recurrencias", parts: [{ tpl: "al-cayley-num", pts: 12 }, { tpl: "al-recurrencia-num", pts: 8 }] },
+            { title: "Exponencial de una matriz", parts: [{ tpl: "al-exp-num", pts: 12 }, { tpl: "al-jordan-vf", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Espacios complejos", parts: [{ tpl: "al-proy-complejo-num", pts: 12 }, { tpl: "al-pi-complejo-vf", pts: 8 }] },
+            { title: "Unitarias y hermíticas", parts: [{ tpl: "al-hermitica-num", pts: 12 }, { tpl: "al-unitaria-vf", pts: 8 }] }
+          ] }
+        ] }
+    ]
+  });
+})();

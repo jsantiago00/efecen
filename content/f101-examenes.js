@@ -501,3 +501,95 @@
 
   E.registerExams("f101", { self: SELF, templates: T });
 })();
+
+/* ===== F101 · Examen Extra UBA =====
+   Temas de Física 1 de la Lic. en Cs. Físicas (FCEN, UBA) que no están en el programa de F101, con el formato de
+   un parcial de allá: problemas largos de desarrollo y cuentas. Enunciados propios y datos sorteados. g = 9,8 m/s². */
+(function () {
+  const E = window.Efecen, R = String.raw, H = E.H;
+  const SELF = {};
+  const g0 = 9.8;
+  const dn = (x, d = 4) => String(H.num(x, d)).replace(".", "{,}");
+  // RK4 de paso fijo para sistemas: f(t, y) → dy/dt
+  const rk4 = (f, y0, t1, n) => { let y = y0.slice(), t = 0; const h = t1 / n; for (let i = 0; i < n; i++) { const k1 = f(t, y), k2 = f(t + h / 2, y.map((v, j) => v + h / 2 * k1[j])), k3 = f(t + h / 2, y.map((v, j) => v + h / 2 * k2[j])), k4 = f(t + h, y.map((v, j) => v + h * k3[j])); y = y.map((v, j) => v + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j])); t += h; } return y; };
+  // velocidad ganada quemando el combustible de m0 hasta m1 con caudal 1 kg/s (independiente del caudal)
+  const burnDv = (m0, m1, u) => rk4((_, y) => [u / y[1], -1], [0, m0], m0 - m1, 4000)[0];
+
+  SELF["f1-ex-etapas"] = {
+    concepts: ["f1-cohete"],
+    generate(r) {
+      const u = r.int(20, 35) * 100, f1 = r.int(20, 60) * 100, d1 = Math.round(f1 / r.pick([8, 10, 12]) / 10) * 10, f2 = r.int(5, 15) * 100, d2 = Math.round(f2 / 10 / 10) * 10, P = r.int(1, 5) * 100;
+      const M0 = f1 + d1 + f2 + d2 + P, m2 = f2 + d2 + P;
+      const dv1 = u * Math.log(M0 / (M0 - f1)), dv2 = u * Math.log(m2 / (d2 + P)), dvs = u * Math.log(M0 / (d1 + d2 + P));
+      return {
+        prompt: `Un cohete de dos etapas lleva una carga útil de $${P}$ kg. La primera etapa tiene $${f1}$ kg de combustible y $${d1}$ kg de estructura; la segunda, $${f2}$ kg de combustible y $${d2}$ kg de estructura. En las dos, los gases salen a $${u}$ m/s respecto del cohete. Parte del reposo en el espacio, lejos de todo. Al agotarse la primera etapa, su estructura se suelta y se enciende la segunda.<br>a) ¿Qué velocidad tiene al terminar la primera etapa?<br>b) ¿Y al terminar la segunda?<br>c) Si el mismo combustible y la misma estructura formaran una sola etapa (sin soltar nada), ¿qué velocidad final tendría? ¿Por qué conviene separar en etapas?`,
+        rubric: [
+          { text: `a) [[f1-cohete|Ecuación del cohete]] con $m_0 = ${M0}$ kg y $m_f = ${M0 - f1}$ kg: $\\Delta v_1 = ${u}\\ln\\frac{${M0}}{${M0 - f1}} \\approx ${dn(dv1)}$ m/s.`, w: 3 },
+          { text: `b) Soltada la estructura, la segunda etapa arranca con $${m2}$ kg y termina con $${d2 + P}$ kg: $\\Delta v_2 \\approx ${dn(dv2)}$ m/s, y la velocidad final es $\\approx ${dn(dv1 + dv2)}$ m/s.`, w: 3 },
+          { text: `c) En una etapa, $m_f = ${d1 + d2 + P}$ kg: $\\Delta v = ${u}\\ln\\frac{${M0}}{${d1 + d2 + P}} \\approx ${dn(dvs)}$ m/s, menos que con etapas.`, w: 2 },
+          { text: `Explicación: soltar la estructura vacía evita seguir acelerando masa inútil; el logaritmo premia achicar la masa final.`, w: 2 }
+        ],
+        solution: [`Sin fuerzas externas, cada encendido da $\\Delta v = u\\ln\\frac{m_{inicial}}{m_{final}}$, sin importar el caudal.`,
+          `Primera etapa: $\\Delta v_1 \\approx ${dn(dv1)}$ m/s. Segunda: $\\Delta v_2 \\approx ${dn(dv2)}$ m/s. Total: $\\approx ${dn(dv1 + dv2)}$ m/s.`,
+          `Una sola etapa: $\\approx ${dn(dvs)}$ m/s. La diferencia, $\\approx ${dn(dv1 + dv2 - dvs)}$ m/s, sale de no cargar los $${d1}$ kg de la primera estructura durante el segundo encendido.`],
+        // otro camino: cada encendido se integra con RK4 (m dv/dt = u·μ)
+        verify: { kind: "zero", tol: 1e-6, fn: () => [(burnDv(M0, M0 - f1, u) - dv1) / dv1, (burnDv(m2, d2 + P, u) - dv2) / dv2, (burnDv(M0, d1 + d2 + P, u) - dvs) / dvs] }
+      };
+    }
+  };
+
+  SELF["f1-ex-aro"] = {
+    concepts: ["f1-estabilidad", "f1-rotante"],
+    generate(r) {
+      const Rr = r.int(1, 5) / 10, fac = r.pick([1.3, 1.5, 1.8, 2, 2.5]), w = Math.round(fac * Math.sqrt(g0 / Rr) * 10) / 10;
+      const c0 = g0 / (w * w * Rr), th0 = Math.acos(c0), Om = w * Math.sin(th0), Tp = 2 * Math.PI / Om;
+      return {
+        prompt: `Una bolita está enhebrada, sin rozamiento, en un aro de radio $R = ${dn(Rr, 1)}$ m que gira con velocidad angular constante $\\omega = ${dn(w, 1)}$ rad/s alrededor de su diámetro vertical. Sea $\\theta$ el ángulo de la bolita medido desde el punto más bajo. ($g = 9{,}8$ m/s²)<br>a) Desde el sistema del aro, escribí la ecuación de movimiento para $\\theta$.<br>b) Encontrá las posiciones de equilibrio y decidí cuáles son estables.<br>c) Calculá el ángulo (en grados) del equilibrio estable con $\\theta > 0$ y el período de las oscilaciones chicas alrededor de él.`,
+        rubric: [
+          { text: `a) En el sistema del aro actúan el peso, la normal y la [[f1-rotante|fuerza centrífuga]] $m\\omega^2R\\sin\\theta$, horizontal. Proyectando sobre la tangente: $R\\ddot\\theta = \\sin\\theta\\,(\\omega^2R\\cos\\theta - g)$.`, w: 3 },
+          { text: `b) Equilibrios: $\\theta = 0$, $\\theta = \\pi$ y $\\cos\\theta_0 = \\frac{g}{\\omega^2R} = ${dn(c0)}$ (existe porque $\\omega^2R > g$). Con $\\omega^2 > \\frac gR$, el fondo es inestable, el punto más alto también, y $\\pm\\theta_0$ son estables ([[f1-estabilidad|estabilidad]]).`, w: 3 },
+          { text: `c) $\\theta_0 = \\arccos(${dn(c0)}) \\approx ${dn(th0 * 180 / Math.PI)}^\\circ$.`, w: 2 },
+          { text: `Linealizando alrededor de $\\theta_0$: $\\Omega^2 = \\omega^2\\sin^2\\theta_0$, así que $\\Omega \\approx ${dn(Om)}$ rad/s y $T = \\frac{2\\pi}{\\Omega} \\approx ${dn(Tp)}$ s.`, w: 2 }
+        ],
+        solution: [`La fuerza efectiva tangencial es $m\\sin\\theta(\\omega^2R\\cos\\theta - g)$: se anula en $\\sin\\theta = 0$ o en $\\cos\\theta = \\frac{g}{\\omega^2R}$.`,
+          `Derivando $F(\\theta) = \\sin\\theta(\\omega^2R\\cos\\theta - g)$ en $\\theta_0$: $F'(\\theta_0) = \\cos\\theta_0(\\omega^2R\\cos\\theta_0 - g) - \\omega^2R\\sin^2\\theta_0 = -\\omega^2R\\sin^2\\theta_0 < 0$: estable, con $\\Omega^2 = \\omega^2\\sin^2\\theta_0$.`,
+          `Con los datos: $\\theta_0 \\approx ${dn(th0 * 180 / Math.PI)}^\\circ$, $T \\approx ${dn(Tp)}$ s.`],
+        // otro camino: se suelta la bolita cerca de θ₀ y se mide el período simulado entre dos cruces hacia arriba
+        verify: { kind: "zero", tol: 1e-4, fn: () => {
+          const f = y => [y[1], Math.sin(y[0]) * (w * w * Rr * Math.cos(y[0]) - g0) / Rr], h = Tp / 4000;
+          let y = [th0 + 1e-4, 0], t = 0, cross = [];
+          for (let i = 0; i < 12000 && cross.length < 2; i++) {
+            const k1 = f(y), k2 = f(y.map((v, j) => v + h / 2 * k1[j])), k3 = f(y.map((v, j) => v + h / 2 * k2[j])), k4 = f(y.map((v, j) => v + h * k3[j]));
+            const yn = y.map((v, j) => v + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]));
+            if (y[0] - th0 < 0 && yn[0] - th0 >= 0) { const s = (th0 - y[0]) / (yn[0] - y[0]); cross.push(t + s * h); }
+            y = yn; t += h;
+          }
+          return [(cross[1] - cross[0] - Tp) / Tp];
+        } }
+      };
+    }
+  };
+
+  E.registerExams("f101", {
+    self: SELF,
+    exams: [
+      { id: "uba", kind: "parcial", title: "Examen Extra UBA", topics: "Temas de Física 1 de la UBA que no están en el programa: sistemas no inerciales, estabilidad y órbitas, relatividad especial y masa variable. Problemas largos, al estilo de un parcial de allá.", minutes: 180, pass: 60,
+        items: [
+          { title: "Cohete de dos etapas", parts: [{ self: "f1-ex-etapas", pts: 20 }] },
+          { title: "Bolita en un aro que gira", parts: [{ self: "f1-ex-aro", pts: 20 }] },
+          { any: [
+            { title: "Sistemas no inerciales", parts: [{ tpl: "f1-coriolis-num", pts: 12 }, { tpl: "f1-plomada-num", pts: 8 }] },
+            { title: "Sistemas no inerciales", parts: [{ tpl: "f1-silla-num", pts: 12 }, { tpl: "f1-ascensor-num", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Relatividad especial", parts: [{ tpl: "f1-velrel-num", pts: 12 }, { tpl: "f1-simult-vf", pts: 8 }] },
+            { title: "Relatividad especial", parts: [{ tpl: "f1-erel-num", pts: 12 }, { pick: ["f1-dilatacion-num", "f1-contraccion-num"], pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Órbitas y masa variable", parts: [{ tpl: "f1-apogeo-num", pts: 12 }, { tpl: "f1-cadena-num", pts: 8 }] },
+            { title: "Despegue y cinta transportadora", parts: [{ tpl: "f1-cohete-grav-num", pts: 12 }, { tpl: "f1-cinta-num", pts: 8 }] }
+          ] }
+        ] }
+    ]
+  });
+})();

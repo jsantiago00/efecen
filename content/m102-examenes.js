@@ -701,3 +701,81 @@
     ]
   });
 })();
+
+/* ===== M102 · Examen Extra UBA =====
+   Temas de Análisis I de la Lic. en Cs. Físicas (FCEN, UBA) con más rigor que el programa de M102: límites y
+   diferenciabilidad por definición, Taylor e implícita, extremos absolutos e integrales impropias dobles.
+   Enunciados propios y datos sorteados. */
+(function () {
+  const E = window.Efecen, H = E.H;
+  const SELF = {};
+  const nd = (x, d = 4) => String(H.num(x, d)).replace(".", "{,}");
+  const simpson = (f, a, b, n = 300) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  const line = (g, n = 240) => simpson(u => { const c = Math.cos(u); return c < 1e-12 ? 0 : g(Math.tan(u)) / (c * c); }, -Math.PI / 2, Math.PI / 2, n);
+
+  SELF["c2-ex-diferenciable"] = {
+    concepts: ["c2-diferenciabilidad"],
+    generate(r) {
+      const [p, q] = r.pick([[2, 1], [1, 2]]), c = r.nz(-4, 4), deg = r.pick([30, 45, 60, 120, 135, 150]), th = deg * Math.PI / 180;
+      const f = (x, y) => (x === 0 && y === 0 ? 0 : c * x ** p * y ** q / (x * x + y * y)), Du = c * Math.cos(th) ** p * Math.sin(th) ** q;
+      const num = `${c === 1 ? "" : c === -1 ? "-" : c}${p === 2 ? "x^2y" : "xy^2"}`;
+      return {
+        prompt: `Sea $f(x, y) = \\dfrac{${num}}{x^2 + y^2}$ si $(x, y) \\ne (0, 0)$ y $f(0, 0) = 0$.<br>a) Probá que $f$ es continua en el origen.<br>b) Calculá por definición $f_x(0, 0)$ y $f_y(0, 0)$.<br>c) Calculá por definición la derivada direccional en el origen en la dirección que forma $${deg}^\\circ$ con el eje $x$.<br>d) ¿Es $f$ diferenciable en el origen? Justificá.`,
+        rubric: [
+          { text: `a) En polares, $|f| = ${Math.abs(c)}\\,r\\,|\\cos^${p}\\theta\\sin^${q}\\theta| \\le ${Math.abs(c)}r \\to 0$: es continua ([[c2-limites-rigor|límite por acotación]]).`, w: 2 },
+          { text: `b) Sobre los ejes $f$ vale 0, así que $f_x(0, 0) = \\lim_{h\\to0}\\frac{f(h, 0) - 0}{h} = 0$ y $f_y(0, 0) = 0$.`, w: 2 },
+          { text: `c) Con $u = (\\cos\\theta, \\sin\\theta)$: $\\frac{f(tu)}{t} = ${c}\\cos^${p}\\theta\\sin^${q}\\theta$, que no depende de $t$: $D_uf(0, 0) \\approx ${nd(Du)}$.`, w: 3 },
+          { text: `d) Si fuera [[c2-diferenciabilidad|diferenciable]], valdría $D_uf = \\nabla f\\cdot u = 0$ en toda dirección. Como en $${deg}^\\circ$ da $${nd(Du)} \\ne 0$, no es diferenciable (aunque tenga parciales y sea continua).`, w: 3 }
+        ],
+        solution: [`Es el ejemplo típico: continua, con todas las derivadas direccionales, pero sin plano tangente, porque $u \\mapsto D_uf$ no es lineal.`,
+          `$D_uf(0, 0) = ${c}\\cos^${p}(${deg}^\\circ)\\sin^${q}(${deg}^\\circ) \\approx ${nd(Du)}$.`],
+        // otro camino: cocientes incrementales numéricos con t chico
+        verify: { kind: "zero", tol: 1e-6, fn: () => { const t = 1e-7; return [f(t, 0) / t, f(0, t) / t, f(t * Math.cos(th), t * Math.sin(th)) / t - Du, f(1e-10, 1e-10) * 1e3]; } }
+      };
+    }
+  };
+
+  SELF["c2-ex-gauss-cuadratica"] = {
+    concepts: ["c2-gauss-integral", "c2-impropias-dobles"],
+    generate(r) {
+      let a, b, c;
+      do { a = r.int(1, 5); c = r.int(1, 5); b = r.nz(-3, 3); } while (a * c - b * b <= 0);
+      const D = a * c - b * b, I = Math.PI / Math.sqrt(D);
+      return {
+        prompt: `a) Calculá $\\int_{-\\infty}^{\\infty}e^{-x^2}dx$ pasando a una integral doble en polares, y justificá cada paso.<br>b) Usando a), calculá $\\displaystyle\\iint_{\\mathbb R^2}e^{-(${a === 1 ? "" : a}x^2 ${b > 0 ? "+" : "-"} ${2 * Math.abs(b)}xy + ${c === 1 ? "" : c}y^2)}\\,dA$.`,
+        rubric: [
+          { text: `a) $I^2 = \\iint_{\\mathbb R^2}e^{-(x^2 + y^2)}dA$ por Fubini (el integrando es positivo, la [[c2-impropias-dobles|integral impropia doble]] se puede calcular con discos). En polares: $\\int_0^{2\\pi}\\int_0^\\infty e^{-r^2}r\\,dr\\,d\\theta = \\pi$, así que $I = \\sqrt\\pi$.`, w: 4 },
+          { text: `b) Completando cuadrados en $x$: $${a}x^2 ${b > 0 ? "+" : "-"} ${2 * Math.abs(b)}xy + ${c}y^2 = ${a}\\left(x ${b > 0 ? "+" : "-"} \\frac{${Math.abs(b)}}{${a}}y\\right)^2 + \\frac{${D}}{${a}}y^2$.`, w: 3 },
+          { text: `La integral en $x$ da $\\sqrt{\\frac{\\pi}{${a}}}$ (la [[c2-gauss-integral|integral de Gauss]] no cambia al correrla), y la de $y$, $\\sqrt{\\frac{${a}\\pi}{${D}}}$. Total: $\\frac{\\pi}{\\sqrt{${D}}} \\approx ${nd(I)}$.`, w: 3 }
+        ],
+        solution: [`En general, $\\iint e^{-(ax^2 + 2bxy + cy^2)}dA = \\frac{\\pi}{\\sqrt{ac - b^2}}$ si la forma es definida positiva ($a > 0$, $ac - b^2 > 0$).`,
+          `Con los datos, $ac - b^2 = ${D}$ y el resultado es $\\approx ${nd(I)}$.`],
+        // otro camino: Simpson doble en cartesianas, con x = tan u e y = tan v
+        verify: { kind: "zero", tol: 1e-5, fn: () => [line(x => line(y => Math.exp(-(a * x * x + 2 * b * x * y + c * y * y)))) / I - 1] }
+      };
+    }
+  };
+
+  E.registerExams("m102", {
+    self: SELF,
+    exams: [
+      { id: "uba", kind: "parcial", title: "Examen Extra UBA", topics: "Temas de Análisis I de la UBA con más rigor que el programa: límites y diferenciabilidad por definición, Taylor de orden 2, función implícita, extremos absolutos e integrales impropias dobles.", minutes: 180, pass: 60,
+        items: [
+          { title: "Diferenciabilidad por definición", parts: [{ self: "c2-ex-diferenciable", pts: 20 }] },
+          { title: "Integral de Gauss", parts: [{ self: "c2-ex-gauss-cuadratica", pts: 20 }] },
+          { any: [
+            { title: "Límites dobles", parts: [{ tpl: "c2-limcamino-num", pts: 12 }, { tpl: "c2-limexiste-mc", pts: 8 }] },
+            { title: "Derivadas direccionales", parts: [{ tpl: "c2-direccional-def-num", pts: 12 }, { tpl: "c2-dif-vf", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Taylor y función implícita", parts: [{ tpl: "c2-taylor2-num", pts: 12 }, { tpl: "c2-implicita-num", pts: 8 }] },
+            { title: "Extremos absolutos y regla de la cadena", parts: [{ tpl: "c2-extabs-num", pts: 12 }, { tpl: "c2-cadena2-num", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Integrales impropias dobles", parts: [{ tpl: "c2-impdoble-num", pts: 12 }, { tpl: "c2-impconv-mc", pts: 8 }] },
+            { title: "Gauss y convergencia", parts: [{ tpl: "c2-gauss-num", pts: 12 }, { tpl: "c2-impdoble-vf", pts: 8 }] }
+          ] }
+        ] }
+    ]
+  });
+})();

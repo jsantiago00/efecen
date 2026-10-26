@@ -223,3 +223,92 @@
     ]
   });
 })();
+
+/* ===== M105 · Examen Extra UBA =====
+   Temas de Métodos Estadísticos en Física Experimental (optativa de Cs. Físicas, FCEN-UBA) que no están en el temario
+   de M105: propagación y ajustes por χ², inferencia bayesiana, Monte Carlo, Cramér-Rao, función característica y
+   Kolmogorov-Smirnov. Enunciados propios y datos sorteados. */
+(function () {
+  const E = window.Efecen, S = E.pye, nf = S.nf;
+  const SELF = {};
+
+  SELF["pe-ex-ajuste"] = {
+    concepts: ["pe-ajuste-chi2"],
+    generate(r) {
+      const a0 = r.int(-5, 5), b0 = r.int(1, 6), xs = [1, 2, 3, 4], sg = xs.map(() => r.pick([0.5, 1, 1, 2]));
+      const ys = xs.map((x, i) => a0 + b0 * x + r.pick([-1, -0.5, 0, 0.5, 1]) * sg[i]);
+      const w = sg.map(s => 1 / (s * s)), Sw = w.reduce((t, v) => t + v, 0), Sx = w.reduce((t, v, i) => t + v * xs[i], 0), Sy = w.reduce((t, v, i) => t + v * ys[i], 0);
+      const Sxx = w.reduce((t, v, i) => t + v * xs[i] ** 2, 0), Sxy = w.reduce((t, v, i) => t + v * xs[i] * ys[i], 0), D = Sw * Sxx - Sx * Sx;
+      const b = (Sw * Sxy - Sx * Sy) / D, a = (Sxx * Sy - Sx * Sxy) / D, sb = Math.sqrt(Sw / D), sa = Math.sqrt(Sxx / D);
+      const chi = (A, B) => ys.reduce((t, y, i) => t + ((y - A - B * xs[i]) / sg[i]) ** 2, 0), c2 = chi(a, b);
+      const p = 1 - S.chi2cdf(c2, 2);
+      return {
+        prompt: `Se miden cuatro puntos $(x_i,\\ y_i \\pm \\sigma_i)$: ${xs.map((x, i) => `$(${x},\\ ${nf(ys[i], 3)} \\pm ${nf(sg[i], 2)})$`).join(", ")}. Las $x$ no tienen error.<br>a) Ajustá la recta $y = a + bx$ por cuadrados mínimos ponderados.<br>b) Calculá los errores de $a$ y de $b$.<br>c) Calculá $\\chi^2$, los grados de libertad y el valor $p$ del ajuste, y decidí si la recta es compatible con los datos.`,
+        rubric: [
+          { text: `a) Minimizando $\\chi^2 = \\sum\\frac{(y_i - a - bx_i)^2}{\\sigma_i^2}$ ([[pe-ajuste-chi2|ajuste por χ²]]), con pesos $w_i = \\frac1{\\sigma_i^2}$: $b = \\frac{S_wS_{xy} - S_xS_y}{\\Delta} \\approx ${nf(b)}$ y $a = \\frac{S_{xx}S_y - S_xS_{xy}}{\\Delta} \\approx ${nf(a)}$, con $\\Delta = S_wS_{xx} - S_x^2 = ${nf(D)}$.`, w: 4 },
+          { text: `b) $\\sigma_b = \\sqrt{S_w/\\Delta} \\approx ${nf(sb)}$ y $\\sigma_a = \\sqrt{S_{xx}/\\Delta} \\approx ${nf(sa)}$.`, w: 3 },
+          { text: `c) $\\chi^2 \\approx ${nf(c2)}$ con $\\nu = 4 - 2 = 2$ grados de libertad: $p = P(\\chi^2_2 > ${nf(c2, 3)}) \\approx ${nf(p, 3)}$. ${p > 0.05 ? "No hay evidencia contra la recta." : "La recta ajusta mal (o los errores están subestimados)."}`, w: 3 }
+        ],
+        solution: [`Las sumas son $S_w = ${nf(Sw)}$, $S_x = ${nf(Sx)}$, $S_y = ${nf(Sy)}$, $S_{xx} = ${nf(Sxx)}$ y $S_{xy} = ${nf(Sxy)}$.`,
+          `Con dos parámetros ajustados, se esperaría $\\chi^2 \\approx \\nu = 2$; acá $\\frac{\\chi^2}{\\nu} \\approx ${nf(c2 / 2, 3)}$.`],
+        // otro camino: el gradiente numérico de χ² se anula en (a, b), y σ_b² sale de la inversa del hessiano numérico (2·H⁻¹)
+        verify: { kind: "zero", tol: 1e-4, fn: () => {
+          const h = 1e-4, ga = (chi(a + h, b) - chi(a - h, b)) / (2 * h), gb = (chi(a, b + h) - chi(a, b - h)) / (2 * h);
+          const Haa = (chi(a + h, b) - 2 * c2 + chi(a - h, b)) / (h * h), Hbb = (chi(a, b + h) - 2 * c2 + chi(a, b - h)) / (h * h), Hab = (chi(a + h, b + h) - chi(a + h, b - h) - chi(a - h, b + h) + chi(a - h, b - h)) / (4 * h * h);
+          const det = Haa * Hbb - Hab * Hab;
+          return [ga / Sw, gb / Sw, 2 * Haa / det / (sb * sb) - 1, 2 * Hbb / det / (sa * sa) - 1];
+        } }
+      };
+    }
+  };
+
+  SELF["pe-ex-bayes-tasa"] = {
+    concepts: ["pe-bayes-conjugada"],
+    generate(r) {
+      const al = r.int(1, 4), be = r.int(0, 3), n = r.int(0, 12), Tm = r.int(2, 10);
+      const A = al + n, B = be + Tm, mean = A / B, sd = Math.sqrt(A) / B, up = S.quantile(x => S.gammaP(A, B * x), 0.9, 0, 200);
+      return {
+        prompt: `Un contador registra $${n}$ eventos en $${Tm}$ minutos. Para la tasa $\\lambda$ (eventos por minuto) se usa un prior ${be === 0 ? `impropio $\\propto\\lambda^{${al - 1}}$` : `$\\text{Gamma}(\\alpha = ${al}, \\beta = ${be})$, con densidad $\\propto\\lambda^{\\alpha-1}e^{-\\beta\\lambda}$`}.<br>a) Escribí la verosimilitud y mostrá que el posterior es una Gamma. ¿Con qué parámetros?<br>b) Calculá la media y el desvío del posterior.<br>c) Calculá el límite superior de credibilidad al 90 % para $\\lambda$.`,
+        rubric: [
+          { text: `a) Poisson: $L(\\lambda) \\propto \\lambda^{${n}}e^{-${Tm}\\lambda}$. Multiplicada por el prior queda $\\lambda^{${A}-1}e^{-${B}\\lambda}$: posterior $\\text{Gamma}(${A}, ${B})$ ([[pe-bayes-conjugada|prior conjugado]]).`, w: 3 },
+          { text: `b) Media $\\frac{${A}}{${B}} \\approx ${nf(mean)}$ por minuto; desvío $\\frac{\\sqrt{${A}}}{${B}} \\approx ${nf(sd)}$.`, w: 3 },
+          { text: `c) Se busca $\\lambda_{90}$ con $P(\\lambda \\le \\lambda_{90}) = 0{,}9$ bajo el posterior: $\\lambda_{90} \\approx ${nf(up)}$ eventos por minuto.`, w: 4 }
+        ],
+        solution: [`El posterior es $\\propto$ prior $\\times$ verosimilitud; los exponentes de $\\lambda$ y de $e^{-\\lambda}$ se suman.`,
+          `${n === 0 ? "Aun sin eventos el límite superior es finito: es lo que se informa cuando no se ve nada." : `La frecuencia observada $\\frac{${n}}{${Tm}}$ queda corrida hacia el prior.`}`],
+        // otro camino: posterior armado en una grilla de λ con Simpson, sin usar que es una Gamma, y su cuantil 0,9 por bisección
+        verify: { kind: "zero", tol: 1e-4, fn: () => {
+          const post = x => (x <= 0 ? 0 : Math.exp((al - 1 + n) * Math.log(x) - (be + Tm) * x)), hi = (A + 12 * Math.sqrt(A) + 10) / B, Z = S.simpson(post, 0, hi, 6000);
+          const cdf = x => S.simpson(post, 0, x, 3000) / Z, m1 = S.simpson(x => x * post(x), 0, hi, 6000) / Z;
+          let lo = 0, hh = hi; for (let i = 0; i < 50; i++) { const m = (lo + hh) / 2; if (cdf(m) < 0.9) lo = m; else hh = m; }
+          return [m1 / mean - 1, (lo + hh) / 2 / up - 1];
+        } }
+      };
+    }
+  };
+
+  E.registerExams("m105", {
+    self: SELF,
+    exams: [
+      { id: "uba", kind: "parcial", title: "Examen Extra UBA", topics: "Temas de Métodos Estadísticos en Física Experimental (UBA): propagación y ajustes por χ², inferencia bayesiana, Monte Carlo, Cramér-Rao, función característica y Kolmogorov-Smirnov.", minutes: 180, pass: 60,
+        items: [
+          { title: "Ajuste de una recta por χ²", parts: [{ self: "pe-ex-ajuste", pts: 20 }] },
+          { title: "Tasa de un contador (Bayes)", parts: [{ self: "pe-ex-bayes-tasa", pts: 20 }] },
+          { any: [
+            { title: "Propagación y cambio de variables", parts: [{ tpl: "pe-propag-num", pts: 12 }, { tpl: "pe-cambiovar-num", pts: 8 }] },
+            { title: "Promedio ponderado y χ²", parts: [{ tpl: "pe-mediapond-num", pts: 12 }, { tpl: "pe-chi2-vf", pts: 8 }] },
+            { title: "Conteos de Poisson", parts: [{ tpl: "pe-poisson-sup-num", pts: 12 }, { tpl: "pe-chi2-vf", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Monte Carlo", parts: [{ tpl: "pe-inversa-num", pts: 12 }, { tpl: "pe-rechazo-num", pts: 8 }] },
+            { title: "Cramér-Rao y Monte Carlo", parts: [{ tpl: "pe-cramer-num", pts: 12 }, { tpl: "pe-mcerror-num", pts: 8 }] },
+            { title: "Priors conjugados", parts: [{ tpl: "pe-betabin-num", pts: 12 }, { tpl: "pe-conjugada-mc", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Función característica", parts: [{ tpl: "pe-caract-num", pts: 12 }, { tpl: "pe-caract-mc", pts: 8 }] },
+            { title: "Kolmogorov-Smirnov", parts: [{ tpl: "pe-ks-num", pts: 12 }, { tpl: "pe-ks-vf", pts: 8 }] }
+          ] }
+        ] }
+    ]
+  });
+})();

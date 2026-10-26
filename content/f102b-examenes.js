@@ -684,3 +684,91 @@
     ]
   });
 })();
+
+/* ===== F102B · Examen Extra UBA =====
+   Temas de Física 2 de la Lic. en Cs. Físicas (FCEN, UBA) que no están en el programa de F102B: oscilaciones acopladas,
+   polarización, ondas entre medios y dispersión, instrumentos ópticos y coherencia. Enunciados propios y datos sorteados. */
+(function () {
+  const E = window.Efecen, H = E.H;
+  const SELF = {};
+  const dn = (x, d = 4) => String(H.num(x, d)).replace(".", "{,}");
+  const mul = (P, Q) => [[P[0][0] * Q[0][0] + P[0][1] * Q[1][0], P[0][0] * Q[0][1] + P[0][1] * Q[1][1]], [P[1][0] * Q[0][0] + P[1][1] * Q[1][0], P[1][0] * Q[0][1] + P[1][1] * Q[1][1]]];
+  const Sp = d => [[1, d], [0, 1]], Ln = f => [[1, 0], [-1 / f, 1]];
+  const simpson = (f, a, b, n = 400) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  // J₁ por su representación integral y su primer cero por bisección (de ahí sale el 1,22 de Rayleigh)
+  const J1 = x => simpson(t => Math.cos(t - x * Math.sin(t)), 0, Math.PI) / Math.PI;
+  const j11 = (() => { let a = 3, b = 4.5; for (let i = 0; i < 60; i++) { const m = (a + b) / 2; if (J1(a) * J1(m) <= 0) b = m; else a = m; } return (a + b) / 2; })();
+
+  SELF["f2b-ex-telescopio"] = {
+    concepts: ["f2b-instrumentos", "f2b-resolucion"],
+    generate(r) {
+      const fo = r.int(10, 40) * 5, fc = r.pick([1, 1.5, 2, 2.5, 4]), D = r.int(4, 20), lam = r.pick([500, 550, 600]), dL = 3.84e8;
+      const M = fo / fc, th = 1.22 * lam * 1e-9 / (D / 100), s = th * dL, eye = 2.9e-4, seen = th * M >= eye;
+      return {
+        prompt: `Un telescopio astronómico tiene un objetivo de $${fo}$ cm de focal y $${D}$ cm de diámetro, y un ocular de $${dn(fc, 2)}$ cm. Se ajusta para mirar con el ojo relajado. Se observa la Luna (a $3{,}84\\times10^8$ m) con luz de $${lam}$ nm.<br>a) ¿Qué aumento angular tiene y qué largo tiene el tubo?<br>b) ¿Cuál es la mínima separación angular que resuelve el objetivo, según Rayleigh? ¿A qué distancia sobre la Luna corresponde?<br>c) El ojo resuelve unos $2{,}9\\times10^{-4}$ rad. ¿Limita el ojo o el objetivo? Justificá.`,
+        rubric: [
+          { text: `a) Con los focos coincidentes, [[f2b-instrumentos|telescopio]]: $|M| = \\frac{f_{ob}}{f_{oc}} = ${dn(M)}$ y largo $f_{ob} + f_{oc} = ${dn(fo + fc)}$ cm.`, w: 3 },
+          { text: `b) [[f2b-resolucion|Criterio de Rayleigh]] para una abertura circular: $\\theta_{min} = 1{,}22\\frac{\\lambda}{D} \\approx ${dn(th * 1e6)}$ μrad, que a la distancia de la Luna son $\\approx ${dn(s / 1000)}$ km.`, w: 4 },
+          { text: `c) Por el ocular, ese ángulo se ve de $\\theta_{min}|M| \\approx ${dn(th * M * 1e4)}\\times10^{-4}$ rad. ${seen ? "Es mayor que la resolución del ojo: lo que se pierde lo pierde el objetivo (limita la difracción)." : "Es menor que la resolución del ojo: con este ocular, limita el ojo; con más aumento se vería el detalle que el objetivo resuelve."}`, w: 3 }
+        ],
+        solution: [`El aumento angular multiplica todos los ángulos por $${dn(M)}$; el detalle más fino que llega al plano focal lo fija la difracción en el objetivo, $1{,}22\\lambda/D$.`,
+          `$\\theta_{min} \\approx ${dn(th * 1e6)}$ μrad, $s \\approx ${dn(s / 1000)}$ km; por el ocular, $\\approx ${dn(th * M * 1e4)}\\times10^{-4}$ rad contra $2{,}9\\times10^{-4}$ rad del ojo.`],
+        // otro camino: aumento con la matriz ABCD del telescopio (elemento D) y el 1,22 como primer cero de J₁ dividido por π
+        verify: { kind: "zero", tol: 1e-3, fn: () => {
+          const Mx = mul(Ln(fc), mul(Sp(fo + fc), Ln(fo))), thJ = j11 / Math.PI * lam * 1e-9 / (D / 100);
+          return [Math.abs(Mx[1][0]) * fo, Math.abs(Mx[1][1]) / M - 1, thJ / th - 1, (thJ * M >= eye) === seen ? 0 : 1];
+        } }
+      };
+    }
+  };
+
+  SELF["f2b-ex-acopladas"] = {
+    concepts: ["f2b-acopladas"],
+    generate(r) {
+      const m = r.int(1, 8) / 2, k = r.int(10, 80) * 5, kap = k * r.pick([0.04, 0.05, 0.08, 0.1, 0.15]), A = r.int(1, 5);
+      const w1 = Math.sqrt(k / m), w2 = Math.sqrt((k + 2 * kap) / m), ts = Math.PI / (w2 - w1);
+      return {
+        prompt: `Dos masas iguales de $${dn(m, 1)}$ kg están sobre una mesa sin rozamiento, unidas cada una a una pared por un resorte de $k = ${k}$ N/m y entre sí por un resorte débil de $\\kappa = ${dn(kap, 3)}$ N/m. En $t = 0$ la masa 1 se aparta $${A}$ cm de su equilibrio y se suelta; la masa 2 está quieta en su equilibrio.<br>a) Escribí las ecuaciones de movimiento y encontrá los modos normales y sus frecuencias.<br>b) Escribí $x_1(t)$ y $x_2(t)$.<br>c) ¿Cuánto tarda la masa 1 en quedarse quieta por primera vez (toda la energía pasó a la masa 2)?`,
+        rubric: [
+          { text: `a) $m\\ddot x_1 = -kx_1 - \\kappa(x_1 - x_2)$ y $m\\ddot x_2 = -kx_2 - \\kappa(x_2 - x_1)$. [[f2b-acopladas|Modos normales]]: en fase ($x_1 = x_2$), con $\\omega_1 = \\sqrt{k/m} \\approx ${dn(w1)}$ rad/s, y en contrafase ($x_1 = -x_2$), con $\\omega_2 = \\sqrt{(k + 2\\kappa)/m} \\approx ${dn(w2)}$ rad/s.`, w: 4 },
+          { text: `b) Con esas condiciones iniciales: $x_1 = \\frac A2(\\cos\\omega_1t + \\cos\\omega_2t) = A\\cos\\frac{(\\omega_2 - \\omega_1)t}{2}\\cos\\frac{(\\omega_1 + \\omega_2)t}{2}$ y $x_2 = A\\sin\\frac{(\\omega_2 - \\omega_1)t}{2}\\sin\\frac{(\\omega_1 + \\omega_2)t}{2}$: [[f2b-ondas|batidos]].`, w: 3 },
+          { text: `c) La envolvente de $x_1$ se anula cuando $\\frac{(\\omega_2 - \\omega_1)t}{2} = \\frac\\pi2$: $t^* = \\frac{\\pi}{\\omega_2 - \\omega_1} \\approx ${dn(ts)}$ s.`, w: 3 }
+        ],
+        solution: [`Sumando y restando las ecuaciones se desacoplan: $q_\\pm = x_1 \\pm x_2$ oscilan con $\\omega_1$ y $\\omega_2$.`,
+          `La energía pasa de una masa a la otra con el ritmo de la diferencia de frecuencias: $t^* \\approx ${dn(ts)}$ s, mucho más que un período ($\\approx ${dn(2 * Math.PI / w1)}$ s) porque el acople es débil.`],
+        // otro camino: det(K − ω²M) = 0 para las dos frecuencias, y simulación con RK4 hasta t*, donde x₁ tiene que dar 0
+        verify: { kind: "zero", tol: 2e-4, fn: () => {
+          const det = w => (k + kap - m * w * w) ** 2 - kap * kap;
+          const f = y => [y[2], y[3], (-k * y[0] - kap * (y[0] - y[1])) / m, (-k * y[1] - kap * (y[1] - y[0])) / m];
+          const n = 40000, h = ts / n; let y = [A, 0, 0, 0];
+          for (let i = 0; i < n; i++) { const k1 = f(y), k2 = f(y.map((v, j) => v + h / 2 * k1[j])), k3 = f(y.map((v, j) => v + h / 2 * k2[j])), k4 = f(y.map((v, j) => v + h * k3[j])); y = y.map((v, j) => v + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j])); }
+          return [det(w1) / (k * k), det(w2) / (k * k), y[0] / A];
+        } }
+      };
+    }
+  };
+
+  E.registerExams("f102b", {
+    self: SELF,
+    exams: [
+      { id: "uba", kind: "parcial", title: "Examen Extra UBA", topics: "Temas de Física 2 de la UBA que no están en el programa: oscilaciones acopladas, polarización, ondas entre medios y dispersión, instrumentos ópticos y coherencia.", minutes: 180, pass: 60,
+        items: [
+          { title: "Osciladores acoplados", parts: [{ self: "f2b-ex-acopladas", pts: 20 }] },
+          { title: "Telescopio y resolución", parts: [{ self: "f2b-ex-telescopio", pts: 20 }] },
+          { any: [
+            { title: "Polarización", parts: [{ tpl: "f2b-malus-num", pts: 12 }, { tpl: "f2b-pol-vf", pts: 8 }] },
+            { title: "Polarización", parts: [{ tpl: "f2b-brewster-num", pts: 12 }, { tpl: "f2b-lamina-num", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Ondas entre medios", parts: [{ tpl: "f2b-union-num", pts: 12 }, { tpl: "f2b-grupo-num", pts: 8 }] },
+            { title: "Fourier y dispersión", parts: [{ tpl: "f2b-fourier-num", pts: 12 }, { tpl: "f2b-dispersion-vf", pts: 8 }] },
+            { title: "Modos de una cadena", parts: [{ pick: ["f2b-cadena-num", "f2b-triatomica-num"], pts: 12 }, { tpl: "f2b-prisma-num", pts: 8 }] }
+          ] },
+          { any: [
+            { title: "Microscopio y coherencia", parts: [{ tpl: "f2b-microscopio-num", pts: 12 }, { tpl: "f2b-coherencia-vf", pts: 8 }] },
+            { title: "Coherencia y lupa", parts: [{ tpl: "f2b-coherencia-num", pts: 12 }, { tpl: "f2b-lupa-num", pts: 8 }] }
+          ] }
+        ] }
+    ]
+  });
+})();
