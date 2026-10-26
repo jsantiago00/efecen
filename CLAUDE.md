@@ -22,9 +22,9 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. **Pulir los dos primeros años** (pedido del usuario, 20/10): 3.º y 4.º año quedan en pausa hasta que las ocho materias estén bien terminadas.
+1. **3.º año** (pedido del usuario, 26/10: terminó la pausa del 20/10). Se sigue el trayecto: F104 Física General III (en curso), M103, M203, F203, M209 y F205.
 
-Las evaluaciones de las ocho materias completas ya están hechas.
+Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, sus unidades «Extra UBA» y un «Examen Extra UBA».
 
 ## Estructura
 
@@ -33,7 +33,7 @@ Las evaluaciones de las ocho materias completas ya están hechas.
 | `index.html` | La UI (`<script id="app-script">`) y el CSS. |
 | `engine.js` | El motor: RNG, helpers `H`, parser de números y expresiones, repaso espaciado, registro de materias, exámenes y estado (`E.store`). Lo cargan `index.html` y los tests. |
 | `content/carrera.js` | La carrera: años → semestres → materias, con `code`, `title`, `course` (si ya tiene contenido) y `step` (orden sugerido). |
-| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
+| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`, `f104-fisica3.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
 | `board.js` | Pizarra para escribir con lápiz en tablets: el motor de la pizarra del usuario (`jsantiago00/pizarra`) en JS sin build, con lazo, goma por área, texto, fórmulas (MathJax, bajo demanda) y figuras (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. Usa `assets/vendor/perfect-freehand/`, `asciimath2tex/` y `mathjax/`. |
 | `content/<código>-examenes.js` | Parciales y finales simulados de la materia (`E.registerExams`). El análisis de los originales está en `docs/parciales/`. |
@@ -66,7 +66,7 @@ Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101
 })();
 ```
 
-- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106), `pe-` (M105; su primer bloque define la biblioteca estadística `E.pye`), `f2a-` (F102A; su primer bloque define `E.f2a`, con constantes, Simpson, RK4 y el campo de cargas puntuales). Para M101 no hay prefijo: sus ids vienen del MVP.
+- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106), `pe-` (M105; su primer bloque define la biblioteca estadística `E.pye`), `f2a-` (F102A; su primer bloque define `E.f2a`, con constantes, Simpson, RK4 y el campo de cargas puntuales), `f3-` (F104; su primer bloque define `E.f3`, con constantes de física moderna, Simpson, bisección, sección áurea y boosts). Para M101 no hay prefijo: sus ids vienen del MVP.
 - **Requisitos por unidad** (los chequean los tests):
   - al menos 4 plantillas de al menos 2 tipos;
   - teoría con hipervínculos;

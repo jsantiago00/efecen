@@ -35,7 +35,7 @@
       ] },
       { n: 3, semesters: [
         { n: 1, subjects: [
-          { code: "F104", title: "Física General III", step: 9 },
+          { code: "F104", title: "Física General III", course: "f104", step: 9 },
           { code: "M103", title: "Cálculo III", step: 10 },
           { code: "M203", title: "Álgebra Lineal", step: 11 }
         ] },

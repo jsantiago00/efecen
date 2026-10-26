@@ -16,7 +16,8 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa (repasada el 24/10) | 61 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado; repasada el 24/10), más 3 unidades «Extra UBA» | 73 | 41 |
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10), más 4 unidades «Extra UBA» | 77 | 53 |
-| 9+ | 3.º y 4.º año | en pausa (20/10): primero se pulen los dos primeros años; aparecen como "Próximamente" | — | — |
+| 9 | F104 Física General III | **en curso** (desde el 26/10): unidades 1 a 3 de 7 (relatividad, fotones, Bohr). No se encontró el programa; el temario sale de los parciales de 2021 (`docs/parciales/f104.md`) | 15 | 8 |
+| 10+ | resto de 3.º y 4.º año | pendientes; aparecen como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
@@ -364,8 +365,9 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **Pulir los dos primeros años** (pedido del usuario, 20/10). 3.º y 4.º año quedan en pausa.
-2. **Extra UBA** (pedido del usuario, 25/10): completar los temas UBA de las ocho materias hechas, una por vez (ver la tabla «Extra UBA»).
+1. **F104 Física General III** (pedido del usuario, 26/10, que levantó la pausa de 3.º año): faltan las unidades 4 a 7 (ondas de materia e incerteza; Schrödinger y pozo infinito; oscilador, escalón, barrera y pozo finito; átomo de hidrógeno), sus figuras y las evaluaciones.
+2. **Resto de 3.º año**, en el orden del trayecto: M103, M203, F203, M209 y F205.
+3. **Extra UBA de M106:** sin equivalente directo en la UBA; queda para después.
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 
