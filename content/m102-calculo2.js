@@ -6,7 +6,7 @@
  *   3 Series de potencias, Taylor y Fourier · 4 Funciones vectoriales · 5 Funciones de varias variables
  *   6 Integración múltiple · 7 Análisis vectorial · 8 Ecuaciones diferenciales
  * Extra UBA (temas de Análisis I de Cs. Físicas, FCEN-UBA, con más rigor que el programa de M102):
- *   Límites y diferenciabilidad en varias variables · Taylor, función implícita y extremos absolutos
+ *   Límites y diferenciabilidad en varias variables · Taylor, función implícita y extremos absolutos · Integrales impropias dobles
  *
  * Verificaciones independientes en los tests: clasificación de cónicas y cuádricas evaluando la
  * ecuación lejos del origen, longitudes de curvas por poligonales, áreas polares por la fórmula del
@@ -2201,6 +2201,208 @@
           intro: R`Si $F_z(P) \ne 0$: $z_x = -F_x/F_z$, $z_y = -F_y/F_z$.` },
         { id: "c2-extremos-abs", title: "Extremos absolutos", templates: ["c2-extabs-num"], theory: ["c2-extremos-abs"],
           intro: R`Compacto y continua: hay máximo y mínimo. Candidatos: críticos interiores, extremos en el borde y esquinas.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · INTEGRALES IMPROPIAS DOBLES E INTEGRAL DE GAUSS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => String(num(x, d)).replace(".", "{,}");
+  const kx = k => (k === 1 ? "" : k === -1 ? "-" : String(k));
+  const simpson = (f, a, b, n = 300) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  // integrales en toda la recta o en [c, ∞), en coordenadas cartesianas, con cambios de variable que llevan el infinito a un intervalo finito
+  const line = (g, n = 300) => simpson(u => { const c = Math.cos(u); return c < 1e-12 ? 0 : g(Math.tan(u)) / (c * c); }, -Math.PI / 2, Math.PI / 2, n);
+  const half = (g, c0, n = 300, sc = 1) => simpson(t => { const u = Math.min(t, 1 - 1e-7); return g(c0 + sc * u / (1 - u)) * sc / ((1 - u) * (1 - u)); }, 0, 1, n);
+  const plane = (f, n = 240) => line(x => line(y => f(x, y), n), n);
+  const quad = (f, n = 240) => half(x => half(y => f(x, y), 0, n), 0, n);
+  // ∬ fuera del disco de radio R0, en cartesianas: 4 × (franja 0 ≤ x < R0, con x = R0 sen φ, más x ≥ R0)
+  const outside = (f, R0, n = 240) => {
+    const inner = x => half(y => f(x, y), Math.sqrt(Math.max(0, R0 * R0 - x * x)), n, Math.max(1, x));
+    return 4 * (simpson(ph => inner(R0 * Math.sin(ph)) * R0 * Math.cos(ph), 0, Math.PI / 2, n) + half(inner, R0, n, R0));
+  };
+  // integral sobre [ε, 1]² con x = e^{−s}, y = e^{−t} (suave aunque f explote en las esquinas)
+  const corner = (f, eps, n = 300) => { const L = Math.log(1 / eps); return simpson(s => simpson(t => f(Math.exp(-s), Math.exp(-t)) * Math.exp(-s - t), 0, L, n), 0, L, n); };
+
+  T["c2-impdoble-num"] = {
+    type: "numeric", concepts: ["c2-impropias-dobles"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["gauss2", "cuadrante", "cola", "r2gauss"]);
+      if (v === "gauss2") {
+        const a = r.int(1, 6), b = r.int(1, 6), ans = Math.PI / Math.sqrt(a * b);
+        return {
+          prompt: `Calculá $\\displaystyle\\iint_{\\mathbb R^2} e^{-(${kx(a)}x^2 + ${kx(b)}y^2)}\\,dA$.`,
+          answer: ans,
+          solution: [`Es una [[c2-impropias-dobles|integral impropia doble]] de una función positiva: se puede calcular con Fubini como producto de dos [[c2-gauss-integral|integrales de Gauss]].`,
+            `$\\int_{-\\infty}^{\\infty}e^{-${kx(a)}x^2}dx = \\sqrt{\\frac{\\pi}{${a}}}$ y $\\int_{-\\infty}^{\\infty}e^{-${kx(b)}y^2}dy = \\sqrt{\\frac{\\pi}{${b}}}$.`,
+            `Producto: $\\frac{\\pi}{\\sqrt{${a * b}}} \\approx ${nd(ans)}$.`],
+          verify: { kind: "value", tol: 1e-5, fn: () => plane((x, y) => Math.exp(-(a * x * x + b * y * y))) }
+        };
+      }
+      if (v === "r2gauss") {
+        const a = r.int(1, 5), ans = Math.PI / (a * a);
+        return {
+          prompt: `Calculá $\\displaystyle\\iint_{\\mathbb R^2} (x^2 + y^2)\\,e^{-${kx(a)}(x^2 + y^2)}\\,dA$.`,
+          answer: ans,
+          solution: [`En [[c2-jacobiano|polares]] ($dA = r\\,dr\\,d\\theta$), sobre discos de radio $R \\to \\infty$ ([[c2-impropias-dobles|integral impropia doble]]): $\\int_0^{2\\pi}\\int_0^\\infty r^3e^{-${kx(a)}r^2}dr\\,d\\theta$.`,
+            `Con $u = r^2$: $\\int_0^\\infty r^3e^{-${kx(a)}r^2}dr = \\frac12\\int_0^\\infty ue^{-${kx(a)}u}du = \\frac{1}{2\\cdot${a * a}}$.`,
+            `Total: $2\\pi\\cdot\\frac{1}{${2 * a * a}} = \\frac{\\pi}{${a * a}} \\approx ${nd(ans)}$.`],
+          verify: { kind: "value", tol: 1e-5, fn: () => plane((x, y) => (x * x + y * y) * Math.exp(-a * (x * x + y * y))) }
+        };
+      }
+      if (v === "cuadrante") {
+        const p = r.pick([2, 3, 4]), c = r.int(1, 6), ans = c * Math.PI / (4 * (p - 1));
+        return {
+          prompt: `Calculá $\\displaystyle\\iint_D \\frac{${c}}{(1 + x^2 + y^2)^{${p}}}\\,dA$, donde $D$ es el primer cuadrante ($x \\ge 0$, $y \\ge 0$).`,
+          answer: ans,
+          solution: [`La región no es acotada: es una [[c2-impropias-dobles|integral impropia doble]]. Como el integrando es positivo, se puede calcular con cualquier sucesión de regiones que llenen $D$; usamos cuartos de disco de radio $R \\to \\infty$, en [[c2-jacobiano|polares]].`,
+            `$\\int_0^{\\pi/2}\\int_0^\\infty\\frac{${c}r}{(1 + r^2)^{${p}}}dr\\,d\\theta = \\frac\\pi2\\cdot${c}\\left[\\frac{-1}{${2 * (p - 1)}(1 + r^2)^{${p - 1}}}\\right]_0^\\infty = \\frac\\pi2\\cdot\\frac{${c}}{${2 * (p - 1)}}$.`,
+            `$= ${c === 1 ? "" : c}\\frac{\\pi}{${4 * (p - 1)}} \\approx ${nd(ans)}$.`],
+          verify: { kind: "value", tol: 1e-5, fn: () => quad((x, y) => c / (1 + x * x + y * y) ** p) }
+        };
+      }
+      const p = r.pick([1.5, 2, 3]), R0 = r.pick([1, 2, 3]), ans = Math.PI * R0 ** (2 - 2 * p) / (p - 1);
+      const pt = p === 1.5 ? "3/2" : String(p);
+      return {
+        prompt: `Calculá $\\displaystyle\\iint_D \\frac{dA}{(x^2 + y^2)^{${pt}}}$, donde $D$ es la región exterior al círculo $x^2 + y^2 = ${R0 * R0}$.`,
+        answer: ans,
+        solution: [`En [[c2-jacobiano|polares]], con anillos $${R0} \\le r \\le R$ y $R \\to \\infty$ ([[c2-impropias-dobles|integral impropia doble]]): $\\int_0^{2\\pi}\\int_{${R0}}^\\infty r^{1 - 2\\cdot${pt}}\\,dr\\,d\\theta$.`,
+          `Converge porque el exponente $1 - 2p = ${1 - 2 * p}$ es menor que $-1$: $\\int_{${R0}}^\\infty r^{${1 - 2 * p}}dr = \\frac{${R0}^{${2 - 2 * p}}}{${2 * p - 2}}$.`,
+          `Total: $2\\pi\\cdot\\frac{${R0}^{${2 - 2 * p}}}{${2 * p - 2}} \\approx ${nd(ans)}$.`],
+        verify: { kind: "value", tol: 5e-4, fn: () => outside((x, y) => (x * x + y * y) ** -p, R0) }
+      };
+    }
+  };
+  T["c2-impconv-mc"] = {
+    type: "mc", concepts: ["c2-impropias-dobles"], difficulty: 2,
+    generate(r) {
+      const R2 = r.pick([1, 4, 9, 16]), c = r.pick(["", "2", "3", "5"]);
+      const v = r.pick([{ d: 2, where: "afuera", tex: R`\iint_{x^2 + y^2 \ge ${R2}}\frac{${c}\,dA}{(x^2 + y^2)^p}`, ok: "p > 1" },
+        { d: 2, where: "adentro", tex: R`\iint_{0 < x^2 + y^2 \le ${R2}}\frac{${c}\,dA}{(x^2 + y^2)^p}`, ok: "p < 1" },
+        { d: 3, where: "afuera", tex: R`\iiint_{x^2 + y^2 + z^2 \ge ${R2}}\frac{${c}\,dV}{(x^2 + y^2 + z^2)^p}`, ok: "p > 3/2" },
+        { d: 3, where: "adentro", tex: R`\iiint_{0 < x^2 + y^2 + z^2 \le ${R2}}\frac{${c}\,dV}{(x^2 + y^2 + z^2)^p}`, ok: "p < 3/2" }]);
+      const all = ["p > 1", "p < 1", "p > 3/2", "p < 3/2", "p > 2", "p < 2", "p > 1/2"];
+      const crit = v.d / 2;
+      return {
+        prompt: `¿Para qué valores de $p > 0$ converge $\\displaystyle ${v.tex}$?`,
+        ...H.mc(r, `$${v.ok}$`, r.sample(all.filter(o => o !== v.ok), 3).map(o => `$${o}$`), { text: true }),
+        solution: [`En coordenadas ${v.d === 2 ? "polares" : "esféricas"}, el elemento de ${v.d === 2 ? "área" : "volumen"} es $${v.d === 2 ? "r\\,dr\\,d\\theta" : "r^2\\sin\\varphi\\,dr\\,d\\theta\\,d\\varphi"}$, así que todo se reduce a $\\int r^{${v.d - 1} - 2p}dr$ ([[c2-impropias-dobles|criterio de las potencias]]).`,
+          v.where === "afuera" ? `Hacia el infinito, $\\int_1^\\infty r^{${v.d - 1} - 2p}dr$ converge si $${v.d - 1} - 2p < -1$, o sea $p > ${crit === 1 ? "1" : "3/2"}$.`
+            : `Cerca del origen, $\\int_0^1 r^{${v.d - 1} - 2p}dr$ converge si $${v.d - 1} - 2p > -1$, o sea $p < ${crit === 1 ? "1" : "3/2"}$.`,
+          `Regla: en $\\mathbb R^n$, $\\frac{1}{r^{2p}}$ es integrable lejos si $2p > n$ y cerca del origen si $2p < n$.`],
+        // verificación: integrales en capas (Simpson sobre la variable radial transformada) con p un cuarto a cada lado del umbral;
+        // del lado que converge, la integral se estabiliza al alejar el corte; del otro, sigue creciendo
+        verify: { kind: "truth", target: true, fn: () => {
+          const shell = (p, cut) => v.where === "afuera"
+            ? simpson(s => Math.exp(s * (v.d - 2 * p)), 0, Math.log(cut), 400)
+            : simpson(s => Math.exp(-s * (v.d - 2 * p)), 0, Math.log(cut), 400);
+          const settles = p => shell(p, 1e8) - shell(p, 1e4) < 0.05 * shell(p, 1e4);
+          const lo = settles(crit - 0.25), hi = settles(crit + 0.25);
+          const want = v.ok.includes(">") ? !lo && hi : lo && !hi;
+          return want;
+        } }
+      };
+    }
+  };
+  T["c2-impdoble-vf"] = {
+    testN: 40, // integrales dobles con muchos puntos
+    type: "tf", concepts: ["c2-impropias-dobles"], difficulty: 3,
+    generate(r) {
+      const c = r.int(1, 5), F = r.pick([
+        { tex: R`\frac{1}{x + y}`, f: (x, y) => 1 / (x + y), conv: true, why: R`en polares cerca del origen se comporta como $\frac1r$, y $\frac1r\cdot r$ es acotado` },
+        { tex: R`\frac{1}{x^2 + y^2}`, f: (x, y) => 1 / (x * x + y * y), conv: false, why: R`en polares queda $\int_0 \frac{r}{r^2}dr = \int_0\frac{dr}{r}$, que diverge` },
+        { tex: R`\frac{1}{\sqrt{xy}}`, f: (x, y) => 1 / Math.sqrt(x * y), conv: true, why: R`separa: $\left(\int_0^1\frac{dx}{\sqrt x}\right)^2 = 4$` },
+        { tex: R`\frac{1}{xy}`, f: (x, y) => 1 / (x * y), conv: false, why: R`separa en $\left(\int_0^1\frac{dx}{x}\right)^2$, que diverge` },
+        { tex: R`\frac{1}{(x + y)^2}`, f: (x, y) => 1 / (x + y) ** 2, conv: false, why: R`en polares se comporta como $\frac{1}{r^2}$, y $\int_0\frac{r}{r^2}dr$ diverge` },
+        { tex: R`\frac{1}{\sqrt{x^2 + y^2}}`, f: (x, y) => 1 / Math.hypot(x, y), conv: true, why: R`en polares queda $\int_0\frac{r}{r}dr$, finita` },
+        { tex: R`\ln(x^2 + y^2)`, f: (x, y) => Math.log(x * x + y * y), conv: true, why: R`en polares queda $\int_0 r\ln r^2\,dr$, y $r\ln r \to 0$` }]);
+      return {
+        prompt: `<b>Verdadero o falso:</b> la integral $\\displaystyle\\iint_{[0,1]^2} ${c === 1 ? "" : c}${F.tex}\\,dA$ converge (el integrando no está acotado cerca del origen).`,
+        answer: F.conv,
+        explanation: `Es una [[c2-impropias-dobles|integral impropia doble]] por el integrando: ${F.why}. ${F.conv ? "Converge." : "Diverge."}`,
+        solution: [`Para decidir, se mira el comportamiento cerca del punto problemático en [[c2-jacobiano|polares]] y se compara con $\\int_0 r^{1 - 2p}dr$.`],
+        // verificación: se integra sobre [ε, 1]² con ε = 10⁻⁴ y 10⁻⁸ (en variables logarítmicas) y se mira si el valor se estabiliza
+        verify: { kind: "truth", fn: () => { const a = corner((x, y) => c * F.f(x, y), 1e-4), b = corner((x, y) => c * F.f(x, y), 1e-8); return Math.abs(b - a) < 0.1 * Math.abs(a); } }
+      };
+    }
+  };
+  T["c2-gauss-num"] = {
+    type: "numeric", concepts: ["c2-gauss-integral"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["base", "medio", "x2", "lineal"]), a = r.pick([0.5, 1, 2, 3, 4, 5, 8]), b = r.nz(-3, 3);
+      const at = String(a).replace(".", "{,}");
+      const ax = a === 1 ? "" : at;
+      const CASES = {
+        base: { tex: R`\int_{-\infty}^{\infty}e^{-${ax}x^2}\,dx`, ans: Math.sqrt(Math.PI / a), g: x => Math.exp(-a * x * x),
+          sol: [`Con $u = \\sqrt{${at}}\\,x$ se reduce a la [[c2-gauss-integral|integral de Gauss]]: $\\frac{1}{\\sqrt{${at}}}\\int e^{-u^2}du = \\sqrt{\\frac{\\pi}{${at}}}$.`] },
+        medio: { tex: R`\int_{0}^{\infty}e^{-${ax}x^2}\,dx`, ans: Math.sqrt(Math.PI / a) / 2, g: x => (x < 0 ? 0 : Math.exp(-a * x * x)), half: true,
+          sol: [`El integrando es par: es la mitad de la [[c2-gauss-integral|integral de Gauss]] en toda la recta, $\\frac12\\sqrt{\\frac{\\pi}{${at}}}$.`] },
+        x2: { tex: R`\int_{-\infty}^{\infty}x^2e^{-${ax}x^2}\,dx`, ans: Math.sqrt(Math.PI) / (2 * a ** 1.5), g: x => x * x * Math.exp(-a * x * x),
+          sol: [`Derivando $\\int e^{-ax^2}dx = \\sqrt\\pi\\,a^{-1/2}$ respecto de $a$ ([[c2-gauss-integral|integral de Gauss]]): $-\\int x^2e^{-ax^2}dx = -\\frac{\\sqrt\\pi}{2}a^{-3/2}$.`, `Con $a = ${at}$: $\\frac{\\sqrt\\pi}{2\\cdot${at}^{3/2}}$.`] },
+        lineal: { tex: R`\int_{-\infty}^{\infty}e^{-${ax}x^2 ${b > 0 ? "+" : "-"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}x}\,dx`, ans: Math.sqrt(Math.PI / a) * Math.exp(b * b / (4 * a)), g: x => Math.exp(-a * x * x + b * x),
+          sol: [`Completando cuadrados: $-${ax}x^2 ${b > 0 ? "+" : "-"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}x = -${ax}\\left(x - \\frac{${b}}{${2 * a}}\\right)^2 + \\frac{${b * b}}{${4 * a}}$.`, `El corrimiento no cambia la [[c2-gauss-integral|integral de Gauss]]: $\\sqrt{\\frac{\\pi}{${at}}}\\,e^{${b * b}/${String(4 * a).replace(".", "{,}")}}$.`] }
+      };
+      const C = CASES[v];
+      return {
+        prompt: `Calculá $\\displaystyle ${C.tex}$.`,
+        answer: C.ans,
+        solution: [...C.sol, `$\\approx ${nd(C.ans)}$.`],
+        // verificación: Simpson en cartesianas, con x = tan u para llevar la recta a un intervalo acotado
+        verify: { kind: "value", tol: 1e-6, fn: () => C.half ? half(C.g, 0, 600) : line(C.g, 600) }
+      };
+    }
+  };
+
+  const cards = {
+    "c2-impropias-dobles": {
+      title: "Integrales impropias dobles", aliases: ["integral impropia doble", "integrales impropias dobles", "criterio de las potencias"], concepts: ["c2-impropias-dobles"],
+      summary: "Si la región no es acotada o f no está acotada, se integra sobre regiones acotadas que crecen y se toma el límite. Con f ≥ 0 el resultado no depende de cómo crezcan. En ℝⁿ, 1/r^{2p} es integrable lejos si 2p > n y cerca del origen si 2p < n.",
+      def: [R`Una **integral impropia doble** es la de una función no acotada, o sobre una región no acotada. Se toma una sucesión de regiones acotadas $D_1 \subset D_2 \subset \cdots$ que llenan $D$ (y evitan los puntos donde $f$ explota) y se define $$\iint_D f\,dA = \lim_{k\to\infty}\iint_{D_k}f\,dA.$$`,
+        R`Si $f \ge 0$, el límite no depende de las regiones elegidas: se pueden usar discos, cuadrados o lo que convenga. Si $f$ cambia de signo, se pide que converja $\iint|f|\,dA$ (convergencia absoluta); si no, distintas sucesiones pueden dar distintos resultados.`,
+        R`**Criterio de las potencias.** En [[c2-jacobiano|polares]] $dA = r\,dr\,d\theta$, así que $\frac{1}{r^{2p}}$ lleva a $\int r^{1 - 2p}dr$: en el plano converge **lejos** si $p > 1$ y **cerca del origen** si $p < 1$. En el espacio, con $dV = r^2\sin\varphi\,dr\,d\theta\,d\varphi$, los umbrales pasan a $p > \frac32$ y $p < \frac32$.`],
+      idea: [R`Es lo mismo que la [[impropias|integral impropia]] de una variable, con una diferencia: el elemento de área $r\,dr$ "ayuda" cerca del origen y "perjudica" lejos. Por eso $\frac1r$ es integrable cerca del origen en el plano, aunque $\int_0\frac{dx}{x}$ diverge en la recta.`,
+        R`Para comparar, se acota el integrando por una potencia de $r$: si $0 \le f \le \frac{C}{r^{2p}}$ con $p$ del lado que converge, $\iint f$ converge.`],
+      demo: [R`**Paso 1 (anillos).** Sea $f = r^{-2p}$ en el anillo $a \le r \le b$. En polares, $\iint f\,dA = \int_0^{2\pi}\int_a^b r^{-2p}\,r\,dr\,d\theta = 2\pi\int_a^b r^{1 - 2p}dr$.`,
+        R`**Paso 2 (lejos).** Con $a = 1$ fijo y $b \to \infty$: si $1 - 2p \ne -1$, la primitiva es $\frac{r^{2 - 2p}}{2 - 2p}$, que tiene límite finito en el infinito solo si $2 - 2p < 0$, o sea $p > 1$. Si $p = 1$ la primitiva es $\ln r$ y diverge.`,
+        R`**Paso 3 (cerca del origen).** Con $b = 1$ y $a \to 0^+$: $\frac{a^{2 - 2p}}{2 - 2p}$ tiene límite finito solo si $2 - 2p > 0$, o sea $p < 1$.`,
+        R`**Paso 4 (independencia de las regiones, f ≥ 0).** Si $D_k$ y $D'_k$ son dos sucesiones que llenan $D$, cada $D_k$ acotada queda dentro de algún $D'_m$ (por compacidad), y como $f \ge 0$, $\iint_{D_k}f \le \iint_{D'_m}f \le \lim\iint_{D'}f$. Tomando límite, $\lim\iint_{D}f \le \lim\iint_{D'}f$, y por simetría valen lo mismo. $\blacksquare$`],
+      examples: [{ q: R`$\iint_{x^2 + y^2 \ge 4}\frac{dA}{(x^2 + y^2)^2}$.`, steps: [R`$2\pi\int_2^\infty r^{-3}dr = 2\pi\cdot\frac{1}{2\cdot4} = \frac\pi4$.`] }],
+      tips: [R`Antes de pasar a polares, fijate **dónde** está el problema (lejos, cerca de un punto, sobre una recta). Si es sobre una recta, como $\frac{1}{\sqrt{x}}$ en $x = 0$, conviene Fubini en cartesianas.`],
+      see: ["impropias", "c2-dobles", "c2-jacobiano", "c2-gauss-integral"]
+    },
+    "c2-gauss-integral": {
+      title: "La integral de Gauss", aliases: ["integral de Gauss", "integral gaussiana", "integral de Euler-Poisson"], concepts: ["c2-gauss-integral"],
+      summary: "∫ e^{−x²} dx = √π en toda la recta. Sale elevando al cuadrado y pasando a polares. De ahí: ∫ e^{−ax²} = √(π/a) y ∫ x² e^{−ax²} = √π/(2a^{3/2}).",
+      def: [R`$$\int_{-\infty}^{\infty}e^{-x^2}dx = \sqrt\pi.$$ Con un cambio de escala, $\int_{-\infty}^{\infty}e^{-ax^2}dx = \sqrt{\frac\pi a}$ para $a > 0$; completando cuadrados, $\int e^{-ax^2 + bx}dx = \sqrt{\frac\pi a}\,e^{b^2/(4a)}$; derivando respecto de $a$, $\int x^2e^{-ax^2}dx = \frac{\sqrt\pi}{2a^{3/2}}$.`],
+      idea: [R`$e^{-x^2}$ no tiene primitiva elemental, pero su integral en toda la recta sí se calcula, con un truco: pasar a dos dimensiones, donde la simetría de rotación la vuelve fácil.`,
+        R`Es la constante que normaliza la [[pe-normal|distribución normal]] ($\frac{1}{\sqrt{2\pi}}$) y aparece en física estadística (Maxwell-Boltzmann) y en mecánica cuántica.`],
+      demo: [R`**Paso 1 (al cuadrado).** Sea $I = \int_{-\infty}^{\infty}e^{-x^2}dx$, que converge porque $e^{-x^2} \le e^{-|x| + 1}$. Entonces $I^2 = \int e^{-x^2}dx\int e^{-y^2}dy = \iint_{\mathbb R^2}e^{-(x^2 + y^2)}dA$, por Fubini (el integrando es positivo, así que vale para la [[c2-impropias-dobles|integral impropia doble]]).`,
+        R`**Paso 2 (polares).** Como el integrando es positivo, podemos llenar el plano con discos de radio $R \to \infty$. En [[c2-jacobiano|polares]]: $\int_0^{2\pi}\int_0^R e^{-r^2}r\,dr\,d\theta = 2\pi\left[-\frac12e^{-r^2}\right]_0^R = \pi\left(1 - e^{-R^2}\right) \to \pi$.`,
+        R`**Paso 3.** $I^2 = \pi$ e $I > 0$, así que $I = \sqrt\pi$.`,
+        R`**Paso 4 (escala).** Con $u = \sqrt a\,x$, $du = \sqrt a\,dx$: $\int e^{-ax^2}dx = \frac{1}{\sqrt a}\int e^{-u^2}du = \sqrt{\frac\pi a}$.`,
+        R`**Paso 5 (momento segundo).** Derivamos $\int e^{-ax^2}dx = \sqrt\pi\,a^{-1/2}$ respecto de $a$, metiendo la derivada adentro (la convergencia es uniforme para $a$ lejos de 0): $\int(-x^2)e^{-ax^2}dx = -\frac{\sqrt\pi}{2}a^{-3/2}$. $\blacksquare$`],
+      examples: [{ q: R`$\int_{-\infty}^\infty e^{-4x^2}dx$.`, steps: [R`$\sqrt{\frac\pi4} = \frac{\sqrt\pi}{2} \approx 0{,}886$.`] }],
+      see: ["c2-impropias-dobles", "pe-normal", "c2-jacobiano"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-impropias-dobles": { name: "Integrales impropias dobles" }, "c2-gauss-integral": { name: "Integral de Gauss" } },
+    templates: T,
+    units: [{
+      id: "c2-impropias-u", order: 11, program: "Extra UBA", title: "Integrales impropias dobles", icon: "sigma",
+      diagnostic: ["c2-impconv-mc", "c2-impdoble-num", "c2-gauss-num"],
+      lessons: [
+        { id: "c2-impropias-dobles", title: "Convergencia e integrales impropias dobles", templates: ["c2-impconv-mc", "c2-impdoble-vf", "c2-impdoble-num"], theory: ["c2-impropias-dobles"],
+          intro: R`Lejos: $\frac{1}{r^{2p}}$ es integrable en el plano si $p > 1$. Cerca del origen, si $p < 1$.` },
+        { id: "c2-gauss-integral", title: "La integral de Gauss", templates: ["c2-gauss-num"], theory: ["c2-gauss-integral"],
+          intro: R`$\int_{-\infty}^\infty e^{-ax^2}dx = \sqrt{\pi/a}$, por el cuadrado en polares.` }
       ]
     }],
     cards

@@ -6,7 +6,7 @@
  *   III Sistemas de ecuaciones lineales · IV Espacios vectoriales
  *   V Transformaciones lineales · VI Autovalores y autovectores
  * Extra UBA (temas de Matemática 2 de Cs. Físicas, FCEN-UBA, que no están en el programa de M104):
- *   Producto interno y teorema espectral · Jordan, Cayley-Hamilton y exponencial
+ *   Producto interno y teorema espectral · Jordan, Cayley-Hamilton y exponencial · Espacios complejos
  *
  * Verificaciones (tests): los determinantes, rangos, sistemas, inversas y autovalores se recalculan
  * por eliminación de Gauss en tests/run-tests.mjs (kinds det, rank, solve, inv, eig, rouche, nullity).
@@ -1625,6 +1625,195 @@
           intro: R`Bloques de $\lambda$: $n - \operatorname{rg}(A - \lambda I)$. Diagonalizable si todos los bloques son de tamaño 1.` },
         { id: "al-cayley-exp", title: "Cayley-Hamilton y exponencial", templates: ["al-cayley-num", "al-recurrencia-num", "al-exp-num"], theory: ["al-cayley", "al-exponencial"],
           intro: R`$p_A(A) = 0$. $\vec x\,' = A\vec x \Rightarrow \vec x = e^{tA}\vec x_0 = Pe^{tD}P^{-1}\vec x_0$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · ESPACIOS COMPLEJOS, MATRICES UNITARIAS Y HERMÍTICAS
+ *  Temas de Matemática 2 de la Lic. en Cs. Físicas (FCEN, UBA) que no figuran en el programa de M104.
+ *  Solo se tomó la lista de temas; el texto y los ejercicios son originales.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => String(num(x, d)).replace(".", "{,}");
+  // complejos como [re, im]
+  const cmul = (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]], conj = a => [a[0], -a[1]], cadd = (a, b) => [a[0] + b[0], a[1] + b[1]];
+  const ip = (u, v) => u.reduce((s, x, i) => cadd(s, cmul(conj(x), v[i])), [0, 0]); // ⟨u, v⟩ = Σ conj(u_i) v_i
+  const cx = ([a, b]) => {
+    if (b === 0) return String(a);
+    const im = `${Math.abs(b) === 1 ? "" : Math.abs(b)}i`;
+    return a === 0 ? `${b < 0 ? "-" : ""}${im}` : `${a} ${b < 0 ? "-" : "+"} ${im}`;
+  };
+  const cvec = v => `(${v.map(cx).join(",\\ ")})`;
+  const rc = r => [r.int(-3, 3), r.int(-3, 3)];
+  // representación real: z ∈ ℂⁿ ↦ (Re z, Im z) ∈ ℝ²ⁿ
+  const real = v => v.map(z => z[0]).concat(v.map(z => z[1]));
+  const rdot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+  const CONV = R`con el producto interno $\langle u, v\rangle = \sum_k\overline{u_k}\,v_k$ (conjugado en el primer lugar)`;
+
+  T["al-pi-complejo-num"] = {
+    type: "numeric", concepts: ["al-pi-complejo"], difficulty: 2,
+    generate(r) {
+      const n = r.pick([2, 3]), u = Array.from({ length: n }, () => rc(r)), v = Array.from({ length: n }, () => rc(r)), ask = r.pick(["re", "im", "norma"]);
+      if (u.every(z => z[0] === 0 && z[1] === 0) || v.every(z => z[0] === 0 && z[1] === 0)) return null;
+      const p = ip(u, v), nn = ip(u, u)[0], ans = ask === "re" ? p[0] : ask === "im" ? p[1] : Math.sqrt(nn);
+      if (ask !== "norma" && ans === 0 && r.bool()) return null;
+      return {
+        prompt: `En $\\mathbb C^${n}$, ${CONV}, sean $u = ${cvec(u)}$ y $v = ${cvec(v)}$. ¿Cuánto vale ${ask === "re" ? "la parte real de $\\langle u, v\\rangle$" : ask === "im" ? "la parte imaginaria de $\\langle u, v\\rangle$" : "$\\|u\\|$"}?`,
+        answer: ans,
+        solution: [ask === "norma"
+          ? `$\\|u\\|^2 = \\langle u, u\\rangle = \\sum|u_k|^2 = ${u.map(z => z[0] * z[0] + z[1] * z[1]).join(" + ")} = ${nn}$ ([[al-pi-complejo|producto interno complejo]]): siempre es real y positivo.`
+          : `$\\langle u, v\\rangle = ${u.map((z, k) => `\\overline{(${cx(z)})}(${cx(v[k])})`).join(" + ")}$ ([[al-pi-complejo|producto interno complejo]]).`,
+          ask === "norma" ? `$\\|u\\| = \\sqrt{${nn}} \\approx ${nd(ans)}$.` : `Sumando: $\\langle u, v\\rangle = ${cx(p)}$, así que la parte ${ask === "re" ? "real" : "imaginaria"} es $${ans}$.`],
+        // verificación: en la representación real (Re, Im) ∈ ℝ²ⁿ, Re⟨u, v⟩ es el producto escalar común y Im⟨u, v⟩ es el producto con v girado (iv ↦ −Im, Re)
+        verify: { kind: "value", tol: 1e-12, fn: () => { const U = real(u), V = real(v), W = real(v.map(z => [z[1], -z[0]])); return ask === "re" ? rdot(U, V) : ask === "im" ? rdot(U, W) : Math.sqrt(rdot(U, U)); } }
+      };
+    }
+  };
+  T["al-proy-complejo-num"] = {
+    type: "numeric", concepts: ["al-pi-complejo"], difficulty: 3,
+    generate(r) {
+      const u = [rc(r), rc(r)], v = [rc(r), rc(r)], ask = r.pick(["dist", "re", "im"]);
+      const uu = ip(u, u)[0];
+      if (uu === 0) return null;
+      const p = ip(u, v), z = [p[0] / uu, p[1] / uu], w = v.map((x, k) => cadd(x, cmul([-z[0], -z[1]], u[k]))), dist = Math.sqrt(ip(w, w)[0]);
+      if (ask === "dist" && dist < 1e-9) return null;
+      const ans = ask === "dist" ? dist : ask === "re" ? z[0] : z[1];
+      return {
+        prompt: `En $\\mathbb C^2$, ${CONV}, sean $u = ${cvec(u)}$ y $v = ${cvec(v)}$. Si $\\alpha u$ es la proyección ortogonal de $v$ sobre la recta compleja generada por $u$, ¿cuánto vale ${ask === "dist" ? "la distancia de $v$ a esa recta" : ask === "re" ? "la parte real de $\\alpha$" : "la parte imaginaria de $\\alpha$"}?`,
+        answer: ans,
+        solution: [`La [[al-proyeccion|proyección]] pide $\\langle u, v - \\alpha u\\rangle = 0$; con el conjugado en el primer lugar, $\\langle u, \\alpha u\\rangle = \\alpha\\langle u, u\\rangle$, así que $\\alpha = \\frac{\\langle u, v\\rangle}{\\langle u, u\\rangle}$ ([[al-pi-complejo|producto interno complejo]]).`,
+          `$\\langle u, v\\rangle = ${cx(p)}$ y $\\langle u, u\\rangle = ${uu}$: $\\alpha = \\frac{${cx(p)}}{${uu}} \\approx ${nd(z[0])} ${z[1] < 0 ? "-" : "+"} ${nd(Math.abs(z[1]))}i$.`,
+          ...(ask === "dist" ? [`Distancia: $\\|v - \\alpha u\\| \\approx ${nd(dist)}$ (por Pitágoras, $\\sqrt{\\|v\\|^2 - |\\alpha|^2\\|u\\|^2}$).`] : [])],
+        // verificación: se minimiza ‖v − (s + it)u‖² sobre los reales s, t con las ecuaciones normales de un problema de cuadrados mínimos real 4×2
+        verify: { kind: "value", tol: 1e-9, fn: () => {
+          const a1 = real(u), a2 = real(u.map(x => cmul([0, 1], x))), b = real(v);
+          const m11 = rdot(a1, a1), m12 = rdot(a1, a2), m22 = rdot(a2, a2), c1 = rdot(a1, b), c2 = rdot(a2, b), D = m11 * m22 - m12 * m12;
+          const s = (c1 * m22 - c2 * m12) / D, t = (m11 * c2 - m12 * c1) / D, res = b.map((x, k) => x - s * a1[k] - t * a2[k]);
+          return ask === "dist" ? Math.sqrt(rdot(res, res)) : ask === "re" ? s : t;
+        } }
+      };
+    }
+  };
+  T["al-pi-complejo-vf"] = {
+    type: "tf", concepts: ["al-pi-complejo"], difficulty: 2,
+    generate(r) {
+      const u = [rc(r), rc(r)], v = [rc(r), rc(r)], l = [r.int(-3, 3), r.nz(-3, 3)];
+      const S = [
+        { s: R`$\langle u, \lambda v\rangle = \lambda\langle u, v\rangle$`, fn: () => { const a = ip(u, v.map(x => cmul(l, x))), b = cmul(l, ip(u, v)); return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 1e-9; },
+          why: R`Es lineal en el segundo lugar: $\sum\overline{u_k}\,\lambda v_k = \lambda\sum\overline{u_k}v_k$.` },
+        { s: R`$\langle\lambda u, v\rangle = \lambda\langle u, v\rangle$`, fn: () => { const a = ip(u.map(x => cmul(l, x)), v), b = cmul(l, ip(u, v)); return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 1e-9; },
+          why: R`En el primer lugar sale **conjugado**: $\langle\lambda u, v\rangle = \overline\lambda\langle u, v\rangle$, que es distinto de $\lambda\langle u, v\rangle$ si $\lambda$ no es real y $\langle u, v\rangle \ne 0$.` },
+        { s: R`$\langle v, u\rangle = \langle u, v\rangle$`, fn: () => { const a = ip(v, u), b = ip(u, v); return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 1e-9; },
+          why: R`Lo que vale es la **simetría hermítica**: $\langle v, u\rangle = \overline{\langle u, v\rangle}$. Coinciden solo si $\langle u, v\rangle$ es real.` },
+        { s: R`$\|\lambda u\| = |\lambda|\,\|u\|$`, fn: () => Math.abs(Math.sqrt(ip(u.map(x => cmul(l, x)), u.map(x => cmul(l, x)))[0]) - Math.hypot(...l) * Math.sqrt(ip(u, u)[0])) < 1e-9,
+          why: R`$\langle\lambda u, \lambda u\rangle = \overline\lambda\lambda\langle u, u\rangle = |\lambda|^2\|u\|^2$.` }
+      ];
+      const k = r.pick(S), truth = k.fn();
+      return {
+        prompt: `En $\\mathbb C^2$, ${CONV}, sean $u = ${cvec(u)}$, $v = ${cvec(v)}$ y $\\lambda = ${cx(l)}$. <b>Verdadero o falso:</b> ${k.s}.`,
+        answer: truth,
+        explanation: `${k.why} ([[al-pi-complejo]])`,
+        solution: [`Hacé la cuenta con estos números: los dos lados ${truth ? "coinciden" : "no coinciden"}.`],
+        // verificación: los dos lados se calculan con la aritmética compleja
+        verify: { kind: "truth", fn: k.fn }
+      };
+    }
+  };
+  T["al-unitaria-vf"] = {
+    type: "tf", concepts: ["al-unitarias"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["rot", "hadamard", "fase", "mal-fase", "mal-norma", "mal-col"]);
+      let M, tex;
+      const s2 = R`\frac{1}{\sqrt2}`;
+      if (v === "rot") { M = [[[0.6, 0], [0, -0.8]], [[0, -0.8], [0.6, 0]]]; tex = R`\begin{pmatrix} 0{,}6 & -0{,}8i \\ -0{,}8i & 0{,}6 \end{pmatrix}`; }
+      else if (v === "hadamard") { const g = 1 / Math.SQRT2; M = [[[g, 0], [0, g]], [[0, g], [g, 0]]]; tex = R`${s2}\begin{pmatrix} 1 & i \\ i & 1 \end{pmatrix}`; }
+      else if (v === "fase") { const g = 1 / Math.SQRT2; M = [[[g, 0], [g, 0]], [[0, g], [0, -g]]]; tex = R`${s2}\begin{pmatrix} 1 & 1 \\ i & -i \end{pmatrix}`; }
+      else if (v === "mal-fase") { const g = 1 / Math.SQRT2; M = [[[g, 0], [g, 0]], [[0, g], [0, g]]]; tex = R`${s2}\begin{pmatrix} 1 & 1 \\ i & i \end{pmatrix}`; }
+      else if (v === "mal-norma") { M = [[[1, 0], [0, 1]], [[0, 1], [1, 0]]]; tex = R`\begin{pmatrix} 1 & i \\ i & 1 \end{pmatrix}`; }
+      else { const g = 1 / Math.SQRT2; M = [[[g, 0], [0, g]], [[0, g], [-g, 0]]]; tex = R`${s2}\begin{pmatrix} 1 & i \\ i & -1 \end{pmatrix}`; }
+      const k = r.pick([1, 2, 3]), Mk = M.map(row => row.map(z => [z[0] * (k === 3 ? 0.6 : 1) - z[1] * (k === 3 ? 0.8 : 0), z[1] * (k === 3 ? 0.6 : 1) + z[0] * (k === 3 ? 0.8 : 0)]));
+      const texK = k === 3 ? R`(0{,}6 + 0{,}8i)\,${tex}` : tex;
+      const U = k === 3 ? Mk : M;
+      // U*U = I ⟺ las columnas son ortonormales con el producto complejo
+      const cols = [0, 1].map(j => [U[0][j], U[1][j]]), unit = Math.abs(ip(cols[0], cols[0])[0] - 1) < 1e-9 && Math.abs(ip(cols[1], cols[1])[0] - 1) < 1e-9, orth = Math.hypot(...ip(cols[0], cols[1])) < 1e-9;
+      const truth = unit && orth;
+      return {
+        prompt: `<b>Verdadero o falso:</b> la matriz $U = ${texK}$ es unitaria.`,
+        answer: truth,
+        explanation: `$U$ es [[al-unitarias|unitaria]] si $U^*U = I$, o sea si sus columnas son ortonormales con el producto interno complejo (con conjugado). ${truth ? "Acá cada columna tiene norma 1 y son ortogonales." : !unit ? "Acá alguna columna no tiene norma 1." : "Acá las columnas no son ortogonales: hay que conjugar al hacer el producto."}${k === 3 ? " Multiplicar por $0{,}6 + 0{,}8i$, de módulo 1, no cambia nada." : ""}`,
+        solution: [`Una matriz unitaria conserva el producto interno complejo: $\\langle Uu, Uv\\rangle = \\langle u, v\\rangle$.`],
+        // verificación: se calcula U*U con la aritmética compleja, entrada por entrada, y se compara con la identidad
+        verify: { kind: "truth", fn: () => { const P = [0, 1].map(i => [0, 1].map(j => [0, 1].reduce((s, m) => cadd(s, cmul(conj(U[m][i]), U[m][j])), [0, 0]))); return P.every((row, i) => row.every((z, j) => Math.abs(z[0] - (i === j ? 1 : 0)) < 1e-9 && Math.abs(z[1]) < 1e-9)); } }
+      };
+    }
+  };
+  T["al-hermitica-num"] = {
+    type: "numeric", concepts: ["al-unitarias"], difficulty: 2,
+    generate(r) {
+      const a = r.int(-4, 4), d = r.int(-4, 4), b = r.int(-3, 3), c = r.nz(-3, 3), ask = r.pick(["max", "min"]);
+      const m = (a + d) / 2, rad = Math.sqrt(((a - d) / 2) ** 2 + b * b + c * c), ans = ask === "max" ? m + rad : m - rad;
+      return {
+        prompt: `¿Cuál es el autovalor ${ask === "max" ? "más grande" : "más chico"} de la matriz hermítica $\\begin{pmatrix} ${a} & ${cx([b, c])} \\\\ ${cx([b, -c])} & ${d} \\end{pmatrix}$?`,
+        answer: ans,
+        solution: [`Es [[al-unitarias|hermítica]] ($H^* = H$): sus autovalores son reales.`,
+          `$\\det(H - \\lambda I) = (${a} - \\lambda)(${d} - \\lambda) - |${cx([b, c])}|^2 = \\lambda^2 ${a + d === 0 ? "" : `${a + d > 0 ? "-" : "+"} ${Math.abs(a + d)}\\lambda`} ${a * d - b * b - c * c < 0 ? "-" : "+"} ${Math.abs(a * d - b * b - c * c)}$.`,
+          `$\\lambda = ${nd(m)} \\pm \\sqrt{${nd(((a - d) / 2) ** 2)} + ${b * b + c * c}}$: el ${ask === "max" ? "mayor" : "menor"} es $\\approx ${nd(ans)}$.`],
+        // verificación: la matriz real 4×4 [[A, −B], [B, A]] (con H = A + iB) tiene los mismos autovalores; det(M − λI) por Gauss
+        verify: { kind: "eig", lambda: ans, A: [[a, b, 0, -c], [b, d, c, 0], [0, c, a, b], [-c, 0, b, d]] }
+      };
+    }
+  };
+
+  const cards = {
+    "al-pi-complejo": {
+      title: "Producto interno en espacios complejos", aliases: ["producto interno complejo", "producto hermítico", "espacio con producto interno complejo", "simetría hermítica"], concepts: ["al-pi-complejo"],
+      summary: "En ℂⁿ, ⟨u, v⟩ = Σ conj(u_k) v_k. Es lineal en un lugar y conjugado-lineal en el otro, y ⟨v, u⟩ = conj⟨u, v⟩. Así ⟨u, u⟩ = Σ|u_k|² es real y positivo.",
+      def: [R`En un espacio vectorial **complejo**, un producto interno cumple: (1) linealidad en el segundo lugar, $\langle u, \alpha v + w\rangle = \alpha\langle u, v\rangle + \langle u, w\rangle$; (2) **simetría hermítica**, $\langle v, u\rangle = \overline{\langle u, v\rangle}$; (3) $\langle u, u\rangle > 0$ si $u \ne 0$.`,
+        R`De (1) y (2): en el primer lugar los escalares salen **conjugados**, $\langle\alpha u, v\rangle = \overline\alpha\langle u, v\rangle$. El producto canónico de $\mathbb C^n$ es $\langle u, v\rangle = \sum_k\overline{u_k}v_k$.`,
+        R`Ojo con la convención: en física se suele conjugar el primer lugar (como acá); muchos libros de matemática conjugan el segundo. Las propiedades son las mismas, cambiando de lugar el conjugado.`],
+      idea: [R`¿Por qué conjugar? Con [[numeros-complejos|números complejos]] y sin conjugado, $(1, i)\cdot(1, i) = 1 + i^2 = 0$: un vector no nulo tendría "longitud" cero. Con el conjugado, $\langle u, u\rangle = \sum|u_k|^2$, la suma de los módulos al cuadrado, que es lo que queremos como norma.`,
+        R`Todo lo de [[al-producto-interno|producto interno]] real sigue valiendo (Cauchy-Schwarz, Pitágoras, [[al-gram-schmidt|Gram-Schmidt]], [[al-proyeccion|proyecciones]]), con cuidado de en qué lugar va cada escalar. Es el lenguaje de la mecánica cuántica.`],
+      demo: [R`**Paso 1 (es positivo).** $\langle u, u\rangle = \sum\overline{u_k}u_k = \sum|u_k|^2$, una suma de números reales no negativos, que es cero solo si todas las coordenadas son cero.`,
+        R`**Paso 2 (simetría hermítica).** $\langle v, u\rangle = \sum\overline{v_k}u_k = \sum\overline{\overline{u_k}v_k} = \overline{\sum\overline{u_k}v_k} = \overline{\langle u, v\rangle}$, porque el conjugado de un producto y de una suma es el producto y la suma de los conjugados.`,
+        R`**Paso 3 (escalar en el primer lugar).** $\langle\alpha u, v\rangle = \overline{\langle v, \alpha u\rangle} = \overline{\alpha\langle v, u\rangle} = \overline\alpha\,\overline{\langle v, u\rangle} = \overline\alpha\langle u, v\rangle$, usando el paso 2 dos veces y la linealidad en el segundo lugar.`,
+        R`**Paso 4 (proyección).** Para proyectar $v$ sobre $u$ buscamos $\alpha$ con $\langle u, v - \alpha u\rangle = 0$. Por linealidad en el segundo lugar, $\langle u, v\rangle - \alpha\langle u, u\rangle = 0$, así que $\alpha = \frac{\langle u, v\rangle}{\langle u, u\rangle}$ (con $u$ en el lugar conjugado). $\blacksquare$`],
+      examples: [{ q: R`$u = (1, i)$, $v = (i, 2)$. ¿$\langle u, v\rangle$?`, steps: [R`$\overline{1}\cdot i + \overline{i}\cdot2 = i - 2i = -i$.`, R`Y $\langle v, u\rangle = \overline{-i} = i$.`] }],
+      see: ["al-producto-interno", "al-unitarias"]
+    },
+    "al-unitarias": {
+      title: "Matrices unitarias y hermíticas", aliases: ["matriz unitaria", "matrices unitarias", "matriz hermítica", "matrices hermíticas", "transpuesta conjugada", "teorema espectral complejo"], concepts: ["al-unitarias"],
+      summary: "U* = conj(U)ᵀ. Unitaria: U*U = I (columnas ortonormales, conserva ⟨·,·⟩, autovalores de módulo 1). Hermítica: H* = H (autovalores reales, autovectores ortogonales, H = UDU*).",
+      def: [R`La **transpuesta conjugada** de $A$ es $A^* = \overline{A}^T$. Cumple $\langle Au, v\rangle = \langle u, A^*v\rangle$.`,
+        R`$U$ es **unitaria** si $U^*U = I$: sus columnas son una base ortonormal de $\mathbb C^n$, conserva el [[al-pi-complejo|producto interno complejo]] y sus autovalores tienen módulo 1. Es el análogo complejo de las matrices ortogonales; $|\det U| = 1$.`,
+        R`$H$ es **hermítica** si $H^* = H$ (en la diagonal, números reales; fuera, $h_{jk} = \overline{h_{kj}}$). **Teorema espectral complejo:** sus autovalores son reales y $H = UDU^*$ con $U$ unitaria y $D$ real diagonal.`],
+      idea: [R`Las hermíticas son las "simétricas" de $\mathbb C^n$: en mecánica cuántica, las magnitudes que se miden (energía, espín) son operadores hermíticos, y por eso sus valores posibles (los autovalores) son reales. Las unitarias son las evoluciones en el tiempo: conservan la probabilidad total, que es la norma.`,
+        R`El caso real es el [[al-espectral|teorema espectral]] para simétricas, que sale de este cuando todas las entradas son reales.`],
+      demo: [R`**Paso 1 (autovalores reales).** Si $Hv = \lambda v$ con $v \ne 0$: $\lambda\langle v, v\rangle = \langle v, Hv\rangle = \langle Hv, v\rangle = \overline\lambda\langle v, v\rangle$. La segunda igualdad es $H^* = H$; la tercera, que el escalar sale conjugado en el primer lugar. Como $\langle v, v\rangle > 0$, $\lambda = \overline\lambda$: es real.`,
+        R`**Paso 2 (autovectores ortogonales).** Si $Hv = \lambda v$ y $Hw = \mu w$ con $\lambda \ne \mu$ (reales): $\mu\langle v, w\rangle = \langle v, Hw\rangle = \langle Hv, w\rangle = \lambda\langle v, w\rangle$, así que $(\mu - \lambda)\langle v, w\rangle = 0$ y $\langle v, w\rangle = 0$.`,
+        R`**Paso 3 (unitarias conservan el producto).** $\langle Uu, Uv\rangle = \langle u, U^*Uv\rangle = \langle u, v\rangle$.`,
+        R`**Paso 4 (autovalores de módulo 1).** Si $Uv = \lambda v$: $\langle v, v\rangle = \langle Uv, Uv\rangle = \overline\lambda\lambda\langle v, v\rangle = |\lambda|^2\langle v, v\rangle$, así que $|\lambda| = 1$. $\blacksquare$`],
+      examples: [{ q: R`Autovalores de $\begin{pmatrix} 1 & i \\ -i & 1\end{pmatrix}$.`, steps: [R`$(1 - \lambda)^2 - |i|^2 = 0$: $\lambda = 1 \pm 1$, o sea $0$ y $2$. Reales, como debe ser.`] }],
+      see: ["al-espectral", "al-pi-complejo", "al-matrices-especiales"]
+    }
+  };
+
+  E.extendCourse("m104", {
+    concepts: { "al-pi-complejo": { name: "Producto interno complejo" }, "al-unitarias": { name: "Unitarias y hermíticas" } },
+    templates: T,
+    units: [{
+      id: "al-complejo-u", order: 9, program: "Extra UBA", title: "Espacios complejos, unitarias y hermíticas", icon: "atom",
+      diagnostic: ["al-pi-complejo-num", "al-unitaria-vf", "al-hermitica-num"],
+      lessons: [
+        { id: "al-pi-complejo", title: "Producto interno complejo", templates: ["al-pi-complejo-num", "al-pi-complejo-vf", "al-proy-complejo-num"], theory: ["al-pi-complejo"],
+          intro: R`$\langle u, v\rangle = \sum\overline{u_k}v_k$: $\langle v, u\rangle = \overline{\langle u, v\rangle}$ y $\|u\|^2 = \sum|u_k|^2$.` },
+        { id: "al-unitarias", title: "Unitarias y hermíticas", templates: ["al-unitaria-vf", "al-hermitica-num"], theory: ["al-unitarias"],
+          intro: R`Unitaria: $U^*U = I$. Hermítica: $H^* = H$, con autovalores reales y $H = UDU^*$.` }
       ]
     }],
     cards

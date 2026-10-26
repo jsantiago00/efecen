@@ -7,7 +7,7 @@
  *   5 Mecánica de fluidos · 6 Cinemática rotacional · 7 Dinámica rotacional
  *   8 Equilibrio de cuerpos rígidos · 9 Gravitación · 10 Movimiento periódico
  * Extra UBA (temas de Física 1 de Cs. Físicas, FCEN-UBA, que no están en el programa de F101):
- *   Sistemas no inerciales · Estabilidad y potencial efectivo · Relatividad especial
+ *   Sistemas no inerciales · Estabilidad y potencial efectivo · Relatividad especial · Masa variable
  *
  * Convención: g = 9,8 m/s² (se aclara en cada enunciado). Respuestas numéricas con ±1 %.
  * Verificaciones (tests): las de dinámica simulan las ecuaciones de movimiento con RK4
@@ -2593,6 +2593,199 @@
           intro: R`$t' = \gamma(t - Vx/c^2)$: la simultaneidad es relativa. Velocidades: $u = \frac{u' + V}{1 + u'V/c^2}$.` },
         { id: "f1-dinamica-rel", title: "Energía relativista", templates: ["f1-erel-num"], theory: ["f1-dinamica-rel"],
           intro: R`$E = \gamma mc^2$, $p = \gamma mv$, $K = (\gamma - 1)mc^2$, $E^2 = (pc)^2 + (mc^2)^2$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · SISTEMAS DE MASA VARIABLE (COHETE, CINTA Y CADENA)
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {}, g = 9.8;
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  // cohete con RK4 propio (para los V/F): estado [v, m]; devuelve la velocidad al agotar el combustible
+  const burn = (m0, mf, u, mu, gg) => {
+    const tb = (m0 - mf) / mu, n = 4000, h = tb / n, f = y => [u * mu / y[1] - gg, -mu];
+    let y = [0, m0];
+    for (let i = 0; i < n; i++) {
+      const k1 = f(y), k2 = f(y.map((v, j) => v + k1[j] * h / 2)), k3 = f(y.map((v, j) => v + k2[j] * h / 2)), k4 = f(y.map((v, j) => v + k3[j] * h));
+      y = y.map((v, j) => v + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]));
+    }
+    return y[0];
+  };
+
+  T["f1-cohete-num"] = {
+    type: "numeric", concepts: ["f1-cohete"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["dv", "comb", "u"]), mf = r.int(2, 30) * 100, frac = r.pick([0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9]);
+      const m0 = Math.round(mf / (1 - frac) / 100) * 100, u = r.int(15, 45) * 100, dv = u * Math.log(m0 / mf);
+      if (v === "dv") return {
+        prompt: `Un cohete en el espacio, lejos de todo, parte del reposo con una masa total de $${m0}$ kg, de la que $${m0 - mf}$ kg son combustible. Los gases salen a $${u}$ m/s respecto del cohete. ¿Qué velocidad (m/s) tiene cuando se termina el combustible?`,
+        answer: dv,
+        solution: [`Sin fuerzas externas vale la [[f1-cohete|ecuación del cohete]]: $\\Delta v = u\\ln\\frac{m_0}{m_f}$, que no depende de cuán rápido se queme el combustible.`,
+          `$m_f = ${m0} - ${m0 - mf} = ${mf}$ kg, así que $\\Delta v = ${u}\\ln\\frac{${m0}}{${mf}} \\approx ${dn(dv, 1)}$ m/s.`],
+        // verificación: se integra m dv/dt = u·μ con un caudal arbitrario hasta quemar todo
+        verify: { kind: "ode", f: (_, y) => [u * 3 / y[1], -3], y0: [0, m0], t1: (m0 - mf) / 3, dt: (m0 - mf) / 3 / 4000, out: (_, y) => y[0], tol: 1e-5 }
+      };
+      const target = Math.round(dv / 10) * 10, burned = m0 * (1 - Math.exp(-target / u));
+      if (v === "comb") return {
+        prompt: `Una sonda de $${m0}$ kg en total (con el combustible incluido) quiere cambiar su velocidad en $${target}$ m/s en el espacio. Sus gases salen a $${u}$ m/s respecto de la sonda. ¿Cuántos kg de combustible tiene que quemar?`,
+        answer: burned,
+        solution: [`De $\\Delta v = u\\ln\\frac{m_0}{m_f}$ ([[f1-cohete|ecuación del cohete]]): $m_f = m_0e^{-\\Delta v/u} = ${m0}\\,e^{-${target}/${u}} \\approx ${dn(m0 - burned, 1)}$ kg.`,
+          `Combustible: $m_0 - m_f \\approx ${dn(burned, 1)}$ kg.`],
+        // verificación: se quema combustible a caudal fijo hasta que la velocidad llega al Δv pedido
+        verify: { kind: "ode", f: (_, y) => [u * 2 / y[1], -2], y0: [0, m0], t1: 0, until: (_, y) => y[0] >= target, g: (_, y) => y[0] - target, dt: m0 / 2 / 40000, tmax: m0, out: (_, y) => m0 - y[1], tol: 1e-4 }
+      };
+      return {
+        prompt: `En una prueba en el espacio, un cohete de $${m0}$ kg quema $${m0 - mf}$ kg de combustible y su velocidad aumenta $${dn(dv, 1)}$ m/s. ¿A qué velocidad (m/s) salen los gases respecto del cohete?`,
+        answer: u,
+        solution: [`De la [[f1-cohete|ecuación del cohete]]: $u = \\frac{\\Delta v}{\\ln(m_0/m_f)} = \\frac{${dn(dv, 1)}}{\\ln(${m0}/${mf})} \\approx ${u}$ m/s.`],
+        // verificación: se prueba esa velocidad de escape en la ecuación de movimiento y se compara el Δv
+        verify: { kind: "zero", fn: a => { const t1 = (m0 - mf) / 5, n = 4000, h = t1 / n; let vv = 0, m = m0; for (let i = 0; i < n; i++) { const mm = m - 5 * h / 2; vv += h / 6 * (a * 5 / m + 4 * a * 5 / mm + a * 5 / (m - 5 * h)); m -= 5 * h; } return (vv - dv) / dv; }, tol: 1e-3 }
+      };
+    }
+  };
+  T["f1-cohete-grav-num"] = {
+    type: "numeric", concepts: ["f1-cohete"], difficulty: 3,
+    generate(r) {
+      const m0 = r.int(4, 30) * 100, frac = r.pick([0.5, 0.6, 0.7, 0.8]), u = r.int(18, 35) * 100, tb = r.int(4, 16) * 5, ask = r.pick(["v", "h", "a"]);
+      const mfuel = frac * m0, mf = m0 - mfuel, mu = mfuel / tb;
+      if (u * mu < 1.3 * m0 * g) return null;
+      const vb = u * Math.log(m0 / mf) - g * tb, hb = u * (tb - mf / mu * Math.log(m0 / mf)) - g * tb * tb / 2, a0 = u * mu / m0 - g;
+      const ans = ask === "v" ? vb : ask === "h" ? hb : a0;
+      return {
+        prompt: `Un cohete de $${m0}$ kg despega verticalmente desde el reposo. Lleva $${dn(mfuel, 0)}$ kg de combustible, que quema a ritmo constante en $${tb}$ s, y los gases salen a $${u}$ m/s respecto del cohete. Despreciando el aire, ${ask === "v" ? "¿qué velocidad (m/s) tiene al apagarse los motores?" : ask === "h" ? "¿a qué altura (m) está al apagarse los motores?" : "¿qué aceleración (m/s²) tiene al despegar?"} ($g = 9{,}8$ m/s²)`,
+        answer: ans,
+        solution: [`Caudal: $\\mu = \\frac{${dn(mfuel, 0)}}{${tb}} = ${dn(mu, 2)}$ kg/s. Empuje: $u\\mu = ${dn(u * mu, 0)}$ N ([[f1-cohete|ecuación del cohete]] con gravedad): $m\\frac{dv}{dt} = u\\mu - mg$.`,
+          ask === "a" ? `Al despegar $m = ${m0}$ kg: $a_0 = \\frac{u\\mu}{m_0} - g = ${dn(u * mu / m0, 3)} - 9{,}8 \\approx ${dn(a0, 3)}$ m/s².`
+            : `Integrando con $m(t) = m_0 - \\mu t$: $v(t) = u\\ln\\frac{m_0}{m_0 - \\mu t} - gt$. Al apagar ($m_f = ${dn(mf, 0)}$ kg): $v = ${u}\\ln\\frac{${m0}}{${dn(mf, 0)}} - 9{,}8\\cdot${tb} \\approx ${dn(vb, 1)}$ m/s.`,
+          ...(ask === "h" ? [`Integrando otra vez: $h = u\\left[t_b - \\frac{m_f}{\\mu}\\ln\\frac{m_0}{m_f}\\right] - \\frac12gt_b^2 \\approx ${dn(hb, 0)}$ m.`] : [])],
+        // verificación: se integra (h, v, m) con RK4; la aceleración inicial sale de un paso muy corto
+        verify: ask === "a"
+          ? { kind: "ode", f: (_, y) => [y[1], u * mu / y[2] - g, -mu], y0: [0, 0, m0], t1: 1e-3, dt: 1e-5, out: (t, y) => y[1] / t, tol: 1e-3 }
+          : { kind: "ode", f: (_, y) => [y[1], u * mu / y[2] - g, -mu], y0: [0, 0, m0], t1: tb, dt: tb / 4000, out: (_, y) => ask === "v" ? y[1] : y[0], tol: 1e-5 }
+      };
+    }
+  };
+  T["f1-cohete-vf"] = {
+    type: "tf", concepts: ["f1-cohete"], difficulty: 2,
+    generate(r) {
+      const m0 = r.int(5, 20) * 100, mf = m0 * r.pick([0.2, 0.25, 0.3, 0.4]), u = r.int(20, 40) * 100;
+      const S = [
+        { s: "en el espacio libre, la velocidad final del cohete no depende de lo rápido que se queme el combustible", why: R`$\Delta v = u\ln\frac{m_0}{m_f}$ solo depende de las masas inicial y final y de $u$.`,
+          fn: () => Math.abs(burn(m0, mf, u, (m0 - mf) / 10, 0) - burn(m0, mf, u, (m0 - mf) / 100, 0)) < 1e-6 * u },
+        { s: "despegando desde la Tierra, quemar el mismo combustible más rápido deja al cohete con más velocidad al apagar los motores", why: R`Con gravedad, $v_f = u\ln\frac{m_0}{m_f} - gt_b$: cuanto más corto el encendido, menos velocidad se pierde contra la gravedad (siempre que el empuje supere al peso).`,
+          fn: () => burn(m0, mf, u, (m0 - mf) / 20, g) > burn(m0, mf, u, (m0 - mf) / 60, g) },
+        { s: "si se duplica la masa de combustible (con la misma estructura), la velocidad final en el espacio se duplica", why: R`$\Delta v$ crece con el **logaritmo** de $m_0/m_f$: duplicar el combustible da bastante menos que el doble.`,
+          fn: () => Math.abs(burn(mf + 2 * (m0 - mf), mf, u, 5, 0) / burn(m0, mf, u, 5, 0) - 2) < 1e-6 },
+        { s: "si los gases salen al doble de velocidad, la velocidad final en el espacio se duplica", why: R`$\Delta v = u\ln\frac{m_0}{m_f}$ es proporcional a $u$.`,
+          fn: () => Math.abs(burn(m0, mf, 2 * u, 5, 0) / burn(m0, mf, u, 5, 0) - 2) < 1e-6 },
+        { s: "con empuje constante en el espacio, la aceleración del cohete se mantiene constante", why: R`$a = \frac{u\mu}{m}$: el empuje es constante pero la masa baja, así que la aceleración **crece**.`,
+          fn: () => { const mu = (m0 - mf) / 50, a1 = burn(m0, m0 - mu * 0.01, u, mu, 0) / 0.01, a2 = (burn(m0, mf, u, mu, 0) - burn(m0, mf + mu * 0.01, u, mu, 0)) / 0.01; return Math.abs(a2 / a1 - 1) < 1e-3; } }
+      ];
+      const k = r.pick(S), truth = k.fn();
+      return {
+        prompt: `Un cohete de $${m0}$ kg, con $${dn(m0 - mf, 0)}$ kg de combustible, expulsa los gases a $${u}$ m/s respecto de sí mismo. <b>Verdadero o falso:</b> ${k.s}.`,
+        answer: truth,
+        explanation: `${k.why} ([[f1-cohete]])`,
+        solution: [`Todo sale de $m\\frac{dv}{dt} = u\\mu + F_{ext}$, con $\\mu = -\\frac{dm}{dt}$.`],
+        // verificación: cada afirmación se chequea integrando la ecuación del cohete con RK4
+        verify: { kind: "truth", fn: k.fn }
+      };
+    }
+  };
+  T["f1-cinta-num"] = {
+    type: "numeric", concepts: ["f1-masa-variable"], difficulty: 2,
+    generate(r) {
+      const lam = r.int(2, 40) / 2, v = r.int(5, 40) / 10, ask = r.pick(["F", "P", "Q"]);
+      const ans = ask === "F" ? lam * v : ask === "P" ? lam * v * v : lam * v * v / 2;
+      return {
+        prompt: `Sobre una cinta transportadora horizontal que avanza a $${dn(v, 1)}$ m/s cae arena verticalmente, a razón de $${dn(lam, 1)}$ kg/s. ${ask === "F" ? "¿Qué fuerza horizontal (N) hay que hacer sobre la cinta para que mantenga su velocidad?" : ask === "P" ? "¿Qué potencia (W) tiene que entregar el motor?" : "¿Cuánta energía por segundo (W) se disipa en el roce entre la arena y la cinta?"}`,
+        answer: ans,
+        solution: [`La arena llega sin velocidad horizontal y termina a $v$: por segundo hay que darle una [[f1-momento|cantidad de movimiento]] $\\lambda v$. Fuerza: $F = \\lambda v = ${dn(lam * v, 3)}$ N ([[f1-masa-variable|sistema de masa variable]]).`,
+          ...(ask === "F" ? [] : [`Potencia del motor: $P = Fv = \\lambda v^2 = ${dn(lam * v * v, 3)}$ W.`]),
+          ...(ask === "Q" ? [`La energía cinética de la arena crece $\\frac12\\lambda v^2$ por segundo: solo la mitad. La otra mitad, $\\frac12\\lambda v^2 = ${dn(ans, 3)}$ W, se disipa en el roce mientras la arena patina.`] : [])],
+        // verificación: se simula un granito que patina sobre la cinta con roce μ = 0,4 hasta alcanzarla;
+        // impulso, trabajo de la cinta y calor por kilo, multiplicados por el caudal
+        verify: { kind: "value", fn: () => {
+          const a = 0.4 * g, dt = 1e-5; let vp = 0, J = 0, W = 0;
+          while (vp < v) { const h = Math.min(dt, (v - vp) / a); J += a * h; W += a * v * h; vp += a * h; }
+          return lam * (ask === "F" ? J : ask === "P" ? W : W - vp * vp / 2);
+        }, tol: 1e-6 }
+      };
+    }
+  };
+  T["f1-cadena-num"] = {
+    type: "numeric", concepts: ["f1-masa-variable"], difficulty: 3,
+    generate(r) {
+      const L = r.int(4, 30) / 10, lam = r.int(2, 30) / 10, x = Math.round(L * r.pick([0.2, 0.3, 0.4, 0.5, 0.6, 0.75]) * 100) / 100, ask = r.pick(["N", "fac"]);
+      const N = 3 * lam * g * x;
+      return {
+        prompt: `Una cadena flexible de $${dn(L, 1)}$ m y $${dn(lam, 1)}$ kg/m cuelga vertical con su extremo inferior tocando una balanza, y se la suelta. ${ask === "N" ? `¿Qué fuerza (N) marca la balanza cuando ya cayeron $${dn(x, 2)}$ m de cadena sobre ella?` : `Cuando ya cayeron $${dn(x, 2)}$ m de cadena, ¿cuántas veces el peso de la cadena que está sobre la balanza marca la balanza?`} ($g = 9{,}8$ m/s²)`,
+        answer: ask === "N" ? N : 3,
+        solution: [`La parte que todavía cae está en caída libre: después de caer $x$ tiene $v^2 = 2gx$.`,
+          `Por segundo llega a la balanza una masa $\\lambda v$ con velocidad $v$, que se frena: eso suma una fuerza $\\lambda v^2 = 2\\lambda gx$ ([[f1-masa-variable|sistema de masa variable]]).`,
+          `Más el peso de lo que ya está apoyado, $\\lambda gx$: $N = 3\\lambda gx${ask === "N" ? ` = ${dn(N, 3)}$ N` : "$, el triple de ese peso"}.`],
+        // verificación: impulso total sobre la cadena entera, N − λLg = dP/dt, con P(t) = −λ(L − x)·gt derivado numéricamente
+        verify: { kind: "value", fn: () => {
+          const ts = Math.sqrt(2 * x / g), P = t => -lam * (L - g * t * t / 2) * g * t, h = 1e-5;
+          const Nn = lam * L * g + (P(ts + h) - P(ts - h)) / (2 * h);
+          return ask === "N" ? Nn : Nn / (lam * g * x);
+        }, tol: 1e-6 }
+      };
+    }
+  };
+
+  const cards = {
+    "f1-cohete": {
+      title: "Ecuación del cohete", aliases: ["ecuación del cohete", "cohete", "Tsiolkovsky", "empuje del cohete"], concepts: ["f1-cohete"],
+      summary: "Un cohete que expulsa gases a velocidad u respecto de sí mismo gana Δv = u ln(m₀/m_f) en el espacio. Con gravedad: m dv/dt = uμ − mg.",
+      def: [R`Un cohete expulsa masa a un ritmo $\mu = -\frac{dm}{dt}$, con velocidad $u$ **respecto del cohete**. El **empuje** es $u\mu$, y la ecuación de movimiento es $$m\frac{dv}{dt} = u\mu + F_{ext}.$$`,
+        R`Sin fuerzas externas, integrando: $$\Delta v = u\ln\frac{m_0}{m_f}.$$ Con gravedad y $\mu$ constante, a la velocidad se le resta $gt$: $v(t) = u\ln\frac{m_0}{m_0 - \mu t} - gt$.`],
+      idea: [R`El cohete no "empuja contra el aire": se impulsa por conservación de la [[f1-momento|cantidad de movimiento]], tirando masa para atrás. Por eso anda en el vacío.`,
+        R`El logaritmo es la mala noticia: para duplicar $\Delta v$ hay que **elevar al cuadrado** la razón de masas. Por eso los cohetes son casi todo combustible y se hacen en etapas, que van soltando los tanques vacíos.`],
+      demo: [R`**Paso 1 (antes).** En el instante $t$, el cohete con su combustible tiene masa $m$ y velocidad $v$: cantidad de movimiento $mv$.`,
+        R`**Paso 2 (después de dt).** Expulsó una masa $dm_e = -dm > 0$ que sale a $v - u$ (velocidad $u$ hacia atrás respecto del cohete), y el cohete quedó con masa $m + dm$ y velocidad $v + dv$. Total: $(m + dm)(v + dv) + (-dm)(v - u)$.`,
+        R`**Paso 3 (conservación).** Sin fuerzas externas, las dos cantidades son iguales. Desarrollando y tachando $mv$: $m\,dv + v\,dm + dm\,dv - v\,dm + u\,dm = 0$. El producto $dm\,dv$ es de segundo orden y se descarta: $m\,dv = -u\,dm$.`,
+        R`**Paso 4 (integrar).** $dv = -u\frac{dm}{m}$, y entre $m_0$ y $m_f$: $\Delta v = -u(\ln m_f - \ln m_0) = u\ln\frac{m_0}{m_f}$.`,
+        R`**Paso 5 (con fuerza externa).** Si actúa $F_{ext}$, el cambio de cantidad de movimiento en $dt$ es $F_{ext}dt$ en lugar de cero: $m\,dv = -u\,dm + F_{ext}dt$, o sea $m\frac{dv}{dt} = u\mu + F_{ext}$. $\blacksquare$`],
+      examples: [{ q: R`Un cohete de 1000 kg con 800 kg de combustible y $u = 2500$ m/s, en el espacio. ¿$\Delta v$?`, steps: [R`$m_f = 200$ kg, $\frac{m_0}{m_f} = 5$.`, R`$\Delta v = 2500\ln5 \approx 4024$ m/s.`] }],
+      tips: [R`$u$ es relativa al cohete, no al suelo. Y $m_f$ es la masa **final** (estructura y carga), no la del combustible.`],
+      see: ["f1-momento", "f1-masa-variable", "f1-newton"]
+    },
+    "f1-masa-variable": {
+      title: "Sistemas de masa variable", aliases: ["masa variable", "sistema de masa variable", "cinta transportadora", "cadena que cae"], concepts: ["f1-masa-variable"],
+      summary: "Si a un cuerpo se le agrega masa que llega con velocidad w, F_ext = m dv/dt + (v − w) dm/dt. Cinta: F = λv y P = λv², la mitad se disipa. Cadena sobre balanza: N = 3λgx.",
+      def: [R`Un **sistema de masa variable** gana o pierde masa con el tiempo. La [[f1-newton|segunda ley]] $F = ma$ no vale tal cual, porque la masa que entra o sale trae su propia [[f1-momento|cantidad de movimiento]].`,
+        R`Si al cuerpo (velocidad $v$) se le pega masa que llega con velocidad $w$ a ritmo $\frac{dm}{dt}$: $$F_{ext} = m\frac{dv}{dt} + (v - w)\frac{dm}{dt}.$$ El [[f1-cohete|cohete]] es el caso en que la masa sale, con $v - w = u$.`,
+        R`**Cinta transportadora** a $v$ constante, con arena que cae a $\lambda$ kg/s: $F = \lambda v$ y $P = \lambda v^2$. **Cadena que cae** sobre una balanza: con $x$ metros ya apoyados, la balanza marca $N = 3\lambda gx$.`],
+      idea: [R`En la cinta, el motor entrega $\lambda v^2$ pero la arena solo gana $\frac12\lambda v^2$ de energía cinética: la otra mitad se va en calor mientras la arena patina. Es la misma mitad que se pierde en un [[f1-choques|choque plástico]], porque eso es: cada grano choca plásticamente con la cinta.`,
+        R`En la cadena, la balanza tiene que sostener lo que ya está apoyado **y además frenar** lo que llega: eso suma el doble del peso apoyado.`],
+      demo: [R`**Paso 1 (balance en dt).** Antes: cuerpo $mv$ más la masa $dm$ que llega, $w\,dm$. Después: todo junto, $(m + dm)(v + dv)$. El impulso externo es la diferencia: $F_{ext}dt = (m + dm)(v + dv) - mv - w\,dm \approx m\,dv + (v - w)\,dm$, descartando $dm\,dv$.`,
+        R`**Paso 2 (cinta).** La cinta va a $v$ constante ($dv = 0$) y la arena llega con $w = 0$ horizontal: $F = v\frac{dm}{dt} = \lambda v$. La potencia es $Fv = \lambda v^2$.`,
+        R`**Paso 3 (dónde va la energía).** Por segundo, la arena gana $\frac12\lambda v^2$ de energía cinética. La diferencia, $\lambda v^2 - \frac12\lambda v^2 = \frac12\lambda v^2$, la disipa el roce mientras cada grano patina hasta alcanzar a la cinta.`,
+        R`**Paso 4 (cadena).** La parte que cae está en caída libre (la cadena es flexible y no hay tensión). Al caer $x$, su velocidad cumple $v^2 = 2gx$. Por segundo llega a la balanza la masa $\lambda v$, que se frena desde $v$ a 0: la balanza le hace la fuerza extra $\lambda v\cdot v = \lambda v^2 = 2\lambda gx$ (paso 1 con $v = 0$ para lo apoyado).`,
+        R`**Paso 5 (sumar).** Además sostiene el peso de lo apoyado, $\lambda gx$: $N = 2\lambda gx + \lambda gx = 3\lambda gx$. $\blacksquare$`],
+      examples: [{ q: R`Una cinta a 2 m/s recibe 5 kg/s de grava. ¿Fuerza y potencia?`, steps: [R`$F = \lambda v = 10$ N.`, R`$P = \lambda v^2 = 20$ W, de los que 10 W se disipan.`] }],
+      see: ["f1-cohete", "f1-momento", "f1-choques"]
+    }
+  };
+
+  E.extendCourse("f101", {
+    concepts: { "f1-cohete": { name: "Ecuación del cohete" }, "f1-masa-variable": { name: "Sistemas de masa variable" } },
+    templates: T,
+    units: [{
+      id: "f1-masavar-u", order: 14, program: "Extra UBA", title: "Sistemas de masa variable", icon: "flame",
+      diagnostic: ["f1-cohete-num", "f1-cohete-grav-num", "f1-cinta-num"],
+      lessons: [
+        { id: "f1-cohete", title: "El cohete", templates: ["f1-cohete-num", "f1-cohete-vf", "f1-cohete-grav-num"], theory: ["f1-cohete"],
+          intro: R`$m\frac{dv}{dt} = u\mu + F_{ext}$. En el espacio: $\Delta v = u\ln\frac{m_0}{m_f}$.` },
+        { id: "f1-masa-variable", title: "Cintas y cadenas", templates: ["f1-cinta-num", "f1-cadena-num"], theory: ["f1-masa-variable"],
+          intro: R`$F_{ext} = m\frac{dv}{dt} + (v - w)\frac{dm}{dt}$. Cinta: $F = \lambda v$. Cadena sobre balanza: $N = 3\lambda gx$.` }
       ]
     }],
     cards

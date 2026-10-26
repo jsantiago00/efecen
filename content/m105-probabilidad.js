@@ -8,7 +8,7 @@
  *   4 Variables aleatorias continuas · 5 Variables conjuntas y distribuciones muestrales
  *   6 Estimación · 7 Pruebas de hipótesis · 8 Regresión y correlación
  * Extra UBA (temas de Métodos Estadísticos en Física Experimental, Cs. Físicas, FCEN-UBA):
- *   Estadística para la física experimental · Bayes, Monte Carlo y Cramér-Rao
+ *   Estadística para la física experimental · Bayes, Monte Carlo y Cramér-Rao · Función característica y K-S
  * Ids con prefijo "pe-". Todo el texto y los ejercicios son originales.
  */
 (function () {
@@ -2537,6 +2537,193 @@
           intro: R`Posterior $\propto$ verosimilitud $\times$ prior. Beta + binomial: $\text{Beta}(a + k, b + n - k)$. Gamma + Poisson: $\text{Gamma}(\alpha + \sum n_i, \beta + m)$.` },
         { id: "pe-montecarlo-cr", title: "Monte Carlo y Cramér-Rao", templates: ["pe-inversa-num", "pe-mcerror-num", "pe-cramer-num"], theory: ["pe-montecarlo", "pe-cramer-rao"],
           intro: R`$X = F^{-1}(U)$. Error de Monte Carlo: $\sigma_f/\sqrt N$. Cramér-Rao: $Var(\hat\theta) \ge \frac{1}{nI(\theta)}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · ACEPTACIÓN Y RECHAZO, FUNCIÓN CARACTERÍSTICA Y KOLMOGOROV-SMIRNOV
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, S = E.pye, nf = S.nf;
+  const T = {};
+  // aritmética compleja mínima, como [re, im]
+  const cexp = ([a, b]) => [Math.exp(a) * Math.cos(b), Math.exp(a) * Math.sin(b)];
+  const cpow = ([a, b], k) => { const m = Math.hypot(a, b) ** k, th = Math.atan2(b, a) * k; return [m * Math.cos(th), m * Math.sin(th)]; };
+  const cmul = (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
+  // familias con su función característica φ(t) (compleja), su TeX, media y varianza
+  const FAM = {
+    normal: (m, s) => ({ tex: `e^{${m === 0 ? "" : `${m}it`} - ${nf(s * s / 2, 3)}t^2}`.replace("{-", "{-").replace("e^{ - ", "e^{-"), name: R`\mathcal N(${m},\ ${s * s})`, phi: t => cexp([-s * s * t * t / 2, m * t]), mean: m, v: s * s }),
+    poisson: l => ({ tex: R`e^{${l}(e^{it} - 1)}`, name: R`\text{Poisson}(${l})`, phi: t => cexp([l * (Math.cos(t) - 1), l * Math.sin(t)]), mean: l, v: l }),
+    gamma: (k, l) => ({ tex: k === 1 ? R`\frac{1}{1 - \frac{it}{${l}}}` : R`\left(1 - \frac{it}{${l}}\right)^{-${k}}`, name: k === 1 ? R`\text{Exp}(${l})` : R`\text{Gamma}(${k},\ ${l})`, phi: t => cpow([1, -t / l], -k), mean: k / l, v: k / (l * l) }),
+    binomial: (n, p) => ({ tex: R`\left(${nf(1 - p, 2)} + ${nf(p, 2)}e^{it}\right)^{${n}}`, name: R`\text{Bin}(${n},\ ${nf(p, 2)})`, phi: t => cpow([1 - p + p * Math.cos(t), p * Math.sin(t)], n), mean: n * p, v: n * p * (1 - p) })
+  };
+  const randFam = r => {
+    const k = r.pick(["normal", "poisson", "gamma", "binomial"]);
+    if (k === "normal") return FAM.normal(r.int(-5, 5), r.int(1, 4));
+    if (k === "poisson") return FAM.poisson(r.int(1, 12));
+    if (k === "gamma") return FAM.gamma(r.int(1, 5), r.int(1, 4));
+    return FAM.binomial(r.int(2, 20), r.pick([0.1, 0.2, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9]));
+  };
+  // momentos a partir de φ por diferencias finitas: φ′(0) = iE[X], φ″(0) = −E[X²]
+  const moments = phi => { const h = 1e-4, p = phi(h), q = phi(-h), o = phi(0), m1 = (p[1] - q[1]) / (2 * h), m2 = -(p[0] - 2 * o[0] + q[0]) / (h * h); return [m1, m2 - m1 * m1]; };
+
+  T["pe-rechazo-num"] = {
+    type: "numeric", concepts: ["pe-montecarlo"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["pot", "seno", "semi", "tri"]), fac = r.pick([1, 1.25, 1.5, 2]), ask = r.pick(["p", "n"]);
+      let f, a, b, M, tex;
+      if (v === "pot") { const k = r.int(1, 4); f = x => (k + 1) * x ** k; a = 0; b = 1; M = k + 1; tex = `f(x) = ${k + 1}x^{${k}}$ en $[0, 1]`; }
+      else if (v === "seno") { f = x => Math.PI / 2 * Math.sin(Math.PI * x); a = 0; b = 1; M = Math.PI / 2; tex = R`f(x) = \frac\pi2\sin(\pi x)$ en $[0, 1]`; }
+      else if (v === "semi") { const Rr = r.int(1, 3); f = x => 2 / (Math.PI * Rr * Rr) * Math.sqrt(Math.max(0, Rr * Rr - x * x)); a = -Rr; b = Rr; M = 2 / (Math.PI * Rr); tex = R`f(x) = \frac{2}{\pi\cdot${Rr * Rr}}\sqrt{${Rr * Rr} - x^2}$ en $[-${Rr}, ${Rr}]`; }
+      else { const L = r.int(1, 4); f = x => (x < L / 2 ? 4 * x / (L * L) : 4 * (L - x) / (L * L)); a = 0; b = L; M = 2 / L; tex = R`f$ triangular en $[0, ${L}]$ con pico en $${nf(L / 2, 2)}`; }
+      const Mv = Math.ceil(M * fac * 100) / 100, p = 1 / (Mv * (b - a)), ans = ask === "p" ? p : 1 / p;
+      return {
+        prompt: `Para simular la densidad $${tex}$ por aceptación y rechazo, se sortean $x$ uniforme en $[${a}, ${b}]$ e $y$ uniforme en $[0, ${nf(Mv, 3)}]$, y se acepta $x$ si $y < f(x)$. ${ask === "p" ? "¿Qué fracción de los intentos se acepta, en promedio?" : "¿Cuántos intentos hacen falta, en promedio, por cada valor aceptado?"}`,
+        answer: ans,
+        solution: [`El punto $(x, y)$ cae uniforme en el rectángulo $[${a}, ${b}]\\times[0, M]$, de área $M(b - a) = ${nf(Mv * (b - a), 4)}$. Se acepta si cae debajo de la curva, que encierra área $\\int f = 1$ ([[pe-montecarlo|aceptación y rechazo]]).`,
+          `Probabilidad de aceptar: $\\frac{1}{M(b - a)} \\approx ${nf(p)}$.`,
+          ...(ask === "n" ? [`El número de intentos hasta el primer éxito es geométrico: en promedio $\\frac1p = M(b - a) \\approx ${nf(1 / p)}$.`] : []),
+          `Conviene tomar $M$ lo más chico posible (el máximo de $f$${fac > 1 ? `, acá $${nf(M, 4)}$` : ""}) para desperdiciar menos.`],
+        // verificación: la probabilidad de aceptar se integra por Simpson, ∫ f(x)/M dx/(b − a), sin usar que f integra 1
+        verify: { kind: "value", tol: 1e-5, fn: () => { const q = S.simpson(x => Math.min(f(x), Mv) / Mv, a, b, 20000) / (b - a); return ask === "p" ? q : 1 / q; } }
+      };
+    }
+  };
+  T["pe-caract-num"] = {
+    type: "numeric", concepts: ["pe-caracteristica"], difficulty: 2,
+    generate(r) {
+      const F = randFam(r), ask = r.pick(["media", "var"]), ans = ask === "media" ? F.mean : F.v;
+      return {
+        prompt: `Una variable aleatoria $X$ tiene función característica $\\varphi(t) = ${F.tex}$. ¿Cuánto vale ${ask === "media" ? "$E[X]$" : "$Var(X)$"}?`,
+        answer: ans,
+        solution: [`Derivando $\\varphi(t) = E[e^{itX}]$ en $t = 0$: $\\varphi'(0) = iE[X]$ y $\\varphi''(0) = -E[X^2]$ ([[pe-caracteristica|función característica]]).`,
+          `Esta es la de una $${F.name}$, con $E[X] = ${nf(F.mean, 4)}$ y $Var(X) = ${nf(F.v, 4)}$.`,
+          `Respuesta: $${nf(ans, 4)}$.`],
+        // verificación: derivadas de φ en 0 por diferencias finitas complejas
+        verify: { kind: "value", tol: 1e-4, fn: () => moments(F.phi)[ask === "media" ? 0 : 1] }
+      };
+    }
+  };
+  T["pe-caract-mc"] = {
+    type: "mc", concepts: ["pe-caracteristica"], difficulty: 2,
+    generate(r) {
+      const k = r.pick(["poisson", "normal", "gamma", "binomial", "exp"]);
+      let X, Y, ok, bad, txt;
+      if (k === "poisson") { const a = r.int(1, 6), b = r.int(1, 6); X = FAM.poisson(a); Y = FAM.poisson(b); ok = FAM.poisson(a + b); bad = [FAM.poisson(a * b), FAM.normal(a + b, Math.sqrt(a + b)), FAM.poisson(Math.max(a, b))]; txt = R`X \sim \text{Poisson}(${a})$ e $Y \sim \text{Poisson}(${b})`; }
+      else if (k === "normal") { const m1 = r.int(-4, 4), m2 = r.int(-4, 4), s1 = r.int(1, 3), s2 = r.int(1, 3); X = FAM.normal(m1, s1); Y = FAM.normal(m2, s2); ok = FAM.normal(m1 + m2, Math.sqrt(s1 * s1 + s2 * s2)); bad = [FAM.normal(m1 + m2, s1 + s2), FAM.normal(m1 + m2, Math.sqrt(Math.abs(s1 * s1 - s2 * s2)) || 0.5), FAM.normal(m1 - m2, Math.sqrt(s1 * s1 + s2 * s2))]; txt = R`X \sim \mathcal N(${m1},\ ${s1 * s1})$ e $Y \sim \mathcal N(${m2},\ ${s2 * s2})`; }
+      else if (k === "gamma") { const a = r.int(1, 4), b = r.int(1, 4), l = r.int(1, 4); X = FAM.gamma(a, l); Y = FAM.gamma(b, l); ok = FAM.gamma(a + b, l); bad = [FAM.gamma(a + b, 2 * l), FAM.gamma(a * b, l), FAM.gamma(Math.max(a, b), l)]; txt = R`X \sim ${X.name}$ e $Y \sim ${Y.name}`; }
+      else if (k === "exp") { const l = r.int(1, 5); X = FAM.gamma(1, l); Y = FAM.gamma(1, l); ok = FAM.gamma(2, l); bad = [FAM.gamma(1, 2 * l), FAM.gamma(1, l / 2 === Math.round(l / 2) ? l / 2 : l + 1), FAM.normal(0, 1)]; txt = R`X$ e $Y$ son exponenciales de parámetro $${l}`; }
+      else { const n1 = r.int(2, 8), n2 = r.int(2, 8), p = r.pick([0.2, 0.25, 0.4, 0.5, 0.6]); X = FAM.binomial(n1, p); Y = FAM.binomial(n2, p); ok = FAM.binomial(n1 + n2, p); bad = [FAM.binomial(n1 + n2, Math.min(0.9, 2 * p)), FAM.binomial(n1 * n2, p), FAM.binomial(Math.max(n1, n2), p)]; txt = R`X \sim ${X.name}$ e $Y \sim ${Y.name}`; }
+      const names = bad.map(b => b.name).filter((n, i, a) => n !== ok.name && a.indexOf(n) === i);
+      if (names.length < 3) return null;
+      return {
+        prompt: `Si $${txt}$ son independientes, ¿qué distribución tiene $X + Y$?`,
+        ...H.mc(r, `$${ok.name}$`, names.map(n => `$${n}$`), { text: true }),
+        solution: [`Para independientes, $\\varphi_{X+Y}(t) = E[e^{itX}e^{itY}] = \\varphi_X(t)\\varphi_Y(t)$ ([[pe-caracteristica|función característica]]).`,
+          `$\\varphi_X\\varphi_Y = (${X.tex})(${Y.tex})$, que es la función característica de una $${ok.name}$. Por el teorema de unicidad, esa es la distribución de $X + Y$.`],
+        // verificación: φ_X·φ_Y se compara numéricamente con la φ de cada opción en varios t
+        verify: { kind: "truth", target: true, fn: () => {
+          const ts = [0.3, 0.7, 1.3, 2.1], d = G => ts.reduce((s, t) => { const p = cmul(X.phi(t), Y.phi(t)), q = G.phi(t); return s + Math.hypot(p[0] - q[0], p[1] - q[1]); }, 0);
+          return d(ok) < 1e-9 && bad.filter(b => names.includes(b.name)).every(b => d(b) > 1e-4);
+        } }
+      };
+    }
+  };
+  // acumuladas de las hipótesis para KS
+  const HYP = [
+    { tex: R`uniforme en $[0, 1]$`, F: x => Math.min(1, Math.max(0, x)), gen: r => r.int(1, 99) / 100, hi: 1.2 },
+    { tex: R`exponencial de media 1`, F: x => (x < 0 ? 0 : 1 - Math.exp(-x)), gen: r => r.int(1, 300) / 100, hi: 12 },
+    { tex: R`uniforme en $[0, 10]$`, F: x => Math.min(1, Math.max(0, x / 10)), gen: r => r.int(1, 99) / 10, hi: 11 }
+  ];
+  T["pe-ks-num"] = {
+    testN: 100, // la verificación recorre una grilla fina
+    type: "numeric", concepts: ["pe-ks"], difficulty: 2,
+    generate(r) {
+      const Hh = r.pick(HYP), n = r.int(4, 7), xs = [];
+      while (xs.length < n) { const x = Hh.gen(r); if (!xs.includes(x)) xs.push(x); }
+      const s = S.sorted(xs), D = Math.max(...s.map((x, i) => Math.max((i + 1) / n - Hh.F(x), Hh.F(x) - i / n)));
+      const worst = s.findIndex((x, i) => Math.abs(Math.max((i + 1) / n - Hh.F(x), Hh.F(x) - i / n) - D) < 1e-12);
+      return {
+        prompt: `Se quiere ver si la muestra $${S.list(xs)}$ viene de una distribución ${Hh.tex}. ¿Cuánto vale el estadístico de Kolmogorov-Smirnov $D = \\sup_x|F_n(x) - F(x)|$?`,
+        answer: D,
+        solution: [`Se ordena la muestra: $${S.list(s)}$. La [[pe-ks|acumulada empírica]] $F_n$ salta $\\frac1{${n}}$ en cada dato.`,
+          `El supremo se alcanza justo antes o justo después de un salto: en cada $x_{(i)}$ se miran $\\frac in - F(x_{(i)})$ y $F(x_{(i)}) - \\frac{i-1}{n}$.`,
+          `El mayor aparece en $x = ${nf(s[worst], 3)}$, con $F = ${nf(Hh.F(s[worst]), 4)}$: $D \\approx ${nf(D)}$.`],
+        // verificación: se recorre una grilla fina de x y se toma el máximo de |F_n − F| a cada lado de cada punto
+        verify: { kind: "value", tol: 1e-4, fn: () => {
+          let best = 0; const N = 200000, Fn = x => xs.filter(v => v <= x).length / n;
+          const cnt = s.slice(); let j = 0;
+          for (let i = 0; i <= N; i++) { const x = -0.1 + (Hh.hi + 0.1) * i / N; while (j < n && cnt[j] <= x) j++; best = Math.max(best, Math.abs(j / n - Hh.F(x))); }
+          for (const x of s) best = Math.max(best, Math.abs(Fn(x) - Hh.F(x)), Math.abs(Fn(x - 1e-9) - Hh.F(x - 1e-9)));
+          return best;
+        } }
+      };
+    }
+  };
+  T["pe-ks-vf"] = {
+    type: "tf", concepts: ["pe-ks"], difficulty: 2,
+    generate(r) {
+      const n = r.pick([20, 30, 40, 50, 80, 100, 200]), fac = r.pick([0.55, 0.7, 0.85, 1.2, 1.4, 1.8]), crit = 1.358 / Math.sqrt(n), D = Math.round(fac * crit * 1000) / 1000;
+      return {
+        prompt: `Con $n = ${n}$ datos, el test de Kolmogorov-Smirnov contra una distribución continua totalmente especificada da $D = ${nf(D, 3)}$. <b>Verdadero o falso:</b> se rechaza la hipótesis nula al 5 %.`,
+        answer: D > crit,
+        explanation: `Para $n$ grande, el valor crítico al 5 % es $\\frac{1{,}36}{\\sqrt n} = \\frac{1{,}36}{\\sqrt{${n}}} \\approx ${nf(crit, 3)}$ ([[pe-ks|Kolmogorov-Smirnov]]). ${D > crit ? "Como $D$ lo supera, se rechaza." : "Como $D$ es menor, no hay evidencia para rechazar."}`,
+        solution: [`Bajo $H_0$, $\\sqrt n\\,D$ tiene (para $n$ grande) la distribución de Kolmogorov, que no depende de cuál sea $F$.`],
+        // verificación: valor p con la serie de Kolmogorov, P(√n D > λ) = 2 Σ (−1)^{k−1} e^{−2k²λ²}
+        verify: { kind: "truth", fn: () => { const l = Math.sqrt(n) * D; let p = 0; for (let k = 1; k < 100; k++) p += 2 * (k % 2 ? 1 : -1) * Math.exp(-2 * k * k * l * l); return p < 0.05; } }
+      };
+    }
+  };
+
+  const cards = {
+    "pe-caracteristica": {
+      title: "Función característica", aliases: ["función característica", "funciones características", "teorema de unicidad"], concepts: ["pe-caracteristica"],
+      summary: "φ(t) = E[e^{itX}] existe siempre y determina la distribución. φ′(0) = iE[X], φ″(0) = −E[X²]. Para independientes, φ_{X+Y} = φ_X φ_Y.",
+      def: [R`La **función característica** de $X$ es $\varphi_X(t) = E\left[e^{itX}\right] = E[\cos tX] + iE[\sin tX]$, para $t$ real. Como $|e^{itX}| = 1$, existe para cualquier variable (a diferencia de la función generadora de momentos).`,
+        R`**Propiedades:** $\varphi(0) = 1$, $|\varphi(t)| \le 1$; si existen los momentos, $\varphi^{(k)}(0) = i^kE[X^k]$; $\varphi_{aX + b}(t) = e^{ibt}\varphi_X(at)$; y para $X$, $Y$ independientes, $\varphi_{X+Y} = \varphi_X\varphi_Y$.`,
+        R`**Unicidad:** dos variables con la misma función característica tienen la misma distribución.`,
+        R`**Tabla:** normal $\mathcal N(\mu, \sigma^2)$: $e^{i\mu t - \sigma^2t^2/2}$. Poisson($\lambda$): $e^{\lambda(e^{it} - 1)}$. Exponencial($\lambda$): $\frac{1}{1 - it/\lambda}$. Gamma($k$, $\lambda$): $(1 - it/\lambda)^{-k}$. Binomial($n$, $p$): $(1 - p + pe^{it})^n$.`],
+      idea: [R`Convierte sumas de independientes (que piden convoluciones de densidades) en **productos**. Por eso es la herramienta para probar el [[pe-tcl|teorema central del límite]]: la función característica de un promedio estandarizado tiende a $e^{-t^2/2}$, la de la normal.`,
+        R`Es la [[c2-fourier|transformada de Fourier]] de la densidad (con otro signo y sin normalizar).`],
+      demo: [R`**Paso 1 (derivadas).** Derivando dentro de la esperanza (vale si $E|X|^k < \infty$): $\varphi^{(k)}(t) = E\left[(iX)^ke^{itX}\right]$. En $t = 0$, $\varphi^{(k)}(0) = i^kE[X^k]$.`,
+        R`**Paso 2 (suma de independientes).** $e^{it(X+Y)} = e^{itX}e^{itY}$, y para independientes la esperanza de un producto de funciones de cada una es el producto de las esperanzas: $\varphi_{X+Y}(t) = \varphi_X(t)\varphi_Y(t)$.`,
+        R`**Paso 3 (Poisson).** $\varphi(t) = \sum_k e^{itk}e^{-\lambda}\frac{\lambda^k}{k!} = e^{-\lambda}\sum_k\frac{(\lambda e^{it})^k}{k!} = e^{-\lambda}e^{\lambda e^{it}} = e^{\lambda(e^{it} - 1)}$, por la serie de la exponencial.`,
+        R`**Paso 4 (consecuencia).** Por el paso 2, $X \sim$ Poisson($a$) e $Y \sim$ Poisson($b$) independientes dan $e^{a(e^{it}-1)}e^{b(e^{it}-1)} = e^{(a+b)(e^{it}-1)}$, la de una Poisson($a + b$); por unicidad, $X + Y \sim$ Poisson($a + b$). $\blacksquare$`],
+      examples: [{ q: R`$\varphi(t) = e^{2it - 3t^2}$. ¿Media y varianza?`, steps: [R`Es una normal con $\mu = 2$ y $\frac{\sigma^2}{2} = 3$: $\sigma^2 = 6$.`] }],
+      see: ["pe-tcl", "pe-normal", "pe-poisson"]
+    },
+    "pe-ks": {
+      title: "Test de Kolmogorov-Smirnov", aliases: ["test de Kolmogorov-Smirnov", "Kolmogorov-Smirnov", "prueba de Kolmogorov-Smirnov", "acumulada empírica", "función de distribución empírica"], concepts: ["pe-ks"],
+      summary: "Compara la acumulada empírica F_n con la F de la hipótesis: D = sup|F_n − F|. Para n grande se rechaza al 5 % si D > 1,36/√n.",
+      def: [R`La **acumulada empírica** de una muestra $x_1, \dots, x_n$ es $F_n(x) = \frac{\#\{i : x_i \le x\}}{n}$: una escalera que sube $\frac1n$ en cada dato.`,
+        R`Para probar $H_0$: "los datos vienen de la distribución continua $F$" (con todos sus parámetros fijados de antemano), se usa $$D_n = \sup_x|F_n(x) - F(x)| = \max_i\max\left(\frac in - F(x_{(i)}),\ F(x_{(i)}) - \frac{i-1}{n}\right),$$ con la muestra ordenada.`,
+        R`Bajo $H_0$, $\sqrt n\,D_n$ tiende a la distribución de Kolmogorov, $P(\sqrt nD > \lambda) = 2\sum_{k\ge1}(-1)^{k-1}e^{-2k^2\lambda^2}$, que **no depende de $F$**. Valores críticos aproximados: $\frac{1{,}22}{\sqrt n}$ (10 %), $\frac{1{,}36}{\sqrt n}$ (5 %) y $\frac{1{,}63}{\sqrt n}$ (1 %).`],
+      idea: [R`A diferencia de la [[pe-chi-cuadrado|prueba χ²]], no hay que agrupar los datos en clases: usa cada dato. Mira la máxima distancia vertical entre la escalera de los datos y la curva propuesta.`,
+        R`Si los parámetros de $F$ se estimaron con los mismos datos, la distribución de $D$ cambia (la escalera queda artificialmente cerca) y los valores críticos de arriba son demasiado permisivos.`],
+      demo: [R`**Paso 1 (dónde está el supremo).** Entre dos datos consecutivos, $F_n$ es constante y $F$ crece, así que $|F_n - F|$ es monótona en ese tramo: el supremo está en los extremos, o sea justo en un dato o justo antes.`,
+        R`**Paso 2 (los dos lados).** En $x_{(i)}$ la escalera vale $\frac in$, y justo antes, $\frac{i-1}{n}$. Como $F$ es continua, las dos diferencias candidatas son $\frac in - F(x_{(i)})$ y $F(x_{(i)}) - \frac{i-1}{n}$.`,
+        R`**Paso 3 (no depende de F).** Con $U = F(X)$, que es uniforme si $X$ tiene acumulada continua $F$ (es la [[pe-montecarlo|transformada inversa]] al revés), $\sup_x|F_n(x) - F(x)| = \sup_u|G_n(u) - u|$, donde $G_n$ es la acumulada empírica de los $U_i$. La distribución de $D$ es la misma para cualquier $F$ continua. $\blacksquare$`],
+      examples: [{ q: R`$n = 50$, $D = 0{,}21$. ¿Se rechaza al 5 %?`, steps: [R`$\frac{1{,}36}{\sqrt{50}} \approx 0{,}192 < 0{,}21$: se rechaza.`] }],
+      see: ["pe-chi-cuadrado", "pe-montecarlo", "pe-hipotesis"]
+    }
+  };
+
+  E.extendCourse("m105", {
+    concepts: { "pe-caracteristica": { name: "Función característica" }, "pe-ks": { name: "Kolmogorov-Smirnov" } },
+    templates: T,
+    units: [{
+      id: "pe-caract-ks-u", order: 11, program: "Extra UBA", title: "Aceptación y rechazo, función característica y Kolmogorov-Smirnov", icon: "chart-column",
+      diagnostic: ["pe-rechazo-num", "pe-caract-num", "pe-ks-num"],
+      lessons: [
+        { id: "pe-rechazo", title: "Aceptación y rechazo", templates: ["pe-rechazo-num"], theory: ["pe-montecarlo"],
+          intro: R`Puntos uniformes en $[a, b]\times[0, M]$; se aceptan los que caen bajo $f$. Eficiencia: $\frac{1}{M(b - a)}$.` },
+        { id: "pe-caracteristica", title: "Función característica", templates: ["pe-caract-num", "pe-caract-mc"], theory: ["pe-caracteristica"],
+          intro: R`$\varphi(t) = E[e^{itX}]$; $\varphi'(0) = iE[X]$; para independientes, $\varphi_{X+Y} = \varphi_X\varphi_Y$.` },
+        { id: "pe-ks", title: "Test de Kolmogorov-Smirnov", templates: ["pe-ks-num", "pe-ks-vf"], theory: ["pe-ks"],
+          intro: R`$D = \sup|F_n - F|$; al 5 %, se rechaza si $D > \frac{1{,}36}{\sqrt n}$.` }
       ]
     }],
     cards

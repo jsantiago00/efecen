@@ -7,6 +7,7 @@
  *   7 Interferencia · 8 Difracción
  * Extra UBA (temas de Física 2 de Cs. Físicas, FCEN-UBA, que no están en el programa de F102B):
  *   Oscilaciones acopladas y modos normales · Polarización · Reflexión entre medios, Fourier y dispersión
+ *   Instrumentos ópticos y coherencia
  *
  * Constantes: R = 8,314 J/(mol K), k_B = 1,381e-23 J/K, N_A = 6,022e23, σ = 5,67e-8 W/(m² K⁴), c = 3e8 m/s.
  * Verificaciones independientes en los tests: simulaciones de intercambio de calor, ciclos de Carnot
@@ -1914,6 +1915,193 @@
           intro: R`$r = \frac{Z_1 - Z_2}{Z_1 + Z_2}$, $t = \frac{2Z_1}{Z_1 + Z_2}$ con $Z = \sqrt{T\mu}$. Modos: $b_n = \frac2L\int_0^Ly_0\sin\frac{n\pi x}{L}dx$.` },
         { id: "f2b-dispersion", title: "Dispersión y prismas", templates: ["f2b-grupo-num", "f2b-dispersion-vf", "f2b-prisma-num"], theory: ["f2b-dispersion"],
           intro: R`$v_f = \omega/k$, $v_g = d\omega/dk$. Prisma: $n = \frac{\sin\frac{A + \delta_{min}}{2}}{\sin\frac A2}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · INSTRUMENTOS ÓPTICOS Y COHERENCIA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const dn = (x, d = 3) => String(num(x, d)).replace(".", "{,}");
+  // matrices ABCD, como en la unidad 6 (otra copia: cada bloque es independiente)
+  const mul = (P, Q) => [[P[0][0] * Q[0][0] + P[0][1] * Q[1][0], P[0][0] * Q[0][1] + P[0][1] * Q[1][1]], [P[1][0] * Q[0][0] + P[1][1] * Q[1][0], P[1][0] * Q[0][1] + P[1][1] * Q[1][1]]];
+  const S = d => [[1, d], [0, 1]], L = f => [[1, 0], [-1 / f, 1]];
+  const ray = (M, y, th) => [M[0][0] * y + M[0][1] * th, M[1][0] * y + M[1][1] * th];
+  // visibilidad de las franjas de un Michelson con un espectro plano en λ (400 componentes) para una diferencia de caminos x;
+  // la longitud de coherencia es el primer mínimo de la visibilidad, buscado barriendo x y afinando por sección áurea
+  const vis = (lam, dlam, x) => { let c = 0, s = 0; const n = 400; for (let i = 0; i < n; i++) { const l = lam - dlam / 2 + dlam * (i + 0.5) / n, k = 2 * Math.PI / l; c += Math.cos(k * x); s += Math.sin(k * x); } return Math.hypot(c, s) / n; };
+  const lcSim = (lam, dlam) => {
+    const h = lam * lam / dlam / 300;
+    let x = h, prev = vis(lam, dlam, 0), cur = vis(lam, dlam, h);
+    while (true) { const nx = vis(lam, dlam, x + h); if (nx > cur && cur < prev) break; prev = cur; cur = nx; x += h; }
+    let a = x - h, b = x + h; const phi = (Math.sqrt(5) - 1) / 2;
+    for (let i = 0; i < 60; i++) { const c1 = b - phi * (b - a), c2 = a + phi * (b - a); if (vis(lam, dlam, c1) < vis(lam, dlam, c2)) b = c2; else a = c1; }
+    return (a + b) / 2;
+  };
+  const FUENTES = [
+    { n: "un LED rojo", lam: 640, dl: [15, 20, 25, 30] }, { n: "un LED verde", lam: 525, dl: [25, 30, 35] },
+    { n: "luz blanca filtrada", lam: 550, dl: [5, 10, 20] }, { n: "una lámpara de sodio", lam: 589, dl: [0.5, 0.6, 1, 2] },
+    { n: "un láser de diodo barato", lam: 650, dl: [0.1, 0.2, 0.5] }
+  ];
+
+  T["f2b-lupa-num"] = {
+    type: "numeric", concepts: ["f2b-instrumentos"], difficulty: 2,
+    generate(r) {
+      const f = r.int(3, 15), modo = r.pick(["inf", "cerca"]), y = 0.2;
+      const M = modo === "inf" ? 25 / f : 1 + 25 / f, d0 = modo === "inf" ? f : 25 * f / (25 + f);
+      return {
+        prompt: `Una lupa de distancia focal $${f}$ cm se usa pegada al ojo, ${modo === "inf" ? "con el objeto en el foco (la imagen queda en el infinito y el ojo mira relajado)" : "con la imagen formada en el punto próximo, a 25 cm"}. ¿Cuál es su aumento angular?`,
+        answer: M,
+        solution: [`El [[f2b-instrumentos|aumento angular]] compara el ángulo con que se ve la imagen con el que se vería el objeto a 25 cm a simple vista: $\\theta_0 = \\frac{y}{25}$.`,
+          modo === "inf" ? `Con el objeto en el foco, $\\theta = \\frac yf$: $M = \\frac{25}{f} = \\frac{25}{${f}} \\approx ${dn(M, 3)}$.`
+            : `Con la imagen a $-25$ cm, la [[f2b-lentes|ecuación de la lente]] da $d_o = \\frac{25f}{25 + f} = ${dn(d0, 3)}$ cm, y $\\theta = \\frac{y}{d_o}$: $M = \\frac{25}{d_o} = 1 + \\frac{25}{f} \\approx ${dn(M, 3)}$.`],
+        // verificación: dos rayos desde la punta del objeto atraviesan la lente; se intersecan sus prolongaciones
+        // (o, con la imagen en el infinito, se mide el ángulo de salida común) y se compara con y/25
+        verify: { kind: "value", fn: () => {
+          const M1 = mul(L(f), S(d0)), [y1, t1] = ray(M1, y, 0.01), [y2, t2] = ray(M1, y, -0.02);
+          if (modo === "inf") return Math.abs(t1) / (y / 25);
+          const z = -(y1 - y2) / (t1 - t2), Y = y1 + t1 * z;
+          return Math.abs(z - (-25)) < 1e-6 ? (Y / Math.abs(z)) / (y / 25) : NaN;
+        }, tol: 1e-6 }
+      };
+    }
+  };
+  T["f2b-microscopio-num"] = {
+    type: "numeric", concepts: ["f2b-instrumentos"], difficulty: 3,
+    generate(r) {
+      const f1 = r.int(3, 10) / 10, f2 = r.int(15, 50) / 10, d = r.int(14, 22), ask = r.pick(["M", "do"]);
+      const di = d - f2, d0 = 1 / (1 / f1 - 1 / di), M = (di / d0) * (25 / f2);
+      return {
+        prompt: `Un microscopio tiene un objetivo de $${dn(f1, 1)}$ cm de focal y un ocular de $${dn(f2, 1)}$ cm, separados $${d}$ cm. Se enfoca para que la imagen final quede en el infinito. ${ask === "M" ? "¿Cuál es el módulo de su aumento total?" : "¿A qué distancia (mm) del objetivo está el objeto?"}`,
+        answer: ask === "M" ? M : d0 * 10,
+        solution: [`Imagen final en el infinito: la imagen del objetivo tiene que caer en el foco del ocular, a $d - f_2 = ${dn(di, 1)}$ cm del objetivo ([[f2b-instrumentos|microscopio]]).`,
+          `[[f2b-lentes|Ecuación de la lente]] para el objetivo: $d_o = \\left(\\frac1{${dn(f1, 1)}} - \\frac1{${dn(di, 1)}}\\right)^{-1} \\approx ${dn(d0, 4)}$ cm $= ${dn(d0 * 10, 4)}$ mm, apenas más que la focal.`,
+          ...(ask === "M" ? [`Aumento del objetivo: $|m_1| = \\frac{${dn(di, 1)}}{${dn(d0, 4)}} \\approx ${dn(di / d0, 3)}$. El ocular trabaja como lupa: $\\frac{25}{${dn(f2, 1)}} = ${dn(25 / f2, 3)}$. Total: $|M| \\approx ${dn(M, 3)}$.`] : [])],
+        // verificación: matriz ABCD de todo el microscopio; con la imagen en el infinito el elemento D es 0
+        // y el ángulo de salida de la punta del objeto es C·y, que se compara con y/25
+        verify: ask === "M"
+          ? { kind: "value", fn: () => { const Mx = mul(L(f2), mul(S(d), mul(L(f1), S(d0)))); return Math.abs(Mx[1][1]) < 1e-9 ? Math.abs(Mx[1][0]) * 25 : NaN; }, tol: 1e-6 }
+          : { kind: "zero", fn: a => { const Mx = mul(L(f2), mul(S(d), mul(L(f1), S(a / 10)))); return [Mx[1][1]]; }, tol: 1e-4 }
+      };
+    }
+  };
+  T["f2b-telescopio-num"] = {
+    type: "numeric", concepts: ["f2b-instrumentos"], difficulty: 2,
+    generate(r) {
+      const f1 = r.int(4, 30) * 5, f2 = r.pick([0.6, 0.9, 1, 1.25, 1.8, 2, 2.5, 4]), ask = r.pick(["M", "L", "luna"]);
+      const M = f1 / f2, moon = 0.52;
+      const ans = ask === "M" ? M : ask === "L" ? f1 + f2 : moon * M;
+      return {
+        prompt: `Un telescopio astronómico tiene un objetivo de $${f1}$ cm de focal y un ocular de $${dn(f2, 2)}$ cm, ajustado para mirar relajado (imagen en el infinito). ${ask === "M" ? "¿Cuál es el módulo de su aumento angular?" : ask === "L" ? "¿Qué distancia (cm) separa las dos lentes?" : "La Luna se ve a simple vista con un diámetro angular de $0{,}52^\\circ$. ¿Con qué diámetro angular (en grados) se la ve por el telescopio?"}`,
+        answer: ans,
+        solution: [`El objetivo forma la imagen de un objeto lejano en su foco; para que el ocular la mande al infinito, ese punto tiene que ser también el foco del ocular: las lentes están a $f_1 + f_2 = ${dn(f1 + f2, 2)}$ cm ([[f2b-instrumentos|telescopio]]).`,
+          `Un rayo que entra con ángulo $\\alpha$ por el centro del objetivo llega a la imagen a altura $f_1\\alpha$, y el ocular lo manda con ángulo $\\frac{f_1\\alpha}{f_2}$: $|M| = \\frac{f_1}{f_2} \\approx ${dn(M, 4)}$ (la imagen está invertida).`,
+          ...(ask === "luna" ? [`$0{,}52^\\circ\\cdot${dn(M, 4)} \\approx ${dn(ans, 4)}^\\circ$ (en la aproximación de ángulos chicos).`] : [])],
+        // verificación: matriz ABCD objetivo–tramo–ocular. La separación se busca anulando C (sistema afocal);
+        // el aumento es |D| = ángulo de salida / ángulo de entrada
+        verify: ask === "L"
+          ? { kind: "zero", fn: a => [mul(L(f2), mul(S(a), L(f1)))[1][0] * f1], tol: 1e-6 }
+          : { kind: "value", fn: () => Math.abs(mul(L(f2), mul(S(f1 + f2), L(f1)))[1][1]) * (ask === "luna" ? moon : 1), tol: 1e-6 }
+      };
+    }
+  };
+  T["f2b-coherencia-num"] = {
+    testN: 80, // la simulación de la visibilidad es algo cara
+    type: "numeric", concepts: ["f2b-coherencia"], difficulty: 2,
+    generate(r) {
+      const F = r.pick(FUENTES), dl = r.pick(F.dl), lc = F.lam * F.lam / dl, ask = r.pick(["lc", "espejo", "franjas"]);
+      const u = lc >= 1e6 ? 1e6 : 1e3, un = u === 1e6 ? "mm" : "μm";
+      const ans = ask === "lc" ? lc / u : ask === "espejo" ? lc / 2 / u : lc / F.lam;
+      return {
+        prompt: `La luz de ${F.n} tiene un espectro aproximadamente plano de $${dn(dl, 2)}$ nm de ancho alrededor de $${F.lam}$ nm. ${ask === "lc" ? `¿Cuál es su longitud de coherencia (en ${un})?` : ask === "espejo" ? `En un interferómetro de Michelson, partiendo de brazos iguales, ¿cuánto (en ${un}) hay que mover un espejo para que las franjas desaparezcan por primera vez?` : "En un interferómetro de Michelson, partiendo de brazos iguales, ¿cuántas franjas pasan hasta que el contraste desaparece por primera vez?"}`,
+        answer: ans,
+        solution: [`[[f2b-coherencia|Longitud de coherencia]]: $\\ell_c \\approx \\frac{\\lambda^2}{\\Delta\\lambda} = \\frac{${F.lam}^2}{${dn(dl, 2)}}$ nm $\\approx ${dn(lc / u, 4)}$ ${un}.`,
+          ...(ask === "espejo" ? [`Mover el espejo una distancia $s$ cambia el camino en $2s$ (ida y vuelta): $s = \\frac{\\ell_c}{2} \\approx ${dn(ans, 4)}$ ${un}.`] : []),
+          ...(ask === "franjas" ? [`Cada franja es una longitud de onda más de camino: $N = \\frac{\\ell_c}{\\lambda} = \\frac{\\lambda}{\\Delta\\lambda} \\approx ${dn(ans, 4)}$.`] : [])],
+        // verificación: se suman 400 longitudes de onda del espectro con su fase y se busca el primer cero del contraste
+        verify: { kind: "value", fn: () => { const x = lcSim(F.lam, dl); return ask === "lc" ? x / u : ask === "espejo" ? x / 2 / u : x / F.lam; }, tol: 3e-3 }
+      };
+    }
+  };
+  T["f2b-coherencia-vf"] = {
+    testN: 50, // la simulación de la visibilidad es algo cara
+    type: "tf", concepts: ["f2b-coherencia"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["pelicula", "michelson"]), fac = r.pick([0.2, 0.3, 0.5, 2, 3, 6]);
+      if (kind === "pelicula") {
+        const lam = 550, dl = 300, lc = lam * lam / dl, n = 1.33, d = Math.round(fac * lc / (2 * n));
+        return {
+          prompt: `Una película de agua jabonosa ($n = 1{,}33$) de $${d}$ nm de espesor se ilumina con luz blanca (de 400 a 700 nm). <b>Verdadero o falso:</b> se ven colores por interferencia en la luz reflejada.`,
+          answer: 2 * n * d < lc,
+          explanation: `Las dos reflexiones interfieren solo si la diferencia de caminos, $2nd \\approx ${Math.round(2 * n * d)}$ nm, es menor que la [[f2b-coherencia|longitud de coherencia]] de la luz blanca, $\\frac{\\lambda^2}{\\Delta\\lambda} \\approx \\frac{550^2}{300} \\approx ${Math.round(lc)}$ nm. ${2 * n * d < lc ? "Acá lo es: se ven colores." : "Acá no: los colores se mezclan y la película se ve blanca (por eso un vidrio de ventana no muestra colores)."}`,
+          solution: [`Cada color tiene su patrón de [[f2b-interferencia|interferencia]]; cuando el camino extra abarca muchas longitudes de onda, los máximos de unos caen sobre los mínimos de otros.`],
+          // verificación: el primer cero del contraste se busca sumando el espectro, sin la fórmula λ²/Δλ
+          verify: { kind: "truth", fn: () => 2 * n * d < lcSim(lam, dl) }
+        };
+      }
+      const F = r.pick(FUENTES), dl = r.pick(F.dl), lc = F.lam * F.lam / dl, s = fac * lc / 2, u = lc >= 1e6 ? 1e6 : 1e3, un = u === 1e6 ? "mm" : "μm";
+      return {
+        prompt: `En un interferómetro de Michelson iluminado con ${F.n} ($${F.lam}$ nm, ancho espectral de $${dn(dl, 2)}$ nm), se parte de brazos iguales y se aleja un espejo $${dn(s / u, 3)}$ ${un}. <b>Verdadero o falso:</b> en todo ese recorrido las franjas siguen viéndose nítidas.`,
+        answer: 2 * s < lc,
+        explanation: `La diferencia de caminos llega a $2s \\approx ${dn(2 * s / u, 3)}$ ${un}, y la [[f2b-coherencia|longitud de coherencia]] es $\\frac{\\lambda^2}{\\Delta\\lambda} \\approx ${dn(lc / u, 3)}$ ${un}. ${2 * s < lc ? "Como es menor, las franjas se mantienen (pierden algo de contraste, pero no desaparecen)." : "Como la supera, en algún momento el contraste se anula."}`,
+        solution: [`Cada longitud de onda del espectro da su propio sistema de franjas; con mucha diferencia de caminos se desfasan entre sí y se borran.`],
+        // verificación: se busca el primer cero del contraste sumando el espectro
+        verify: { kind: "truth", fn: () => 2 * s < lcSim(F.lam, dl) }
+      };
+    }
+  };
+
+  const cards = {
+    "f2b-instrumentos": {
+      title: "Instrumentos ópticos: lupa, microscopio y telescopio", aliases: ["instrumentos ópticos", "lupa", "microscopio", "telescopio", "aumento angular", "punto próximo", "ocular", "objetivo del telescopio"], concepts: ["f2b-instrumentos"],
+      summary: "Aumento angular M = θ/θ₀ con θ₀ = y/25 cm. Lupa: 25/f (o 1 + 25/f). Microscopio: m_obj · 25/f_oc. Telescopio: f_obj/f_oc, con las lentes a f_obj + f_oc.",
+      def: [R`El ojo ve más grande lo que subtiende más **ángulo**. El **aumento angular** es $M = \frac{\theta}{\theta_0}$, donde $\theta_0 = \frac{y}{25\ \text{cm}}$ es el ángulo del objeto a simple vista en el **punto próximo** (lo más cerca que el ojo enfoca).`,
+        R`**Lupa** ([[f2b-lentes|lente convergente]] pegada al ojo): $M = \frac{25}{f}$ con la imagen en el infinito, y $M = 1 + \frac{25}{f}$ con la imagen en el punto próximo.`,
+        R`**Microscopio:** el objetivo forma una imagen real aumentada $m_1 = -\frac{d_i}{d_o}$, y el ocular la mira como lupa: $M = m_1\cdot\frac{25}{f_{oc}}$.`,
+        R`**Telescopio (Kepler):** objetivo y ocular con los focos coincidentes, separados $f_{ob} + f_{oc}$; $M = -\frac{f_{ob}}{f_{oc}}$.`],
+      idea: [R`La lupa no "agranda" el objeto: deja acercarlo al ojo más que el punto próximo sin perder el foco. El microscopio hace eso dos veces: primero una imagen real ampliada, después una lupa sobre ella.`,
+        R`El telescopio no puede acercar la Luna: lo que hace es **agrandar ángulos**. Un haz paralelo que entra inclinado $\alpha$ sale paralelo, inclinado $\frac{f_{ob}}{f_{oc}}\alpha$. Además junta luz con su objetivo grande, y su poder de resolución lo pone la [[f2b-resolucion|difracción]].`],
+      demo: [R`**Paso 1 (lupa, imagen en el infinito).** Con el objeto en el foco, el rayo que pasa por el centro de la lente no se desvía y sale con ángulo $\theta = \frac yf$. Todos los rayos de la punta salen paralelos a ese, así que el ojo ve la punta en esa dirección. Dividiendo por $\theta_0 = \frac{y}{25}$: $M = \frac{25}{f}$.`,
+        R`**Paso 2 (lupa, imagen en el punto próximo).** Con la imagen virtual a 25 cm, la [[f2b-lentes|ecuación de la lente]] con $d_i = -25$ da $\frac{1}{d_o} = \frac1f + \frac1{25}$. El rayo central sale con ángulo $\frac{y}{d_o}$, así que $M = \frac{25}{d_o} = \frac{25}{f} + 1$.`,
+        R`**Paso 3 (microscopio).** El objetivo da una imagen real de tamaño $m_1y$. Si cae en el foco del ocular, el paso 1 aplicado a esa imagen da el ángulo $\frac{m_1y}{f_{oc}}$. Dividiendo por $\frac{y}{25}$: $M = m_1\frac{25}{f_{oc}}$.`,
+        R`**Paso 4 (telescopio).** Un haz paralelo que llega con ángulo $\alpha$ converge en el plano focal del objetivo, a altura $-f_{ob}\alpha$ (el rayo por el centro no se desvía). Ese punto está también en el foco del ocular, y según el paso 1 el ocular lo manda al infinito con ángulo $\frac{-f_{ob}\alpha}{f_{oc}}$. Por eso $M = -\frac{f_{ob}}{f_{oc}}$, y las lentes quedan a $f_{ob} + f_{oc}$. $\blacksquare$`],
+      examples: [{ q: R`Telescopio con objetivo de 100 cm y ocular de 2 cm.`, steps: [R`$|M| = \frac{100}{2} = 50$; largo $102$ cm.`, R`La Luna ($0{,}5^\circ$) se ve de unos $25^\circ$.`] }],
+      tips: [R`El aumento angular no es el lateral de la [[f2b-lentes|ecuación de lentes]]: con la imagen en el infinito, el lateral ni siquiera está definido.`],
+      see: ["f2b-lentes", "f2b-resolucion"]
+    },
+    "f2b-coherencia": {
+      title: "Coherencia de la luz", aliases: ["coherencia", "longitud de coherencia", "tiempo de coherencia", "luz coherente", "ancho espectral"], concepts: ["f2b-coherencia"],
+      summary: "Una fuente con ancho espectral Δλ alrededor de λ interfiere consigo misma solo si la diferencia de caminos es menor que ℓ_c ≈ λ²/Δλ (o c/Δν).",
+      def: [R`Ninguna fuente es perfectamente monocromática: emite un **ancho espectral** $\Delta\lambda$ (o $\Delta\nu$) alrededor de $\lambda$. La **longitud de coherencia** es la diferencia de caminos máxima para la que todavía se ven franjas de [[f2b-interferencia|interferencia]]: $$\ell_c \approx \frac{\lambda^2}{\Delta\lambda} = \frac{c}{\Delta\nu}.$$ El **tiempo de coherencia** es $\tau_c = \frac{\ell_c}{c} = \frac{1}{\Delta\nu}$.`,
+        R`Luz blanca: $\ell_c \sim 1$ μm. Un LED: unos 15 a 30 μm. Una lámpara de sodio: menos de un milímetro. Un láser estabilizado: metros o kilómetros.`],
+      idea: [R`Cada longitud de onda del espectro forma su propio sistema de franjas. Con poca diferencia de caminos coinciden; al crecer la diferencia, unas se corren respecto de otras y los máximos de unas tapan los mínimos de otras: el contraste se pierde.`,
+        R`Por eso las burbujas de jabón muestran colores y un vidrio de ventana no: en la burbuja el camino extra es de unos cientos de nanómetros; en el vidrio, de milímetros.`],
+      demo: [R`**Paso 1 (en números de onda).** Escribimos $k = \frac{2\pi}{\lambda}$. Una diferencia de caminos $x$ desfasa cada componente en $kx$. Si el espectro ocupa de $k_0 - \frac{\Delta k}2$ a $k_0 + \frac{\Delta k}2$, los desfases van de $k_0x - \frac{\Delta k\,x}{2}$ a $k_0x + \frac{\Delta k\,x}{2}$.`,
+        R`**Paso 2 (cuándo se borran).** Si esos desfases abarcan una vuelta entera, $\Delta k\,x = 2\pi$, para cada componente hay otra desfasada media vuelta que la cancela: el contraste se anula. Eso pasa en $x = \frac{2\pi}{\Delta k}$.`,
+        R`**Paso 3 (pasar a λ).** Diferenciando $k = \frac{2\pi}{\lambda}$: $|\Delta k| \approx \frac{2\pi}{\lambda^2}\Delta\lambda$ (para $\Delta\lambda \ll \lambda$). Reemplazando: $\ell_c = \frac{\lambda^2}{\Delta\lambda}$.`,
+        R`**Paso 4 (en frecuencia).** Con $\nu = \frac{c}{\lambda}$, $\Delta\nu \approx \frac{c}{\lambda^2}\Delta\lambda$, así que $\ell_c = \frac{c}{\Delta\nu}$. $\blacksquare$`],
+      examples: [{ q: R`¿Cuántas franjas se ven con un LED de 600 nm y 20 nm de ancho?`, steps: [R`$\ell_c = \frac{600^2}{20} = 18\,000$ nm $= 18$ μm.`, R`$N = \frac{\ell_c}{\lambda} = \frac{\lambda}{\Delta\lambda} = 30$ franjas.`] }],
+      see: ["f2b-interferencia", "f2b-dispersion"]
+    }
+  };
+
+  E.extendCourse("f102b", {
+    concepts: { "f2b-instrumentos": { name: "Instrumentos ópticos" }, "f2b-coherencia": { name: "Coherencia" } },
+    templates: T,
+    units: [{
+      id: "f2b-instrumentos-u", order: 12, program: "Extra UBA", title: "Instrumentos ópticos y coherencia", icon: "search",
+      diagnostic: ["f2b-lupa-num", "f2b-telescopio-num", "f2b-coherencia-num"],
+      lessons: [
+        { id: "f2b-instrumentos", title: "Lupa, microscopio y telescopio", templates: ["f2b-lupa-num", "f2b-microscopio-num", "f2b-telescopio-num"], theory: ["f2b-instrumentos"],
+          intro: R`Aumento angular $M = \theta/\theta_0$, con $\theta_0 = y/25$ cm. Lupa: $\frac{25}{f}$. Telescopio: $\frac{f_{ob}}{f_{oc}}$.` },
+        { id: "f2b-coherencia", title: "Coherencia", templates: ["f2b-coherencia-num", "f2b-coherencia-vf"], theory: ["f2b-coherencia"],
+          intro: R`Hay franjas solo si la diferencia de caminos es menor que $\ell_c \approx \frac{\lambda^2}{\Delta\lambda}$.` }
       ]
     }],
     cards

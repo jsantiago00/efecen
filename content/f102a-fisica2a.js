@@ -6,7 +6,7 @@
  *   4 Corriente, resistencia y fem · 5 Circuitos de corriente continua · 6 Campo magnético
  *   7 Fuentes de campo magnético · 8 Inducción electromagnética · 9 Corriente alterna
  * Extra UBA (temas de Física 3 de Cs. Físicas, FCEN-UBA, que no están en el programa de F102A):
- *   Electrostática avanzada · Medios materiales · Thévenin, puentes y filtros
+ *   Electrostática avanzada · Medios materiales · Thévenin, puentes y filtros · Ondas desde Maxwell y potencial vector
  * Ids con prefijo "f2a-". Todo el texto y los ejercicios son originales.
  */
 (function () {
@@ -2848,6 +2848,230 @@
           intro: R`$V_{th}$: tensión en vacío. $R_{th}$: resistencia con las fuentes apagadas. Puente equilibrado: $R_x = \frac{R_2R_3}{R_1}$.` },
         { id: "f2a-filtros", title: "Filtros", templates: ["f2a-filtro-vf", "f2a-filtro-num", "f2a-pasabanda-num"], theory: ["f2a-filtros"],
           intro: R`RC: $f_c = \frac{1}{2\pi RC}$; salida en C, pasa-bajos; en R, pasa-altos. RLC: $\Delta f = \frac{R}{2\pi L}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · ONDAS DESDE MAXWELL Y POTENCIAL VECTOR
+ *  Temas de Física 3 de la Lic. en Cs. Físicas (FCEN, UBA) que no figuran en el programa de F102A.
+ *  Solo se tomó la lista de temas; el texto y los ejercicios son originales.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const c0 = 1 / Math.sqrt(F.mu0 * F.e0);
+  const curl = (Fv, p, h = 1e-4) => { const d = (i, j) => { const a = p.slice(), b = p.slice(); a[j] += h; b[j] -= h; return (Fv(a)[i] - Fv(b)[i]) / (2 * h); }; return [d(2, 1) - d(1, 2), d(0, 2) - d(2, 0), d(1, 0) - d(0, 1)]; };
+  const div = (Fv, p, h = 1e-3) => [0, 1, 2].reduce((s, i) => { const a = p.slice(), b = p.slice(); a[i] += h; b[i] -= h; return s + (Fv(a)[i] - Fv(b)[i]) / (2 * h); }, 0);
+  // flujo de B a través de un círculo de radio r centrado en el eje de un solenoide de radio Rs (Simpson en polares, partido en el borde)
+  const solFlux = (B, Rs, r) => { const m = Math.min(r, Rs); return F.simpson(p => B * 2 * Math.PI * p, 0, m, 400); };
+  const MEDIOS = [{ n: "vidrio", er: 2.25 }, { n: "teflón", er: 2.1 }, { n: "agua (a frecuencias de radio)", er: 81 }, { n: "un plástico", er: 4 }, { n: "un cerámico", er: 9 }, { n: "polietileno", er: 2.3 }];
+
+  T["f2a-ondamedio-num"] = {
+    type: "numeric", concepts: ["f2a-ondas-maxwell"], difficulty: 2,
+    generate(r) {
+      const m = r.pick(MEDIOS), fr = r.pick([[100, "MHz", 1e8], [300, "MHz", 3e8], [1.5, "GHz", 1.5e9], [2.4, "GHz", 2.4e9], [10, "GHz", 1e10], [50, "MHz", 5e7]]), ask = r.pick(["v", "lam", "n"]);
+      const v = c0 / Math.sqrt(m.er), lam = v / fr[2];
+      const ans = ask === "v" ? v / 1e8 : ask === "lam" ? lam * 100 : Math.sqrt(m.er);
+      return {
+        prompt: `Una onda electromagnética de $${String(fr[0]).replace(".", "{,}")}$ ${fr[1]} se propaga en ${m.n}, un medio no magnético con $\\varepsilon_r = ${String(m.er).replace(".", "{,}")}$ y sin cargas ni corrientes libres. ${ask === "v" ? "¿Con qué rapidez se propaga (en $10^8$ m/s)?" : ask === "lam" ? "¿Cuál es su longitud de onda en ese medio (en cm)?" : "¿Cuál es el índice de refracción del medio para esa onda?"} ($c = 1/\\sqrt{\\mu_0\\varepsilon_0} \\approx 2{,}998\\times10^8$ m/s)`,
+        answer: ans,
+        solution: [`En el medio, las [[f2a-ondas-maxwell|ecuaciones de Maxwell]] dan la ecuación de ondas $\\nabla^2\\vec E = \\mu_0\\varepsilon\\frac{\\partial^2\\vec E}{\\partial t^2}$, con $\\varepsilon = \\varepsilon_r\\varepsilon_0$ ([[f2a-medios-electricos|dieléctrico]]).`,
+          `La rapidez es $v = \\frac{1}{\\sqrt{\\mu_0\\varepsilon_r\\varepsilon_0}} = \\frac{c}{\\sqrt{\\varepsilon_r}} \\approx ${nf(v)}$ m/s${ask === "n" ? `, y el índice es $n = \\frac cv = \\sqrt{\\varepsilon_r} = ${nf(ans)}$` : ""}.`,
+          ...(ask === "lam" ? [`$\\lambda = \\frac vf \\approx ${nf(lam * 100)}$ cm (más corta que en el vacío, $${nf(c0 / fr[2] * 100)}$ cm).`] : [])],
+        // verificación: se arma E = cos(kx − ωt) con lo que da la respuesta y se mira el residuo de la ecuación de ondas por diferencias finitas
+        verify: { kind: "zero", tol: 1e-4, fn: a => {
+          const w = 2 * Math.PI * fr[2], k = ask === "v" ? w / (a * 1e8) : ask === "lam" ? 2 * Math.PI / (a / 100) : w * a * Math.sqrt(F.mu0 * F.e0);
+          const Ef = (x, t) => Math.cos(k * x - w * t), x0 = 0.3 / k, t0 = 0.7 / w, hx = 1e-3 / k, ht = 1e-3 / w;
+          const Exx = (Ef(x0 + hx, t0) - 2 * Ef(x0, t0) + Ef(x0 - hx, t0)) / (hx * hx), Ett = (Ef(x0, t0 + ht) - 2 * Ef(x0, t0) + Ef(x0, t0 - ht)) / (ht * ht);
+          return [(Exx - F.mu0 * m.er * F.e0 * Ett) / (k * k)];
+        } }
+      };
+    }
+  };
+  T["f2a-poynting-num"] = {
+    type: "numeric", concepts: ["f2a-ondas-maxwell"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["I", "E0", "cable"]);
+      if (v === "cable") {
+        const I = r.int(2, 30) / 2, Rr = r.int(5, 60) / 10, a = r.int(2, 10) / 10, L = r.int(5, 40) / 10, S = I * I * Rr / (2 * Math.PI * a * 1e-3 * L);
+        return {
+          prompt: `Un alambre de $${String(a).replace(".", "{,}")}$ mm de radio y $${String(L).replace(".", "{,}")}$ m de largo, con resistencia $${String(Rr).replace(".", "{,}")}\\ \\Omega$, lleva una corriente continua de $${String(I).replace(".", "{,}")}$ A. ¿Cuánto vale el vector de Poynting en la superficie del alambre (en kW/m²)?`,
+          answer: S / 1e3,
+          solution: [`En la superficie: $E = \\frac{V}{L} = \\frac{IR}{L}$ a lo largo del alambre, y $B = \\frac{\\mu_0I}{2\\pi a}$ alrededor ([[f2a-ampere|ley de Ampère]]).`,
+            `$\\vec S = \\frac{\\vec E\\times\\vec B}{\\mu_0}$ apunta **hacia adentro**, con módulo $S = \\frac{IR}{L}\\cdot\\frac{I}{2\\pi a} \\approx ${nf(S / 1e3)}$ kW/m².`,
+            `Multiplicado por el área lateral $2\\pi aL$ da $I^2R$: la energía que se disipa en el alambre entra por los costados, desde el campo.`],
+          // verificación: el flujo de S por la superficie lateral tiene que dar la potencia de Joule I²R
+          verify: { kind: "zero", tol: 1e-9, fn: x => [(x * 1e3 * 2 * Math.PI * a * 1e-3 * L - I * I * Rr) / (I * I * Rr)] }
+        };
+      }
+      const E0 = r.int(2, 60) * 50, I = E0 * E0 / (2 * F.mu0 * c0);
+      const Iq = r.pick([1360, 1000, 500, 2000, 50, 120]);
+      // promedio de S en un período: B se obtiene integrando Faraday (∂B/∂t = −∂E/∂x) en el tiempo, sin usar B = E/c
+      const avgS = e0 => {
+        const lam = 1, k = 2 * Math.PI / lam, w = k * c0, Tp = 2 * Math.PI / w, n = 2000, h = Tp / n;
+        const dEdx = t => -k * e0 * Math.sin(-w * t);
+        const Bs = [0]; for (let i = 0; i < n; i++) Bs.push(Bs[i] - h / 2 * (dEdx(i * h) + dEdx((i + 1) * h)));
+        const mB = Bs.slice(0, n).reduce((s, x) => s + x, 0) / n;
+        let s = 0; for (let i = 0; i < n; i++) s += e0 * Math.cos(-w * i * h) * (Bs[i] - mB);
+        return s / n / F.mu0;
+      };
+      if (v === "I") return {
+        prompt: `Una onda electromagnética plana y senoidal viaja por el vacío con un campo eléctrico de amplitud $${E0}$ V/m. ¿Cuál es su intensidad media (en W/m²)? ($\\mu_0 = 4\\pi\\times10^{-7}$ T m/A, $c \\approx 2{,}998\\times10^8$ m/s)`,
+        answer: I,
+        solution: [`Por Faraday, $B_0 = \\frac{E_0}{c}$, y el [[f2a-ondas-maxwell|vector de Poynting]] vale $S = \\frac{EB}{\\mu_0} = \\frac{E_0^2}{\\mu_0c}\\cos^2(kx - \\omega t)$.`,
+          `El promedio de $\\cos^2$ es $\\frac12$: $\\langle S\\rangle = \\frac{E_0^2}{2\\mu_0c} \\approx ${nf(I)}$ W/m².`],
+        verify: { kind: "value", tol: 1e-5, fn: () => avgS(E0) }
+      };
+      const e0 = Math.sqrt(2 * F.mu0 * c0 * Iq);
+      return {
+        prompt: `Una onda electromagnética plana y senoidal tiene una intensidad media de $${Iq}$ W/m² en el vacío. ¿Cuál es la amplitud de su campo eléctrico (en V/m)? ($\\mu_0 = 4\\pi\\times10^{-7}$ T m/A, $c \\approx 2{,}998\\times10^8$ m/s)`,
+        answer: e0,
+        solution: [`De $\\langle S\\rangle = \\frac{E_0^2}{2\\mu_0c}$ ([[f2a-ondas-maxwell|vector de Poynting]]): $E_0 = \\sqrt{2\\mu_0c\\langle S\\rangle} \\approx ${nf(e0)}$ V/m.`,
+          `El campo magnético tiene amplitud $B_0 = \\frac{E_0}{c} \\approx ${nf(e0 / c0 * 1e6)}$ μT.`],
+        verify: { kind: "zero", tol: 1e-5, fn: x => [(avgS(x) - Iq) / Iq] }
+      };
+    }
+  };
+  T["f2a-rotA-num"] = {
+    type: "numeric", concepts: ["f2a-potencial-vector"], difficulty: 2,
+    generate(r) {
+      // cada componente de A es c·(monomio en x, y, z); B = ∇×A se deriva exacto y se pide una componente en un punto
+      const MON = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [0, 1, 1], [1, 0, 1], [2, 0, 0], [0, 2, 0], [0, 0, 2]];
+      const tex = e => ["x", "y", "z"].map((v, i) => e[i] === 0 ? "" : e[i] === 1 ? v : `${v}^{${e[i]}}`).join("");
+      const comps = [0, 1, 2].map(() => [[r.nz(-5, 5), r.pick(MON)], [r.nz(-5, 5), r.pick(MON)]]);
+      const ev = (t, p) => t.reduce((s, [c, e]) => s + c * p[0] ** e[0] * p[1] ** e[1] * p[2] ** e[2], 0);
+      const dv = (t, j, p) => t.reduce((s, [c, e]) => e[j] === 0 ? s : s + c * e[j] * p[0] ** (e[0] - (j === 0)) * p[1] ** (e[1] - (j === 1)) * p[2] ** (e[2] - (j === 2)), 0);
+      const P = [r.nz(-3, 3), r.nz(-3, 3), r.nz(-3, 3)], i = r.int(0, 2), j = (i + 1) % 3, k = (i + 2) % 3;
+      const ans = dv(comps[k], j, P) - dv(comps[j], k, P);
+      if (ans === 0 || comps.some(t => t[0][1] === t[1][1])) return null;
+      const show = t => H.poly(t.map(([c, e]) => [c, tex(e)])) || "0";
+      const n = ["x", "y", "z"];
+      return {
+        prompt: `El potencial vector de cierto campo magnético es $\\vec A = \\left(${show(comps[0])},\\ ${show(comps[1])},\\ ${show(comps[2])}\\right)$ (en T·m, con las coordenadas en metros). ¿Cuánto vale $B_${n[i]}$ (en T) en el punto $(${P.join(", ")})$?`,
+        answer: ans,
+        solution: [`$\\vec B = \\nabla\\times\\vec A$ ([[f2a-potencial-vector|potencial vector]]). Su componente $${n[i]}$ es $B_${n[i]} = \\frac{\\partial A_${n[k]}}{\\partial ${n[j]}} - \\frac{\\partial A_${n[j]}}{\\partial ${n[k]}}$.`,
+          `En $(${P.join(", ")})$: $\\frac{\\partial A_${n[k]}}{\\partial ${n[j]}} = ${dv(comps[k], j, P)}$ y $\\frac{\\partial A_${n[j]}}{\\partial ${n[k]}} = ${dv(comps[j], k, P)}$.`,
+          `$B_${n[i]} = ${ans}$ T.`],
+        // verificación: rotor por diferencias finitas
+        verify: { kind: "value", tol: 1e-6, fn: () => curl(p => comps.map(t => ev(t, p)), P, 1e-4)[i] }
+      };
+    }
+  };
+  T["f2a-solenoideA-num"] = {
+    type: "numeric", concepts: ["f2a-potencial-vector"], difficulty: 3,
+    generate(r) {
+      const n = r.int(5, 40) * 100, I = r.int(1, 10) / 2, Rs = r.int(1, 5), rr = r.pick([0.25, 0.5, 0.8, 1.5, 2, 3, 5]) * Rs, ask = r.pick(["A", "fem"]);
+      const B = F.mu0 * n * I, A = rr < Rs ? B * rr / 200 : B * (Rs / 100) ** 2 / (2 * rr / 100);
+      const dIdt = r.int(1, 20) * 10, Ein = A / I * dIdt;
+      return {
+        prompt: `Un solenoide largo de radio $${Rs}$ cm tiene $${n}$ vueltas por metro y lleva ${ask === "A" ? `$${String(I).replace(".", "{,}")}$ A` : `una corriente que crece a $${dIdt}$ A/s`}. ${ask === "A" ? `En el gauge de Coulomb, ¿cuánto vale el módulo del potencial vector a $${nf(rr)}$ cm del eje (en μT·m)?` : `¿Cuánto vale el campo eléctrico inducido a $${nf(rr)}$ cm del eje (en mV/m)?`} ($\\mu_0 = 4\\pi\\times10^{-7}$ T m/A)`,
+        answer: ask === "A" ? A * 1e6 : Ein * 1e3,
+        solution: [`Por simetría, $\\vec A$ da vueltas alrededor del eje y su módulo depende solo de $r$. Por [[c2-flujo|Stokes]], $\\oint\\vec A\\cdot d\\vec l = \\Phi_B$: $A\\cdot2\\pi r = \\Phi_B(r)$ ([[f2a-potencial-vector|potencial vector]]).`,
+          `Adentro $B = \\mu_0nI${ask === "A" ? ` = ${nf(B * 1e3)}$ mT` : "$"}. ${rr < Rs ? `Como $r < R$: $\\Phi = B\\pi r^2$ y $A = \\frac{Br}{2}$.` : `Como $r > R$: $\\Phi = B\\pi R^2$ y $A = \\frac{BR^2}{2r}$, que **no es cero** aunque afuera $B = 0$.`}`,
+          ask === "A" ? `$A \\approx ${nf(A * 1e6)}$ μT·m.` : `El [[f2a-campo-inducido|campo eléctrico inducido]] es $\\vec E = -\\frac{\\partial\\vec A}{\\partial t}$: $E = \\frac{A}{I}\\frac{dI}{dt} \\approx ${nf(Ein * 1e3)}$ mV/m.`],
+        // verificación: flujo de B integrado en polares (Simpson) y circulación de A, o ley de Faraday con ese flujo
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const per = solFlux(F.mu0 * n, Rs / 100, rr / 100) / (2 * Math.PI * rr / 100);
+          return ask === "A" ? per * I * 1e6 : per * dIdt * 1e3;
+        } }
+      };
+    }
+  };
+  T["f2a-potA-vf"] = {
+    type: "tf", concepts: ["f2a-potencial-vector"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(1, 5), kind = r.pick(["rot", "gauge", "afuera", "div"]), P = [0.31, -0.57, 0.83];
+      if (kind === "rot") {
+        const sg = r.pick([1, -1]), Af = p => [-sg * a * p[1], a * p[0], 0];
+        return {
+          prompt: `<b>Verdadero o falso:</b> el potencial vector $\\vec A = (${sg > 0 ? "-" : ""}${a === 1 ? "" : a}y,\\ ${a === 1 ? "" : a}x,\\ 0)$ (T·m) corresponde a un campo magnético nulo.`,
+          answer: sg < 0,
+          explanation: `$\\vec B = \\nabla\\times\\vec A$ tiene $B_z = \\frac{\\partial A_y}{\\partial x} - \\frac{\\partial A_x}{\\partial y} = ${a} ${sg > 0 ? "+" : "-"} ${a} = ${sg > 0 ? 2 * a : 0}$ T. ${sg > 0 ? "Es un campo uniforme, no nulo." : `Es nulo: ese $\\vec A$ es el gradiente de $${a === 1 ? "" : a}xy$ ([[f2a-potencial-vector|libertad de gauge]]).`}`,
+          solution: [`Un $\\vec A$ que "da vueltas" tiene rotor; uno que es un gradiente, no.`],
+          verify: { kind: "truth", fn: () => curl(Af, P).every(x => Math.abs(x) < 1e-6) }
+        };
+      }
+      if (kind === "gauge") {
+        const b = r.nz(-4, 4), A0 = p => [a * p[1] * p[2], 0, -a * p[0]], gr = p => [b * p[1] * p[2], b * p[0] * p[2], b * p[0] * p[1]];
+        return {
+          prompt: `<b>Verdadero o falso:</b> los potenciales vectores $\\vec A = (${a === 1 ? "" : a}yz,\\ 0,\\ -${a === 1 ? "" : a}x)$ y $\\vec A' = \\vec A + \\nabla(${b === 1 ? "" : b === -1 ? "-" : b}xyz)$ dan el mismo campo magnético.`,
+          answer: true,
+          explanation: `El rotor de un gradiente es siempre cero, así que $\\nabla\\times\\vec A' = \\nabla\\times\\vec A$. Esa es la **libertad de gauge** del [[f2a-potencial-vector|potencial vector]].`,
+          solution: [`Lo físico es $\\vec B$; $\\vec A$ queda definido salvo un gradiente.`],
+          verify: { kind: "truth", fn: () => { const b1 = curl(A0, P), b2 = curl(p => A0(p).map((x, i) => x + gr(p)[i]), P); return b1.every((x, i) => Math.abs(x - b2[i]) < 1e-6); } }
+        };
+      }
+      if (kind === "afuera") {
+        const Rs = r.int(1, 5), n = r.int(5, 40) * 100;
+        return {
+          prompt: `Un solenoide ideal muy largo, de radio $${Rs}$ cm y $${n}$ vueltas por metro, lleva $${a}$ A. <b>Verdadero o falso:</b> como afuera del solenoide $\\vec B = 0$, ahí se puede tomar $\\vec A = 0$ en todos los puntos.`,
+          answer: false,
+          explanation: `Una curva que rodea al solenoide encierra flujo, y por Stokes $\\oint\\vec A\\cdot d\\vec l = \\Phi_B \\ne 0$: $\\vec A$ no puede anularse en toda la curva. Afuera $\\vec A$ tiene rotor nulo pero no es cero (lo que se ve en el efecto Aharonov-Bohm) ([[f2a-potencial-vector]]).`,
+          solution: [`Con simetría, $A = \\frac{\\Phi}{2\\pi r}$ afuera.`],
+          verify: { kind: "truth", fn: () => !(solFlux(F.mu0 * n * a, Rs / 100, 3 * Rs / 100) > 0) }
+        };
+      }
+      const Af = p => [a * p[1] ** 2 * p[2], -a * p[0] * p[2] ** 2, a * p[0] * p[1]];
+      return {
+        prompt: `<b>Verdadero o falso:</b> el campo $\\vec B = \\nabla\\times\\vec A$, con $\\vec A = (${a === 1 ? "" : a}y^2z,\\ -${a === 1 ? "" : a}xz^2,\\ ${a === 1 ? "" : a}xy)$, cumple $\\nabla\\cdot\\vec B = 0$ en todos lados.`,
+        answer: true,
+        explanation: `La divergencia de un rotor es siempre cero (las derivadas cruzadas se cancelan de a pares). Por eso escribir $\\vec B = \\nabla\\times\\vec A$ garantiza la ley de Gauss magnética ([[f2a-potencial-vector]]).`,
+        solution: [`Vale para cualquier $\\vec A$ con derivadas segundas continuas.`],
+        verify: { kind: "truth", fn: () => Math.abs(div(p => curl(Af, p, 1e-3), P, 1e-2)) < 1e-4 }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-ondas-maxwell": {
+      title: "Ecuación de ondas desde Maxwell y vector de Poynting", aliases: ["ecuación de ondas electromagnética", "vector de Poynting", "Poynting", "teorema de Poynting", "presión de radiación"], concepts: ["f2a-ondas-maxwell"],
+      summary: "Tomando el rotor de Faraday y usando Ampère-Maxwell sin fuentes: ∇²E = με ∂²E/∂t², ondas a v = 1/√(με). La energía fluye con S = E×B/μ₀, y ⟨S⟩ = E₀²/(2μ₀c).",
+      def: [R`En una región sin cargas ni corrientes, de un medio lineal con $\varepsilon$ y $\mu$, las [[f2a-forma-diferencial|ecuaciones de Maxwell en forma diferencial]] implican $$\nabla^2\vec E = \mu\varepsilon\frac{\partial^2\vec E}{\partial t^2},\qquad \nabla^2\vec B = \mu\varepsilon\frac{\partial^2\vec B}{\partial t^2}:$$ ondas que viajan a $v = \frac{1}{\sqrt{\mu\varepsilon}}$. En el vacío, $c = \frac{1}{\sqrt{\mu_0\varepsilon_0}}$; en un dieléctrico no magnético, $v = \frac{c}{\sqrt{\varepsilon_r}}$ e índice $n = \sqrt{\varepsilon_r}$.`,
+        R`El **vector de Poynting** $\vec S = \frac{1}{\mu_0}\vec E\times\vec B$ es la potencia por unidad de área que lleva el campo. En una onda plana senoidal, $\langle S\rangle = \frac{E_0^2}{2\mu_0c}$ (la intensidad). Al ser absorbida, la onda ejerce una **presión de radiación** $\frac{\langle S\rangle}{c}$ (el doble si se refleja).`],
+      idea: [R`Lo nuevo respecto de [[f2b-em|ondas electromagnéticas]] es el camino: no se adivina una onda y se prueba, sino que la ecuación de ondas **sale** de Maxwell, con la rapidez ya puesta. Que $\frac{1}{\sqrt{\mu_0\varepsilon_0}}$ diera la rapidez medida de la luz fue lo que convenció a Maxwell de que la luz es electromagnética.`,
+        R`El vector de Poynting cuenta por dónde viaja la energía, y a veces sorprende: en un alambre con corriente, la energía que se disipa entra **por los costados**, desde el campo de afuera, no "por adentro del cable".`],
+      demo: [R`**Paso 1 (rotor de Faraday).** Partimos de $\nabla\times\vec E = -\frac{\partial\vec B}{\partial t}$ y tomamos el rotor de los dos lados. Las derivadas en el espacio y en el tiempo conmutan: $\nabla\times(\nabla\times\vec E) = -\frac{\partial}{\partial t}(\nabla\times\vec B)$.`,
+        R`**Paso 2 (Ampère-Maxwell).** Sin corrientes, $\nabla\times\vec B = \mu\varepsilon\frac{\partial\vec E}{\partial t}$. Reemplazando: $\nabla\times(\nabla\times\vec E) = -\mu\varepsilon\frac{\partial^2\vec E}{\partial t^2}$.`,
+        R`**Paso 3 (identidad del doble rotor).** Para cualquier campo, $\nabla\times(\nabla\times\vec E) = \nabla(\nabla\cdot\vec E) - \nabla^2\vec E$ (se comprueba componente por componente). Sin cargas, la ley de Gauss da $\nabla\cdot\vec E = 0$, así que queda $-\nabla^2\vec E$.`,
+        R`**Paso 4 (ecuación de ondas).** Igualando: $\nabla^2\vec E = \mu\varepsilon\frac{\partial^2\vec E}{\partial t^2}$. Para una función $f(x - vt)$, las derivadas segundas cumplen $f_{tt} = v^2f_{xx}$, así que es una ecuación de ondas con $v^2 = \frac{1}{\mu\varepsilon}$. Lo mismo, empezando por el rotor de Ampère-Maxwell, sale para $\vec B$.`,
+        R`**Paso 5 (Poynting).** La energía del campo por unidad de volumen es $u = \frac12\varepsilon_0E^2 + \frac{B^2}{2\mu_0}$. Derivando y usando Faraday y Ampère-Maxwell, con la identidad $\nabla\cdot(\vec E\times\vec B) = \vec B\cdot(\nabla\times\vec E) - \vec E\cdot(\nabla\times\vec B)$, queda $\frac{\partial u}{\partial t} + \nabla\cdot\vec S = -\vec J\cdot\vec E$: lo que pierde el campo en un volumen sale por su borde como flujo de $\vec S$ o se lo entrega a las cargas.`,
+        R`**Paso 6 (onda plana).** Con $E = E_0\cos(kx - \omega t)$ y $B = \frac Ec$ en fase, $S = \frac{E_0^2}{\mu_0c}\cos^2(kx - \omega t)$, y como el promedio de $\cos^2$ es $\frac12$, $\langle S\rangle = \frac{E_0^2}{2\mu_0c}$. $\blacksquare$`],
+      examples: [{ q: R`Luz solar en la Tierra: $1360$ W/m². ¿Amplitud del campo eléctrico?`, steps: [R`$E_0 = \sqrt{2\mu_0c\langle S\rangle} = \sqrt{2\cdot4\pi\times10^{-7}\cdot3\times10^8\cdot1360} \approx 1010$ V/m.`] }],
+      see: ["f2a-maxwell", "f2a-forma-diferencial", "f2b-em", "f2a-potencial-vector"]
+    },
+    "f2a-potencial-vector": {
+      title: "Potencial vector", aliases: ["potencial vector", "libertad de gauge", "gauge de Coulomb", "Aharonov-Bohm"], concepts: ["f2a-potencial-vector"],
+      summary: "Como ∇·B = 0, se puede escribir B = ∇×A. A queda definido salvo un gradiente (gauge). Por Stokes, ∮A·dl = Φ_B, y E = −∇V − ∂A/∂t.",
+      def: [R`Como $\nabla\cdot\vec B = 0$, siempre existe un **potencial vector** $\vec A$ con $$\vec B = \nabla\times\vec A.$$ Es el análogo magnético del [[f2a-potencial|potencial eléctrico]].`,
+        R`**Libertad de gauge:** $\vec A$ y $\vec A + \nabla\chi$ dan el mismo $\vec B$, porque el rotor de un gradiente es cero. En el **gauge de Coulomb** se pide además $\nabla\cdot\vec A = 0$, y entonces $\nabla^2\vec A = -\mu_0\vec J$, como Poisson componente por componente.`,
+        R`**Circulación:** por [[c2-flujo|Stokes]], $\oint_C\vec A\cdot d\vec l = \Phi_B$, el flujo magnético por una superficie apoyada en $C$. Con campos que cambian, Faraday da $\vec E = -\nabla V - \frac{\partial\vec A}{\partial t}$.`],
+      idea: [R`En un solenoide largo, $\vec A$ da vueltas alrededor del eje: adentro $A = \frac{Br}{2}$ y afuera $A = \frac{BR^2}{2r}$. Afuera no hay campo magnético pero $\vec A$ **no** es cero: tiene rotor nulo, pero su circulación alrededor del solenoide es el flujo encerrado.`,
+        R`En mecánica clásica eso no tiene consecuencias, pero en cuántica sí: un electrón que rodea al solenoide sin tocar el campo cambia su fase (efecto Aharonov-Bohm). Y el campo eléctrico inducido afuera del solenoide es justamente $-\frac{\partial\vec A}{\partial t}$.`],
+      demo: [R`**Paso 1 (por qué existe).** Un campo con divergencia nula en todo el espacio es el rotor de otro (es el recíproco de que la divergencia de un rotor es cero, y se prueba construyendo $\vec A$ por integración). Lo usamos como dato.`,
+        R`**Paso 2 (gauge).** Si $\vec A' = \vec A + \nabla\chi$, entonces $\nabla\times\vec A' = \nabla\times\vec A + \nabla\times\nabla\chi$, y el último término es cero porque las derivadas cruzadas de $\chi$ son iguales. Mismo $\vec B$.`,
+        R`**Paso 3 (Stokes).** Para una curva $C$ que borda una superficie $S$: $\oint_C\vec A\cdot d\vec l = \iint_S(\nabla\times\vec A)\cdot d\vec S = \iint_S\vec B\cdot d\vec S = \Phi_B$.`,
+        R`**Paso 4 (solenoide).** Por la simetría de rotación, $\vec A$ es tangente a las circunferencias centradas en el eje y de módulo constante en cada una. En una de radio $r$: $A\cdot2\pi r = \Phi_B(r)$. Adentro $\Phi = B\pi r^2$, así que $A = \frac{Br}{2}$; afuera $\Phi = B\pi R^2$ y $A = \frac{BR^2}{2r}$.`,
+        R`**Paso 5 (campo inducido).** Faraday: $\nabla\times\vec E = -\frac{\partial}{\partial t}\nabla\times\vec A$, o sea $\nabla\times\left(\vec E + \frac{\partial\vec A}{\partial t}\right) = 0$. Un campo de rotor nulo es un gradiente: $\vec E + \frac{\partial\vec A}{\partial t} = -\nabla V$. $\blacksquare$`],
+      examples: [{ q: R`$\vec A = (0,\ 3x^2,\ 0)$ T·m. ¿$\vec B$?`, steps: [R`$B_z = \frac{\partial A_y}{\partial x} - \frac{\partial A_x}{\partial y} = 6x$; las otras componentes son cero.`, R`En $x = 1$ m, $B = 6$ T en $\hat z$.`] }],
+      tips: [R`$\vec A$ no es único: dos respuestas distintas pueden estar bien si difieren en un gradiente. Lo que se compara es $\vec B$, o la circulación de $\vec A$ en una curva cerrada.`],
+      see: ["f2a-campo-inducido", "f2a-ampere", "f2a-forma-diferencial", "f2a-ondas-maxwell"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-ondas-maxwell": { name: "Ondas desde Maxwell" }, "f2a-potencial-vector": { name: "Potencial vector" } },
+    templates: T,
+    units: [{
+      id: "f2a-ondas-ext-u", order: 13, program: "Extra UBA", title: "Ondas desde Maxwell y potencial vector", icon: "sparkles",
+      diagnostic: ["f2a-ondamedio-num", "f2a-poynting-num", "f2a-rotA-num"],
+      lessons: [
+        { id: "f2a-ondas-maxwell", title: "Ecuación de ondas y Poynting", templates: ["f2a-ondamedio-num", "f2a-poynting-num"], theory: ["f2a-ondas-maxwell"],
+          intro: R`$\nabla^2\vec E = \mu\varepsilon\,\partial_t^2\vec E$: ondas a $v = \frac{1}{\sqrt{\mu\varepsilon}}$. Potencia por área: $\vec S = \frac{1}{\mu_0}\vec E\times\vec B$.` },
+        { id: "f2a-potencial-vector", title: "Potencial vector", templates: ["f2a-rotA-num", "f2a-potA-vf", "f2a-solenoideA-num"], theory: ["f2a-potencial-vector"],
+          intro: R`$\vec B = \nabla\times\vec A$, $\oint\vec A\cdot d\vec l = \Phi_B$ y $\vec E = -\nabla V - \partial_t\vec A$.` }
       ]
     }],
     cards
