@@ -109,6 +109,24 @@
     { v: Math.PI / 6, t: "\\frac{\\pi}{6}" }, { v: Math.PI / 4, t: "\\frac{\\pi}{4}" },
     { v: Math.PI / 3, t: "\\frac{\\pi}{3}" }, { v: Math.PI / 2, t: "\\frac{\\pi}{2}" }
   ];
+  // para las respuestas de tipo expr: una suma de términos { p, q, m, t } (coeficiente p/q, monomio para el parser m
+  // y en TeX t) → [texto para el parser, TeX], con signos, fracciones y coeficientes 1 resueltos
+  H.terms = terms => {
+    let P = "", X = "";
+    terms.filter(o => o.p !== 0).forEach((o, i) => {
+      let p = o.p, q = o.q || 1;
+      if (q < 0) { p = -p; q = -q; }
+      const g = H.gcd(p, q), a = Math.abs(p / g), d = q / g, neg = p < 0;
+      const cp = d === 1 ? (a === 1 && o.m ? "" : String(a)) : `(${a}/${d})`;
+      const ct = d === 1 ? (a === 1 && o.t ? "" : String(a)) : `\\frac{${a}}{${d}}`;
+      const sg = neg ? (i ? " - " : "-") : i ? " + " : "";
+      P += sg + (o.m ? (cp ? `${cp}*${o.m}` : o.m) : cp);
+      X += sg + ct + (o.t || "");
+    });
+    return [P || "0", X || "0"];
+  };
+  // potencia de una variable como monomio de H.terms: pw(0) = 1, pw(1, "t") = t, pw(3) = x³
+  H.pw = (e, v = "x") => (e === 0 ? { m: "", t: "" } : e === 1 ? { m: v, t: v } : { m: `${v}^${e}`, t: `${v}^{${e}}` });
   // armar opción múltiple: dedup + completar con fallbacks + mezclar
   H.mc = (r, correct, distractors, opts = {}) => {
     const seen = new Set([correct]);
@@ -122,55 +140,159 @@
     return { options, correct: raw.indexOf(correct) };
   };
 
-  // ---------- Parser numérico seguro (sin eval) ----------
-  const NAMES = ["sqrt", "exp", "sin", "cos", "tan", "ln", "log", "pi", "e"];
-  const FN = { sqrt: Math.sqrt, ln: Math.log, log: Math.log10, sin: Math.sin, cos: Math.cos, tan: Math.tan, exp: Math.exp };
-  E.parseNum = function (src) {
-    if (src == null) return NaN;
+  // ---------- Parser de expresiones (sin eval) ----------
+  // E.parseExpr(src, vars) devuelve un árbol, o null si no se entiende. Sirve para las respuestas numéricas (sin
+  // variables, ver E.parseNum) y para las de tipo `expr`, donde se escribe una función: 3x^2 - 2sen(x), e^(2t)…
+  // Acepta multiplicación implícita (2x, (x+1)(x-1)), sen o sin, tg o tan, arcsen…, |x|, raiz o √, ² y ³, y
+  // potencias de funciones: sen^2 x y sen(x)^2 son (sen x)², pero sen x^2 es sen(x²). Sin paréntesis, el argumento
+  // de una función se lleva los números y variables que le siguen: sen 2x es sen(2x), y sen x cos x es sen(x)·cos(x).
+  // Nodos: ["n", v], ["c", "pi" | "e"], ["v", nombre], ["neg", a], ["+" | "-" | "/" | "^", a, b],
+  // ["*", a, b, implícita], ["f", nombre, a] (una función de FN) y ["abs", a].
+  const FN = {
+    sqrt: Math.sqrt, exp: Math.exp, ln: Math.log, log: Math.log10, sin: Math.sin, cos: Math.cos, tan: Math.tan,
+    asin: Math.asin, acos: Math.acos, atan: Math.atan, sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
+    sec: x => 1 / Math.cos(x), csc: x => 1 / Math.sin(x), cot: x => 1 / Math.tan(x)
+  };
+  // lo que se puede escribir → función o constante
+  const ALIAS = {
+    sqrt: "sqrt", raiz: "sqrt", exp: "exp", ln: "ln", log: "log", sin: "sin", sen: "sin", cos: "cos", tan: "tan", tg: "tan",
+    arcsin: "asin", arcsen: "asin", asin: "asin", arccos: "acos", acos: "acos", arctan: "atan", arctg: "atan", atan: "atan",
+    sinh: "sinh", senh: "sinh", cosh: "cosh", tanh: "tanh", tgh: "tanh", sec: "sec", csc: "csc", cosec: "csc", cot: "cot", cotg: "cot",
+    pi: "pi", e: "e"
+  };
+  const NAMES = Object.keys(ALIAS).sort((a, b) => b.length - a.length);
+  E.parseExpr = function (src, vars = []) {
+    if (src == null) return null;
+    const VS = vars.map(v => v.toLowerCase()).sort((a, b) => b.length - a.length);
+    let s = String(src).trim();
     // notación científica: 1,3E-5, 1,3e7 (e pegada a un dígito y seguida de dígitos) y 1,3 x 10^7; «2e» sola sigue siendo 2·e
-    let s = String(src).trim().replace(/(\d)\s*[xX×·*]\s*10\s*\^/g, "$1*10^").replace(/(\d)E([+-]?\d+)/g, "$1*10^($2)").replace(/(\d)e(\d+)/g, "$1*10^($2)").toLowerCase()
-      .replace(/,/g, ".").replace(/π/g, "pi").replace(/√/g, "sqrt")
+    if (!VS.includes("x")) s = s.replace(/(\d)\s*[xX]\s*10\s*\^/g, "$1*10^");
+    s = s.replace(/(\d)E([+-]?\d+)/g, "$1*10^($2)").replace(/(\d)e(\d+)/g, "$1*10^($2)").toLowerCase()
+      .replace(/,/g, ".").replace(/π/g, "pi").replace(/√/g, "sqrt").replace(/²/g, "^2").replace(/³/g, "^3")
       .replace(/[·×]/g, "*").replace(/[−–]/g, "-").replace(/\s+/g, "");
-    if (!s) return NaN;
+    if (!s) return null;
     const open = (s.match(/\(/g) || []).length - (s.match(/\)/g) || []).length;
     if (open > 0) s += ")".repeat(open);
     const toks = [];
-    let i = 0;
-    while (i < s.length) {
-      const ch = s[i];
+    for (let i = 0; i < s.length;) {
       const num = /^(\d+\.?\d*|\.\d+)/.exec(s.slice(i));
       if (num) { toks.push({ t: "n", v: parseFloat(num[1]) }); i += num[1].length; continue; }
-      if ("+-*/^()".includes(ch)) { toks.push({ t: ch }); i++; continue; }
+      if ("+-*/^()|".includes(s[i])) { toks.push({ t: s[i] }); i++; continue; }
       const name = NAMES.find(n => s.startsWith(n, i));
-      if (name) { toks.push({ t: "id", v: name }); i += name.length; continue; }
-      return NaN;
+      if (name) { toks.push({ t: "id", v: ALIAS[name] }); i += name.length; continue; }
+      const vn = VS.find(v => s.startsWith(v, i));
+      if (vn) { toks.push({ t: "v", v: vn }); i += vn.length; continue; }
+      return null;
     }
-    let k = 0;
+    let k = 0, bars = 0;
+    const peek = () => toks[k];
     const eat = t => (toks[k] && toks[k].t === t ? (k++, true) : false);
-    const expr = () => { let v = term(); for (;;) { if (eat("+")) v += term(); else if (eat("-")) v -= term(); else return v; } };
+    const startsFactor = p => p && (p.t === "n" || p.t === "id" || p.t === "v" || p.t === "(" || (p.t === "|" && !bars));
+    const expr = () => { let a = term(); for (;;) { if (eat("+")) a = ["+", a, term()]; else if (eat("-")) a = ["-", a, term()]; else return a; } };
     const term = () => {
-      let v = unary();
+      let a = unary();
       for (;;) {
-        if (eat("*")) v *= unary();
-        else if (eat("/")) v /= unary();
-        else { const p = toks[k]; if (p && (p.t === "n" || p.t === "id" || p.t === "(")) v *= power(); else return v; }
+        if (eat("*")) a = ["*", a, unary()];
+        else if (eat("/")) a = ["/", a, unary()];
+        else if (startsFactor(peek())) a = ["*", a, power(), 1];
+        else return a;
       }
     };
-    const unary = () => (eat("-") ? -unary() : eat("+") ? unary() : power());
-    const power = () => { const b = atom(); return eat("^") ? Math.pow(b, unary()) : b; };
+    const unary = () => (eat("-") ? ["neg", unary()] : eat("+") ? unary() : power());
+    const power = () => { const b = atom(); return eat("^") ? ["^", b, unary()] : b; };
     const atom = () => {
       const p = toks[k++];
       if (!p) throw 0;
-      if (p.t === "n") return p.v;
-      if (p.t === "(") { const v = expr(); if (!eat(")")) throw 0; return v; }
+      if (p.t === "n") return ["n", p.v];
+      if (p.t === "v") return ["v", p.v];
+      if (p.t === "(") { const a = expr(); if (!eat(")")) throw 0; return a; }
+      if (p.t === "|") { bars++; const a = expr(); bars--; if (!eat("|")) throw 0; return ["abs", a]; }
       if (p.t === "id") {
-        if (p.v === "pi") return Math.PI;
-        if (p.v === "e") return Math.E;
-        return FN[p.v](power());
+        if (p.v === "pi" || p.v === "e") return ["c", p.v];
+        const ex = eat("^") ? atom() : null;
+        let arg;
+        if (peek() && peek().t === "(") arg = atom();
+        else { arg = power(); while (peek() && (peek().t === "n" || peek().t === "v")) arg = ["*", arg, power(), 1]; }
+        return ex ? ["^", ["f", p.v, arg], ex] : ["f", p.v, arg];
       }
       throw 0;
     };
-    try { const v = expr(); return k === toks.length ? v : NaN; } catch (e) { return NaN; }
+    try { const a = expr(); return k === toks.length ? a : null; } catch (e) { return null; }
+  };
+  E.evalExpr = function ev(a, env) {
+    switch (a[0]) {
+      case "n": return a[1];
+      case "c": return a[1] === "pi" ? Math.PI : Math.E;
+      case "v": return env[a[1]];
+      case "neg": return -ev(a[1], env);
+      case "+": return ev(a[1], env) + ev(a[2], env);
+      case "-": return ev(a[1], env) - ev(a[2], env);
+      case "*": return ev(a[1], env) * ev(a[2], env);
+      case "/": return ev(a[1], env) / ev(a[2], env);
+      case "^": return Math.pow(ev(a[1], env), ev(a[2], env));
+      case "f": return FN[a[1]](ev(a[2], env));
+      case "abs": return Math.abs(ev(a[1], env));
+    }
+    return NaN;
+  };
+  E.parseNum = function (src) {
+    const a = E.parseExpr(src);
+    return a ? E.evalExpr(a, {}) : NaN;
+  };
+  // la expresión como función de sus variables, en el orden de `vars` (o null si no se entiende)
+  E.exprFn = function (src, vars) {
+    const a = E.parseExpr(src, vars);
+    if (!a) return null;
+    const names = vars.map(v => v.toLowerCase());
+    return (...xs) => { const env = {}; names.forEach((v, i) => { env[v] = xs[i]; }); return E.evalExpr(a, env); };
+  };
+  // el árbol en TeX, para la vista previa: así se ve si «e^2x» quedó como e²·x o como e^(2x)
+  const TEXF = { ln: "\\ln", log: "\\log", sin: "\\sin", cos: "\\cos", tan: "\\tan", asin: "\\arcsin", acos: "\\arccos", atan: "\\arctan",
+    sinh: "\\sinh", cosh: "\\cosh", tanh: "\\tanh", sec: "\\sec", csc: "\\csc", cot: "\\cot" };
+  const numTex = v => {
+    if (!isFinite(v)) return "\\infty";
+    const s = String(+v.toPrecision(12)), m = /^([\d.]+)e([+-]\d+)$/.exec(s);
+    return m ? `${m[1].replace(".", "{,}")} \\times 10^{${+m[2]}}` : s.replace(".", "{,}");
+  };
+  // si el primer factor de un producto es negativo, el producto sin ese signo (para escribirlo adelante)
+  const leadNeg = a => {
+    if (a[0] === "neg") return a[1];
+    if (a[0] !== "*") return null;
+    const s = leadNeg(a[1]);
+    return s ? ["*", s, a[2], a[3]] : null;
+  };
+  // prec: 0 suelto, 0.5 a la derecha de una resta, 1 factor de un producto, 2 base de una potencia
+  E.exprTex = function tx(a, prec = 0) {
+    const P = (s, need) => (need ? `\\left(${s}\\right)` : s);
+    switch (a[0]) {
+      case "n": return numTex(a[1]);
+      case "c": return a[1] === "pi" ? "\\pi" : "e";
+      case "v": return a[1];
+      case "neg": return P("-" + tx(a[1], 1), prec >= 0.5);
+      case "+": case "-": return P(`${tx(a[1], 0)} ${a[0]} ${tx(a[2], 0.5)}`, prec >= 0.5);
+      case "*": {
+        // -2·x se escribe −2x (el signo afuera), 1·x es x, y el punto va solo si lo que sigue empieza con un número
+        const pos = leadNeg(a);
+        if (pos) return P("-" + tx(pos, 1), prec >= 0.5);
+        const l = tx(a[1], 1), r = tx(a[2], 1);
+        if (l === "1") return P(r, prec >= 2);
+        return P(/^[\d-]/.test(r) ? `${l} \\cdot ${r}` : `${l} ${r}`, prec >= 2);
+      }
+      case "/": return P(`\\frac{${tx(a[1], 0)}}{${tx(a[2], 0)}}`, prec >= 2);
+      case "^": {
+        const b = a[1];
+        if (b[0] === "f" && TEXF[b[1]]) return P(`${TEXF[b[1]]}^{${tx(a[2], 0)}}\\left(${tx(b[2], 0)}\\right)`, prec >= 2);
+        return P(`{${tx(b, 2)}}^{${tx(a[2], 0)}}`, prec >= 2);
+      }
+      case "f": {
+        const arg = tx(a[2], 0);
+        if (a[1] === "sqrt") return `\\sqrt{${arg}}`;
+        if (a[1] === "exp") return P(`e^{${arg}}`, prec >= 2);
+        return P(`${TEXF[a[1]]}\\left(${arg}\\right)`, prec >= 2);
+      }
+      case "abs": return `\\left|${tx(a[1], 0)}\\right|`;
+    }
+    return "";
   };
   // ¿la respuesta numérica es correcta? tolerancia relativa, o redondeo a 2 decimales
   E.checkNumeric = function (user, answer, tol = 0.01) {
@@ -179,6 +301,105 @@
     if (diff <= tol * Math.abs(answer) + 1e-9) return true;
     if (Math.abs(user - Math.round(answer * 100) / 100) < 1e-9) return true;
     return Math.abs(answer) < 1e-9 && Math.abs(user) < 1e-6;
+  };
+
+  // ---------- respuestas de tipo `expr` (se escribe una función) ----------
+  // inst: { answer: "2x cos(x^2)" (con la sintaxis del parser), answerTex, vars: ["x"], domain: [[lo, hi], …],
+  // constant?: true si alcanza con acertar salvo una constante (primitivas), lhs?: TeX que va antes, «f'(x) =» }.
+  // Se comparan las dos funciones en puntos fijos del dominio (siempre los mismos para una plantilla).
+  function exprSamples(src, inst) {
+    const vars = inst.vars || ["x"], f = E.exprFn(src, vars), g = E.exprFn(inst.answer, vars);
+    if (!f || !g) return null;
+    const dom = inst.domain || vars.map(() => [-2, 2]), r = E.rng(9973), out = [];
+    for (let i = 0; i < 200 && out.length < 12; i++) {
+      const p = dom.map(([lo, hi]) => lo + (hi - lo) * r.next()), b = g(...p);
+      if (Number.isFinite(b)) out.push([f(...p), b]);
+    }
+    return out.length >= 6 && out.every(([a]) => Number.isFinite(a)) ? out : null;
+  }
+  // ¿los valores son todos iguales? (con una tolerancia relativa a `scale`)
+  const allSame = (xs, tol, scale) => xs.every(x => Math.abs(x - xs[0]) <= tol * scale);
+  E.checkExpr = function (src, inst) {
+    const sm = exprSamples(src, inst), tol = inst.tolerance ?? 2e-3;
+    if (!sm) return false;
+    const scale = Math.max(1e-9, ...sm.map(([, b]) => Math.abs(b)));
+    if (inst.constant) return allSame(sm.map(([a, b]) => a - b), tol, Math.max(1, scale));
+    return sm.every(([a, b]) => Math.abs(a - b) <= tol * Math.max(Math.abs(b), 0.1 * scale));
+  };
+
+  // ---------- errores típicos ----------
+  // E.diagnose(inst, raw) mira una respuesta incorrecta (lo que escribió o eligió la persona) y devuelve una pista, o null.
+  // Primero van las trampas de la plantilla, inst.traps: [{ value, msg }] en las numéricas, [{ expr, msg }] en las de
+  // expresión y [{ option, msg }] en las de opción múltiple. Después, errores generales que valen para cualquier
+  // ejercicio: el signo, un factor 2, g, grados y radianes, potencias de 10, la inversa, una raíz o el redondeo.
+  const isNear = (u, v, tol) => Math.abs(u - v) <= tol * Math.abs(v);
+  const G_RE = /9[.,]8|9\{,\}8/;
+  function numHint(u, A, tol, inst) {
+    if (!A || !u || !Number.isFinite(A)) return null;
+    if (isNear(u, -A, tol)) return "El valor está bien, pero el signo no: revisá qué sentido tomaste como positivo o el signo de algún término.";
+    if (isNear(u, 2 * A, tol)) return "Te dio el doble: fijate si te sobra un factor 2 (un ½ que se perdió, un diámetro en lugar de un radio, ida y vuelta…).";
+    if (isNear(u, A / 2, tol)) return "Te dio la mitad: fijate si te falta un factor 2 (un ½ de más, un radio en lugar de un diámetro, ida y vuelta…).";
+    if (G_RE.test(inst.prompt || "") && (isNear(u, A * 9.8, tol) || isNear(u, A / 9.8, tol))) return "Te difiere en un factor $g = 9{,}8$: revisá si confundiste masa con peso ($m$ con $mg$) o si se te coló una $g$ de más.";
+    if (isNear(u, A * 180 / Math.PI, tol) || isNear(u, A * Math.PI / 180, tol)) return "Parece una mezcla de grados y radianes: revisá en qué unidad está el ángulo y cómo está configurada la calculadora.";
+    if (Math.abs(A) !== 1 && isNear(u, 1 / A, tol)) return "Te dio la inversa: ¿invertiste un cociente? (período y frecuencia, $R$ y $1/R$, numerador y denominador…)";
+    if (A > 0 && A !== 1 && isNear(u, A * A, tol)) return "Te dio el cuadrado de la respuesta: ¿te faltó sacar una raíz?";
+    if (A > 0 && A !== 1 && u > 0 && isNear(u * u, A, 2 * tol)) return "Te dio la raíz cuadrada de la respuesta: ¿sacaste una raíz de más o te faltó elevar al cuadrado?";
+    const L = Math.log10(Math.abs(u / A)), k = Math.round(L);
+    if (k && Math.abs(k) <= 12 && Math.sign(u) === Math.sign(A) && Math.abs(L - k) < Math.log10(1 + tol))
+      return `El número está bien, pero corrido en un factor $10^{${k}}$: revisá las unidades y los prefijos (cm y m, g y kg, µ, m, k, M…) y dónde quedó la coma.`;
+    if (isNear(u, A, 0.05)) return "Estás muy cerca: seguramente redondeaste en un paso intermedio. Arrastrá más decimales y redondeá recién al final.";
+    return null;
+  }
+  function exprHint(src, inst) {
+    const sm = exprSamples(src, inst);
+    if (!sm) return null;
+    const scale = Math.max(...sm.map(([, b]) => Math.abs(b)));
+    if (scale < 1e-9) return null;
+    const ratio = sm.filter(([, b]) => Math.abs(b) > 0.05 * scale).map(([a, b]) => a / b);
+    if (ratio.length >= 4 && allSame(ratio, 1e-3, Math.max(1, Math.abs(ratio[0])))) {
+      const c = ratio[0];
+      if (Math.abs(c + 1) < 1e-3) return "Te quedó con el signo cambiado: revisá los signos (por ejemplo, la derivada del coseno o un menos que sale afuera).";
+      if (Math.abs(c - 2) < 2e-3) return "Está bien salvo por un factor 2 de más: revisá las constantes que salen afuera.";
+      if (Math.abs(c - 0.5) < 1e-3) return "Está bien salvo por un factor 2 de menos: revisá las constantes que salen afuera.";
+      if (Math.abs(c) > 1e-6) return `Está bien salvo por un factor constante (te da $${numTex(+c.toPrecision(3))}$ veces la respuesta): revisá las constantes que salen afuera, como la derivada de lo de adentro en la regla de la cadena.`;
+    }
+    if (!inst.constant && allSame(sm.map(([a, b]) => a - b), 1e-3, Math.max(1, scale)))
+      return "Te difiere solo en una constante: revisá los términos que no dependen de la variable.";
+    return null;
+  }
+  E.diagnose = function (inst, raw) {
+    const traps = inst.traps || [];
+    if (inst.type === "mc") { const t = traps.find(x => x.option === inst.options[raw]); return t ? t.msg : null; }
+    if (inst.type === "expr") {
+      const t = traps.find(x => E.checkExpr(raw, Object.assign({}, inst, { answer: x.expr })));
+      return t ? t.msg : exprHint(raw, inst);
+    }
+    if (inst.type !== "numeric") return null;
+    const u = E.parseNum(raw), tol = Math.max(inst.tolerance ?? 0.01, 1e-4);
+    if (!Number.isFinite(u)) return null;
+    const t = traps.find(x => E.checkNumeric(u, x.value, tol));
+    return t ? t.msg : numHint(u, inst.answer, tol, inst);
+  };
+
+  // ---------- ejercicios paso a paso (type: "multi") ----------
+  // inst.parts: [{ q, type: "numeric" | "expr" | "mc", …los campos de ese tipo, verify }]. Se responde de a una parte;
+  // si una sale mal, se muestra la correcta y se sigue con la próxima, así los pasos siguientes se practican igual.
+  // E.subInst arma la instancia de una parte, para corregirla y mostrarla como cualquier otra.
+  E.subInst = (inst, k) => Object.assign({ solution: [] }, inst.parts[k], { prompt: inst.parts[k].q });
+
+  // ejercicios que se suman a lecciones que ya existen (los de expresión y paso a paso, por ejemplo), desde
+  // un archivo aparte: E.addPractice(cid, { concepts, templates, lessons: { idLección: [idPlantilla, …] } })
+  E.addPractice = function (cid, ext) {
+    const c = E.courses[cid];
+    if (!c) throw new Error("Materia no registrada: " + cid);
+    Object.assign(c.concepts, ext.concepts || {});
+    Object.assign(c.templates, ext.templates || {});
+    for (const [lid, ids] of Object.entries(ext.lessons || {})) {
+      const l = c.lessonList.find(x => x.id === lid);
+      if (!l) throw new Error(`Lección inexistente en ${cid}: ${lid}`);
+      for (const id of ids) if (!l.templates.includes(id)) l.templates.push(id);
+    }
+    indexCourse(c);
   };
 
   // ---------- Fechas (siempre en hora local) ----------

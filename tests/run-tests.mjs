@@ -41,6 +41,52 @@ ok(!E.checkNumeric(0.3, 1 / 3), "checkNumeric", "0.3 no es 1/3");
 ok(E.checkNumeric(0, 0) && !E.checkNumeric(0.1, 0), "checkNumeric", "cero");
 ok(!E.checkNumeric(Infinity, 1), "checkNumeric", "infinito");
 
+// ---------- 1b. expresiones (respuestas de tipo expr) ----------
+{
+  const w = "parseExpr", sin = Math.sin, cos = Math.cos;
+  const X = [["3x^2 - 2sen(x)", x => 3 * x * x - 2 * sin(x)], ["2x cos(x^2)", x => 2 * x * cos(x * x)], ["sen^2 x", x => sin(x) ** 2], ["sin(x)^2", x => sin(x) ** 2],
+    ["sen x^2", x => sin(x * x)], ["sen 2x", x => sin(2 * x)], ["sen x cos x", x => sin(x) * cos(x)], ["e^(2x)", x => Math.exp(2 * x)], ["e^2x", x => Math.E ** 2 * x],
+    ["e^-x", x => Math.exp(-x)], ["(x+1)(x-1)", x => x * x - 1], ["|x - 1|", x => Math.abs(x - 1)], ["x²+1", x => x * x + 1], ["√(x+4)", x => Math.sqrt(x + 4)],
+    ["ln|x|", x => Math.log(Math.abs(x))], ["1/2x", x => x / 2], ["arctg x", Math.atan], ["2xe^x", x => 2 * x * Math.exp(x)], ["x/(1+x^2)", x => x / (1 + x * x)],
+    ["-x^2", x => -x * x], ["tg(x)", Math.tan], ["cosh x", Math.cosh], ["2|x|+1", x => 2 * Math.abs(x) + 1], ["x^(1/2)", Math.sqrt], ["-3e^(-x/2)", x => -3 * Math.exp(-x / 2)],
+    ["1,5x - 0.25", x => 1.5 * x - 0.25], ["raiz(x) + pi", x => Math.sqrt(x) + Math.PI], ["sec(x)^2", x => 1 / cos(x) ** 2], ["5", () => 5]];
+  for (const [s, f] of X) {
+    const g = E.exprFn(s, ["x"]);
+    ok(!!g && [0.3, 0.9, 1.7].every(x => Math.abs(g(x) - f(x)) < 1e-12), w, `"${s}" no se entiende bien`);
+    const a = E.parseExpr(s, ["x"]);
+    if (a) checkTexStr(w, E.exprTex(a));
+  }
+  ok(E.exprFn("3t^2 - 4t", ["t"])(2) === 4, w, "variable t");
+  ok(E.exprFn("2xy + y^2", ["x", "y"])(1, 2) === 8, w, "dos variables");
+  ok(E.parseExpr("2x+", ["x"]) === null && E.parseExpr("y", ["x"]) === null && E.parseExpr("sen", ["x"]) === null && E.parseExpr("x)", ["x"]) === null, w, "expresiones mal escritas tienen que dar null");
+  ok(/\\sin\^\{2\}/.test(E.exprTex(E.parseExpr("sen^2 x", ["x"]))), w, "sen^2 x en TeX");
+  const I = { answer: "2x cos(x^2)", vars: ["x"] };
+  ok(E.checkExpr("2*x*cos(x*x)", I) && E.checkExpr("cos(x^2)·2x", I) && !E.checkExpr("2x sen(x^2)", I) && !E.checkExpr("x cos(x^2)", I) && !E.checkExpr("", I), "checkExpr", "derivada");
+  const Ip = { answer: "x^3/3", vars: ["x"], constant: true };
+  ok(E.checkExpr("x^3/3 + 5", Ip) && E.checkExpr("(x^3 - 1)/3", Ip) && !E.checkExpr("x^3", Ip), "checkExpr", "primitiva salvo constante");
+  ok(E.checkExpr("0,333x^3", Ip) && !E.checkExpr("0,33x^3", Ip), "checkExpr", "tolerancia de los decimales");
+  ok(!E.checkExpr("x", { answer: "sqrt(x)", vars: ["x"], domain: [[-3, -1]] }), "checkExpr", "sin puntos válidos no se acepta nada");
+}
+// ---------- 1c. errores típicos (pistas al equivocarse) ----------
+{
+  const w = "diagnose", N1 = (answer, raw, prompt = "", extra = {}) => E.diagnose(Object.assign({ type: "numeric", answer, prompt }, extra), raw) || "";
+  ok(/signo/.test(N1(12.5, "-12,5")), w, "signo");
+  ok(/doble/.test(N1(12.5, "25")) && /mitad/.test(N1(12.5, "6.25")), w, "factor 2");
+  ok(/10\^\{2\}/.test(N1(12.5, "1250")) && /10\^\{-3\}/.test(N1(4.2, "0,0042")), w, "potencias de 10");
+  ok(/cerca/.test(N1(12.5, "12.3")), w, "redondeo");
+  ok(N1(12.5, "40") === "", w, "sin pista para un error cualquiera");
+  ok(/9\{,\}8/.test(N1(2, "19,6", "Tomá $g = 9{,}8$ m/s².")) && !/9\{,\}8/.test(N1(2, "19,6", "Sin gravedad.")), w, "factor g solo en física");
+  ok(/grados/.test(N1(Math.PI / 6, "30")), w, "grados y radianes");
+  ok(/inversa/.test(N1(4, "0,25")), w, "inversa");
+  ok(/raíz/.test(N1(9, "81")), w, "cuadrado");
+  ok(/signo/.test(N1(1.6e-19, "-1,6×10^-19")) && N1(1.6e-19, "3×10^-19") === "", w, "magnitudes chicas");
+  ok(N1(7, "7,5", "", { traps: [{ value: 7.5, msg: "TRAMPA" }] }) === "TRAMPA", w, "trampa propia de la plantilla");
+  const X1 = (raw, extra = {}) => E.diagnose(Object.assign({ type: "expr", answer: "2x cos(x^2)", vars: ["x"] }, extra), raw) || "";
+  ok(/signo/.test(X1("-2x cos(x^2)")) && /2 de menos/.test(X1("x cos(x^2)")) && /3/.test(X1("6x cos(x^2)")) && /constante/.test(X1("2x cos(x^2) + 1")), w, "pistas en expresiones");
+  ok(X1("cos(x^2)") === "" && X1("2x sen(x^2)", { traps: [{ expr: "2x sin(x^2)", msg: "T" }] }) === "T", w, "trampas en expresiones");
+  ok(E.diagnose({ type: "mc", options: ["a", "b"], correct: 0, traps: [{ option: "b", msg: "M" }] }, 1) === "M", w, "trampa en opción múltiple");
+}
+
 // ---------- 2. SRS ----------
 {
   let c = E.srs.newCard();
@@ -68,6 +114,12 @@ function checkTex(where, s) {
   if (/\\[a-zA-Z]+|\{,\}/.test(bare)) fail(where, `TeX fuera de $…$: ${bare.match(/.{0,30}(\\[a-zA-Z]+|\{,\}).{0,30}/)[0]}`);
   // signos dobles o restos de JS en el texto
   if (/\+ -|- -|undefined|NaN|\[object/.test(s)) fail(where, `texto sospechoso: ${s.slice(0, 140)}`);
+}
+// una fórmula suelta (sin $…$) que tiene que compilar en KaTeX estricto
+function checkTexStr(where, m) {
+  checks++;
+  try { katex.renderToString(m, { throwOnError: true, strict: "error", displayMode: false }); }
+  catch (e) { fail(where, `LaTeX inválido: ${m}  (${e.message.slice(0, 90)})`); }
 }
 const numDeriv = (f, x, h = 1e-5) => (f(x + h) - f(x - h)) / (2 * h);
 const numDeriv2 = (f, x, h = 1e-4) => (f(x + h) - 2 * f(x) + f(x - h)) / (h * h);
@@ -143,6 +195,37 @@ const matvec = (A, x) => A.map(row => row.reduce((s, a, k) => s + a * x[k], 0));
 const near = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
 const eye = n => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
 
+// trampas (errores típicos con su pista): no pueden coincidir con la respuesta correcta
+function checkTraps(inst, w) {
+  for (const t of inst.traps || []) {
+    ok(typeof t.msg === "string" && t.msg.length > 10, w, "trampa sin mensaje");
+    checkTex(w + " trampa", t.msg || "");
+    if (inst.type === "numeric") ok(Number.isFinite(t.value) && !E.checkNumeric(t.value, inst.answer, inst.tolerance ?? 0.01), w, `la trampa ${t.value} se acepta como correcta (${inst.answer})`);
+    else if (inst.type === "expr") ok(E.parseExpr(t.expr, inst.vars || ["x"]) && !E.checkExpr(t.expr, inst), w, `la trampa ${t.expr} no se entiende o se acepta como correcta`);
+    else if (inst.type === "mc") ok(inst.options.includes(t.option) && inst.options.indexOf(t.option) !== inst.correct, w, "la trampa no es un distractor");
+  }
+}
+// una respuesta numérica, de expresión o de opción múltiple (sola o como parte de un paso a paso)
+function checkPart(p, w) {
+  if (p.type === "numeric") {
+    ok(typeof p.answer === "number" && isFinite(p.answer), w, `respuesta no finita: ${p.answer}`);
+    if (p.answerTex) checkTex(w + " answerTex", "$" + p.answerTex + "$");
+  } else if (p.type === "mc") {
+    ok(p.options.length >= 2 && new Set(p.options).size === p.options.length && p.correct >= 0 && p.correct < p.options.length, w, "opciones inválidas");
+    p.options.forEach(o => checkTex(w + " opción", o));
+  } else if (p.type === "expr") {
+    const vars = p.vars || ["x"];
+    ok(typeof p.answer === "string" && !!E.parseExpr(p.answer, vars), w, `la respuesta no se entiende: ${p.answer}`);
+    ok(!!p.answerTex, w, "falta answerTex");
+    checkTex(w + " answerTex", "$" + (p.lhs || "") + p.answerTex + "$");
+    ok(E.checkExpr(p.answer, p), w, "la respuesta correcta no se acepta (¿el dominio tiene puntos válidos?)");
+    // alterarla un poco tiene que dar incorrecto
+    ok(!E.checkExpr(`(${p.answer})*1.1 + ${vars[0]}/10`, p), w, "una respuesta alterada se acepta como correcta");
+    // la respuesta escrita en TeX por el parser compila
+    checkTexStr(w + " vista previa", E.exprTex(E.parseExpr(p.answer, vars)));
+  }
+  checkTraps(p, w);
+}
 function runVerify(v, answer, w) {
   const target = v.target !== undefined ? v.target : answer;
   // en álgebra lineal la matriz puede depender de la respuesta (por ejemplo, el k que anula un determinante)
@@ -241,6 +324,24 @@ function runVerify(v, answer, w) {
       break;
     }
     case "nullity": ok(v.A[0].length - gaussRank(v.A) === target, w, `nulidad por Gauss ${v.A[0].length - gaussRank(v.A)} vs ${target}`); break;
+    // respuestas de tipo expr: `answer` es la función que escribió la app; se compara en puntos al azar de `dom`
+    // derivOf: la derivada numérica de f (respecto de la variable `wrt`, por `k` si se pide, como en E = −dV/dx) · primOf: f es la derivada numérica de la
+    // respuesta (primitivas) · fnEq: g, calculada por otro camino (por ejemplo, una simulación)
+    case "derivOf": case "primOf": case "fnEq": {
+      const dom = v.dom || [[-2, 2]], rr = E.rng(4242), wrt = v.wrt || 0;
+      const along = (fn, p) => { const h = 1e-5 * Math.max(1, Math.abs(p[wrt])), a = p.slice(), b = p.slice(); a[wrt] += h; b[wrt] -= h; return (fn(...a) - fn(...b)) / (2 * h); };
+      let cnt = 0;
+      for (let i = 0; i < 200 && cnt < (v.n || 8); i++) {
+        const p = dom.map(([lo, hi]) => lo + (hi - lo) * rr.next());
+        const want = v.kind === "derivOf" ? (v.k ?? 1) * along(v.f, p) : v.kind === "primOf" ? v.f(...p) : v.g(...p);
+        if (!Number.isFinite(want)) continue;
+        const got = v.kind === "primOf" ? along(answer, p) : answer(...p);
+        cnt++;
+        ok(Number.isFinite(got) && Math.abs(got - want) <= (v.tol || 1e-5) * Math.max(1, Math.abs(want)), w, `${v.kind} en (${p.map(x => x.toFixed(3))}): ${got} vs ${want}`);
+      }
+      ok(cnt >= 3, w, "verify: pocos puntos válidos en el dominio");
+      break;
+    }
     case "all": for (const sub of v.list) runVerify(sub, answer, w); break;
     default: fail(w, "tipo de verify desconocido: " + v.kind);
   }
@@ -326,10 +427,27 @@ for (const cid of E.courseOrder) {
           answers.add(inst.pairs.map(p => p[0].tex || String(p[0].graph.fns ? p[0].graph.fns[0] : "")).join("|"));
           break;
         }
+        case "expr": checkPart(inst, w); answers.add(inst.prompt + "|" + inst.answer); break;
+        case "multi":
+          ok(Array.isArray(inst.parts) && inst.parts.length >= 2, w, "un ejercicio paso a paso necesita al menos 2 partes");
+          ok(!inst.verify, w, "en un paso a paso, el verify va en cada parte");
+          inst.parts.forEach((p, j) => {
+            const sub = E.subInst(inst, j), wj = `${w} parte ${j + 1}`;
+            ok(["numeric", "expr", "mc"].includes(sub.type), wj, "tipo de parte no soportado: " + sub.type);
+            checkTex(wj, sub.q || "");
+            ok(!!sub.q, wj, "parte sin pregunta");
+            checkPart(sub, wj);
+            if (sub.verify) runVerify(sub.verify, sub.type === "expr" ? E.exprFn(sub.answer, sub.vars || ["x"]) : sub.type === "mc" ? undefined : sub.answer, wj);
+            else fail(wj, "parte sin verify");
+          });
+          answers.add(inst.prompt + "|" + inst.parts.map(p => p.answer ?? p.correct).join("|"));
+          break;
         default: fail(w, "tipo desconocido " + inst.type);
       }
+      if (inst.type === "numeric" || inst.type === "mc") checkTraps(inst, w);
       // verificación numérica independiente
-      if (inst.verify) runVerify(inst.verify, inst.answer, w);
+      if (inst.type === "multi") { /* cada parte se verificó arriba */ }
+      else if (inst.verify) runVerify(inst.verify, inst.type === "expr" ? E.exprFn(inst.answer, inst.vars || ["x"]) : inst.answer, w);
       else ok(LEGACY_NO_VERIFY.has(id), w, "plantilla nueva sin verify (toda plantilla nueva necesita verificación numérica)");
     }
     const ms = Date.now() - t0;

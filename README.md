@@ -50,6 +50,10 @@ Tipos de instancia:
 | `order` | `steps` en el orden correcto (la UI los mezcla) |
 | `match` | `pairs: [[izq, der], …]`, cada lado `{ tex }` o `{ graph }` |
 | `error` | `steps`, `wrongIndex`, `fix`, y `solution` con los pasos correctos |
+| `expr` | `answer` (texto para el parser, por ejemplo `"2*x*cos(x^2)"`), `answerTex`, `vars`, `domain`, `lhs?`, `constant?` (primitivas): se escribe una función y se compara evaluándola |
+| `multi` | `parts: [{ q, type, … }]`, un paso a paso: cada parte es `numeric`, `expr` o `mc` y se corrige por separado |
+
+Cualquier ejercicio numérico, de expresión o de opción múltiple puede traer `traps` (errores típicos con su pista). Además, `E.diagnose` reconoce errores generales como el signo, un factor 2 o las potencias de 10.
 
 Todas llevan `prompt` y `solution` (pasos en LaTeX, con `$…$` o `$$…$$`). Opcionalmente, `graph` (`{ fns | pieces, points, asym, xr, yr }`) dibuja un gráfico con canvas y `verify` permite que los tests comprueben numéricamente la respuesta (`limit`, `liminf`, `deriv`, `deriv2`, `deriv-fn`, `implicit`).
 

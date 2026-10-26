@@ -326,6 +326,21 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .step { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: 0 3px 0 var(--line); font-weight: 600; }
 .step .n { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-size: .8rem; font-weight: 900; display: grid; place-items: center; margin-top: 2px; }
 .step .ov { overflow-x: auto; min-width: 0; flex: 1; }
+/* respuestas de tipo expresión y paso a paso */
+.numin.expr { font: 700 1.15rem ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.expr-lhs { font-size: 1.15rem; }
+.numwrap .preview .katex { font-size: 1.15em; color: var(--ink); }
+.numwrap code { font: 700 .85em ui-monospace, Consolas, monospace; background: var(--primary-soft); color: var(--primary); padding: 1px 5px; border-radius: 6px; }
+.multi { display: flex; flex-direction: column; gap: 10px; }
+.mpart { display: flex; flex-direction: column; gap: 6px; border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; background: var(--card); }
+.mpart.cur { border-color: var(--primary); }
+.mpart.ok { border-color: var(--ok); background: var(--ok-soft); }
+.mpart.bad { border-color: var(--bad); background: var(--bad-soft); }
+.mq { display: flex; gap: 10px; align-items: flex-start; font-weight: 700; }
+.mq .n { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-size: .8rem; font-weight: 900; display: grid; place-items: center; }
+.mq .grow { min-width: 0; overflow-x: auto; }
+.fb-hint { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--gold) 22%, var(--card)); color: var(--ink); font-weight: 700; }
+.fb-hint .ic { flex: none; color: var(--gold-d); margin-top: 2px; }
 .step.sel { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 3px 0 var(--primary); }
 .step.right { border-color: var(--ok); background: var(--ok-soft); box-shadow: 0 3px 0 var(--ok); }
 .step.wrong { border-color: var(--bad); background: var(--bad-soft); box-shadow: 0 3px 0 var(--bad); }
@@ -668,6 +683,13 @@ body.board-split .nav { padding-bottom: 0; }
 <script src="content/m102-examenes.js"></script>
 <script src="content/m105-examenes.js"></script>
 <script src="content/f102a-examenes.js"></script>
+
+<!-- ejercicios de escribir la expresión y paso a paso, que se suman a lecciones existentes (E.addPractice) -->
+<script src="content/m101-practica.js"></script>
+<script src="content/f101-practica.js"></script>
+<script src="content/m102-practica.js"></script>
+<script src="content/f102b-practica.js"></script>
+<script src="content/f102a-practica.js"></script>
 <!-- pizarra para escribir con lápiz (tablets); va antes de la app para atajar el botón "atrás" -->
 <script src="assets/vendor/perfect-freehand/perfect-freehand.js"></script>
 <script src="board.js"></script>
@@ -1666,12 +1688,14 @@ body.board-split .nav { padding-bottom: 0; }
   }
 
   // ---------- SESIÓN: ejercicio ----------
-  const TYPE_LABEL = { mc: "Elegí la opción correcta", numeric: "Respuesta numérica", tf: "Verdadero o falso", order: "Ordená los pasos", match: "Uní los pares", error: "Encontrá el error" };
+  const TYPE_LABEL = { mc: "Elegí la opción correcta", numeric: "Respuesta numérica", tf: "Verdadero o falso", order: "Ordená los pasos", match: "Uní los pares", error: "Encontrá el error", expr: "Escribí la expresión", multi: "Paso a paso" };
+  // la parte que se está respondiendo: en un paso a paso, la actual; si no, el ejercicio entero
+  const curInst = () => { const s = ui.session; return s.inst.type === "multi" ? E.subInst(s.inst, s.multi.k) : s.inst; };
   function renderExercise() {
     const s = ui.session, item = s.items[s.i], c = course(item.cid || s.cid);
     if (!item.inst) item.inst = E.instantiate(c, item.tpl, item.seed);
     const inst = s.inst = item.inst;
-    s.phase = "answer"; s.ans = initAns(inst); s.tStart = Date.now();
+    s.phase = "answer"; s.multi = inst.type === "multi" ? { k: 0, res: [] } : null; s.ans = initAns(inst); s.tStart = Date.now();
     const prog = s.kind === "boss" ? 1 - s.boss.hp / s.boss.max : s.kind === "rush" ? rushLeft() / RUSH_MS : s.i / s.items.length;
     const tag = item.src === "review" ? `<span class="ses-tag review">${icon("rotate-ccw")}Repaso · ${esc(c.concepts[item.focus || c.templates[item.tpl].concepts[0]].name)}</span>`
       : item.src === "diag" ? `<span class="ses-tag">${icon("target")}Diagnóstico · Unidad ${item.unit + 1}</span>`
@@ -1702,6 +1726,7 @@ body.board-split .nav { padding-bottom: 0; }
         const r = E.rng(E.newSeed());
         return { right: r.shuffle(inst.pairs.map((_, i) => i)), pairs: {}, sel: null };
       }
+      case "multi": return initAns(E.subInst(inst, 0));
       default: return { v: null };
     }
   }
@@ -1726,6 +1751,21 @@ body.board-split .nav { padding-bottom: 0; }
           <div class="preview" id="preview">${previewText(a.v)}</div>
           ${done ? "" : `<div class="keys">${["π", "√(", "/", "^", "(", ")", "-", "e", "×10^"].map(k => `<button data-act="key" data-k="${k}" tabindex="-1">${k}</button>`).join("")}</div>`}
           <div class="muted small">Podés escribir fracciones, π, √, e y notación científica (1,6×10^-19). Se acepta ±1%.</div></div>`;
+      case "expr": {
+        const vars = inst.vars || ["x"], keys = [...vars, "^", "(", ")", "/", "√(", "π", "e^(", "sen(", "cos(", "ln("];
+        return `<div class="numwrap">
+          ${inst.lhs ? `<div class="expr-lhs">${K(inst.lhs, false)}</div>` : ""}
+          <input class="numin expr ${done ? (s_ok() ? "right" : "wrong") : ""}" id="numin" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Tu expresión, en ${vars.join(" y ")}" value="${esc(a.v || "")}" ${dis} aria-label="Respuesta">
+          <div class="preview" id="preview">${previewHtml(inst, a.v)}</div>
+          ${done ? "" : `<div class="keys">${keys.map(k => `<button data-act="key" data-k="${k}" tabindex="-1">${k}</button>`).join("")}</div>`}
+          <div class="muted small">Escribí la expresión en ${vars.map(v => `<i>${v}</i>`).join(" y ")}, por ejemplo <code>3x^2 - 2sen(x)</code> o <code>e^(2x)/x</code>. Abajo ves cómo la leyó la app.${inst.constant ? " La constante de integración podés ponerla o no." : ""}</div></div>`;
+      }
+      case "multi": {
+        const m = ui.session.multi, left = inst.parts.length - m.k - 1;
+        const past = m.res.map((r, j) => partResultHtml(E.subInst(inst, j), r, j)).join("");
+        const cur = done ? "" : `<div class="mpart cur"><div class="mq"><span class="n">${m.k + 1}</span><span class="grow">${texL(inst.parts[m.k].q)}</span></div>${answerHtml(E.subInst(inst, m.k), a, false)}</div>`;
+        return `<div class="multi">${past}${cur}${!done && left > 0 ? `<div class="muted small">Después ${left === 1 ? "queda un paso más" : `quedan ${left} pasos más`}.</div>` : ""}</div>`;
+      }
       case "order": {
         const step = (i, n, act, cls = "") => `<button class="step ${cls}" data-act="${act}" data-i="${i}" ${dis}>${n != null ? `<span class="n">${n}</span>` : ""}<span class="ov">${tex(inst.steps[i])}</span></button>`;
         const placed = a.placed.map((i, k) => step(i, k + 1, "ord-rem", done ? (i === k ? "right" : "wrong") : "")).join("");
@@ -1773,9 +1813,25 @@ body.board-split .nav { padding-bottom: 0; }
     if (a && (a < 1e-3 || a >= 1e6)) { const ex = Math.floor(Math.log10(a)); return `= ${String(+(x / 10 ** ex).toFixed(3)).replace(".", ",")} × 10^${ex}`; }
     return "= " + H.num(x, 4);
   }
+  // vista previa de lo que se escribe: el número (numéricas) o la expresión como la entendió la app (expr)
+  function previewHtml(inst, v) {
+    if (inst.type !== "expr") return esc(previewText(v));
+    if (!v) return "";
+    const a = E.parseExpr(v, inst.vars || ["x"]);
+    if (!a) return `<span class="muted">… (usá ${(inst.vars || ["x"]).join(" y ")} como variable${(inst.vars || []).length > 1 ? "s" : ""})</span>`;
+    try { return katex.renderToString((inst.lhs || "") + E.exprTex(a), { throwOnError: false, strict: false }); } catch (e) { return "…"; }
+  }
+  // una parte ya respondida de un paso a paso: lo que se puso, si estuvo bien y, si no, la correcta y la pista
+  function partResultHtml(sub, r, j) {
+    return `<div class="mpart ${r.ok ? "ok" : "bad"}"><div class="mq"><span class="n">${j + 1}</span><span class="grow">${texL(sub.q)}</span></div>
+      <div class="small">Tu respuesta: ${answerText(sub, r.a)} ${r.ok ? icon("check", "ok-ic") : icon("x", "bad-ic")}</div>
+      ${r.ok ? "" : `<div class="small">${correctText(sub)}</div>${r.hint ? `<div class="fb-hint small">${icon("lightbulb")}<span>${tex(r.hint)}</span></div>` : ""}`}</div>`;
+  }
   function ready(inst, a) {
     switch (inst.type) {
       case "numeric": return isFinite(E.parseNum(a.v));
+      case "expr": return !!a.v && !!E.parseExpr(a.v, inst.vars || ["x"]);
+      case "multi": return ready(curInst(), a);
       case "order": return a.placed.length === inst.steps.length;
       case "match": return Object.keys(a.pairs).length === inst.pairs.length;
       default: return a.v !== null;
@@ -1786,6 +1842,8 @@ body.board-split .nav { padding-bottom: 0; }
       case "mc": return a.v === inst.correct;
       case "tf": return a.v === inst.answer;
       case "numeric": return E.checkNumeric(E.parseNum(a.v), inst.answer, inst.tolerance ?? 0.01);
+      case "expr": return E.checkExpr(a.v, inst);
+      case "multi": return ui.session.multi.res.length === inst.parts.length && ui.session.multi.res.every(r => r.ok);
       case "order": return a.placed.every((v, i) => v === i);
       case "match": return inst.pairs.every((_, i) => a.pairs[i] === i);
       case "error": return a.v === inst.wrongIndex;
@@ -1808,6 +1866,8 @@ body.board-split .nav { padding-bottom: 0; }
       case "mc": return `Respuesta correcta: ${tex(inst.options[inst.correct])}`;
       case "tf": return `Era <b>${inst.answer ? "Verdadero" : "Falso"}</b>.`;
       case "numeric": return `Respuesta: ${tex("$" + (inst.answerTex || ansTex(inst.answer)) + "$")}${inst.answerTex && !Number.isInteger(inst.answer) ? ` ≈ ${H.num(inst.answer, 4)}` : ""}`;
+      case "expr": return `Respuesta: ${K((inst.lhs || "") + inst.answerTex, false)}${inst.constant ? " (más una constante)" : ""}`;
+      case "multi": return "En cada paso que fallaste quedó la respuesta correcta.";
       case "order": return "Mirá el orden correcto en la resolución.";
       case "match": return "Los pares correctos quedaron en verde.";
       case "error": return `El error estaba en el paso ${inst.wrongIndex + 1}. ${texL(inst.fix || "")}`;
@@ -1820,7 +1880,23 @@ body.board-split .nav { padding-bottom: 0; }
     if (s && s.kind === "exam") { if (s.phase === "answer") s.i < s.parts.length - 1 ? examGo(s.i + 1) : submitExam(); return; }
     if (!s || s.phase !== "answer" || !ready(s.inst, s.ans)) return;
     const item = s.items[s.i], icid = item.cid || s.cid, c = course(icid), t = c.templates[item.tpl];
+    // paso a paso: se corrige la parte actual y, si no es la última, se sigue con la próxima (si falló, con la correcta a la vista)
+    if (s.inst.type === "multi") {
+      const m = s.multi, sub = curInst(), okk = isCorrect(sub, s.ans);
+      m.res.push({ ok: okk, a: s.ans, hint: okk ? null : E.diagnose(sub, s.ans.v) });
+      if (m.k < s.inst.parts.length - 1) {
+        m.k++; s.ans = initAns(curInst());
+        Snd.play(okk ? "correct" : "wrong");
+        if (!okk && navigator.vibrate) navigator.vibrate(40);
+        rerenderAnswer();
+        const ni = $(".numin");
+        if (ni && matchMedia("(pointer: fine)").matches) ni.focus();
+        return;
+      }
+    }
     const ok = isCorrect(s.inst, s.ans);
+    // si se equivocó, una pista sobre el error típico (las partes de un paso a paso ya traen la suya)
+    const hint = ok || s.inst.type === "multi" ? null : E.diagnose(s.inst, s.ans.v);
     const ms = Date.now() - s.tStart;
     s.phase = "feedback"; s.lastOk = ok;
     const first = !item.retry;
@@ -1852,6 +1928,7 @@ body.board-split .nav { padding-bottom: 0; }
       <div class="fb-head">${mascot(ok ? "happy" : "sad")}<div class="grow"><div class="fb-title">${titles[Math.floor(Math.random() * titles.length)]}</div>
         <div class="fb-quip">${esc(bossMsg || quip(ok ? "ok" : "bad"))}${gain ? ` <span class="xp-pop pop">+${gain} XP</span>` : ""}</div></div></div>
       <div class="fb-scroll">
+        ${hint ? `<div class="fb-hint">${icon("lightbulb")}<span>${tex(hint)}</span></div>` : ""}
         ${ok && s.inst.type !== "tf" && s.inst.type !== "error" ? "" : `<div class="fb-answer">${correctText(s.inst)}</div>`}
         ${s.inst.explanation ? `<div>${texL(s.inst.explanation)}</div>` : ""}
         ${sol.length ? `<button class="linkbtn" data-act="sol">${icon("book-open")} ${ok ? "Ver resolución" : "Ocultar resolución"}</button>
@@ -2338,6 +2415,8 @@ body.board-split .nav { padding-bottom: 0; }
       case "mc": return plainOf(t(inst.options[inst.correct]));
       case "tf": return inst.answer ? "Verdadero" : "Falso";
       case "numeric": return "$" + (inst.answerTex || H.num(inst.answer, 4)) + "$";
+      case "expr": return "$" + (inst.lhs || "") + inst.answerTex + "$" + (inst.constant ? " (más una constante)" : "");
+      case "multi": return "\n" + inst.parts.map((p, i) => `${i + 1}. ${plainOf(p.q)} → ${answerPlain(E.subInst(inst, i))}`).join("\n");
       case "order": return "\n" + inst.steps.map((x, i) => `${i + 1}. ${plainOf(x)}`).join("\n");
       case "match": return "\n" + inst.pairs.map(([a, b]) => `${plainOf(t(a))} ↔ ${plainOf(t(b))}`).join("\n");
       case "error": return `el primer paso incorrecto es el ${inst.wrongIndex + 1}: ${plainOf(inst.steps[inst.wrongIndex])}. ${plainOf(inst.fix || "")}`;
@@ -2595,6 +2674,7 @@ body.board-split .nav { padding-bottom: 0; }
       case "mc": return tex(inst.options[a.v]);
       case "tf": return a.v ? "Verdadero" : "Falso";
       case "numeric": return esc(a.v) + (isFinite(E.parseNum(a.v)) ? ` <span class="muted">(${previewText(a.v)})</span>` : "");
+      case "expr": return previewHtml(inst, a.v);
       case "error": return `paso ${a.v + 1}`;
       default: return "respondido";
     }
@@ -2765,7 +2845,7 @@ body.board-split .nav { padding-bottom: 0; }
   document.addEventListener("input", e => {
     if (e.target.id === "numin" && ui.session) {
       ui.session.ans.v = e.target.value;
-      $("#preview").textContent = previewText(e.target.value);
+      $("#preview").innerHTML = previewHtml(curInst(), e.target.value);
       updateCheck();
       if (ui.session.kind === "exam") examNavRefresh();
     }
@@ -2794,10 +2874,10 @@ body.board-split .nav { padding-bottom: 0; }
       return;
     }
     if (s.phase !== "answer" || e.target.id === "numin") return;
-    const n = parseInt(e.key, 10);
-    if (s.inst.type === "mc" && n >= 1 && n <= s.inst.options.length) { s.ans.v = n - 1; rerenderAnswer(); }
-    else if (s.inst.type === "tf" && (n === 1 || n === 2)) { s.ans.v = n === 1; rerenderAnswer(); }
-    else if (s.inst.type === "error" && n >= 1 && n <= s.inst.steps.length) { s.ans.v = n - 1; rerenderAnswer(); }
+    const n = parseInt(e.key, 10), ci = curInst();
+    if (ci.type === "mc" && n >= 1 && n <= ci.options.length) { s.ans.v = n - 1; rerenderAnswer(); }
+    else if (ci.type === "tf" && (n === 1 || n === 2)) { s.ans.v = n === 1; rerenderAnswer(); }
+    else if (ci.type === "error" && n >= 1 && n <= ci.steps.length) { s.ans.v = n - 1; rerenderAnswer(); }
   });
   // tooltips del heatmap y barras
   let tipEl;

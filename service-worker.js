@@ -1,11 +1,11 @@
 // Service worker de efecen: precachea todo para funcionar offline.
 // Al publicar cambios, subí CACHE para que los clientes descarguen la versión nueva.
-const CACHE = "efecen-v82";
+const CACHE = "efecen-v83";
 const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "Fraktur-Bold", "Fraktur-Regular",
   "Main-Bold", "Main-BoldItalic", "Main-Italic", "Main-Regular", "Math-BoldItalic", "Math-Italic",
   "SansSerif-Bold", "SansSerif-Italic", "SansSerif-Regular", "Script-Regular", "Size1-Regular", "Size2-Regular",
   "Size3-Regular", "Size4-Regular", "Typewriter-Regular"].map(f => `assets/vendor/katex/fonts/KaTeX_${f}.woff2`);
-const CONTENT = ["content/carrera.js", "content/m101-calculo1.js", "content/m104-algebra-lineal.js", "content/f101-fisica1.js", "content/f102b-fisica2b.js", "content/m102-calculo2.js", "content/m106-geometria-analitica.js", "content/m105-probabilidad.js", "content/f102a-fisica2a.js", "content/f104-fisica3.js", "content/m101-figuras.js", "content/m102-figuras.js", "content/m106-figuras.js", "content/m105-figuras.js", "content/m104-figuras.js", "content/f101-figuras.js", "content/f102b-figuras.js", "content/f102a-figuras.js", "content/m101-examenes.js", "content/m104-examenes.js", "content/f101-examenes.js", "content/m106-examenes.js", "content/f102b-examenes.js", "content/m102-examenes.js", "content/m105-examenes.js", "content/f102a-examenes.js"];
+const CONTENT = ["content/carrera.js", "content/m101-calculo1.js", "content/m104-algebra-lineal.js", "content/f101-fisica1.js", "content/f102b-fisica2b.js", "content/m102-calculo2.js", "content/m106-geometria-analitica.js", "content/m105-probabilidad.js", "content/f102a-fisica2a.js", "content/f104-fisica3.js", "content/m101-figuras.js", "content/m102-figuras.js", "content/m106-figuras.js", "content/m105-figuras.js", "content/m104-figuras.js", "content/f101-figuras.js", "content/f102b-figuras.js", "content/f102a-figuras.js", "content/m101-examenes.js", "content/m104-examenes.js", "content/f101-examenes.js", "content/m106-examenes.js", "content/f102b-examenes.js", "content/m102-examenes.js", "content/m105-examenes.js", "content/f102a-examenes.js", "content/m101-practica.js", "content/f101-practica.js", "content/m102-practica.js", "content/f102b-practica.js", "content/f102a-practica.js"];
 const PRECACHE = [
   "./", "index.html", "engine.js", "manifest.json", "sync.js", "board.js", "assets/vendor/perfect-freehand/perfect-freehand.js",
   // un archivo por materia (ver content/carrera.js)

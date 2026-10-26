@@ -36,6 +36,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 | `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`, `f104-fisica3.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
 | `board.js` | Pizarra para escribir con lápiz en tablets: el motor de la pizarra del usuario (`jsantiago00/pizarra`) en JS sin build, con lazo, goma por área, texto, fórmulas (MathJax, bajo demanda) y figuras (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. Usa `assets/vendor/perfect-freehand/`, `asciimath2tex/` y `mathjax/`. |
+| `content/<código>-practica.js` | Ejercicios de escribir la expresión (`expr`) y paso a paso (`multi`) que se suman a lecciones existentes con `E.addPractice`. |
 | `content/<código>-examenes.js` | Parciales y finales simulados de la materia (`E.registerExams`). El análisis de los originales está en `docs/parciales/`. |
 | `service-worker.js` | Precache offline (stale-while-revalidate). `CACHE` y `CONTENT`. |
 | `tests/run-tests.mjs` | Suite: carga el motor y el contenido en un `vm` de Node y verifica todo. |
@@ -73,7 +74,11 @@ Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101
   - `order` y `program`;
   - un `diagnostic` válido;
   - cada plantilla en exactamente una lección.
-- **Tipos de plantilla:** `numeric` (`answer`), `mc` (`options`/`correct`, usá `H.mc(r, correcta, distractores, { text: true })`), `tf` (`answer` booleano + `explanation`), `order` (`steps`), `match` (`pairs`), `error`.
+- **Tipos de plantilla:** `numeric` (`answer`), `mc` (`options`/`correct`, usá `H.mc(r, correcta, distractores, { text: true })`), `tf` (`answer` booleano + `explanation`), `order` (`steps`), `match` (`pairs`), `error`, y dos más (pedido del usuario, 26/10):
+  - `expr`: se escribe una función. Lleva `answer` como texto para el parser (`"2*x*cos(x^2)"`), `answerTex`, `vars` (`["x"]`, `["t"]`, `["x", "y"]`), `domain` (`[[lo, hi], …]`, uno por variable), `lhs` opcional (TeX que va antes, como `"f'(x) = "`) y `constant: true` para las primitivas. La app compara evaluando en puntos del dominio, así que acepta cualquier forma equivalente. Para armar sumas de términos con signos y fracciones, usá `H.terms([{ p, q, m, t }])` y `H.pw(e, v)`.
+  - `multi` (paso a paso): `parts: [{ q, type: "numeric" | "expr" | "mc", …, verify }]`. Se responde de a una parte, y cada parte lleva su `verify`. Si una parte sale mal, se muestra la correcta y se sigue con la próxima. Sirve para separar el planteo (la ecuación, la normal, la función a optimizar) de la cuenta.
+- **Errores típicos (`traps`, opcional):** `traps: [{ value, msg }]` en las numéricas, `[{ expr, msg }]` en las `expr` y `[{ option, msg }]` en las `mc`. Si la respuesta coincide con una trampa, se muestra `msg` como pista. Además, `E.diagnose` reconoce solo errores generales (el signo, un factor 2, $g$, grados y radianes, potencias de 10, la inversa, una raíz o el redondeo), así que agregá trampas solo para los errores propios del tema. El test verifica que una trampa nunca se acepte como respuesta correcta.
+- **Ejercicios nuevos en lecciones existentes:** van en `content/<código>-practica.js` con `E.addPractice(cid, { templates, lessons: { idLección: [idPlantilla] } })`. Así no se tocan los archivos grandes de cada materia.
 - **RNG `r`:** `r.int(a, b)`, `r.nz(a, b)` (sin 0), `r.pick(arr)`, `r.bool()`, `r.distinct(n, a, b)`, `r.sample(arr, n)`, `r.shuffle(arr)`. Ojo: `u.map(x => x * r.pick([...]))` sortea **un valor por componente**; si querés el mismo factor, sorteálo antes. `generate` puede devolver `null` para descartar una instancia y probar otra.
 - **Helpers `H`:** `H.num(x, d)`, `H.frac(p, q)`, `H.poly([[c, "x^{2}"], …])`, `H.par`, `H.sg`, `H.xm(h, "x")`. Para mostrar decimales con coma en TeX: `String(x).replace(".", "{,}")`.
 - **Links en la teoría:**
@@ -102,6 +107,7 @@ Toda plantilla nueva lleva `verify`, y la suite recalcula la respuesta **por otr
   - `integral` (`f`, `a`, `b`);
   - `ode` (RK4: `f(t, y)`, `y0`, `t1`, `dt`, `out`; para eventos, `until` **y** `g`, que es la función cuyo cero se interpola);
   - de álgebra lineal: `det`, `rank`, `solve`, `inv`, `eig`, `rouche`, `nullity`;
+  - para las `expr` (la respuesta llega como función y se compara en puntos al azar de `dom`): `derivOf` (`f`, `wrt`, `k`: la derivada numérica de `f`, por `k` si hace falta, como en $E = -dV/dx$), `primOf` (`f`: la derivada numérica de la respuesta tiene que dar `f`) y `fnEq` (`g`, calculada por otro camino, por ejemplo con una simulación);
   - `all`.
 - **Tolerancias:** preferí tolerancias relativas cuando la escala de los valores varía.
 - **Plantillas lentas:** declarán `testN` (por ejemplo 60) y la suite avisa las que tardan más de 8 s.
