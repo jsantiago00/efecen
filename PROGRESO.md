@@ -16,7 +16,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa (repasada el 24/10) | 61 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado; repasada el 24/10), más 3 unidades «Extra UBA» | 73 | 41 |
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10), más 4 unidades «Extra UBA» | 77 | 53 |
-| 9 | F104 Física General III | **en curso** (desde el 26/10): unidades 1 a 3 de 7 (relatividad, fotones, Bohr). No se encontró el programa; el temario sale de los parciales de 2021 (`docs/parciales/f104.md`) | 15 | 8 |
+| 9 | F104 Física General III | **en curso** (desde el 26/10): las 7 unidades (relatividad; fotones; Bohr; ondas de materia e incerteza; Schrödinger y pozo infinito; oscilador, escalón, barrera y pozo finito; hidrógeno). Faltan figuras y evaluaciones. No se encontró el programa; el temario sale de los parciales de 2021 (`docs/parciales/f104.md`) | 36 | 18 |
 | 10+ | resto de 3.º y 4.º año | pendientes; aparecen como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
@@ -308,6 +308,12 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
 - **Verificación en desarrollo:** los ejercicios de desarrollo con cuentas llevan `verify`, como las plantillas, y la suite lo corre. Se recalcula por otro camino: simulación del movimiento, integración numérica de fuerzas, Gauss, A·A⁻¹ = I y residuos de A·x = b.
 - **Pendiente:** lo que no pasó a la app, anotado al final de cada `docs/parciales/*.md` (por ejemplo, Stokes en M102 y lente con espejo en F102B).
 
+## F104 Física General III (26/10)
+
+- **Temario:** sin programa publicado; sale de los parciales y el final de 2021 (`docs/parciales/f104.md`) y de un temario estándar de física moderna. La relatividad de F101 (dilatación, contracción, Lorentz y energía) se da por vista y se enlaza; F104 suma el intervalo y la causalidad, el Doppler relativista y el cuadrimomento (umbrales y decaimientos).
+- **Biblioteca `E.f3`** (primer bloque de `content/f104-fisica3.js`): constantes CODATA (con la constante de Rydberg y el radio de Bohr calculados a partir de ellas), Simpson, bisección, sección áurea, boosts con la rapidez, el método del disparo para la ecuación de Schrödinger (`F.shoot`, `F.eigen`) y la transmisión por un potencial a tramos (`F.transmit`, con ψ complejo integrado desde la onda transmitida).
+- **Verificaciones:** boosts armados con la rapidez; pulsos emitidos y recibidos para el Doppler; masa invariante y bisección para umbrales y decaimientos; máximo e integral del espectro de Planck; frenado del fotoelectrón simulado; cuadrimomento conservado en Compton; la órbita de Bohr resuelta en SI (con masa reducida para el deuterio); aceleración relativista simulada para De Broglie; suma de 200 ondas para Davisson-Germer; paquetes gaussianos integrados con derivadas numéricas; autovalores del pozo y del oscilador por disparo; escalón y barrera integrando la ecuación compleja; estados ligados del pozo finito por el teorema de oscilación de Sturm; funciones radiales del hidrógeno integradas con Simpson; y L² armado con matrices escalera.
+
 ## Juegos
 
 - **Jefe de unidad.** Al completar una unidad aparece un nodo rojo al final de su camino, con un jefe: una paradoja famosa (Zenón, el demonio de Maxwell, el hotel de Hilbert, el monstruo de Weierstrass…). El jefe tiene 8 de vida y vos 3 vidas. Cada acierto le saca 1, y desde el tercero seguido, 2. Las preguntas salen de todas las plantillas de la unidad, de menor a mayor dificultad, y no hay reintentos. Si lo vencés, el nodo queda con una corona y suma 30 XP (15 las veces siguientes).
@@ -378,7 +384,7 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **F104 Física General III** (pedido del usuario, 26/10, que levantó la pausa de 3.º año): faltan las unidades 4 a 7 (ondas de materia e incerteza; Schrödinger y pozo infinito; oscilador, escalón, barrera y pozo finito; átomo de hidrógeno), sus figuras y las evaluaciones.
+1. **F104 Física General III** (pedido del usuario, 26/10, que levantó la pausa de 3.º año): faltan las figuras y las evaluaciones (dos parciales y el final, con preguntas conceptuales y problemas, como en `docs/parciales/f104.md`).
 2. **Resto de 3.º año**, en el orden del trayecto: M103, M203, F203, M209 y F205.
 3. **Extra UBA de M106:** sin equivalente directo en la UBA; queda para después.
 
