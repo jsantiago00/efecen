@@ -15,7 +15,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 5 | M102 Cálculo II | **completa**: las 8 unidades del programa (repasada el 21/10) | 52 | 26 |
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa (repasada el 24/10) | 61 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado; repasada el 24/10) | 56 | 33 |
-| 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10) | 58 | 44 |
+| 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10), más 3 unidades «Extra UBA» | 72 | 51 |
 | 9+ | 3.º y 4.º año | en pausa (20/10): primero se pulen los dos primeros años; aparecen como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
@@ -44,9 +44,11 @@ Pedido del usuario: sumar a cada materia los temas que la Lic. en Cs. Físicas d
 |---|---|---|
 | F101 | **Sistemas no inerciales:** fuerzas de inercia, centrífuga y Coriolis. **Estabilidad:** pequeñas oscilaciones y potencial efectivo. **Relatividad especial:** dilatación, contracción, Lorentz, simultaneidad y energía. | Sistemas de masa variable (cohete) |
 | F102B | **Oscilaciones acopladas:** modos normales, batidos, molécula triatómica y cadena de N masas. **Polarización:** estados, Malus, Brewster y láminas retardadoras. **Ondas:** reflexión y transmisión entre medios (impedancia), Fourier en una cuerda, velocidad de grupo y prismas. | Instrumentos ópticos (microscopio y telescopio con aumentos), coherencia |
-| F102A, M101, M104, M102, M106, M105 | — | Por relevar contra las guías UBA |
+| F102A | **Electrostática avanzada:** forma diferencial (divergencia, rotor, Poisson y Laplace), método de imágenes y desarrollo multipolar. **Medios:** P, D y cargas de polarización; M, H y circuitos magnéticos con entrehierro. **Circuitos:** Thévenin, puente de Wheatstone y filtros (pasa-bajos, pasa-altos y pasabanda). | Ecuación de ondas desde Maxwell, potencial vector |
+| M101, M104, M102, M106, M105 | — | Por relevar contra las guías UBA |
 
 - **F102B: verificaciones.** Los modos se verifican simulando el sistema y midiendo períodos, o con $\det(M^{-1}K - \omega^2I) = 0$ por Gauss. La polarización, con matrices de Jones complejas y promediando 720 polarizaciones de entrada para la luz natural. Brewster, con el coeficiente de Fresnel $r_p$. La unión de cuerdas, con una simulación por diferencias finitas del pulso. El prisma, trazando el rayo y minimizando la desviación por sección áurea.
+- **F102A: verificaciones.** Poisson y el rotor se verifican con diferencias finitas. Las imágenes, integrando la carga inducida sobre el plano (fuerza y $-\frac12qV_{ind}$), o anulando el potencial sobre la esfera. Los multipolos, con el potencial exacto lejos. Los dieléctricos en serie, resolviendo $\nabla\cdot(\varepsilon\nabla V) = 0$ en 1D. El núcleo, sumando 4000 espiras con la corriente libre más la de magnetización. Thévenin y Wheatstone, por análisis nodal. Los filtros RC, simulando el circuito en el tiempo. El pasabanda, bisecando los puntos de media potencia.
 - **Relatividad: verificación con rapidez.** Las plantillas se verifican con un boost construido como exponencial de la matriz de rapidez (serie de Taylor), sin usar γ, aplicado a los eventos.
 
 ## Hecho
@@ -361,5 +363,6 @@ Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Fí
 - **Plan de estudios y trayecto sugerido:** el que indicó el usuario, consistente con la [distribución curricular](https://fcen.uncuyo.edu.ar/distribucion-curricular) de la facultad.
 - **Extra UBA de F101:** guías de Física 1 de Cs. Físicas (FCEN-UBA), 1.er cuatrimestre de 2023: prácticas 4 (oscilaciones y estabilidad), 5 (sistemas no inerciales), 10 (gravitación) y 13 (relatividad, optativa). Están en la carpeta local de bibliografía, en `Física 1/03 - Ejercicios/F1 - Guía de ejs (2023)`.
 - **Extra UBA de F102B:** guías de Física 2 de Cs. Físicas (FCEN-UBA), 2.º cuatrimestre de 2011: 1 (oscilaciones libres, forzadas y acopladas, y modos de cuerdas y tubos), 3 (óptica geométrica), 4 (polarización) y 5 (interferencia y difracción). Están en `Física 2/02 - Ejercicios/Guia de Ejercicios (2011)`. Los parciales recientes están escaneados y no se usaron.
+- **Extra UBA de F102A:** guías de Física 3 de Cs. Físicas (FCEN-UBA) de 2013 y 2014: 1 (electrostática), 3 (corrientes estacionarias y Thévenin), 4 (magnetostática y medios magnéticos) y 5 (campos variables). También las preguntas de final de la cátedra Dmitruk (2025-2026). Están en `Física 3/03 - Ejercicios/Guia de Ejercicios (2014)` y en `Física 3/05 - Finales`.
 
 De los programas solo se tomó la lista de temas. Todo el texto y todos los ejercicios son originales.

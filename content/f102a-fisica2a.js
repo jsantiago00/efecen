@@ -5,6 +5,8 @@
  *   1 Carga y campo eléctrico · 2 Potencial eléctrico · 3 Capacitancia y dieléctricos
  *   4 Corriente, resistencia y fem · 5 Circuitos de corriente continua · 6 Campo magnético
  *   7 Fuentes de campo magnético · 8 Inducción electromagnética · 9 Corriente alterna
+ * Extra UBA (temas de Física 3 de Cs. Físicas, FCEN-UBA, que no están en el programa de F102A):
+ *   Electrostática avanzada · Medios materiales · Thévenin, puentes y filtros
  * Ids con prefijo "f2a-". Todo el texto y los ejercicios son originales.
  */
 (function () {
@@ -2343,6 +2345,509 @@
           intro: R`$Z = \sqrt{R^2 + (X_L - X_C)^2}$, resonancia en $\omega_0 = \frac1{\sqrt{LC}}$ y $\frac{V_2}{V_1} = \frac{N_2}{N_1}$.` },
         { id: "f2a-alterna-l3", title: "Potencia y circuitos en paralelo", templates: ["f2a-potencia-ca-num", "f2a-rlc-paralelo-num"], theory: ["f2a-potencia-ca", "f2a-rlc"],
           intro: R`$P = V_{ef}I_{ef}\cos\phi$, $Q = V_{ef}I_{ef}\sin\phi$ y $S^2 = P^2 + Q^2$; en paralelo se suman las corrientes como fasores.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · ELECTROSTÁTICA AVANZADA: FORMA DIFERENCIAL, IMÁGENES Y MULTIPOLOS
+ *  Temas de Física 3 de la Lic. en Cs. Físicas (FCEN, UBA) que no figuran en el programa de F102A.
+ *  Solo se tomó la lista de temas; el texto y los ejercicios son originales.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const K = R`k = 8{,}99\times10^9\ \text{N m}^2/\text{C}^2`;
+  // laplaciano y divergencia por diferencias finitas
+  const lap = (V, p, h = 1e-3) => [0, 1, 2].reduce((s, i) => { const a = p.slice(), b = p.slice(); a[i] += h; b[i] -= h; return s + (V(a) - 2 * V(p) + V(b)) / (h * h); }, 0);
+  const div = (Fv, p, h = 1e-4) => [0, 1, 2].reduce((s, i) => { const a = p.slice(), b = p.slice(); a[i] += h; b[i] -= h; return s + (Fv(a)[i] - Fv(b)[i]) / (2 * h); }, 0);
+  const curl = (Fv, p, h = 1e-4) => { const d = (i, j) => { const a = p.slice(), b = p.slice(); a[j] += h; b[j] -= h; return (Fv(a)[i] - Fv(b)[i]) / (2 * h); }; return [d(2, 1) - d(1, 2), d(0, 2) - d(2, 0), d(1, 0) - d(0, 1)]; };
+  const P0 = [0.37, -0.81, 0.53];
+
+  T["f2a-poisson-num"] = {
+    type: "numeric", concepts: ["f2a-forma-diferencial"], difficulty: 2,
+    generate(r) {
+      const [a, b, c] = [r.nz(-9, 9) * 5, r.nz(-9, 9) * 5, r.nz(-9, 9) * 5], v = r.pick(["V", "E"]);
+      if (a + b + c === 0) return null;
+      const terms = H.poly([[a, "x^{2}"], [b, "y^{2}"], [c, "z^{2}"]]), Eterms = `(${a}x,\\ ${b}y,\\ ${c}z)`;
+      // en kV y metros: ρ = −ε₀∇²V o ρ = ε₀∇·E, pasado a nC/m³
+      const rho = v === "V" ? -F.e0 * 2 * (a + b + c) * 1e3 * 1e9 : F.e0 * (a + b + c) * 1e3 * 1e9;
+      return {
+        prompt: v === "V" ? `En una región, el potencial electrostático es $V = ${terms}$ (en kV, con $x, y, z$ en metros). ¿Cuánto vale la densidad de carga (en nC/m³)? ($\\varepsilon_0 = 8{,}854\\times10^{-12}$ F/m)`
+          : `En una región, el campo eléctrico es $\\vec E = ${Eterms}$ (en kV/m, con $x, y, z$ en metros). ¿Cuánto vale la densidad de carga (en nC/m³)? ($\\varepsilon_0 = 8{,}854\\times10^{-12}$ F/m)`,
+        answer: rho,
+        solution: v === "V"
+          ? [`[[f2a-forma-diferencial|Ecuación de Poisson]]: $\\nabla^2V = -\\frac{\\rho}{\\varepsilon_0}$.`, `$\\nabla^2V = 2(${a}) + 2(${b}) + 2(${c}) = ${2 * (a + b + c)}$ kV/m².`, `$\\rho = -\\varepsilon_0\\nabla^2V = -8{,}854\\times10^{-12}\\cdot${2 * (a + b + c)}\\times10^3 \\approx ${nf(rho)}$ nC/m³.`]
+          : [`[[f2a-forma-diferencial|Ley de Gauss en forma diferencial]]: $\\nabla\\cdot\\vec E = \\frac{\\rho}{\\varepsilon_0}$.`, `$\\nabla\\cdot\\vec E = ${a} + ${b} + ${c} = ${a + b + c}$ kV/m².`.replace(/\+ -/g, "- "), `$\\rho = \\varepsilon_0\\nabla\\cdot\\vec E \\approx ${nf(rho)}$ nC/m³.`],
+        // verificación: laplaciano o divergencia por diferencias finitas en un punto cualquiera
+        verify: { kind: "value", tol: 1e-5, fn: () => (v === "V" ? -F.e0 * lap(p => 1e3 * (a * p[0] ** 2 + b * p[1] ** 2 + c * p[2] ** 2), P0) : F.e0 * div(p => [1e3 * a * p[0], 1e3 * b * p[1], 1e3 * c * p[2]], P0)) * 1e9 }
+      };
+    }
+  };
+  T["f2a-laplace-vf"] = {
+    type: "tf", concepts: ["f2a-forma-diferencial"], difficulty: 2,
+    generate(r) {
+      const zero = r.bool(), a = r.nz(-6, 6), b = r.nz(-6, 6), c = zero ? -(a + b) : r.nz(-6, 6), d = r.int(-4, 4);
+      if (!zero && a + b + c === 0) return null;
+      if (c === 0) return null;
+      return {
+        prompt: `En cierta región el potencial es $V = ${H.poly([[a, "x^{2}"], [b, "y^{2}"], [c, "z^{2}"], [d, "xy"]])}$ (en V, con las coordenadas en metros). <b>Verdadero o falso:</b> en esa región no hay carga.`,
+        answer: zero,
+        explanation: `Sin carga, el potencial cumple la [[f2a-forma-diferencial|ecuación de Laplace]] $\\nabla^2V = 0$. Acá $\\nabla^2V = 2(${a}) + 2(${b}) + 2(${c}) = ${2 * (a + b + c)}$ V/m² (el término en $xy$ no aporta). ${zero ? "Da cero: no hay carga." : `No da cero: hay una densidad $\\rho = -\\varepsilon_0\\nabla^2V$.`}`,
+        solution: [`Un potencial con $\\nabla^2V = 0$ no puede tener máximos ni mínimos dentro de la región: siempre "sube" en alguna dirección y "baja" en otra.`],
+        verify: { kind: "truth", fn: () => Math.abs(lap(p => a * p[0] ** 2 + b * p[1] ** 2 + c * p[2] ** 2 + d * p[0] * p[1], P0)) < 1e-4 }
+      };
+    }
+  };
+  T["f2a-conservativo-mc"] = {
+    type: "mc", concepts: ["f2a-forma-diferencial"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(1, 5), s = r.pick(["", "-"]);
+      const A = s === "-" ? -a : a, ta = `${s}${a === 1 ? "" : a}`;
+      const good = [
+        [`(2${ta === "-" ? "-" : ta}xy,\\ ${ta}x^2,\\ 0)`.replace("2-", "-2"), p => [2 * A * p[0] * p[1], A * p[0] ** 2, 0]],
+        [`(${ta}yz,\\ ${ta}xz,\\ ${ta}xy)`, p => [A * p[1] * p[2], A * p[0] * p[2], A * p[0] * p[1]]],
+        [`(${ta}y,\\ ${ta}x,\\ 0)`, p => [A * p[1], A * p[0], 0]]
+      ];
+      const bad = [
+        [`(${ta}y,\\ ${s === "-" ? "" : "-"}${a === 1 ? "" : a}x,\\ 0)`, p => [A * p[1], -A * p[0], 0]],
+        [`(${ta}xy,\\ ${ta}xy,\\ 0)`, p => [A * p[0] * p[1], A * p[0] * p[1], 0]],
+        [`(${ta}y^2,\\ ${ta}x^2,\\ 0)`, p => [A * p[1] ** 2, A * p[0] ** 2, 0]],
+        [`(${ta}z,\\ 0,\\ ${s === "-" ? "" : "-"}${a === 1 ? "" : a}x)`, p => [A * p[2], 0, -A * p[0]]]
+      ];
+      const g = r.pick(good), bs = r.sample(bad, 3);
+      return {
+        prompt: `¿Cuál de estos campos (con constantes en unidades del SI) **puede** ser un campo electrostático?`,
+        ...H.mc(r, `\\vec E = ${g[0]}`, bs.map(b => `\\vec E = ${b[0]}`)),
+        solution: [`Un campo electrostático es conservativo: $\\vec E = -\\nabla V$, así que su [[f2a-forma-diferencial|rotor]] es nulo, $\\nabla\\times\\vec E = 0$.`,
+          `Solo $${g[0]}$ tiene rotor nulo en todo punto (es el gradiente de un potencial). Los otros tienen alguna componente del rotor distinta de cero.`],
+        // verificación: rotor por diferencias finitas en varios puntos, nulo para la correcta y no nulo para las otras
+        verify: { kind: "truth", target: true, fn: () => { const pts = [P0, [1.1, 0.4, -0.6], [-0.7, 1.3, 0.9]], n = f => Math.max(...pts.map(p => Math.hypot(...curl(f, p))));
+          return n(g[1]) < 1e-6 && bs.every(b => n(b[1]) > 1e-3); } }
+      };
+    }
+  };
+  T["f2a-imagen-num"] = {
+    type: "numeric", concepts: ["f2a-imagenes"], difficulty: 3,
+    generate(r) {
+      const v = r.pick(["plano-F", "plano-W", "esfera-q", "esfera-F"]), q = r.int(1, 20), Q = q * 1e-9;
+      if (v.startsWith("plano")) {
+        const d = r.int(1, 10) / 100, Fz = F.k * Q * Q / (4 * d * d), W = F.k * Q * Q / (4 * d);
+        return { prompt: `Una carga de $${q}$ nC está a $${dn2(d * 100)}$ cm de un plano conductor infinito conectado a tierra. ¿${v === "plano-F" ? "Con qué fuerza (N) la atrae el plano" : "Qué trabajo (J) hay que hacer para alejarla hasta el infinito"}? ($${K}$)`, answer: v === "plano-F" ? Fz : W,
+          solution: [`[[f2a-imagenes|Método de imágenes]]: el potencial en la región de la carga es el de la carga más una **carga imagen** $-q$ a la misma distancia del otro lado del plano. Así $V = 0$ sobre el plano y se cumple Poisson afuera.`,
+            v === "plano-F" ? `La fuerza es la de la imagen, a distancia $2d$: $F = \\frac{kq^2}{(2d)^2} \\approx ${nf(Fz)}$ N.` : `La fuerza a distancia $x$ es $\\frac{kq^2}{4x^2}$; integrando de $d$ a $\\infty$: $W = \\frac{kq^2}{4d} \\approx ${nf(W)}$ J. Es la **mitad** de la energía de dos cargas reales a $2d$: la imagen no es una carga real y se mueve con ella.`],
+          // verificación: se integra la atracción de la carga inducida sobre el plano, σ(r) = −qd/(2π(r² + d²)^{3/2}), anillo por anillo
+          verify: v === "plano-F"
+            ? { kind: "integral", f: rr => F.k * Q * (Q * d / (2 * Math.PI * (rr * rr + d * d) ** 1.5)) * 2 * Math.PI * rr * d / (rr * rr + d * d) ** 1.5, a: 0, inf: true, tol: 1e-5 }
+            // trabajo = −½ q V_inducido en la posición de la carga, con V_inducido sumando kσ dA/distancia sobre el plano
+            : { kind: "integral", f: rr => 0.5 * F.k * Q * (Q * d / (2 * Math.PI * (rr * rr + d * d) ** 1.5)) * 2 * Math.PI * rr / Math.sqrt(rr * rr + d * d), a: 0, inf: true, tol: 1e-5 } };
+      }
+      const a = r.int(2, 10) / 100, D = a * r.pick([1.5, 2, 2.5, 3, 4]), qi = -Q * a / D, b = a * a / D, Fz = F.k * Q * Q * a * D / (D * D - a * a) ** 2;
+      return { prompt: `Una carga de $${q}$ nC está a $${dn2(D * 100)}$ cm del centro de una esfera conductora de radio $${dn2(a * 100)}$ cm conectada a tierra. ¿${v === "esfera-q" ? "Cuánto vale (en nC) la carga imagen que reemplaza a la esfera" : "Con qué fuerza (N) la esfera atrae a la carga"}? ($${K}$)`, answer: v === "esfera-q" ? qi * 1e9 : Fz,
+        solution: [`[[f2a-imagenes|Imagen en una esfera a tierra]]: una carga $q' = -q\\frac aD$ en el punto a $b = \\frac{a^2}{D}$ del centro (sobre la recta que va hacia $q$) hace $V = 0$ en toda la superficie.`,
+          `$q' = -${q}\\cdot\\frac{${dn2(a * 100)}}{${dn2(D * 100)}} \\approx ${nf(qi * 1e9)}$ nC, en $b \\approx ${dn2(b * 100)}$ cm.`,
+          v === "esfera-F" ? `$F = \\frac{k|qq'|}{(D - b)^2} = \\frac{kq^2aD}{(D^2 - a^2)^2} \\approx ${nf(Fz)}$ N.` : `La carga total inducida en la esfera es $q'$ (no $-q$: parte de las líneas de campo se van al infinito).`],
+        verify: v === "esfera-q"
+          // verificación: con la imagen propuesta, el potencial se anula en puntos de la superficie de la esfera
+          ? { kind: "zero", fn: ans => [0.3, 1.1, 2, 2.9].map(t => (F.k * Q / Math.hypot(a * Math.cos(t) - D, a * Math.sin(t)) + F.k * ans * 1e-9 / Math.hypot(a * Math.cos(t) - b, a * Math.sin(t))) / (F.k * Q / a)), tol: 1e-9 }
+          // verificación: la fuerza como −dU/dD, con la energía de interacción U = ½ q V_inducido
+          : { kind: "value", tol: 1e-5, fn: () => { const U = x => -0.5 * F.k * Q * Q * a / (x * x - a * a), h = 1e-7; return (U(D + h) - U(D - h)) / (2 * h); } } };
+    }
+  };
+  const dn2 = x => String(+x.toFixed(2)).replace(".", "{,}");
+  T["f2a-multipolo-num"] = {
+    type: "numeric", concepts: ["f2a-multipolos"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["dipolo", "lejos", "cuadrupolo"]);
+      if (v === "dipolo") {
+        const z = r.distinct(3, -5, 5), q1 = r.nz(-5, 5), q2 = r.nz(-5, 5), q3 = -(q1 + q2);
+        if (q3 === 0) return null;
+        const p = q1 * z[0] + q2 * z[1] + q3 * z[2];
+        if (p === 0) return null;
+        return { prompt: `Sobre el eje $z$ hay tres cargas: $${q1}$ nC en $z = ${z[0]}$ cm, $${q2}$ nC en $z = ${z[1]}$ cm y $${q3}$ nC en $z = ${z[2]}$ cm. ¿Cuánto vale su momento dipolar $p_z$ (en nC·cm)?`, answer: p,
+          solution: [`La carga total es $0$, así que lejos domina el término **dipolar** del [[f2a-multipolos|desarrollo multipolar]], y $\\vec p = \\sum q_i\\vec r_i$ no depende del origen.`,
+            `$p_z = ${q1}\\cdot${z[0]} + ${q2}\\cdot${z[1]} + ${q3}\\cdot${z[2]} = ${p}$ nC·cm.`.replace(/\+ -/g, "+ (-").replace(/\(-(\d+)\\cdot/g, "(-$1)\\cdot")],
+          // verificación: potencial exacto lejos sobre el eje, en +r y en −r; la semidiferencia por r²/k cancela el cuadrupolo
+          verify: { kind: "value", tol: 1e-5, fn: () => { const rr = 1e5, V = s => [[q1, z[0]], [q2, z[1]], [q3, z[2]]].reduce((acc, [q, zz]) => acc + q / Math.abs(s * rr - zz), 0); return (V(1) - V(-1)) / 2 * rr * rr; } } };
+      }
+      if (v === "lejos") {
+        const q1 = r.nz(-5, 5), q2 = r.nz(-5, 5), d = r.int(2, 10), rr = r.pick([10, 20, 50, 100]), Q = (q1 + q2) * 1e-9, p = (q1 - q2) * 1e-9 * d / 100;
+        if (q1 + q2 === 0) return null;
+        const Vap = F.k * Q / rr + F.k * p / (rr * rr);
+        return { prompt: `Hay $${q1}$ nC en $z = ${d}$ cm y $${q2}$ nC en $z = -${d}$ cm. Usando los términos monopolar y dipolar, ¿cuánto vale el potencial (V) en el punto $z = ${rr}$ m del eje? ($${K}$)`, answer: Vap,
+          solution: [`[[f2a-multipolos|Desarrollo multipolar]] lejos: $V \\approx \\frac{kQ}{r} + \\frac{kp\\cos\\theta}{r^2}$, con $Q = ${q1 + q2}$ nC y $p = \\sum q_iz_i = ${nf((q1 - q2) * d)}$ nC·cm.`,
+            `Sobre el eje ($\\theta = 0$): $V \\approx ${nf(F.k * Q / rr)} + ${nf(F.k * p / (rr * rr))} \\approx ${nf(Vap)}$ V.`.replace("+ -", "- ")],
+          // verificación: potencial exacto de las dos cargas (la diferencia es del orden del cuadrupolo, (d/r)²)
+          verify: { kind: "value", tol: 5e-4, fn: () => F.k * (q1 * 1e-9 / (rr - d / 100) + q2 * 1e-9 / (rr + d / 100)) } };
+      }
+      const q = r.nz(1, 9), d = r.int(1, 5), rr = r.pick([1, 2, 5, 10]), Vq = 2 * F.k * q * 1e-9 * (d / 100) ** 2 / rr ** 3;
+      return { prompt: `Un cuadrupolo lineal tiene $${q}$ nC en $z = \\pm${d}$ cm y $-${2 * q}$ nC en el origen. ¿Cuánto vale aproximadamente el potencial (V) en el punto $z = ${rr}$ m del eje? ($${K}$)`, answer: Vq,
+        solution: [`Carga total y momento dipolar son nulos: el primer término que sobrevive es el **cuadrupolar** ([[f2a-multipolos]]), que cae como $\\frac{1}{r^3}$.`,
+          `Sobre el eje: $V \\approx \\frac{2kqd^2}{r^3} = \\frac{2\\cdot8{,}99\\times10^9\\cdot${q}\\times10^{-9}\\cdot(${dn2(d / 100)})^2}{${rr}^3} \\approx ${nf(Vq)}$ V.`],
+        verify: { kind: "value", tol: 1e-3, fn: () => F.k * q * 1e-9 * (1 / (rr - d / 100) + 1 / (rr + d / 100) - 2 / rr) } };
+    }
+  };
+
+  const cards = {
+    "f2a-forma-diferencial": {
+      title: "Forma diferencial: divergencia, rotor, Poisson y Laplace", aliases: ["ecuación de Poisson", "ecuación de Laplace", "ley de Gauss en forma diferencial", "forma diferencial de las ecuaciones de Maxwell", "teorema de Earnshaw"], concepts: ["f2a-forma-diferencial"],
+      summary: "∇·E = ρ/ε₀ y ∇×E = 0 en electrostática. Con E = −∇V: ∇²V = −ρ/ε₀ (Poisson); sin carga, ∇²V = 0 (Laplace).",
+      def: [R`**Ley de Gauss en forma diferencial:** $\nabla\cdot\vec E = \frac{\rho}{\varepsilon_0}$. Vale punto a punto; integrándola en un volumen y usando el teorema de la divergencia se recupera la [[f2a-gauss|ley de Gauss]].`,
+        R`**Campo conservativo:** en electrostática $\nabla\times\vec E = 0$, que es equivalente a que exista un potencial con $\vec E = -\nabla V$.`,
+        R`**Ecuación de Poisson:** reemplazando, $\nabla^2V = -\frac{\rho}{\varepsilon_0}$, con $\nabla^2V = \frac{\partial^2V}{\partial x^2} + \frac{\partial^2V}{\partial y^2} + \frac{\partial^2V}{\partial z^2}$. Sin carga queda la **ecuación de Laplace**, $\nabla^2V = 0$.`,
+        R`**Las cuatro ecuaciones de Maxwell en forma diferencial:** $\nabla\cdot\vec E = \frac{\rho}{\varepsilon_0}$, $\nabla\cdot\vec B = 0$, $\nabla\times\vec E = -\frac{\partial\vec B}{\partial t}$, $\nabla\times\vec B = \mu_0\vec J + \mu_0\varepsilon_0\frac{\partial\vec E}{\partial t}$.`],
+      idea: [R`La divergencia mide cuánto "sale" el campo de un punto (fuentes y sumideros: las cargas); el rotor, cuánto "gira" alrededor. Un campo electrostático sale de las cargas positivas y no gira nunca.`,
+        R`**Earnshaw:** una solución de Laplace no tiene máximos ni mínimos en el interior (cada punto es el promedio de su entorno). Por eso no se puede atrapar una carga en equilibrio estable solo con campos electrostáticos.`,
+        R`Con Poisson y las condiciones de borde, el potencial queda **determinado de forma única** (teorema de unicidad). Eso es lo que justifica el [[f2a-imagenes|método de imágenes]].`],
+      demo: [R`**Paso 1 (Gauss en un cubito).** Aplicamos la ley de Gauss a un cubito de lados $dx, dy, dz$. Por las dos caras perpendiculares a $x$ el flujo neto es $[E_x(x + dx) - E_x(x)]\,dy\,dz \approx \frac{\partial E_x}{\partial x}dx\,dy\,dz$.`,
+        R`**Paso 2 (sumar las tres direcciones).** El flujo total es $\left(\frac{\partial E_x}{\partial x} + \frac{\partial E_y}{\partial y} + \frac{\partial E_z}{\partial z}\right)dV = (\nabla\cdot\vec E)\,dV$, y la carga encerrada es $\rho\,dV$.`,
+        R`**Paso 3 (Gauss).** Igualando flujo y $\frac{q_{enc}}{\varepsilon_0}$ y dividiendo por $dV$: $\nabla\cdot\vec E = \frac{\rho}{\varepsilon_0}$.`,
+        R`**Paso 4 (Poisson).** Con $\vec E = -\nabla V$, la divergencia del gradiente es el laplaciano: $\nabla\cdot(-\nabla V) = -\nabla^2V = \frac{\rho}{\varepsilon_0}$. $\blacksquare$`],
+      examples: [{ q: R`¿Qué densidad de carga produce $V = 3x^2$ kV (x en m)?`, steps: [R`$\nabla^2V = 6$ kV/m², así que $\rho = -\varepsilon_0\cdot6000 \approx -5{,}3\times10^{-8}$ C/m³.`] }],
+      see: ["f2a-gauss", "f2a-gradiente-potencial", "f2a-imagenes", "f2a-maxwell"]
+    },
+    "f2a-imagenes": {
+      title: "Método de imágenes", aliases: ["método de imágenes", "carga imagen", "cargas imagen"], concepts: ["f2a-imagenes"],
+      summary: "Se reemplaza un conductor por cargas ficticias fuera de la región que reproducen sus condiciones de borde. Plano a tierra: imagen −q simétrica. Esfera a tierra: −qa/D en a²/D.",
+      def: [R`Por el teorema de unicidad, si encontramos un potencial que cumple Poisson en una región y las condiciones de borde, es **el** potencial. El método de imágenes lo arma con cargas puntuales ficticias ubicadas **fuera** de la región.`,
+        R`**Plano conductor a tierra:** una carga $q$ a distancia $d$ ve el mismo campo que si el plano se reemplazara por una carga $-q$ en el punto simétrico. La carga inducida en el plano es $\sigma(r) = -\frac{qd}{2\pi(r^2 + d^2)^{3/2}}$, que suma $-q$, y la fuerza es $\frac{kq^2}{4d^2}$.`,
+        R`**Esfera conductora a tierra** de radio $a$, con $q$ a distancia $D$ del centro: la imagen es $q' = -q\frac aD$, a distancia $b = \frac{a^2}{D}$ del centro.`],
+      idea: [R`La carga imagen no existe: es un truco para obtener el campo en la región física. Del lado del conductor, el campo real es otro (adentro de un conductor es cero).`,
+        R`La energía para alejar una carga de un plano es la **mitad** de la de dos cargas reales a distancia $2d$, porque la imagen se mueve junto con la carga y el campo solo existe de un lado.`],
+      demo: [R`**Paso 1 (plano: proponer).** Ponemos $q$ en $(0, 0, d)$ y una imagen $-q$ en $(0, 0, -d)$. Para $z > 0$ el potencial $V = \frac{kq}{|\vec r - d\hat z|} - \frac{kq}{|\vec r + d\hat z|}$ cumple Poisson, porque la imagen está fuera de esa región.`,
+        R`**Paso 2 (plano: borde).** En $z = 0$ las dos distancias son iguales y $V = 0$, como el plano a tierra. Por unicidad, es el potencial correcto.`,
+        R`**Paso 3 (esfera).** Para la esfera, pedimos que $\frac{q}{|\vec r - D\hat z|} + \frac{q'}{|\vec r - b\hat z|} = 0$ en $|\vec r| = a$. En los dos puntos del eje ($z = \pm a$): $\frac{q}{D - a} = -\frac{q'}{a - b}$ y $\frac{q}{D + a} = -\frac{q'}{a + b}$.`,
+        R`**Paso 4 (resolver).** Dividiendo las dos ecuaciones: $\frac{D + a}{D - a} = \frac{a + b}{a - b}$, de donde $b = \frac{a^2}{D}$; y reemplazando, $q' = -q\frac aD$. Se comprueba que con esos valores $V = 0$ en toda la esfera. $\blacksquare$`],
+      examples: [{ q: R`Una carga de 10 nC a 5 cm de un plano a tierra. ¿Fuerza?`, steps: [R`$F = \frac{kq^2}{(2d)^2} = \frac{8{,}99\times10^9\cdot10^{-16}}{0{,}01} \approx 9\times10^{-5}$ N.`] }],
+      see: ["f2a-conductores", "f2a-forma-diferencial"]
+    },
+    "f2a-multipolos": {
+      title: "Desarrollo multipolar", aliases: ["desarrollo multipolar", "cuadrupolo", "momento cuadrupolar", "potencial lejano"], concepts: ["f2a-multipolos"],
+      summary: "Lejos de una distribución: V ≈ kQ/r + kp cos θ/r² + … El primer término no nulo domina: monopolo (1/r), dipolo (1/r²), cuadrupolo (1/r³).",
+      def: [R`Para una distribución de cargas cerca del origen, a distancias $r$ mucho mayores que su tamaño: $$V(\vec r) \approx \frac{kQ}{r} + \frac{k\,\vec p\cdot\hat r}{r^2} + \frac{k\,Q_{zz}(3\cos^2\theta - 1)}{4r^3} + \dots$$`,
+        R`**Monopolo:** $Q = \sum q_i$. **Momento dipolar:** $\vec p = \sum q_i\vec r_i$; no depende del origen si $Q = 0$. **Cuadrupolo** (eje $z$): $Q_{zz} = \sum q_i(3z_i^2 - r_i^2)$.`,
+        R`Lejos, manda el primer término no nulo: si $Q \ne 0$, todo se ve como una carga puntual; si $Q = 0$ y $\vec p \ne 0$, como un dipolo; si los dos se anulan, como un cuadrupolo.`],
+      idea: [R`Un átomo neutro no atrae con $\frac{1}{r^2}$, pero si se polariza aparece un dipolo, y por eso las moléculas neutras se atraen con fuerzas de corto alcance (van der Waals).`,
+        R`El núcleo de muchos átomos es un cuadrupolo eléctrico (no es una esfera perfecta), y eso se mide en los corrimientos de las líneas espectrales.`],
+      demo: [R`**Paso 1 (distancia a una carga).** Para una carga en $\vec r_i$, $|\vec r - \vec r_i| = r\sqrt{1 - 2\frac{\vec r_i\cdot\hat r}{r} + \frac{r_i^2}{r^2}}$.`,
+        R`**Paso 2 (desarrollar).** Con $(1 + \varepsilon)^{-1/2} \approx 1 - \frac\varepsilon2 + \frac38\varepsilon^2$ y quedándonos con los términos hasta $\frac{1}{r^2}$: $\frac{1}{|\vec r - \vec r_i|} \approx \frac1r + \frac{\vec r_i\cdot\hat r}{r^2} + O\left(\frac{1}{r^3}\right)$.`,
+        R`**Paso 3 (sumar).** Multiplicando por $kq_i$ y sumando: $V \approx \frac{k\sum q_i}{r} + \frac{k(\sum q_i\vec r_i)\cdot\hat r}{r^2} = \frac{kQ}{r} + \frac{k\,\vec p\cdot\hat r}{r^2}$.`,
+        R`**Paso 4 (el cuadrupolo lineal).** Con $q$ en $\pm d$ y $-2q$ en el origen, $Q = 0$ y $p = 0$. Sobre el eje, $V = kq\left(\frac{1}{r - d} + \frac{1}{r + d} - \frac2r\right) = \frac{2kqd^2}{r(r^2 - d^2)} \approx \frac{2kqd^2}{r^3}$. $\blacksquare$`],
+      examples: [{ q: R`Dos cargas $+q$ y $-q$ separadas 2 mm. ¿Cómo cae el potencial lejos?`, steps: [R`$Q = 0$, $p = q\cdot2$ mm: $V \approx \frac{kp\cos\theta}{r^2}$, como $\frac{1}{r^2}$.`] }],
+      see: ["f2a-campo-electrico", "f2a-potencial"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-forma-diferencial": { name: "Forma diferencial y Poisson" }, "f2a-imagenes": { name: "Método de imágenes" }, "f2a-multipolos": { name: "Desarrollo multipolar" } },
+    templates: T,
+    units: [{
+      id: "f2a-electrostatica-ext-u", order: 10, program: "Extra UBA", title: "Electrostática avanzada", icon: "zap",
+      diagnostic: ["f2a-poisson-num", "f2a-imagen-num", "f2a-multipolo-num"],
+      lessons: [
+        { id: "f2a-forma-diferencial", title: "Divergencia, rotor y Poisson", templates: ["f2a-poisson-num", "f2a-laplace-vf", "f2a-conservativo-mc"], theory: ["f2a-forma-diferencial"],
+          intro: R`$\nabla\cdot\vec E = \rho/\varepsilon_0$, $\nabla\times\vec E = 0$, y con $\vec E = -\nabla V$: $\nabla^2V = -\rho/\varepsilon_0$.` },
+        { id: "f2a-imagenes-multipolos", title: "Imágenes y multipolos", templates: ["f2a-imagen-num", "f2a-multipolo-num"], theory: ["f2a-imagenes", "f2a-multipolos"],
+          intro: R`Plano a tierra: imagen $-q$ simétrica. Lejos: $V \approx \frac{kQ}{r} + \frac{kp\cos\theta}{r^2} + \dots$` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · MEDIOS MATERIALES: P, D, M Y H
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dn = (x, d = 3) => String(+x.toFixed(d)).replace(".", "{,}");
+
+  // capacitor plano con dos dieléctricos en serie: se resuelve ∇·(ε∇V) = 0 en 1D por diferencias finitas (Thomas)
+  const fd1d = (d1, d2, k1, k2, V0) => {
+    const n1 = 400, n2 = 400, N = n1 + n2, h = i => (i < n1 ? d1 / n1 : d2 / n2), eps = i => (i < n1 ? k1 : k2); // celda i entre los nodos i e i+1
+    const a = [], b = [], c = [], rhs = [];
+    for (let j = 1; j < N; j++) { const gl = eps(j - 1) / h(j - 1), gr = eps(j) / h(j); a.push(-gl); b.push(gl + gr); c.push(-gr); rhs.push(j === 1 ? gl * V0 : 0); }
+    for (let i = 1; i < b.length; i++) { const m = a[i] / b[i - 1]; b[i] -= m * c[i - 1]; rhs[i] -= m * rhs[i - 1]; }
+    const V = new Array(N + 1).fill(0); V[0] = V0;
+    for (let i = b.length - 1; i >= 0; i--) V[i + 1] = (rhs[i] - (i + 1 < b.length ? c[i] * V[i + 2] : 0)) / b[i];
+    return { E1: (V[0] - V[n1]) / d1, E2: (V[n1] - V[N]) / d2 };
+  };
+  T["f2a-dielserie-num"] = {
+    type: "numeric", concepts: ["f2a-medios-electricos"], difficulty: 2,
+    generate(r) {
+      const A = r.int(5, 50) * 10, d1 = r.int(1, 5), d2 = r.int(1, 5), k1 = r.pick([2, 3, 4, 5, 6]), k2 = r.pick([1, 2, 3, 4, 8]), V0 = r.pick([50, 100, 200, 500]), ask = r.pick(["C", "E1", "sb"]);
+      if (k1 === k2) return null;
+      const D = V0 / (d1 / k1 + d2 / k2) * 1e3 * F.e0, E1 = D / (F.e0 * k1), C = F.e0 * A * 1e-4 / ((d1 / k1 + d2 / k2) * 1e-3), sb = F.e0 * (k1 - 1) * E1;
+      const ans = { C: C * 1e12, E1: E1 / 1e3, sb: sb * 1e9 }[ask];
+      return {
+        prompt: `Un capacitor plano de $${A}$ cm² tiene entre sus placas dos láminas dieléctricas apiladas: una de $${d1}$ mm con $\\kappa_1 = ${k1}$ y otra de $${d2}$ mm con $\\kappa_2 = ${k2}$. Se conecta a $${V0}$ V. ¿${{ C: "Cuál es su capacidad (pF)", E1: "Cuánto vale el campo eléctrico (kV/m) dentro de la primera lámina", sb: "Cuánto vale la densidad de carga de polarización (nC/m²) en la cara de la primera lámina que toca a la placa" }[ask]}? ($\\varepsilon_0 = 8{,}854\\times10^{-12}$ F/m)`,
+        answer: ans,
+        solution: [
+          `[[f2a-medios-electricos|Ley de Gauss en medios]]: $\\vec D$ solo depende de la carga libre, así que vale lo mismo en las dos láminas: $D = \\sigma_{libre}$. En cada una, $E_i = \\frac{D}{\\kappa_i\\varepsilon_0}$.`,
+          `La tensión es la suma: $V = E_1d_1 + E_2d_2 = \\frac{D}{\\varepsilon_0}\\left(\\frac{d_1}{\\kappa_1} + \\frac{d_2}{\\kappa_2}\\right)$, así que $D \\approx ${nf(D)}$ C/m².`,
+          { C: `$C = \\frac{\\varepsilon_0A}{d_1/\\kappa_1 + d_2/\\kappa_2} \\approx ${nf(C * 1e12)}$ pF (dos capacitores en serie).`, E1: `$E_1 = \\frac{D}{\\kappa_1\\varepsilon_0} \\approx ${nf(E1 / 1e3)}$ kV/m.`, sb: `$P_1 = \\varepsilon_0(\\kappa_1 - 1)E_1$ y $\\sigma_b = \\vec P\\cdot\\hat n$: en esa cara $|\\sigma_b| = P_1 \\approx ${nf(sb * 1e9)}$ nC/m², de signo opuesto a la carga de la placa.` }[ask]
+        ],
+        // verificación: ecuación de Laplace en el medio, ∇·(ε∇V) = 0, resuelta numéricamente en 1D
+        verify: { kind: "value", tol: 1e-6, fn: () => { const s = fd1d(d1 * 1e-3, d2 * 1e-3, k1, k2, V0); return { C: F.e0 * k1 * s.E1 * A * 1e-4 / V0 * 1e12, E1: s.E1 / 1e3, sb: F.e0 * (k1 - 1) * s.E1 * 1e9 }[ask]; } }
+      };
+    }
+  };
+  const ANG = [[0, "en el polo hacia donde apunta $\\vec P$"], [60, "a $60^\\circ$ de la dirección de $\\vec P$ (medido desde el centro)"], [90, "en el ecuador"], [120, "a $120^\\circ$ de la dirección de $\\vec P$ (medido desde el centro)"], [180, "en el polo opuesto a $\\vec P$"]];
+  const SV = { 1: "P", 0.5: "\\frac P2", 0: "0", "-0.5": "-\\frac P2", "-1": "-P" };
+  T["f2a-polsup-mc"] = {
+    type: "mc", concepts: ["f2a-medios-electricos"], difficulty: 1,
+    generate(r) {
+      const [th, txt] = r.pick(ANG), cs = Math.round(Math.cos(th * Math.PI / 180) * 2) / 2, correct = SV[String(cs)];
+      return {
+        prompt: `Una esfera dieléctrica está polarizada uniformemente, con $\\vec P$ constante. ¿Cuánto vale la densidad superficial de carga de polarización ${txt}?`,
+        ...H.mc(r, `\\sigma_b = ${correct}`, Object.values(SV).filter(s => s !== correct).map(s => `\\sigma_b = ${s}`)),
+        solution: [`[[f2a-medios-electricos|Cargas de polarización]]: $\\sigma_b = \\vec P\\cdot\\hat n$ en la superficie y $\\rho_b = -\\nabla\\cdot\\vec P$ adentro (acá cero, porque $\\vec P$ es uniforme).`,
+          `En la esfera $\\hat n$ es radial: $\\sigma_b = P\\cos\\theta$, con $\\theta = ${th}^\\circ$: $\\sigma_b = ${correct}$.`],
+        // verificación: producto escalar de P con la normal exterior en ese punto
+        verify: { kind: "truth", target: true, fn: () => { const t = th * Math.PI / 180, v = [Math.sin(t), 0, Math.cos(t)].reduce((s, x, i) => s + x * [0, 0, 1][i], 0); return SV[String(Math.round(v * 2) / 2)] === correct; } }
+      };
+    }
+  };
+  T["f2a-entrehierro-num"] = {
+    type: "numeric", concepts: ["f2a-medios-magneticos"], difficulty: 3,
+    generate(r) {
+      const N = r.int(2, 10) * 100, I = r.int(1, 10) / 2, L = r.int(20, 60) / 100, g = r.int(1, 6) / 2000, mur = r.pick([500, 1000, 2000, 4000]), ask = r.pick(["B", "Hg", "I"]);
+      const B = F.mu0 * N * I / ((L - g) / mur + g), Hg = B / F.mu0;
+      if (ask === "I") {
+        const Bt = r.pick([0.3, 0.5, 0.8, 1, 1.2]), It = Bt * ((L - g) / mur + g) / (F.mu0 * N);
+        return { prompt: `Un toroide de hierro ($\\mu_r = ${mur}$) de $${dn(L * 100, 1)}$ cm de circunferencia media tiene un entrehierro de $${dn(g * 1000, 1)}$ mm y $${N}$ vueltas. ¿Qué corriente (A) hace falta para tener $B = ${dn(Bt, 1)}$ T en el entrehierro? ($\\mu_0 = 4\\pi\\times10^{-7}$ T m/A)`, answer: It,
+          solution: [`[[f2a-medios-magneticos|Circuito magnético]]: $B$ es el mismo en el hierro y en el entrehierro (las líneas de $\\vec B$ no se cortan). Por Ampère con $\\vec H$: $H_{Fe}(L - g) + H_gg = NI$.`, `Con $H_{Fe} = \\frac{B}{\\mu_0\\mu_r}$ y $H_g = \\frac{B}{\\mu_0}$: $I = \\frac{B}{\\mu_0N}\\left(\\frac{L - g}{\\mu_r} + g\\right) \\approx ${nf(It)}$ A.`],
+          verify: { kind: "zero", fn: x => { let s = 0; const n = 1000; for (let i = 0; i < n; i++) s += (Bt / (F.mu0 * mur)) * (L - g) / n; for (let i = 0; i < 50; i++) s += (Bt / F.mu0) * g / 50; return [(s - N * x) / (N * x)]; }, tol: 1e-9 } };
+      }
+      return { prompt: `Un toroide de hierro ($\\mu_r = ${mur}$) de $${dn(L * 100, 1)}$ cm de circunferencia media tiene un entrehierro de $${dn(g * 1000, 1)}$ mm. Está bobinado con $${N}$ vueltas por las que circulan $${dn(I, 1)}$ A. ¿${ask === "B" ? "Cuánto vale $B$ (T) en el entrehierro" : "Cuánto vale $H$ (kA/m) en el entrehierro"}? ($\\mu_0 = 4\\pi\\times10^{-7}$ T m/A)`, answer: ask === "B" ? B : Hg / 1e3,
+        solution: [`[[f2a-medios-magneticos|Ampère para H]]: $\\oint\\vec H\\cdot d\\vec l = NI$ (solo cuenta la corriente libre). Como $B$ es el mismo en todo el circuito, $\\frac{B}{\\mu_0\\mu_r}(L - g) + \\frac{B}{\\mu_0}g = NI$.`,
+          `$B = \\frac{\\mu_0NI}{(L - g)/\\mu_r + g} \\approx ${nf(B)}$ T. El entrehierro de ${String(+(g * 1000).toFixed(1)).replace(".", ",")} mm "pesa" ${String(+(g / ((L - g) / mur)).toFixed(1)).replace(".", ",")} veces más que todo el hierro.`,
+          ask === "Hg" ? `$H_g = \\frac{B}{\\mu_0} \\approx ${nf(Hg / 1e3)}$ kA/m, mucho mayor que en el hierro.` : `Sin entrehierro sería $\\mu_0\\mu_rNI/L \\approx ${nf(F.mu0 * mur * N * I / L)}$ T (en la práctica, el hierro se satura antes).`],
+        // verificación: circulación de H tramo a tramo (1000 tramos de hierro y 50 de aire) contra la corriente encerrada
+        verify: { kind: "zero", fn: x => { const Bx = ask === "B" ? x : x * 1e3 * F.mu0; let s = 0; const n = 1000; for (let i = 0; i < n; i++) s += (Bx / (F.mu0 * mur)) * (L - g) / n; for (let i = 0; i < 50; i++) s += (Bx / F.mu0) * g / 50; return [(s - N * I) / (N * I)]; }, tol: 1e-9 } };
+    }
+  };
+  T["f2a-nucleo-num"] = {
+    type: "numeric", concepts: ["f2a-medios-magneticos"], difficulty: 2,
+    generate(r) {
+      const n = r.int(5, 40) * 100, I = r.int(1, 20) / 10, mur = r.pick([1.00002, 50, 200, 800, 1500]), ask = mur < 2 ? "B" : r.pick(["B", "M"]);
+      const Hh = n * I, M = (mur - 1) * Hh, B = F.mu0 * mur * Hh;
+      return {
+        prompt: `Un solenoide largo de $${n}$ vueltas por metro, con $${dn(I, 1)}$ A, tiene un núcleo de permeabilidad relativa $\\mu_r = ${String(mur).replace(".", "{,}")}$ que lo llena. ¿Cuánto vale ${ask === "B" ? "$B$ (mT) adentro" : "la magnetización $M$ (kA/m) del núcleo"}? ($\\mu_0 = 4\\pi\\times10^{-7}$ T m/A)`,
+        answer: ask === "B" ? B * 1e3 : M / 1e3,
+        solution: [`[[f2a-medios-magneticos|Ampère con H]]: adentro $H = nI = ${Hh}$ A/m, sin importar el material.`,
+          `Material lineal: $\\vec M = \\chi_m\\vec H$ con $\\chi_m = \\mu_r - 1$, y $\\vec B = \\mu_0(\\vec H + \\vec M) = \\mu_0\\mu_r\\vec H$.`,
+          ask === "B" ? `$B = \\mu_0\\mu_rnI \\approx ${nf(B * 1e3)}$ mT.` : `$M = (\\mu_r - 1)nI \\approx ${nf(M / 1e3)}$ kA/m: equivale a una corriente superficial de magnetización $K_M = M$ sobre el núcleo.`],
+        // verificación: B en el centro de un solenoide de largo 100R, sumando el campo de 4000 espiras con la corriente total
+        // (libre más de magnetización); para M se despeja de esa B
+        verify: { kind: "value", tol: 1e-3, fn: () => { const Rr = 0.01, Ls = 1, Kt = mur * Hh, nz = 4000; let s = 0;
+          for (let j = 0; j < nz; j++) { const z = -Ls / 2 + (j + 0.5) * Ls / nz; s += F.mu0 * Kt * (Ls / nz) * Rr * Rr / (2 * (Rr * Rr + z * z) ** 1.5); }
+          return ask === "B" ? s * 1e3 : (s / F.mu0 - Hh) / 1e3; } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-medios-electricos": {
+      title: "Dieléctricos: polarización, D y cargas de polarización", aliases: ["vector polarización", "vector desplazamiento", "desplazamiento eléctrico", "ley de Gauss en medios", "susceptibilidad eléctrica", "cargas de polarización"], concepts: ["f2a-medios-electricos"],
+      summary: "Un dieléctrico se polariza (P = dipolos por volumen) y aparecen σ_b = P·n̂ y ρ_b = −∇·P. Con D = ε₀E + P, Gauss queda ∮D·dA = q_libre.",
+      def: [R`La **polarización** $\vec P$ es el momento dipolar por unidad de volumen. En un material lineal, $\vec P = \varepsilon_0\chi_e\vec E$, con $\kappa = 1 + \chi_e$ (ver [[f2a-dielectricos|dieléctricos]]).`,
+        R`**Cargas de polarización:** $\sigma_b = \vec P\cdot\hat n$ en la superficie y $\rho_b = -\nabla\cdot\vec P$ en el volumen. Producen campo como cualquier carga.`,
+        R`**Vector desplazamiento:** $\vec D = \varepsilon_0\vec E + \vec P$. La ley de Gauss en medios es $\oint\vec D\cdot d\vec A = q_{libre}$ (o $\nabla\cdot\vec D = \rho_{libre}$). En un medio lineal, $\vec D = \kappa\varepsilon_0\vec E$.`,
+        R`**En una interfaz** sin carga libre: se conservan la componente normal de $\vec D$ y la tangencial de $\vec E$.`],
+      idea: [R`$\vec D$ sirve porque depende solo de la carga que controlamos (la libre); la de polarización la "pone" el material. Con capas de dieléctricos apiladas, $D$ es el mismo en todas y $E$ es menor donde $\kappa$ es mayor.`],
+      demo: [R`**Paso 1 (dipolos en una lámina).** Un bloque con $\vec P$ uniforme es un montón de dipolos alineados. Adentro, la punta $+$ de uno se cancela con la cola $-$ del siguiente; solo quedan sin compensar las cargas en las caras.`,
+        R`**Paso 2 (cuánta carga queda).** En una cara de área $dA$, los dipolos con su carga a menos de $dl$ del borde aportan $P\,dA\cos\theta$ (con $\theta$ el ángulo entre $\vec P$ y la normal). Por unidad de área, $\sigma_b = \vec P\cdot\hat n$.`,
+        R`**Paso 3 (si P varía).** Si $\vec P$ no es uniforme, lo que sale de un volumen no se compensa con lo que entra: queda $\rho_b = -\nabla\cdot\vec P$.`,
+        R`**Paso 4 (Gauss en medios).** Gauss con toda la carga: $\varepsilon_0\nabla\cdot\vec E = \rho_{libre} + \rho_b = \rho_{libre} - \nabla\cdot\vec P$. Pasando de miembro, $\nabla\cdot(\varepsilon_0\vec E + \vec P) = \rho_{libre}$, o sea $\nabla\cdot\vec D = \rho_{libre}$. $\blacksquare$`],
+      examples: [{ q: R`Una lámina con $\kappa = 4$ en un campo externo con $D = 2\ \mu$C/m². ¿$E$ y $\sigma_b$?`, steps: [R`$E = \frac{D}{4\varepsilon_0} \approx 5{,}6\times10^4$ V/m.`, R`$P = D - \varepsilon_0E = D\left(1 - \frac14\right) = 1{,}5\ \mu$C/m², y $|\sigma_b| = P$.`] }],
+      see: ["f2a-dielectricos", "f2a-medios-magneticos", "f2a-forma-diferencial"]
+    },
+    "f2a-medios-magneticos": {
+      title: "Magnetización, H y circuitos magnéticos", aliases: ["magnetización", "campo H", "intensidad magnética", "circuito magnético", "entrehierro", "corriente de magnetización", "susceptibilidad magnética"], concepts: ["f2a-medios-magneticos"],
+      summary: "B = μ₀(H + M). Ampère para H solo cuenta corriente libre: ∮H·dl = I_libre. En un circuito magnético con entrehierro: B = μ₀NI/((L − g)/μᵣ + g).",
+      def: [R`La **magnetización** $\vec M$ es el momento magnético por unidad de volumen. Equivale a corrientes de magnetización: $\vec J_M = \nabla\times\vec M$ y, en la superficie, $\vec K_M = \vec M\times\hat n$.`,
+        R`**Campo H:** $\vec H = \frac{\vec B}{\mu_0} - \vec M$. La ley de Ampère queda $\oint\vec H\cdot d\vec l = I_{libre}$. En un material lineal, $\vec M = \chi_m\vec H$ y $\vec B = \mu_0\mu_r\vec H$, con $\mu_r = 1 + \chi_m$ (ver [[f2a-materiales-magneticos|materiales magnéticos]]).`,
+        R`**Circuito magnético:** en un núcleo con entrehierro, $\vec B$ tiene el mismo flujo en todo el recorrido (porque $\nabla\cdot\vec B = 0$). Ampère con $\vec H$ da $\frac{B}{\mu_0\mu_r}(L - g) + \frac{B}{\mu_0}g = NI$.`],
+      idea: [R`Es como un circuito de resistencias en serie: la "resistencia" (reluctancia) de cada tramo es $\frac{\ell}{\mu A}$. El hierro tiene $\mu$ enorme y conduce el flujo con poca reluctancia; un entrehierro de un milímetro puede pesar más que medio metro de hierro.`,
+        R`Los transformadores y los motores tienen núcleos sin entrehierros (o muy chicos) justamente para necesitar poca corriente.`],
+      demo: [R`**Paso 1 (Ampère con todas las corrientes).** $\nabla\times\vec B = \mu_0(\vec J_{libre} + \vec J_M)$, con $\vec J_M = \nabla\times\vec M$.`,
+        R`**Paso 2 (definir H).** Pasando el término de magnetización: $\nabla\times\left(\frac{\vec B}{\mu_0} - \vec M\right) = \vec J_{libre}$, o sea $\nabla\times\vec H = \vec J_{libre}$; en forma integral, $\oint\vec H\cdot d\vec l = I_{libre}$.`,
+        R`**Paso 3 (el toroide).** Por simetría, sobre la circunferencia media $H$ es constante en cada tramo. La corriente libre encerrada es $NI$: $H_{Fe}(L - g) + H_gg = NI$.`,
+        R`**Paso 4 (mismo B).** El flujo de $\vec B$ se conserva y la sección es la misma, así que $B$ es igual en el hierro y en el aire. Con $H_{Fe} = \frac{B}{\mu_0\mu_r}$ y $H_g = \frac{B}{\mu_0}$ queda $B = \frac{\mu_0NI}{(L - g)/\mu_r + g}$. $\blacksquare$`],
+      examples: [{ q: R`Toroide de hierro ($\mu_r = 1000$), $L = 50$ cm, entrehierro de 1 mm, 500 vueltas, 2 A. ¿B?`, steps: [R`$\frac{L - g}{\mu_r} + g \approx 0{,}0005 + 0{,}001 = 0{,}0015$ m.`, R`$B = \frac{4\pi\times10^{-7}\cdot1000}{0{,}0015} \approx 0{,}84$ T.`] }],
+      see: ["f2a-materiales-magneticos", "f2a-ampere", "f2a-medios-electricos"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-medios-electricos": { name: "Dieléctricos: P y D" }, "f2a-medios-magneticos": { name: "Magnetización y H" } },
+    templates: T,
+    units: [{
+      id: "f2a-medios-u", order: 11, program: "Extra UBA", title: "Medios materiales", icon: "atom",
+      diagnostic: ["f2a-dielserie-num", "f2a-entrehierro-num", "f2a-nucleo-num"],
+      lessons: [
+        { id: "f2a-medios-electricos", title: "Polarización y D", templates: ["f2a-polsup-mc", "f2a-dielserie-num"], theory: ["f2a-medios-electricos"],
+          intro: R`$\sigma_b = \vec P\cdot\hat n$, $\rho_b = -\nabla\cdot\vec P$. $\vec D = \varepsilon_0\vec E + \vec P$ y $\oint\vec D\cdot d\vec A = q_{libre}$.` },
+        { id: "f2a-medios-magneticos", title: "Magnetización y H", templates: ["f2a-nucleo-num", "f2a-entrehierro-num"], theory: ["f2a-medios-magneticos"],
+          intro: R`$\vec B = \mu_0(\vec H + \vec M)$, $\oint\vec H\cdot d\vec l = I_{libre}$. Con entrehierro: $B = \frac{\mu_0NI}{(L - g)/\mu_r + g}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · THÉVENIN, PUENTES Y FILTROS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, F = E.f2a, nf = F.nf;
+  const T = {};
+  const dn = (x, d = 3) => String(+x.toFixed(d)).replace(".", "{,}");
+
+  // circuito: fuente V – R1 – nodo A – R2 – tierra; A – R3 – nodo B – carga RL – tierra (análisis nodal)
+  const nodal = (V, R1, R2, R3, RL) => F.solve([[1 / R1 + 1 / R2 + 1 / R3, -1 / R3], [-1 / R3, 1 / R3 + 1 / RL]], [V / R1, 0]);
+  T["f2a-thevenin-num"] = {
+    type: "numeric", concepts: ["f2a-thevenin"], difficulty: 2,
+    generate(r) {
+      const V = r.pick([6, 9, 12, 18, 24]), R1 = r.int(1, 10) * 10, R2 = r.int(1, 10) * 10, R3 = r.int(1, 10) * 5, RL = r.int(1, 20) * 10, ask = r.pick(["Vth", "Rth", "IL"]);
+      const Vth = V * R2 / (R1 + R2), Rth = R3 + R1 * R2 / (R1 + R2), IL = Vth / (Rth + RL);
+      return {
+        prompt: `Una fuente de $${V}$ V alimenta un divisor: $R_1 = ${R1}\\ \\Omega$ desde la fuente hasta el nodo A, y $R_2 = ${R2}\\ \\Omega$ de A a tierra. Desde A sale $R_3 = ${R3}\\ \\Omega$ hasta el borne B; el otro borne es tierra. ${ask === "IL" ? `Si se conecta una carga de $${RL}\\ \\Omega$ entre B y tierra, ¿qué corriente (mA) circula por ella?` : `¿Cuánto vale ${ask === "Vth" ? "la tensión de Thévenin (V)" : "la resistencia de Thévenin (Ω)"} vista desde B?`}`,
+        answer: { Vth, Rth, IL: IL * 1e3 }[ask],
+        solution: [
+          `[[f2a-thevenin|Thévenin]]: $V_{th}$ es la tensión entre B y tierra en circuito abierto. Por $R_3$ no circula corriente, así que es la del divisor: $V_{th} = V\\frac{R_2}{R_1 + R_2} = ${dn(Vth, 3)}$ V.`,
+          `$R_{th}$: se apaga la fuente (cortocircuito) y se mira desde B: $R_3 + R_1\\parallel R_2 = ${R3} + ${dn(R1 * R2 / (R1 + R2), 3)} = ${dn(Rth, 3)}\\ \\Omega$.`,
+          ask === "IL" ? `Con la carga: $I = \\frac{V_{th}}{R_{th} + R_L} \\approx ${dn(IL * 1e3, 3)}$ mA.` : `Cualquier carga que se conecte entre B y tierra ve lo mismo que una fuente $V_{th}$ en serie con $R_{th}$.`
+        ],
+        // verificación: análisis nodal del circuito completo (en vacío, en cortocircuito o con la carga)
+        verify: { kind: "value", tol: 1e-6, fn: () => { if (ask === "IL") return nodal(V, R1, R2, R3, RL)[1] / RL * 1e3; const vo = nodal(V, R1, R2, R3, 1e12)[1], isc = nodal(V, R1, R2, R3, 1e-9)[1] / 1e-9; return ask === "Vth" ? vo : vo / isc; } }
+      };
+    }
+  };
+  T["f2a-wheatstone-num"] = {
+    type: "numeric", concepts: ["f2a-thevenin"], difficulty: 2,
+    generate(r) {
+      const R1 = r.int(1, 20) * 10, R2 = r.int(1, 20) * 10, R3 = r.int(1, 20) * 10, Rx = R2 * R3 / R1;
+      return {
+        prompt: `En un puente de Wheatstone, una rama tiene $R_1 = ${R1}\\ \\Omega$ (arriba) y $R_2 = ${R2}\\ \\Omega$ (abajo); la otra, $R_3 = ${R3}\\ \\Omega$ (arriba) y la resistencia desconocida $R_x$ (abajo). El galvanómetro entre los puntos medios marca cero. ¿Cuánto vale $R_x$ (Ω)?`,
+        answer: Rx,
+        solution: [`[[f2a-thevenin|Puente de Wheatstone]] equilibrado: si no pasa corriente por el galvanómetro, los dos puntos medios están al mismo potencial, y cada rama es un divisor.`,
+          `$\\frac{R_2}{R_1 + R_2} = \\frac{R_x}{R_3 + R_x} \\Rightarrow R_x = \\frac{R_2R_3}{R_1} = \\frac{${R2}\\cdot${R3}}{${R1}} = ${dn(Rx, 3)}\\ \\Omega$. No depende de la tensión de la fuente.`],
+        // verificación: análisis nodal con un galvanómetro de 50 Ω entre los puntos medios; con R_x la corriente tiene que anularse
+        verify: { kind: "zero", fn: x => { const g = 1 / 50, s = F.solve([[1 / R1 + 1 / R2 + g, -g], [-g, 1 / R3 + 1 / x + g]], [10 / R1, 10 / R3]); return [(s[0] - s[1]) * g / (10 / R1)]; }, tol: 1e-9 }
+      };
+    }
+  };
+  // filtro RC en régimen: se simula la ecuación del capacitor (τ = 1) con una entrada senoidal y se mide la amplitud de salida
+  const rcGain = (wt, out) => { let vc = 0, t = 0, mx = 0; const P = 2 * Math.PI / wt, dt = Math.min(P / 400, 0.01), tEnd = 30 + 6 * P; const f = (tt, v) => Math.sin(wt * tt) - v;
+    while (t < tEnd) { const k1 = f(t, vc), k2 = f(t + dt / 2, vc + dt / 2 * k1), k3 = f(t + dt / 2, vc + dt / 2 * k2), k4 = f(t + dt, vc + dt * k3); vc += dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4); t += dt;
+      if (t > tEnd - 2 * P) mx = Math.max(mx, Math.abs(out === "C" ? vc : Math.sin(wt * t) - vc)); } return mx; };
+  T["f2a-filtro-num"] = {
+    testN: 60, // simulación algo cara: menos instancias en los tests
+    type: "numeric", concepts: ["f2a-filtros"], difficulty: 2,
+    generate(r) {
+      const Rk = r.pick([1, 2.2, 4.7, 10, 22]), Cn = r.pick([10, 22, 47, 100]), out = r.pick(["C", "R"]), ask = r.pick(["fc", "H", "dB"]), RC = Rk * 1e3 * Cn * 1e-9, fc = 1 / (2 * Math.PI * RC);
+      const ratio = r.pick([0.25, 0.5, 2, 3, 5]), f = ratio * fc, Hm = out === "C" ? 1 / Math.sqrt(1 + ratio * ratio) : ratio / Math.sqrt(1 + ratio * ratio);
+      const fTxt = Math.round(f);
+      const Hx = out === "C" ? 1 / Math.sqrt(1 + (fTxt / fc) ** 2) : (fTxt / fc) / Math.sqrt(1 + (fTxt / fc) ** 2);
+      return {
+        prompt: `Un filtro RC tiene $R = ${String(Rk).replace(".", "{,}")}$ kΩ y $C = ${Cn}$ nF, con la salida tomada sobre ${out === "C" ? "el capacitor" : "la resistencia"}. ${ask === "fc" ? "¿Cuál es su frecuencia de corte (Hz)?" : `Para una entrada senoidal de $${fTxt}$ Hz, ¿cuánto vale ${ask === "H" ? "el cociente de amplitudes $V_{sal}/V_{ent}$" : "la ganancia en decibeles, $20\\log_{10}(V_{sal}/V_{ent})$"}?`}`,
+        answer: ask === "fc" ? fc : ask === "H" ? Hx : 20 * Math.log10(Hx),
+        solution: [
+          `Es un [[f2a-filtros|filtro pasa-${out === "C" ? "bajos" : "altos"}]]: con la salida en ${out === "C" ? "el capacitor, a alta frecuencia $X_C \\to 0$ y la salida se apaga" : "la resistencia, a baja frecuencia el capacitor no deja pasar corriente"}.`,
+          `Frecuencia de corte: $f_c = \\frac{1}{2\\pi RC} \\approx ${dn(fc, 1)}$ Hz.`,
+          ask === "fc" ? `Ahí $|H| = \\frac{1}{\\sqrt2}$ (−3 dB): la potencia de salida es la mitad.` : `$|H| = ${out === "C" ? "\\frac{1}{\\sqrt{1 + (f/f_c)^2}}" : "\\frac{f/f_c}{\\sqrt{1 + (f/f_c)^2}}"} \\approx ${dn(Hx, 4)}$${ask === "dB" ? `, o sea $${dn(20 * Math.log10(Hx), 2)}$ dB` : ""}.`
+        ],
+        // verificación: circuito simulado en el tiempo (RK4) con entrada senoidal hasta el régimen; se mide la amplitud
+        verify: ask === "fc"
+          ? { kind: "zero", fn: x => [rcGain(2 * Math.PI * x * RC, out) - Math.SQRT1_2], tol: 2e-4 }
+          : { kind: "value", tol: ask === "H" ? 2e-4 : 2e-3, fn: () => { const gn = rcGain(2 * Math.PI * fTxt * RC, out); return ask === "H" ? gn : 20 * Math.log10(gn); } }
+      };
+    }
+  };
+  T["f2a-filtro-vf"] = {
+    testN: 60, // simulación algo cara: menos instancias en los tests
+    type: "tf", concepts: ["f2a-filtros"], difficulty: 1,
+    generate(r) {
+      const out = r.pick(["C", "R"]), lo = r.bool(), ratio = lo ? r.pick([0.02, 0.05]) : r.pick([20, 50]), Rk = r.pick([1, 10]), Cn = r.pick([10, 100]);
+      const fc = 1 / (2 * Math.PI * Rk * 1e3 * Cn * 1e-9), f = Math.round(ratio * fc), pass = out === "C" ? lo : !lo;
+      return {
+        prompt: `Un filtro RC con $R = ${Rk}$ kΩ y $C = ${Cn}$ nF tiene la salida sobre ${out === "C" ? "el capacitor" : "la resistencia"}. <b>Verdadero o falso:</b> una señal de $${f}$ Hz sale prácticamente sin atenuar (más del 95 % de la amplitud).`,
+        answer: pass,
+        explanation: `$f_c = \\frac{1}{2\\pi RC} \\approx ${dn(fc, 0)}$ Hz y la señal está ${lo ? "muy por debajo" : "muy por encima"} de $f_c$. Con la salida en ${out === "C" ? "el capacitor es un pasa-bajos" : "la resistencia es un pasa-altos"} ([[f2a-filtros]]), así que ${pass ? "**pasa** casi entera" : "queda **muy atenuada**"}.`,
+        solution: [`Lejos de la frecuencia de corte, un RC deja pasar todo o casi nada, según de qué lado esté la señal.`],
+        verify: { kind: "truth", fn: () => rcGain(2 * Math.PI * f * Rk * 1e3 * Cn * 1e-9, out) > 0.95 }
+      };
+    }
+  };
+  T["f2a-pasabanda-num"] = {
+    type: "numeric", concepts: ["f2a-filtros"], difficulty: 3,
+    generate(r) {
+      const Rr = r.pick([5, 10, 20, 50, 100]), Lm = r.pick([1, 2, 5, 10, 20]), Cn = r.pick([10, 47, 100, 220]), ask = r.pick(["df", "Q"]);
+      const L = Lm * 1e-3, C = Cn * 1e-9, f0 = 1 / (2 * Math.PI * Math.sqrt(L * C)), df = Rr / (2 * Math.PI * L), Q = f0 / df;
+      if (Q < 1.5) return null;
+      return {
+        prompt: `Un RLC serie con $R = ${Rr}\\ \\Omega$, $L = ${Lm}$ mH y $C = ${Cn}$ nF se usa como filtro pasabanda, con la salida sobre la resistencia. ¿Cuánto vale ${ask === "df" ? "su ancho de banda (Hz) entre los puntos de media potencia" : "su factor de calidad $Q = f_0/\\Delta f$"}?`,
+        answer: ask === "df" ? df : Q,
+        solution: [`[[f2a-filtros|Pasabanda RLC]]: $|H| = \\frac{R}{|Z|}$ es máximo (vale 1) en $f_0 = \\frac{1}{2\\pi\\sqrt{LC}} \\approx ${dn(f0, 0)}$ Hz.`,
+          `Los puntos de media potencia ($|H| = \\frac{1}{\\sqrt2}$) cumplen $|\\omega L - \\frac{1}{\\omega C}| = R$, y su diferencia es exactamente $\\Delta\\omega = \\frac RL$: $\\Delta f = \\frac{R}{2\\pi L} \\approx ${dn(df, 1)}$ Hz.`,
+          ask === "Q" ? `$Q = \\frac{f_0}{\\Delta f} \\approx ${dn(Q, 2)}$: cuanto más chica $R$, más angosto y selectivo el filtro (así se sintoniza una radio).` : `El ancho de banda no depende de $C$.`],
+        // verificación: |H(f)| con impedancias complejas y bisección de los dos puntos de media potencia
+        verify: { kind: "value", tol: 1e-6, fn: () => { const Hf = f => { const w = 2 * Math.PI * f, X = w * L - 1 / (w * C); return Rr / Math.hypot(Rr, X); }, half = Math.SQRT1_2;
+          const bis = (a, b, up) => { for (let i = 0; i < 200; i++) { const m = (a + b) / 2; if ((Hf(m) > half) === up) b = m; else a = m; } return (a + b) / 2; };
+          const f1 = bis(f0 / 100, f0, true), f2 = bis(f0, f0 * 100, false); return ask === "df" ? f2 - f1 : f0 / (f2 - f1); } }
+      };
+    }
+  };
+
+  const cards = {
+    "f2a-thevenin": {
+      title: "Teorema de Thévenin y puente de Wheatstone", aliases: ["teorema de Thévenin", "equivalente de Thévenin", "Thévenin", "equivalente de Norton", "puente de Wheatstone"], concepts: ["f2a-thevenin"],
+      summary: "Cualquier red lineal vista desde dos bornes equivale a una fuente V_th en serie con R_th. El puente de Wheatstone equilibrado cumple R₁R_x = R₂R₃.",
+      def: [R`**Thévenin:** una red de fuentes y resistencias, vista desde dos bornes, se comporta como una fuente $V_{th}$ en serie con una resistencia $R_{th}$. $V_{th}$ es la tensión en circuito abierto; $R_{th}$, la resistencia entre los bornes con las fuentes apagadas (las de tensión en cortocircuito). También $R_{th} = \frac{V_{th}}{I_{cc}}$, con la corriente de cortocircuito.`,
+        R`**Norton:** la misma red equivale a una fuente de corriente $I_{cc}$ en paralelo con $R_{th}$.`,
+        R`**Puente de Wheatstone:** dos divisores en paralelo con un galvanómetro entre sus puntos medios. Está equilibrado (corriente nula por el galvanómetro) si $\frac{R_1}{R_2} = \frac{R_3}{R_x}$.`],
+      idea: [R`Thévenin permite estudiar qué pasa al cambiar la carga sin rehacer todo el circuito; por ejemplo, la [[f2a-potencia-electrica|máxima transferencia de potencia]] se da con $R_L = R_{th}$.`,
+        R`El puente mide resistencias comparándolas, sin depender de la fuente ni de la calibración del instrumento: solo hay que detectar "cero".`],
+      demo: [R`**Paso 1 (linealidad).** En una red de resistencias y fuentes, la tensión entre los bornes es una función lineal de la corriente que se saca: $V = a - bI$ (superposición de las fuentes internas y de la corriente externa).`,
+        R`**Paso 2 (identificar a).** Con $I = 0$ (circuito abierto), $V = a$: es $V_{th}$.`,
+        R`**Paso 3 (identificar b).** Con las fuentes apagadas, $a = 0$ y $V = -bI$: $b$ es la resistencia vista desde los bornes, $R_{th}$. Una fuente $V_{th}$ en serie con $R_{th}$ cumple la misma relación $V = V_{th} - R_{th}I$.`,
+        R`**Paso 4 (Wheatstone).** Sin corriente por el galvanómetro, cada rama es un divisor: $V_C = V\frac{R_2}{R_1 + R_2}$ y $V_D = V\frac{R_x}{R_3 + R_x}$. Igualándolos, $R_2(R_3 + R_x) = R_x(R_1 + R_2)$, o sea $R_x = \frac{R_2R_3}{R_1}$. $\blacksquare$`],
+      examples: [{ q: R`Divisor de 12 V con $R_1 = R_2 = 100\ \Omega$. ¿Thévenin desde el punto medio?`, steps: [R`$V_{th} = 6$ V y $R_{th} = 100\parallel100 = 50\ \Omega$.`] }],
+      see: ["f2a-kirchhoff", "f2a-resistores", "f2a-potencia-electrica"]
+    },
+    "f2a-filtros": {
+      title: "Filtros: pasa-bajos, pasa-altos y pasabanda", aliases: ["filtro pasa-bajos", "filtro pasa-altos", "filtro pasabanda", "frecuencia de corte", "función de transferencia", "ancho de banda"], concepts: ["f2a-filtros"],
+      summary: "RC con salida en C: pasa-bajos, |H| = 1/√(1 + (f/f_c)²). Con salida en R: pasa-altos. f_c = 1/(2πRC). RLC con salida en R: pasabanda de ancho Δf = R/(2πL).",
+      def: [R`La **función de transferencia** de un filtro es $H(\omega) = \frac{V_{sal}}{V_{ent}}$ (con fasores, ver [[f2a-reactancia|reactancias]]). Su módulo dice cuánto se atenúa cada frecuencia, y su argumento, cuánto se desfasa.`,
+        R`**RC pasa-bajos** (salida en el capacitor): $H = \frac{1}{1 + i\omega RC}$, $|H| = \frac{1}{\sqrt{1 + (f/f_c)^2}}$, con **frecuencia de corte** $f_c = \frac{1}{2\pi RC}$. **Pasa-altos** (salida en la resistencia): $|H| = \frac{f/f_c}{\sqrt{1 + (f/f_c)^2}}$.`,
+        R`**Pasabanda RLC** (salida en $R$): $|H| = \frac{R}{|Z|}$, máximo en la [[f2a-resonancia|resonancia]] $f_0$. El **ancho de banda** entre los puntos de media potencia es $\Delta f = \frac{R}{2\pi L}$, y $Q = \frac{f_0}{\Delta f}$.`],
+      idea: [R`Un capacitor es un cortocircuito para frecuencias altas y un circuito abierto para frecuencias bajas. Según dónde se mire la salida, el RC deja pasar lo lento o lo rápido.`,
+        R`En $f_c$ la salida es $\frac{1}{\sqrt2}$ de la entrada: $-3$ dB, la mitad de la potencia. Lejos de $f_c$ la ganancia cambia 20 dB por década.`],
+      demo: [R`**Paso 1 (divisor con impedancias).** En el RC serie, la corriente es $I = \frac{V_{ent}}{R + 1/(i\omega C)}$ y la tensión en el capacitor, $V_C = \frac{I}{i\omega C}$.`,
+        R`**Paso 2 (cociente).** $H = \frac{V_C}{V_{ent}} = \frac{1/(i\omega C)}{R + 1/(i\omega C)} = \frac{1}{1 + i\omega RC}$.`,
+        R`**Paso 3 (módulo).** $|H| = \frac{1}{\sqrt{1 + (\omega RC)^2}}$; vale $\frac{1}{\sqrt2}$ cuando $\omega RC = 1$, o sea $f_c = \frac{1}{2\pi RC}$.`,
+        R`**Paso 4 (ancho del pasabanda).** En el RLC, $|H| = \frac{1}{\sqrt2}$ cuando $|\omega L - \frac{1}{\omega C}| = R$. Las dos raíces positivas de $\omega^2 \mp \frac RL\omega - \frac{1}{LC} = 0$ difieren exactamente en $\frac RL$: $\Delta f = \frac{R}{2\pi L}$. $\blacksquare$`],
+      examples: [{ q: R`¿Frecuencia de corte de un RC con 10 kΩ y 100 nF?`, steps: [R`$f_c = \frac{1}{2\pi\cdot10^4\cdot10^{-7}} \approx 159$ Hz.`] }],
+      see: ["f2a-reactancia", "f2a-rlc", "f2a-resonancia", "f2a-rc"]
+    }
+  };
+
+  E.extendCourse("f102a", {
+    concepts: { "f2a-thevenin": { name: "Thévenin y puentes" }, "f2a-filtros": { name: "Filtros" } },
+    templates: T,
+    units: [{
+      id: "f2a-circuitos-ext-u", order: 12, program: "Extra UBA", title: "Thévenin, puentes y filtros", icon: "volume-2",
+      diagnostic: ["f2a-thevenin-num", "f2a-wheatstone-num", "f2a-filtro-num"],
+      lessons: [
+        { id: "f2a-thevenin", title: "Thévenin y Wheatstone", templates: ["f2a-thevenin-num", "f2a-wheatstone-num"], theory: ["f2a-thevenin"],
+          intro: R`$V_{th}$: tensión en vacío. $R_{th}$: resistencia con las fuentes apagadas. Puente equilibrado: $R_x = \frac{R_2R_3}{R_1}$.` },
+        { id: "f2a-filtros", title: "Filtros", templates: ["f2a-filtro-vf", "f2a-filtro-num", "f2a-pasabanda-num"], theory: ["f2a-filtros"],
+          intro: R`RC: $f_c = \frac{1}{2\pi RC}$; salida en C, pasa-bajos; en R, pasa-altos. RLC: $\Delta f = \frac{R}{2\pi L}$.` }
       ]
     }],
     cards
