@@ -5,6 +5,8 @@
  *   I Vectores geométricos del plano y del espacio · II Matrices y determinantes
  *   III Sistemas de ecuaciones lineales · IV Espacios vectoriales
  *   V Transformaciones lineales · VI Autovalores y autovectores
+ * Extra UBA (temas de Matemática 2 de Cs. Físicas, FCEN-UBA, que no están en el programa de M104):
+ *   Producto interno y teorema espectral · Jordan, Cayley-Hamilton y exponencial
  *
  * Verificaciones (tests): los determinantes, rangos, sistemas, inversas y autovalores se recalculan
  * por eliminación de Gauss en tests/run-tests.mjs (kinds det, rank, solve, inv, eig, rouche, nullity).
@@ -1248,6 +1250,381 @@
           intro: R`$\operatorname{tr}A = \sum\lambda_i$, $\det A = \prod\lambda_i$. Diagonalizable si $m_g = m_a$ para cada autovalor.` },
         { id: "al-diagonalizacion", title: "Diagonalización y Gram-Schmidt", templates: ["al-diag-vf", "al-gs-num"], theory: ["al-diagonalizacion", "al-gram-schmidt"],
           intro: R`Diagonalizable si y solo si hay $n$ autovectores LI. Las simétricas siempre lo son, con base ortonormal (Gram-Schmidt).` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · PRODUCTO INTERNO, TEOREMA ESPECTRAL Y FORMAS CUADRÁTICAS
+ *  Temas de Matemática 2 de la Lic. en Cs. Físicas (FCEN, UBA) que no figuran en el programa de M104.
+ *  Solo se tomó la lista de temas; el texto y los ejercicios son originales.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => String(num(x, d)).replace(".", "{,}");
+  const simpson = (f, a, b, n = 2000) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  const vec = v => `(${v.join(", ")})`;
+  const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+  T["al-pi-polinomios-num"] = {
+    type: "numeric", concepts: ["al-producto-interno"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-3, 3), b = r.int(-3, 3), c = r.nz(-3, 3), d = r.int(-3, 3), ask = r.pick(["pq", "norma", "coseno"]);
+      const p = x => a * x + b, q = x => c * x * x + d;
+      // ∫₀¹ (ax + b)(cx² + d) dx = ac/4 + bc/3 + ad/2 + bd
+      const pq = a * c / 4 + b * c / 3 + a * d / 2 + b * d, pp = a * a / 3 + a * b + b * b, qq = c * c / 5 + 2 * c * d / 3 + d * d;
+      const ans = { pq, norma: Math.sqrt(pp), coseno: pq / Math.sqrt(pp * qq) }[ask];
+      if (ask === "coseno" && Math.abs(ans) > 0.9999) return null;
+      return {
+        prompt: `En el espacio de polinomios de grado $\\le 2$ con el producto interno $\\langle f, g\\rangle = \\int_0^1 f(x)g(x)\\,dx$, sean $p = ${H.poly([[a, "x"], [b, ""]])}$ y $q = ${H.poly([[c, "x^{2}"], [d, ""]])}$. ¿Cuánto vale ${{ pq: "$\\langle p, q\\rangle$", norma: "$\\|p\\|$", coseno: "el coseno del ángulo entre $p$ y $q$" }[ask]}?`,
+        answer: ans,
+        solution: [
+          `Es un [[al-producto-interno|producto interno]]: bilineal, simétrico y $\\langle f, f\\rangle = \\int_0^1f^2 > 0$ si $f \\ne 0$.`,
+          `$\\langle p, q\\rangle = \\int_0^1(${H.poly([[a, "x"], [b, ""]])})(${H.poly([[c, "x^{2}"], [d, ""]])})\\,dx = ${nd(pq)}$; $\\|p\\|^2 = ${nd(pp)}$ y $\\|q\\|^2 = ${nd(qq)}$.`,
+          ask === "coseno" ? `$\\cos\\theta = \\frac{\\langle p, q\\rangle}{\\|p\\|\\|q\\|} \\approx ${nd(ans)}$ (está entre $-1$ y $1$ por [[al-euclideo|Cauchy-Schwarz]]).` : `Respuesta: $\\approx ${nd(ans)}$.`
+        ],
+        // verificación: las integrales por Simpson
+        verify: { kind: "value", tol: 1e-8, fn: () => { const I = (f, g) => simpson(x => f(x) * g(x), 0, 1); return { pq: I(p, q), norma: Math.sqrt(I(p, p)), coseno: I(p, q) / Math.sqrt(I(p, p) * I(q, q)) }[ask]; } }
+      };
+    }
+  };
+  T["al-proyeccion-num"] = {
+    type: "numeric", concepts: ["al-proyeccion"], difficulty: 2,
+    generate(r) {
+      const u1 = [r.int(-2, 2), r.int(-2, 2), r.int(-2, 2)], u2 = [r.int(-2, 2), r.int(-2, 2), r.int(-2, 2)], v = [r.int(-4, 4), r.int(-4, 4), r.int(-4, 4)], ask = r.pick(["dist", "x", "z"]);
+      const n = cross(u1, u2);
+      if (dot(n, n) === 0) return null;
+      // proyección por ecuaciones normales: G (a, b) = (⟨v,u1⟩, ⟨v,u2⟩) con la matriz de Gram G
+      const g11 = dot(u1, u1), g12 = dot(u1, u2), g22 = dot(u2, u2), b1 = dot(v, u1), b2 = dot(v, u2), det = g11 * g22 - g12 * g12;
+      const al = (b1 * g22 - b2 * g12) / det, be = (g11 * b2 - g12 * b1) / det, P = u1.map((x, i) => al * x + be * u2[i]);
+      const dist = Math.hypot(...v.map((x, i) => x - P[i]));
+      if (dist < 1e-9 && ask === "dist") return null;
+      return {
+        prompt: `Sea $S = \\langle ${vec(u1)}, ${vec(u2)}\\rangle \\subset \\mathbb R^3$ y $v = ${vec(v)}$. ¿Cuánto vale ${ask === "dist" ? "la distancia de $v$ a $S$" : `la coordenada $${ask}$ de la proyección ortogonal de $v$ sobre $S$`}?`,
+        answer: ask === "dist" ? dist : ask === "x" ? P[0] : P[2],
+        solution: [
+          `La [[al-proyeccion|proyección ortogonal]] $P = \\alpha u_1 + \\beta u_2$ cumple que $v - P$ es perpendicular a $u_1$ y a $u_2$: las ecuaciones normales son $\\begin{pmatrix}${g11} & ${g12}\\\\ ${g12} & ${g22}\\end{pmatrix}\\begin{pmatrix}\\alpha\\\\ \\beta\\end{pmatrix} = \\begin{pmatrix}${b1}\\\\ ${b2}\\end{pmatrix}$.`,
+          `$\\alpha = ${nd(al)}$, $\\beta = ${nd(be)}$, así que $P \\approx (${P.map(x => nd(x, 3)).join(", ")})$.`,
+          ask === "dist" ? `$d(v, S) = \\|v - P\\| \\approx ${nd(dist)}$: es la menor distancia de $v$ a un punto de $S$.` : `Coordenada pedida: $\\approx ${nd(ask === "x" ? P[0] : P[2])}$.`
+        ],
+        // verificación: con la normal n = u₁ × u₂ (otro camino): d = |v·n|/|n| y P = v − (v·n/|n|²)n
+        verify: { kind: "value", tol: 1e-9, fn: () => { const nn = dot(n, n), t = dot(v, n) / nn; return ask === "dist" ? Math.abs(dot(v, n)) / Math.sqrt(nn) : ask === "x" ? v[0] - t * n[0] : v[2] - t * n[2]; } }
+      };
+    }
+  };
+  T["al-cuadmin-num"] = {
+    type: "numeric", concepts: ["al-proyeccion"], difficulty: 2,
+    generate(r) {
+      const nP = r.int(4, 5), xs = r.distinct(nP, -3, 5).sort((a, b) => a - b), m0 = r.int(-3, 3), c0 = r.int(-4, 4), ys = xs.map(x => m0 * x + c0 + r.int(-2, 2)), ask = r.pick(["m", "b"]);
+      // ecuaciones normales: (AᵀA)(m, b) = Aᵀy con A = [x 1]
+      const sxx = xs.reduce((s, x) => s + x * x, 0), sx = xs.reduce((s, x) => s + x, 0), sxy = xs.reduce((s, x, i) => s + x * ys[i], 0), sy = ys.reduce((s, y) => s + y, 0), det = sxx * nP - sx * sx;
+      const m = (sxy * nP - sx * sy) / det, b = (sxx * sy - sx * sxy) / det;
+      return {
+        prompt: `Hallá la recta $y = mx + b$ de cuadrados mínimos para los puntos ${xs.map((x, i) => `$(${x}, ${ys[i]})$`).join(", ")}. ¿Cuánto vale ${ask === "m" ? "$m$" : "$b$"}?`,
+        answer: ask === "m" ? m : b,
+        solution: [
+          `El sistema $A\\begin{pmatrix}m\\\\ b\\end{pmatrix} = y$ (una fila $(x_i, 1)$ por punto) no tiene solución. La de [[al-proyeccion|cuadrados mínimos]] proyecta $y$ sobre el espacio columna de $A$: $A^TA\\begin{pmatrix}m\\\\ b\\end{pmatrix} = A^Ty$.`,
+          `$A^TA = \\begin{pmatrix}${sxx} & ${sx}\\\\ ${sx} & ${nP}\\end{pmatrix}$, $A^Ty = \\begin{pmatrix}${sxy}\\\\ ${sy}\\end{pmatrix}$.`,
+          `$m \\approx ${nd(m)}$ y $b \\approx ${nd(b)}$.`
+        ],
+        // verificación: fórmulas estadísticas con medias y covarianza, m = S_xy/S_xx y b = ȳ − m x̄
+        verify: { kind: "value", tol: 1e-9, fn: () => { const mx = sx / nP, my = sy / nP; let Sxy = 0, Sxx = 0; xs.forEach((x, i) => { Sxy += (x - mx) * (ys[i] - my); Sxx += (x - mx) ** 2; }); const mm = Sxy / Sxx; return ask === "m" ? mm : my - mm * mx; } }
+      };
+    }
+  };
+  // extremos de la forma cuadrática sobre la circunferencia unidad (muestreo fino más refinamiento)
+  const qExt = (a, b, c, want) => { let best = want === "max" ? -Infinity : Infinity, bt = 0; const Q = t => a * Math.cos(t) ** 2 + 2 * b * Math.cos(t) * Math.sin(t) + c * Math.sin(t) ** 2;
+    for (let i = 0; i < 2000; i++) { const t = i * Math.PI / 2000, v = Q(t); if (want === "max" ? v > best : v < best) { best = v; bt = t; } }
+    let s = Math.PI / 2000; for (let k = 0; k < 60; k++) { for (const d of [-s, s]) { const v = Q(bt + d); if (want === "max" ? v > best : v < best) { best = v; bt += d; } } s /= 2; } return best; };
+  T["al-espectral-num"] = {
+    type: "numeric", concepts: ["al-espectral"], difficulty: 2,
+    generate(r) {
+      const a = r.int(-5, 5), b = r.nz(-4, 4), c = r.int(-5, 5), want = r.pick(["max", "min"]);
+      const tr = a + c, disc = Math.sqrt((a - c) ** 2 + 4 * b * b), l1 = (tr + disc) / 2, l2 = (tr - disc) / 2, ans = want === "max" ? l1 : l2;
+      return {
+        prompt: `¿Cuál es el valor ${want === "max" ? "máximo" : "mínimo"} de $Q(x, y) = ${H.poly([[a, "x^{2}"], [2 * b, "xy"], [c, "y^{2}"]])}$ sobre la circunferencia $x^2 + y^2 = 1$?`,
+        answer: ans,
+        solution: [
+          `$Q(\\vec x) = \\vec x^TA\\vec x$ con $A = \\begin{pmatrix}${a} & ${b}\\\\ ${b} & ${c}\\end{pmatrix}$, simétrica. Por el [[al-espectral|teorema espectral]], en una base ortonormal de autovectores $Q = \\lambda_1u^2 + \\lambda_2v^2$.`,
+          `Sobre la circunferencia unidad ($u^2 + v^2 = 1$), $Q$ va de $\\lambda_{min}$ a $\\lambda_{max}$. Los autovalores salen de $${H.poly([[1, "\\lambda^{2}"], [-tr, "\\lambda"], [a * c - b * b, ""]])} = 0$: $\\lambda = ${nd(l1)}$ y $${nd(l2)}$.`,
+          `El ${want === "max" ? "máximo" : "mínimo"} es $${nd(ans)}$, y se alcanza en la dirección del autovector correspondiente.`
+        ],
+        // verificación: recorriendo la circunferencia unidad
+        verify: { kind: "value", tol: 1e-9, fn: () => qExt(a, b, c, want) }
+      };
+    }
+  };
+  const CLS = ["Definida positiva", "Definida negativa", "Indefinida", "Semidefinida, pero no definida"];
+  T["al-cuadratica-mc"] = {
+    type: "mc", concepts: ["al-espectral"], difficulty: 2,
+    generate(r) {
+      let a, b, c;
+      const kind = r.int(0, 3);
+      if (kind === 3) { const p = r.nz(-3, 3), q = r.nz(-3, 3), s = r.pick([1, -1]); a = s * p * p; b = s * p * q; c = s * q * q; }
+      else { a = r.int(-6, 6); b = r.int(-4, 4); c = r.int(-6, 6); }
+      const det = a * c - b * b, correct = det > 0 ? (a > 0 ? CLS[0] : CLS[1]) : det < 0 ? CLS[2] : (a === 0 && c === 0 ? null : CLS[3]);
+      if (!correct || (kind !== 3 && det === 0)) return null;
+      return {
+        prompt: `¿Cómo es la forma cuadrática $Q(x, y) = ${H.poly([[a, "x^{2}"], [2 * b, "xy"], [c, "y^{2}"]])}$?`,
+        ...H.mc(r, correct, CLS.filter(x => x !== correct), { text: true, keepOrder: true }),
+        solution: [`Su matriz es $A = \\begin{pmatrix}${a} & ${b}\\\\ ${b} & ${c}\\end{pmatrix}$. Por el [[al-espectral|teorema espectral]], el signo de $Q$ depende del signo de los autovalores: $\\det A = \\lambda_1\\lambda_2 = ${det}$ y $\\operatorname{tr}A = \\lambda_1 + \\lambda_2 = ${a + c}$.`,
+          det > 0 ? `Los dos autovalores tienen el mismo signo, el de la traza: **${correct.toLowerCase()}**.` : det < 0 ? `Tienen signos opuestos: $Q$ toma valores positivos y negativos, es **indefinida**.` : `Un autovalor es $0$: $Q$ se anula en una dirección no nula y no cambia de signo, es **semidefinida**.`],
+        // verificación: valores de Q en 720 direcciones
+        verify: { kind: "truth", target: true, fn: () => { let mn = Infinity, mx = -Infinity; for (let i = 0; i < 720; i++) { const t = i * Math.PI / 720, v = a * Math.cos(t) ** 2 + 2 * b * Math.cos(t) * Math.sin(t) + c * Math.sin(t) ** 2; mn = Math.min(mn, v); mx = Math.max(mx, v); }
+          // umbral relativo: en una semidefinida el mínimo muestreado no es exactamente 0
+          const e = 1e-3 * Math.max(Math.abs(mn), Math.abs(mx)), got = mn > e ? CLS[0] : mx < -e ? CLS[1] : mn < -e && mx > e ? CLS[2] : CLS[3]; return got === correct; } }
+      };
+    }
+  };
+
+  const cards = {
+    "al-producto-interno": {
+      title: "Producto interno en espacios vectoriales", aliases: ["producto interno general", "espacio con producto interno", "matriz de Gram", "producto interno de funciones"], concepts: ["al-producto-interno"],
+      summary: "Un producto interno es bilineal, simétrico y definido positivo. Define norma, ángulo y ortogonalidad en cualquier espacio, por ejemplo ⟨f, g⟩ = ∫ f g en polinomios.",
+      def: [R`Un **producto interno** en un espacio real $V$ es una función $\langle\cdot, \cdot\rangle$ que es lineal en cada variable, simétrica ($\langle u, v\rangle = \langle v, u\rangle$) y definida positiva ($\langle v, v\rangle > 0$ si $v \ne 0$). Generaliza el [[al-producto-escalar|producto escalar]].`,
+        R`Con él se definen la **norma** $\|v\| = \sqrt{\langle v, v\rangle}$, el **ángulo** ($\cos\theta = \frac{\langle u, v\rangle}{\|u\|\|v\|}$) y la **ortogonalidad** ($\langle u, v\rangle = 0$). Vale la desigualdad de [[al-euclideo|Cauchy-Schwarz]].`,
+        R`**Ejemplos:** en $\mathbb R^n$, $\langle x, y\rangle = x^TGy$ con $G$ simétrica definida positiva (la **matriz de Gram** en la base canónica); en funciones continuas en $[a, b]$, $\langle f, g\rangle = \int_a^bf(x)g(x)\,dx$.`],
+      idea: [R`Con $\int fg$, dos funciones son "perpendiculares" si su producto tiene integral cero: $\sin x$ y $\cos x$ en $[0, 2\pi]$ lo son. Esa es la geometría detrás de las [[c2-fourier|series de Fourier]].`],
+      demo: [R`**Paso 1 (bilineal y simétrico).** Para $\langle f, g\rangle = \int_a^bfg$, la linealidad sale de la linealidad de la integral, y la simetría, de $fg = gf$.`,
+        R`**Paso 2 (positivo).** $\langle f, f\rangle = \int_a^bf^2 \ge 0$, porque $f^2 \ge 0$.`,
+        R`**Paso 3 (solo cero para f = 0).** Si $f$ es continua y no es nula, $f^2 > 0$ en un intervalito alrededor de algún punto, y ahí la integral ya es positiva. Así que $\langle f, f\rangle = 0$ obliga a $f = 0$. $\blacksquare$`],
+      examples: [{ q: R`¿Son ortogonales $1$ y $x - \frac12$ con $\int_0^1fg$?`, steps: [R`$\int_0^1(x - \frac12)\,dx = \frac12 - \frac12 = 0$: sí.`] }],
+      see: ["al-producto-escalar", "al-proyeccion", "al-gram-schmidt"]
+    },
+    "al-proyeccion": {
+      title: "Complemento ortogonal, proyección y cuadrados mínimos", aliases: ["complemento ortogonal", "mejor aproximación", "cuadrados mínimos"], concepts: ["al-proyeccion"],
+      summary: "La proyección P de v sobre S es el único punto de S con v − P ⟂ S, y es el punto de S más cercano a v. Cuadrados mínimos: resolver AᵀA x = Aᵀb.",
+      def: [R`El **complemento ortogonal** de $S$ es $S^\perp = \{w : \langle w, s\rangle = 0\ \forall s \in S\}$. Todo $v$ se escribe de una única forma como $v = P + w$ con $P \in S$ y $w \in S^\perp$; $P$ es la [[al-gram-schmidt|proyección ortogonal]] de $v$ sobre $S$.`,
+        R`**Ecuaciones normales:** si $S = \langle u_1, \dots, u_k\rangle$ y $P = \sum\alpha_ju_j$, la condición $\langle v - P, u_i\rangle = 0$ da el sistema $\sum_j\langle u_i, u_j\rangle\alpha_j = \langle v, u_i\rangle$.`,
+        R`**Mejor aproximación:** $\|v - P\| \le \|v - s\|$ para todo $s \in S$. **Cuadrados mínimos:** si $Ax = b$ no tiene solución, la $x$ que minimiza $\|Ax - b\|$ cumple $A^TAx = A^Tb$.`],
+      idea: [R`Ajustar una recta a datos es proyectar el vector de las $y$ sobre el plano generado por las columnas de $A$ (la de las $x$ y la de unos). El residuo queda perpendicular a ese plano: por eso los residuos suman cero.`],
+      demo: [R`**Paso 1 (Pitágoras).** Sea $s \in S$ cualquiera. Escribimos $v - s = (v - P) + (P - s)$. El primer término está en $S^\perp$ y el segundo en $S$, así que son ortogonales.`,
+        R`**Paso 2 (comparar).** Por Pitágoras, $\|v - s\|^2 = \|v - P\|^2 + \|P - s\|^2 \ge \|v - P\|^2$, con igualdad solo si $s = P$: $P$ es el punto más cercano.`,
+        R`**Paso 3 (cuadrados mínimos).** Minimizar $\|Ax - b\|$ es buscar el punto $Ax$ del espacio columna más cercano a $b$: su proyección. La condición $b - Ax \perp$ (cada columna de $A$) es $A^T(b - Ax) = 0$, o sea $A^TAx = A^Tb$. $\blacksquare$`],
+      examples: [{ q: R`Distancia de $(1, 2, 3)$ al plano $z = 0$.`, steps: [R`La proyección es $(1, 2, 0)$ y la distancia, $3$.`] }],
+      see: ["al-gram-schmidt", "al-producto-interno", "al-sistemas"]
+    },
+    "al-espectral": {
+      title: "Teorema espectral y formas cuadráticas", aliases: ["teorema espectral", "matriz definida positiva"], concepts: ["al-espectral"],
+      summary: "Una matriz simétrica real tiene autovalores reales y una base ortonormal de autovectores: A = QDQᵀ. Una forma cuadrática xᵀAx es definida positiva si todos sus autovalores son positivos.",
+      def: [R`**Teorema espectral:** si $A \in \mathbb R^{n\times n}$ es simétrica, sus autovalores son reales y existe una base ortonormal de [[al-autovalores|autovectores]]: $A = QDQ^T$ con $Q$ ortogonal y $D$ diagonal (ver [[al-diagonalizacion|diagonalización]]).`,
+        R`Una **forma cuadrática** es $Q(\vec x) = \vec x^TA\vec x$ con $A$ simétrica. En la base de autovectores queda $Q = \lambda_1y_1^2 + \dots + \lambda_ny_n^2$.`,
+        R`**Clasificación:** definida positiva si todos los $\lambda_i > 0$; definida negativa si todos son $< 0$; indefinida si hay de los dos signos; semidefinida si hay ceros y los demás tienen un solo signo. Sobre la esfera unidad, $Q$ va de $\lambda_{min}$ a $\lambda_{max}$.`],
+      idea: [R`El teorema dice que una simétrica es solo "estirar" en direcciones perpendiculares. Es lo que usa el [[c2-extremos|criterio del hessiano]]: el hessiano es simétrico, y el signo de sus autovalores dice si hay mínimo, máximo o silla.`],
+      demo: [R`**Paso 1 (autovalores reales).** Si $Av = \lambda v$ con $v$ complejo, $\bar v^TAv = \lambda\bar v^Tv$. Conjugando y transponiendo (con $A$ real y simétrica), el mismo número vale $\bar\lambda\bar v^Tv$. Como $\bar v^Tv = \sum|v_i|^2 > 0$, $\lambda = \bar\lambda$.`,
+        R`**Paso 2 (autovectores ortogonales).** Si $Av = \lambda v$ y $Aw = \mu w$ con $\lambda \ne \mu$: $\lambda\langle v, w\rangle = \langle Av, w\rangle = \langle v, Aw\rangle = \mu\langle v, w\rangle$, usando la simetría. Entonces $\langle v, w\rangle = 0$.`,
+        R`**Paso 3 (forma cuadrática).** Con $\vec x = Q\vec y$: $\vec x^TA\vec x = \vec y^TQ^TAQ\vec y = \vec y^TD\vec y = \sum\lambda_iy_i^2$. Como $Q$ es ortogonal, $\|\vec x\| = \|\vec y\|$, y sobre la esfera unidad la suma es un promedio ponderado de los $\lambda_i$: está entre el menor y el mayor. $\blacksquare$`],
+      examples: [{ q: R`¿Cómo es $Q = 2x^2 + 2xy + 2y^2$?`, steps: [R`$A = \begin{pmatrix}2 & 1\\ 1 & 2\end{pmatrix}$, autovalores $1$ y $3$: definida positiva.`] }],
+      see: ["al-autovalores", "al-diagonalizacion", "ga-forma-cuadratica", "c2-extremos"]
+    }
+  };
+
+  E.extendCourse("m104", {
+    concepts: { "al-producto-interno": { name: "Producto interno" }, "al-proyeccion": { name: "Proyección y cuadrados mínimos" }, "al-espectral": { name: "Teorema espectral" } },
+    templates: T,
+    units: [{
+      id: "al-interno-u", order: 7, program: "Extra UBA", title: "Producto interno y teorema espectral", icon: "grid-3x3",
+      diagnostic: ["al-pi-polinomios-num", "al-proyeccion-num", "al-espectral-num"],
+      lessons: [
+        { id: "al-producto-interno", title: "Producto interno y proyección", templates: ["al-pi-polinomios-num", "al-proyeccion-num", "al-cuadmin-num"], theory: ["al-producto-interno", "al-proyeccion"],
+          intro: R`Norma, ángulo y ortogonalidad con cualquier producto interno. Proyección: $v - P \perp S$. Cuadrados mínimos: $A^TAx = A^Tb$.` },
+        { id: "al-espectral", title: "Teorema espectral", templates: ["al-cuadratica-mc", "al-espectral-num"], theory: ["al-espectral"],
+          intro: R`Simétrica: $A = QDQ^T$. $\vec x^TA\vec x = \sum\lambda_iy_i^2$, entre $\lambda_{min}$ y $\lambda_{max}$ en la esfera unidad.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · FORMA DE JORDAN, CAYLEY-HAMILTON Y EXPONENCIAL DE MATRICES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => String(num(x, d)).replace(".", "{,}");
+  const mul = (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, a, k) => s + a * B[k][j], 0)));
+  const sub = (A, l) => A.map((r, i) => r.map((x, j) => x - (i === j ? l : 0)));
+  const rank = M0 => { const M = M0.map(r => r.slice()), n = M.length, m = M[0].length; let rk = 0;
+    for (let c = 0; c < m && rk < n; c++) { let p = rk; for (let i = rk + 1; i < n; i++) if (Math.abs(M[i][c]) > Math.abs(M[p][c])) p = i;
+      if (Math.abs(M[p][c]) < 1e-9) continue; [M[p], M[rk]] = [M[rk], M[p]]; for (let i = rk + 1; i < n; i++) { const f = M[i][c] / M[rk][c]; for (let k = c; k < m; k++) M[i][k] -= f * M[rk][k]; } rk++; }
+    return rk; };
+  const pm = M => `\\begin{pmatrix}${M.map(r => r.join(" & ")).join("\\\\ ")}\\end{pmatrix}`;
+  // matriz entera con determinante 1 (producto de una triangular inferior y una superior con unos en la diagonal) y su inversa entera
+  const unimod = r => { const L = [[1, 0, 0], [r.int(-1, 1), 1, 0], [r.int(-1, 1), r.int(-1, 1), 1]], U = [[1, r.int(-1, 1), r.int(-1, 1)], [0, 1, r.int(-1, 1)], [0, 0, 1]];
+    const inv3 = M => { const [[a, b, c], [d, e, f], [g, h, i]] = M; return [[e * i - f * h, c * h - b * i, b * f - c * e], [f * g - d * i, a * i - c * g, c * d - a * f], [d * h - e * g, b * g - a * h, a * e - b * d]]; };
+    return { P: mul(L, U), Pi: mul(inv3(U), inv3(L)) }; };
+  const JF = {
+    diag3: (a, b, c) => [[a, 0, 0], [0, b, 0], [0, 0, c]],
+    j2: (a, b) => [[a, 1, 0], [0, a, 0], [0, 0, b]],
+    j3: a => [[a, 1, 0], [0, a, 1], [0, 0, a]]
+  };
+  // invariantes de semejanza: rangos de (M − λI) y (M − λI)² para cada λ de la lista
+  const inv = (M, ls) => ls.map(l => { const N = sub(M, l); return [rank(N), rank(mul(N, N))]; }).join("|");
+
+  T["al-jordan-mc"] = {
+    type: "mc", concepts: ["al-jordan"], difficulty: 3,
+    generate(r) {
+      const kind = r.pick(["diag2", "j2", "j3"]), [a, b] = r.distinct(2, -3, 3);
+      const Jc = kind === "diag2" ? JF.diag3(a, a, b) : kind === "j2" ? JF.j2(a, b) : JF.j3(a);
+      const { P, Pi } = unimod(r), A = mul(mul(P, Jc), Pi);
+      const cands = [JF.diag3(a, a, b), JF.j2(a, b), JF.j3(a), JF.diag3(a, b, b), JF.j2(b, a), JF.diag3(a, a, a)].filter(J => pm(J) !== pm(Jc));
+      const ls = [a, b], target = inv(A, ls), ds = r.shuffle(cands.filter(J => inv(J, ls) !== target)).slice(0, 3);
+      if (ds.length < 3) return null;
+      const ev = kind === "j3" ? `$${a}$ (triple)` : `$${a}$ (doble) y $${b}$ (simple)`;
+      return {
+        prompt: `La matriz $A = ${pm(A)}$ tiene autovalores ${ev}. ¿Cuál es su forma de Jordan (salvo el orden de los bloques)?`,
+        ...H.mc(r, `J = ${pm(Jc)}`, ds.map(J => `J = ${pm(J)}`)),
+        solution: [
+          `La [[al-jordan|forma de Jordan]] queda determinada por los rangos de $A - \\lambda I$ y de sus potencias. La cantidad de bloques de $\\lambda$ es $\\dim\\ker(A - \\lambda I) = 3 - \\operatorname{rg}(A - \\lambda I)$.`,
+          `Acá $\\operatorname{rg}(A - ${H.par(a)}I) = ${rank(sub(A, a))}$, así que $\\lambda = ${a}$ tiene ${3 - rank(sub(A, a))} bloque${3 - rank(sub(A, a)) > 1 ? "s" : ""} de Jordan${kind === "diag2" ? " (dos bloques de tamaño 1: es diagonalizable)" : kind === "j2" ? ": un bloque de tamaño 2 (no es diagonalizable)" : ": un solo bloque de tamaño 3"}.`,
+          `Por eso $J = ${pm(Jc)}$.`
+        ],
+        // verificación: los rangos de (A − λI) y (A − λI)², por Gauss, coinciden con los de la J correcta y no con los de las otras
+        verify: { kind: "truth", target: true, fn: () => inv(Jc, ls) === target && ds.every(J => inv(J, ls) !== target) }
+      };
+    }
+  };
+  T["al-jordan-vf"] = {
+    type: "tf", concepts: ["al-jordan"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["diag2", "j2", "j3", "diag3"]), [a, b, c] = r.distinct(3, -3, 3);
+      const Jc = kind === "diag2" ? JF.diag3(a, a, b) : kind === "j2" ? JF.j2(a, b) : kind === "j3" ? JF.j3(a) : JF.diag3(a, b, c);
+      const { P, Pi } = unimod(r), A = mul(mul(P, Jc), Pi), diag = kind === "diag2" || kind === "diag3";
+      return {
+        prompt: `<b>Verdadero o falso:</b> la matriz $A = ${pm(A)}$ es diagonalizable.`,
+        answer: diag,
+        explanation: `Es diagonalizable si y solo si, para cada autovalor, la multiplicidad geométrica $3 - \\operatorname{rg}(A - \\lambda I)$ es igual a la algebraica ([[al-multiplicidades|multiplicidades]]). ${kind === "diag3" ? "Tiene tres autovalores distintos, así que **sí**." : `El autovalor $${a}$ tiene multiplicidad algebraica ${kind === "j3" ? 3 : 2} y $\\operatorname{rg}(A - ${H.par(a)}I) = ${rank(sub(A, a))}$, o sea multiplicidad geométrica ${3 - rank(sub(A, a))}: ${diag ? "**sí** es diagonalizable" : "**no** es diagonalizable; su [[al-jordan|forma de Jordan]] tiene un bloque de tamaño mayor que 1"}.`}`,
+        solution: [`Para decidirlo no hace falta calcular autovectores: alcanzan los rangos de $A - \\lambda I$.`],
+        // verificación: suma de las multiplicidades geométricas (por rangos) contra 3
+        verify: { kind: "truth", fn: () => { const ls = [...new Set(kind === "diag3" ? [a, b, c] : kind === "j3" ? [a] : [a, b])]; return ls.reduce((s, l) => s + 3 - rank(sub(A, l)), 0) === 3; } }
+      };
+    }
+  };
+  T["al-cayley-num"] = {
+    type: "numeric", concepts: ["al-cayley"], difficulty: 2,
+    generate(r) {
+      const A = [[r.int(-2, 3), r.int(-2, 2)], [r.int(-2, 2), r.int(-2, 3)]], n = r.int(4, 7), [i, j] = r.pick([[0, 0], [0, 1], [1, 0], [1, 1]]);
+      const t = A[0][0] + A[1][1], d = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+      // por Cayley-Hamilton: A^{k+1} = t·A^k − d·A^{k−1}
+      let Pm = [[1, 0], [0, 1]], Pk = A.map(r2 => r2.slice());
+      for (let k = 1; k < n; k++) { const Nx = Pk.map((row, ii) => row.map((x, jj) => t * x - d * Pm[ii][jj])); Pm = Pk; Pk = Nx; }
+      const ans = Pk[i][j];
+      return {
+        prompt: `Sea $A = ${pm(A)}$. Usando el teorema de Cayley-Hamilton, calculá el elemento $(${i + 1}, ${j + 1})$ de $A^{${n}}$.`,
+        answer: ans,
+        solution: [
+          `[[al-cayley|Cayley-Hamilton]]: $A$ anula su polinomio característico, $${H.poly([[1, "A^{2}"], [-t, "A"], [d, "I"]])} = 0$. Así que $A^{k+1} = ${H.poly([[t, "A^{k}"], [-d, "A^{k-1}"]]) || "0"}$ y cada potencia se arma con las dos anteriores.`,
+          `Aplicando la recursión desde $A^0 = I$ y $A^1 = A$ hasta $A^{${n}}$: el elemento pedido es $${ans}$.`
+        ],
+        // verificación: producto de matrices directo, n veces
+        verify: { kind: "value", tol: 1e-12, fn: () => { let M = [[1, 0], [0, 1]]; for (let k = 0; k < n; k++) M = mul(M, A); return M[i][j]; } }
+      };
+    }
+  };
+  T["al-exp-num"] = {
+    type: "numeric", concepts: ["al-exponencial"], difficulty: 3,
+    generate(r) {
+      const [l1, l2] = r.distinct(2, -3, 2), p = r.int(-1, 1), q = r.int(-1, 1);
+      const P = [[1 + p * q, p], [q, 1]], Pi = [[1, -p], [-q, 1 + p * q]], A = mul(mul(P, [[l1, 0], [0, l2]]), Pi);
+      const x0 = [r.int(-3, 3), r.int(-3, 3)], t = r.pick([0.5, 1]), comp = r.int(0, 1);
+      if (!x0[0] && !x0[1]) return null;
+      const c = [Pi[0][0] * x0[0] + Pi[0][1] * x0[1], Pi[1][0] * x0[0] + Pi[1][1] * x0[1]];
+      const xt = [0, 1].map(k => P[k][0] * c[0] * Math.exp(l1 * t) + P[k][1] * c[1] * Math.exp(l2 * t));
+      return {
+        prompt: `Resolvé el sistema $\\vec x\\,' = A\\vec x$ con $A = ${pm(A)}$ y $\\vec x(0) = (${x0.join(", ")})$. ¿Cuánto vale $x_${comp + 1}(${String(t).replace(".", "{,}")})$?`,
+        answer: xt[comp],
+        solution: [
+          `La solución es $\\vec x(t) = e^{tA}\\vec x(0)$ ([[al-exponencial|exponencial de una matriz]]). Diagonalizando, $A = PDP^{-1}$ con autovalores $${l1}$ y $${l2}$, y $e^{tA} = Pe^{tD}P^{-1}$.`,
+          `Autovectores: $v_1 = (${P[0][0]}, ${P[1][0]})$ y $v_2 = (${P[0][1]}, ${P[1][1]})$. Escribimos $\\vec x(0) = ${c[0]}v_1 ${c[1] < 0 ? "-" : "+"} ${Math.abs(c[1])}v_2$, y cada parte evoluciona con su autovalor: $\\vec x(t) = ${c[0]}e^{${l1}t}v_1 ${c[1] < 0 ? "-" : "+"} ${Math.abs(c[1])}e^{${l2}t}v_2$.`,
+          `$x_${comp + 1}(${String(t).replace(".", "{,}")}) \\approx ${nd(xt[comp])}$.`
+        ],
+        // verificación: integración numérica del sistema con RK4
+        verify: { kind: "ode", f: (_, y) => [A[0][0] * y[0] + A[0][1] * y[1], A[1][0] * y[0] + A[1][1] * y[1]], y0: x0.slice(), t1: t, dt: 1e-4, out: (_, y) => y[comp], tol: 1e-6 }
+      };
+    }
+  };
+  T["al-recurrencia-num"] = {
+    type: "numeric", concepts: ["al-exponencial"], difficulty: 2,
+    generate(r) {
+      const p = r.int(1, 4), q = r.int(1, 6), a0 = r.int(0, 3), a1 = r.int(1, 5);
+      const disc = p * p + 4 * q, l1 = (p + Math.sqrt(disc)) / 2, l2 = (p - Math.sqrt(disc)) / 2;
+      // coeficiente del autovalor dominante: a1 − l2·a0 ≠ 0
+      if (Math.abs(a1 - l2 * a0) < 1e-9) return null;
+      return {
+        prompt: `La sucesión cumple $a_{n+2} = ${p === 1 ? "" : p}a_{n+1} + ${q === 1 ? "" : q}a_n$ con $a_0 = ${a0}$ y $a_1 = ${a1}$. ¿A qué valor tiende $\\frac{a_{n+1}}{a_n}$?`,
+        answer: l1,
+        solution: [
+          `En forma matricial: $\\begin{pmatrix}a_{n+2}\\\\ a_{n+1}\\end{pmatrix} = \\begin{pmatrix}${p} & ${q}\\\\ 1 & 0\\end{pmatrix}\\begin{pmatrix}a_{n+1}\\\\ a_n\\end{pmatrix}$, así que el vector se obtiene aplicando $n$ veces la matriz ([[al-exponencial|recurrencias lineales]]).`,
+          `Sus autovalores cumplen $\\lambda^2 = ${p}\\lambda + ${q}$: $\\lambda = \\frac{${p} \\pm \\sqrt{${disc}}}{2}$. Como $|\\lambda_1| > |\\lambda_2|$, para $n$ grande domina $\\lambda_1^n$.`,
+          `$\\frac{a_{n+1}}{a_n} \\to \\lambda_1 = \\frac{${p} + \\sqrt{${disc}}}{2} \\approx ${nd(l1)}$.${p === 1 && q === 1 ? " Con Fibonacci es el número de oro." : ""}`
+        ],
+        // verificación: se itera la recurrencia 60 veces
+        verify: { kind: "value", tol: 1e-9, fn: () => { let x = a0, y = a1; for (let i = 0; i < 60; i++) { const z = p * y + q * x; x = y; y = z; } return y / x; } }
+      };
+    }
+  };
+
+  const cards = {
+    "al-jordan": {
+      title: "Forma de Jordan", aliases: ["forma de Jordan", "forma canónica de Jordan", "bloque de Jordan", "bloques de Jordan", "autovector generalizado", "autovectores generalizados"], concepts: ["al-jordan"],
+      summary: "Toda matriz compleja es semejante a una J diagonal por bloques de Jordan. La cantidad y el tamaño de los bloques salen de los rangos de (A − λI)^k.",
+      def: [R`Un **bloque de Jordan** de tamaño $k$ tiene $\lambda$ en la diagonal y unos justo arriba. Toda matriz $A \in \mathbb C^{n\times n}$ es semejante a una matriz $J$ diagonal por bloques de Jordan, única salvo el orden de los bloques: $A = PJP^{-1}$.`,
+        R`Para cada autovalor $\lambda$: la cantidad de bloques es $\dim\ker(A - \lambda I)$ (la multiplicidad geométrica); la suma de sus tamaños es la multiplicidad algebraica; y la cantidad de bloques de tamaño $\ge k$ es $\operatorname{rg}(A - \lambda I)^{k-1} - \operatorname{rg}(A - \lambda I)^k$.`,
+        R`$A$ es [[al-diagonalizacion|diagonalizable]] si y solo si todos los bloques tienen tamaño 1. Las columnas de $P$ son **autovectores generalizados**: $(A - \lambda I)v_{j+1} = v_j$.`],
+      idea: [R`Cuando faltan autovectores, la matriz "mezcla" direcciones: un bloque $\begin{pmatrix}\lambda & 1\\ 0 & \lambda\end{pmatrix}$ estira por $\lambda$ y además corre un poco en la otra dirección. En $e^{tJ}$ eso aparece como términos $te^{\lambda t}$, los de la resonancia y el amortiguamiento crítico.`],
+      demo: [R`**Paso 1 (rangos invariantes).** Si $A = PJP^{-1}$, entonces $(A - \lambda I)^k = P(J - \lambda I)^kP^{-1}$, y multiplicar por matrices inversibles no cambia el rango: los rangos de $(A - \lambda I)^k$ y de $(J - \lambda I)^k$ son iguales.`,
+        R`**Paso 2 (contar bloques).** En $J - \lambda I$, cada bloque de $\lambda$ se vuelve un bloque nilpotente (unos arriba de la diagonal), que tiene exactamente una columna nula: pierde 1 de rango. Los bloques de otros autovalores no pierden nada. Así, $n - \operatorname{rg}(J - \lambda I)$ es la cantidad de bloques de $\lambda$.`,
+        R`**Paso 3 (tamaños).** Al elevar al cuadrado, un bloque nilpotente de tamaño $k$ pierde un rango más si $k \ge 2$, y se anula si $k \le 2$. Repitiendo, la diferencia de rangos entre potencias consecutivas cuenta los bloques de tamaño $\ge k$. $\blacksquare$`],
+      examples: [{ q: R`$A$ de $3\times3$ con autovalor triple $2$ y $\operatorname{rg}(A - 2I) = 1$. ¿Forma de Jordan?`, steps: [R`$3 - 1 = 2$ bloques que suman 3: tamaños 2 y 1. $J = \begin{pmatrix}2 & 1 & 0\\ 0 & 2 & 0\\ 0 & 0 & 2\end{pmatrix}$.`] }],
+      see: ["al-diagonalizacion", "al-multiplicidades", "al-exponencial"]
+    },
+    "al-cayley": {
+      title: "Teorema de Cayley-Hamilton y polinomio minimal", aliases: ["teorema de Cayley-Hamilton", "Cayley-Hamilton", "polinomio minimal"], concepts: ["al-cayley"],
+      summary: "Toda matriz anula su polinomio característico: p_A(A) = 0. Sirve para bajar potencias, calcular la inversa y armar recursiones. El polinomio minimal es el de menor grado que anula a A.",
+      def: [R`**Cayley-Hamilton:** si $p_A(\lambda) = \det(\lambda I - A)$ es el [[al-autovalores|polinomio característico]], entonces $p_A(A) = 0$. Para $2\times2$: $A^2 - \operatorname{tr}(A)A + \det(A)I = 0$.`,
+        R`**Consecuencias:** toda potencia $A^k$ es combinación lineal de $I, A, \dots, A^{n-1}$; y si $\det A \ne 0$, $A^{-1}$ también (para $2\times2$: $A^{-1} = \frac{\operatorname{tr}(A)I - A}{\det A}$).`,
+        R`El **polinomio minimal** $m_A$ es el polinomio mónico de menor grado con $m_A(A) = 0$. Divide a $p_A$, tiene las mismas raíces, y $A$ es diagonalizable si y solo si sus raíces son simples.`],
+      idea: [R`Las potencias de una matriz $n\times n$ viven en un espacio de dimensión $n^2$, pero Cayley-Hamilton dice que ya $A^n$ depende de las anteriores. Por eso $A^{100}$ se puede calcular con una recursión de dos términos (en $2\times2$).`],
+      demo: [R`**Paso 1 (caso diagonalizable).** Si $A = PDP^{-1}$, entonces $p_A(A) = P\,p_A(D)\,P^{-1}$, porque las potencias de $A$ son $PD^kP^{-1}$.`,
+        R`**Paso 2 (aplicar a D).** $p_A(D)$ es diagonal, con $p_A(\lambda_i)$ en la diagonal, y cada $\lambda_i$ es raíz de $p_A$: $p_A(D) = 0$, y entonces $p_A(A) = 0$.`,
+        R`**Paso 3 (caso general).** Las matrices diagonalizables están "en todas partes": cualquier $A$ es límite de matrices con autovalores distintos. Como $A \mapsto p_A(A)$ es continua (sus entradas son polinomios en las de $A$) y vale $0$ en esas matrices, también vale $0$ en $A$. $\blacksquare$`],
+      examples: [{ q: R`$A = \begin{pmatrix}1 & 1\\ 1 & 0\end{pmatrix}$. ¿$A^2$ con Cayley-Hamilton?`, steps: [R`$\operatorname{tr} = 1$, $\det = -1$: $A^2 = A + I = \begin{pmatrix}2 & 1\\ 1 & 1\end{pmatrix}$.`] }],
+      see: ["al-autovalores", "al-jordan", "al-inversa"]
+    },
+    "al-exponencial": {
+      title: "Exponencial de una matriz, sistemas lineales y recurrencias", aliases: ["exponencial de una matriz", "sistemas lineales de ecuaciones diferenciales", "sistema lineal de ecuaciones diferenciales", "recurrencias lineales", "recurrencia lineal"], concepts: ["al-exponencial"],
+      summary: "x′ = Ax tiene solución x(t) = e^{tA}x(0), con e^{tA} = Pe^{tD}P⁻¹ si A = PDP⁻¹. Una recurrencia lineal es x_{n+1} = Ax_n, y para n grande domina el autovalor de mayor módulo.",
+      def: [R`La **exponencial de una matriz** es $e^{A} = \sum_{k\ge0}\frac{A^k}{k!}$. Cumple $\frac{d}{dt}e^{tA} = Ae^{tA}$, así que $\vec x(t) = e^{tA}\vec x(0)$ resuelve $\vec x\,' = A\vec x$.`,
+        R`Si $A = PDP^{-1}$, $e^{tA} = Pe^{tD}P^{-1}$, con $e^{tD}$ diagonal ($e^{\lambda_it}$). Equivalentemente, si $\vec x(0) = \sum c_iv_i$ en una base de autovectores, $\vec x(t) = \sum c_ie^{\lambda_it}v_i$.`,
+        R`**Recurrencias lineales:** $a_{n+2} = pa_{n+1} + qa_n$ es $\vec x_{n+1} = A\vec x_n$ con $A = \begin{pmatrix}p & q\\ 1 & 0\end{pmatrix}$; $\vec x_n = A^n\vec x_0$, y si hay un autovalor de módulo estrictamente mayor, $\frac{a_{n+1}}{a_n} \to \lambda_1$.`],
+      idea: [R`Es la misma idea que en [[c2-edo-lineal|ecuaciones lineales]] de una variable ($x' = ax \Rightarrow x = e^{at}x_0$), pero en cada dirección propia por separado: los autovectores son las direcciones donde el sistema se desacopla. Es la versión matemática de los [[f2b-acopladas|modos normales]].`],
+      demo: [R`**Paso 1 (derivar la serie).** Derivando término a término, $\frac{d}{dt}\sum\frac{t^kA^k}{k!} = \sum_{k\ge1}\frac{t^{k-1}A^k}{(k-1)!} = A\sum_{j\ge0}\frac{t^jA^j}{j!} = Ae^{tA}$.`,
+        R`**Paso 2 (es solución).** Entonces $\vec x(t) = e^{tA}\vec x_0$ cumple $\vec x\,' = A\vec x$ y $\vec x(0) = I\vec x_0 = \vec x_0$; por unicidad, es **la** solución.`,
+        R`**Paso 3 (diagonalizar).** Si $A = PDP^{-1}$, $A^k = PD^kP^{-1}$, y sumando la serie, $e^{tA} = Pe^{tD}P^{-1}$, con $e^{tD} = \operatorname{diag}(e^{\lambda_1t}, \dots)$.`,
+        R`**Paso 4 (recurrencias).** $\vec x_n = A^n\vec x_0 = \sum c_i\lambda_i^nv_i$. Si $|\lambda_1| > |\lambda_2|$ y $c_1 \ne 0$, dividiendo por $\lambda_1^n$ el segundo término tiende a $0$, y el cociente de dos términos consecutivos tiende a $\lambda_1$. $\blacksquare$`],
+      examples: [{ q: R`$x' = 2x$, $y' = -y$ con $(x, y)(0) = (1, 1)$.`, steps: [R`$A$ ya es diagonal: $(x, y) = (e^{2t}, e^{-t})$.`] }],
+      see: ["al-diagonalizacion", "al-jordan", "c2-edo-lineal"]
+    }
+  };
+
+  E.extendCourse("m104", {
+    concepts: { "al-jordan": { name: "Forma de Jordan" }, "al-cayley": { name: "Cayley-Hamilton" }, "al-exponencial": { name: "Exponencial y recurrencias" } },
+    templates: T,
+    units: [{
+      id: "al-jordan-u", order: 8, program: "Extra UBA", title: "Jordan, Cayley-Hamilton y exponencial", icon: "sparkles",
+      diagnostic: ["al-jordan-vf", "al-cayley-num", "al-exp-num"],
+      lessons: [
+        { id: "al-jordan", title: "Forma de Jordan", templates: ["al-jordan-vf", "al-jordan-mc"], theory: ["al-jordan"],
+          intro: R`Bloques de $\lambda$: $n - \operatorname{rg}(A - \lambda I)$. Diagonalizable si todos los bloques son de tamaño 1.` },
+        { id: "al-cayley-exp", title: "Cayley-Hamilton y exponencial", templates: ["al-cayley-num", "al-recurrencia-num", "al-exp-num"], theory: ["al-cayley", "al-exponencial"],
+          intro: R`$p_A(A) = 0$. $\vec x\,' = A\vec x \Rightarrow \vec x = e^{tA}\vec x_0 = Pe^{tD}P^{-1}\vec x_0$.` }
       ]
     }],
     cards
