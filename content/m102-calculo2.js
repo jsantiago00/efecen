@@ -5,6 +5,8 @@
  *   1 Cónicas, ecuaciones paramétricas y coordenadas polares · 2 Vectores y geometría del espacio
  *   3 Series de potencias, Taylor y Fourier · 4 Funciones vectoriales · 5 Funciones de varias variables
  *   6 Integración múltiple · 7 Análisis vectorial · 8 Ecuaciones diferenciales
+ * Extra UBA (temas de Análisis I de Cs. Físicas, FCEN-UBA, con más rigor que el programa de M102):
+ *   Límites y diferenciabilidad en varias variables · Taylor, función implícita y extremos absolutos
  *
  * Verificaciones independientes en los tests: clasificación de cónicas y cuádricas evaluando la
  * ecuación lejos del origen, longitudes de curvas por poligonales, áreas polares por la fórmula del
@@ -1849,6 +1851,356 @@
           intro: R`Separables: $\frac{dy}{h(y)} = g(x)\,dx$. Lineales: factor integrante $\mu = e^{\int p}$.` },
         { id: "c2-edo-modelos", title: "Modelos", templates: ["c2-mezcla-num", "c2-logistica-num"], theory: ["c2-edo-modelos"],
           intro: R`Logística $P' = kP(1 - P/K)$ y mezclas $S' = \text{entra} - \text{sale}$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · LÍMITES, CONTINUIDAD Y DIFERENCIABILIDAD EN VARIAS VARIABLES
+ *  Temas de Análisis I de la Lic. en Cs. Físicas (FCEN, UBA; es cálculo en varias variables)
+ *  que en M102 no se practican con ese rigor. Solo se tomó la lista de temas; todo es original.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => String(num(x, d)).replace(".", "{,}");
+  const kx = k => (k === 1 ? "" : k === -1 ? "-" : String(k));
+
+  T["c2-limcamino-num"] = {
+    type: "numeric", concepts: ["c2-limites-rigor"], difficulty: 2,
+    generate(r) {
+      const k = r.nz(-6, 6), m = r.nz(-3, 3), v = r.pick(["recta", "parabola"]);
+      const f = v === "recta" ? (x, y) => k * x * y / (x * x + y * y) : (x, y) => k * x * x * y / (x ** 4 + y * y);
+      const L = k * m / (1 + m * m);
+      return {
+        prompt: `Sea $f(x, y) = ${v === "recta" ? `\\frac{${kx(k)}xy}{x^2 + y^2}` : `\\frac{${kx(k)}x^2y}{x^4 + y^2}`}$. ¿A qué valor tiende $f$ cuando $(x, y) \\to (0, 0)$ a lo largo de la curva $y = ${kx(m)}x${v === "recta" ? "" : "^2"}$?`,
+        answer: L,
+        solution: [
+          `Reemplazamos $y = ${kx(m)}x${v === "recta" ? "" : "^2"}$: $f = \\frac{${k}\\cdot${H.par(m)}\\,x^{${v === "recta" ? 2 : 4}}}{x^{${v === "recta" ? 2 : 4}}(1 + ${m * m})} = \\frac{${k * m}}{${1 + m * m}}$, que no depende de $x$.`,
+          `El límite por ese camino es $${H.frac(k * m, 1 + m * m)}$. Como cambia con $m$, el [[c2-limites-rigor|límite doble]] **no existe**: dos caminos dan valores distintos.`,
+          v === "parabola" ? `Ojo: por **todas las rectas** $y = mx$ esta función tiende a $0$. Hace falta probar con parábolas para ver que el límite no existe.` : `Por los ejes da $0$, y por $y = x$ da $\\frac{${k}}{2}$.`
+        ],
+        // verificación: se evalúa f muy cerca del origen sobre el camino
+        verify: { kind: "value", tol: 1e-6, fn: () => { const x = 1e-5; return f(x, v === "recta" ? m * x : m * x * x); } }
+      };
+    }
+  };
+  const LIMS = [
+    { tex: k => `\\frac{${kx(k)}x^2y}{x^2 + y^2}`, f: k => (x, y) => k * x * x * y / (x * x + y * y), lim: () => 0 },
+    { tex: k => `\\frac{${kx(k)}(x^3 + y^3)}{x^2 + y^2}`, f: k => (x, y) => k * (x ** 3 + y ** 3) / (x * x + y * y), lim: () => 0 },
+    { tex: k => `\\frac{\\sin(${kx(k)}(x^2 + y^2))}{x^2 + y^2}`, f: k => (x, y) => Math.sin(k * (x * x + y * y)) / (x * x + y * y), lim: k => k },
+    { tex: k => `\\frac{${kx(k)}xy}{x^2 + y^2}`, f: k => (x, y) => k * x * y / (x * x + y * y), lim: () => null },
+    { tex: k => `\\frac{${kx(k)}x^2y}{x^4 + y^2}`, f: k => (x, y) => k * x * x * y / (x ** 4 + y * y), lim: () => null },
+    { tex: k => `\\frac{${kx(k)}(x^2 - y^2)}{x^2 + y^2}`, f: k => (x, y) => k * (x * x - y * y) / (x * x + y * y), lim: () => null }
+  ];
+  T["c2-limexiste-mc"] = {
+    type: "mc", concepts: ["c2-limites-rigor"], difficulty: 2,
+    generate(r) {
+      const i = r.int(0, LIMS.length - 1), L = LIMS[i], k = r.int(2, 6), lim = L.lim(k);
+      const opts = ["El límite existe y vale $0$", `El límite existe y vale $${k}$`, "El límite no existe", "El límite es $+\\infty$"];
+      const correct = lim === null ? opts[2] : lim === 0 ? opts[0] : opts[1];
+      return {
+        prompt: `¿Qué pasa con $\\displaystyle\\lim_{(x, y) \\to (0, 0)} ${L.tex(k)}$?`,
+        ...H.mc(r, correct, opts.filter(o => o !== correct), { text: true, keepOrder: true }),
+        solution: [
+          lim === null ? `Probamos [[c2-limites-rigor|caminos]]: ${i === 4 ? "por las rectas da $0$, pero por $y = x^2$ da un valor distinto de $0$" : "por los ejes y por la recta $y = x$ da valores distintos"}. Dos caminos con límites distintos alcanzan para que **no exista**.`
+            : i === 2 ? `Con $u = x^2 + y^2 \\to 0$: $\\frac{\\sin(${k}u)}{u} \\to ${k}$, por el [[lim-trig-notable|límite notable]]. Depende solo de la distancia al origen, así que el límite existe.`
+            : `En polares ($x = \\rho\\cos\\theta$, $y = \\rho\\sin\\theta$) queda $\\rho$ por una función acotada de $\\theta$. Un infinitésimo por una función acotada tiende a $0$, **sin importar la dirección**: el límite existe y vale $0$.`,
+          `Los caminos sirven para mostrar que un límite **no** existe; para probar que existe hace falta una cota que no dependa del camino (por ejemplo, en polares).`
+        ],
+        // verificación: valores muy cerca del origen en 24 direcciones y sobre las parábolas y = ±x²
+        verify: { kind: "truth", target: true, fn: () => { const f = L.f(k), vals = [];
+          for (let j = 0; j < 24; j++) { const t = (j + 0.3) * Math.PI / 12, rr = 1e-7; vals.push(f(rr * Math.cos(t), rr * Math.sin(t))); }
+          for (const s of [1, -1, 2]) { const x = 1e-4; vals.push(f(x, s * x * x)); }
+          const mn = Math.min(...vals), mx = Math.max(...vals), exists = mx - mn < 1e-3, val = (mx + mn) / 2;
+          const got = !exists ? opts[2] : Math.abs(val) < 1e-3 ? opts[0] : Math.abs(val - k) < 1e-3 ? opts[1] : "?"; return got === correct; } }
+      };
+    }
+  };
+  // f = x^p y^q/(x² + y²) fuera del origen y 0 en el origen: homogénea de grado p + q − 2
+  T["c2-dif-vf"] = {
+    type: "tf", concepts: ["c2-diferenciabilidad"], difficulty: 3,
+    generate(r) {
+      const p = r.int(1, 3), q = r.int(1, 3), s = p + q, prop = r.pick(["continua", "diferenciable", "parciales"]);
+      if (s > 5) return null;
+      const f = (x, y) => (x === 0 && y === 0 ? 0 : x ** p * y ** q / (x * x + y * y));
+      const truth = prop === "continua" ? s > 2 : prop === "diferenciable" ? s > 3 : true;
+      const mono = `${p === 1 ? "x" : `x^{${p}}`}${q === 1 ? "y" : `y^{${q}}`}`;
+      return {
+        prompt: `Sea $f(x, y) = \\frac{${mono}}{x^2 + y^2}$ si $(x, y) \\ne (0, 0)$, y $f(0, 0) = 0$. <b>Verdadero o falso:</b> $f$ ${prop === "continua" ? "es continua" : prop === "diferenciable" ? "es diferenciable" : "tiene derivadas parciales"} en el origen.`,
+        answer: truth,
+        explanation: `En polares, $f = \\rho^{${s - 2}}\\,g(\\theta)$ con $g$ acotada y no nula. ${prop === "parciales" ? "Sobre los ejes $f$ vale $0$, así que $f_x(0, 0) = f_y(0, 0) = 0$: las parciales **existen** siempre." : prop === "continua" ? (s > 2 ? "Como el exponente es positivo, $f \\to 0 = f(0, 0)$: es **continua**." : "Con exponente $0$, el valor depende de $\\theta$: no hay límite, y **no es continua**.") : (s > 3 ? `Las parciales son nulas, y $\\frac{f(x, y)}{\\sqrt{x^2 + y^2}} = \\rho^{${s - 3}}g(\\theta) \\to 0$: es **diferenciable**.` : `Las parciales son nulas, pero $\\frac{f(x, y)}{\\sqrt{x^2 + y^2}} = \\rho^{${s - 3}}g(\\theta)$ no tiende a $0$: **no es diferenciable** ([[c2-diferenciabilidad]]).`)}`,
+        solution: [`Diferenciable ⟹ continua ⟹ nada sobre las parciales; y tener parciales no implica ni continuidad ni diferenciabilidad.`],
+        // verificación: se miden |f| y |f|/ρ (las parciales son nulas) sobre una circunferencia muy chica
+        verify: { kind: "truth", fn: () => { const rr = 1e-6; let mf = 0, md = 0;
+          for (let j = 0; j < 48; j++) { const t = (j + 0.4) * Math.PI / 24, v = Math.abs(f(rr * Math.cos(t), rr * Math.sin(t))); mf = Math.max(mf, v); md = Math.max(md, v / rr); }
+          const h = 1e-7, px = Math.abs(f(h, 0) / h), py = Math.abs(f(0, h) / h);
+          return prop === "continua" ? mf < 1e-3 : prop === "diferenciable" ? md < 1e-3 : px < 1e-6 && py < 1e-6; } }
+      };
+    }
+  };
+  const DIRS = [[3, 4, 5], [4, 3, 5], [-3, 4, 5], [5, 12, 13], [12, -5, 13], [8, 15, 17], [-15, 8, 17]];
+  T["c2-direccional-def-num"] = {
+    type: "numeric", concepts: ["c2-diferenciabilidad"], difficulty: 2,
+    generate(r) {
+      const k = r.nz(-5, 5), [a, b, c] = r.pick(DIRS), v = r.pick(["x2y", "xy2"]), u1 = a / c, u2 = b / c;
+      const f = (x, y) => (x === 0 && y === 0 ? 0 : (v === "x2y" ? k * x * x * y : k * x * y * y) / (x * x + y * y));
+      const D = v === "x2y" ? k * u1 * u1 * u2 : k * u1 * u2 * u2;
+      return {
+        prompt: `Sea $f(x, y) = \\frac{${kx(k)}${v === "x2y" ? "x^2y" : "xy^2"}}{x^2 + y^2}$ fuera del origen, con $f(0, 0) = 0$. Calculá por definición la derivada direccional en el origen según $\\vec u = \\left(${H.frac(a, c)}, ${H.frac(b, c)}\\right)$.`,
+        answer: D,
+        solution: [
+          `Por definición: $D_{\\vec u}f(0, 0) = \\lim_{t \\to 0}\\frac{f(tu_1, tu_2) - f(0, 0)}{t}$. Como $f(t\\vec u) = t\\,f(\\vec u)$ (es homogénea de grado 1), el cociente vale siempre $f(\\vec u)$.`,
+          `$D_{\\vec u}f(0, 0) = ${k}\\cdot${v === "x2y" ? `\\left(${H.frac(a, c)}\\right)^2\\cdot${H.frac(b, c)}` : `${H.frac(a, c)}\\cdot\\left(${H.frac(b, c)}\\right)^2`} \\approx ${nd(D)}$.`,
+          `Sobre los ejes $f = 0$, así que $\\nabla f(0, 0) = (0, 0)$. Si $f$ fuera [[c2-diferenciabilidad|diferenciable]] tendría que ser $D_{\\vec u}f = \\nabla f\\cdot\\vec u = 0$: como no da cero, **no es diferenciable**, aunque tenga todas las derivadas direccionales.`
+        ],
+        // verificación: el cociente incremental con t muy chico
+        verify: { kind: "value", tol: 1e-6, fn: () => { const t = 1e-7; return f(t * u1, t * u2) / t; } }
+      };
+    }
+  };
+
+  const cards = {
+    "c2-limites-rigor": {
+      title: "Límites dobles: caminos y polares", aliases: ["criterio de los caminos", "límites por caminos", "límite por caminos", "límites en polares"], concepts: ["c2-limites-rigor"],
+      summary: "Si dos caminos dan límites distintos, el límite doble no existe. Para probar que existe: |f − L| ≤ g(ρ) con g(ρ) → 0, sin depender de θ (por ejemplo, en polares).",
+      def: [R`$\lim_{(x, y) \to (a, b)} f(x, y) = L$ si $|f(x, y) - L|$ se hace tan chico como se quiera para **todos** los puntos cercanos a $(a, b)$, sin importar por dónde se acerquen (ver [[c2-varias|funciones de varias variables]]).`,
+        R`**Criterio de los caminos:** si $f$ tiende a $L_1$ por un camino y a $L_2 \ne L_1$ por otro, el límite no existe. Que todos los caminos que probaste den lo mismo **no** prueba que exista.`,
+        R`**Polares:** con $x = a + \rho\cos\theta$, $y = b + \rho\sin\theta$, el límite es $L$ si $|f - L| \le g(\rho)$ con $g(\rho) \to 0$ y $g$ **independiente de** $\theta$. Caso típico: infinitésimo por acotado.`],
+      idea: [R`En una variable hay dos maneras de acercarse (izquierda y derecha); en el plano hay infinitas. $\frac{x^2y}{x^4 + y^2}$ tiende a $0$ por todas las rectas y vale $\frac12$ sobre toda la parábola $y = x^2$: las rectas no alcanzan.`],
+      demo: [R`**Paso 1 (caminos: por qué no existe).** Si existiera el límite $L$, cada camino que llega a $(a, b)$ tendría que dar $L$, porque sus puntos terminan tan cerca como se quiera de $(a, b)$. Dos caminos con valores distintos contradicen eso.`,
+        R`**Paso 2 (polares: la cota).** Por ejemplo, $\left|\frac{x^2y}{x^2 + y^2}\right| = \frac{\rho^3\cos^2\theta|\sin\theta|}{\rho^2} \le \rho$, porque $\cos^2\theta|\sin\theta| \le 1$.`,
+        R`**Paso 3 (concluir).** La cota $\rho$ no depende de $\theta$ y tiende a $0$: dado $\varepsilon$, todos los puntos con $\rho < \varepsilon$ cumplen $|f| < \varepsilon$. El límite es $0$. $\blacksquare$`],
+      examples: [{ q: R`¿Existe $\lim\frac{xy}{x^2 + y^2}$ en el origen?`, steps: [R`Por $y = mx$ da $\frac{m}{1 + m^2}$: $0$ por los ejes y $\frac12$ por $y = x$. No existe.`] }],
+      see: ["c2-varias", "c2-diferenciabilidad"]
+    },
+    "c2-diferenciabilidad": {
+      title: "Diferenciabilidad en varias variables", aliases: ["función diferenciable", "funciones diferenciables", "diferenciabilidad", "condición suficiente de diferenciabilidad"], concepts: ["c2-diferenciabilidad"],
+      summary: "f es diferenciable en P si f(P + h) = f(P) + ∇f(P)·h + o(|h|). Diferenciable ⟹ continua y D_u f = ∇f·u. Tener parciales no alcanza; ser C¹ sí.",
+      def: [R`$f$ es **diferenciable** en $P$ si existen las [[c2-parciales|derivadas parciales]] y $$\lim_{\vec h \to 0}\frac{f(P + \vec h) - f(P) - \nabla f(P)\cdot\vec h}{|\vec h|} = 0.$$ Es decir, el [[c2-gradiente|plano tangente]] aproxima bien a $f$.`,
+        R`**Consecuencias:** si $f$ es diferenciable en $P$, es continua en $P$ y todas sus derivadas direccionales valen $D_{\vec u}f(P) = \nabla f(P)\cdot\vec u$.`,
+        R`**Condición suficiente:** si las derivadas parciales existen cerca de $P$ y son continuas en $P$ ($f$ de clase $C^1$), $f$ es diferenciable en $P$.`],
+      idea: [R`Las parciales miran solo dos direcciones. Una función puede tener todas las derivadas direccionales y aun así "doblarse" de manera distinta en cada dirección, sin un plano tangente común: $\frac{x^2y}{x^2 + y^2}$ es así en el origen.`,
+        R`Para probar que **no** es diferenciable, alcanza con mostrar que $D_{\vec u}f \ne \nabla f\cdot\vec u$ para algún $\vec u$, o que no es continua.`],
+      demo: [R`**Paso 1 (direccionales).** Si $f$ es diferenciable, tomamos $\vec h = t\vec u$ en la definición: $\frac{f(P + t\vec u) - f(P) - t\nabla f\cdot\vec u}{|t|} \to 0$.`,
+        R`**Paso 2 (despejar).** Eso dice que $\frac{f(P + t\vec u) - f(P)}{t} \to \nabla f\cdot\vec u$, es decir, $D_{\vec u}f(P) = \nabla f(P)\cdot\vec u$.`,
+        R`**Paso 3 (continuidad).** De la definición, $f(P + \vec h) - f(P) = \nabla f\cdot\vec h + o(|\vec h|)$, y los dos términos tienden a $0$ con $\vec h$: $f$ es continua en $P$. $\blacksquare$`],
+      examples: [{ q: R`¿Es diferenciable $f = \frac{x^2y}{x^2 + y^2}$ (con $f(0, 0) = 0$) en el origen?`, steps: [R`$\nabla f(0, 0) = (0, 0)$, pero $D_{\vec u}f(0, 0) = u_1^2u_2$, que para $\vec u = \frac{(1, 1)}{\sqrt2}$ vale $\frac{1}{2\sqrt2} \ne 0$. No es diferenciable.`] }],
+      see: ["c2-parciales", "c2-gradiente", "c2-limites-rigor"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-limites-rigor": { name: "Límites dobles" }, "c2-diferenciabilidad": { name: "Diferenciabilidad" } },
+    templates: T,
+    units: [{
+      id: "c2-rigor-u", order: 9, program: "Extra UBA", title: "Límites y diferenciabilidad en varias variables", icon: "target",
+      diagnostic: ["c2-limcamino-num", "c2-limexiste-mc", "c2-direccional-def-num"],
+      lessons: [
+        { id: "c2-limites-rigor", title: "Límites dobles", templates: ["c2-limcamino-num", "c2-limexiste-mc"], theory: ["c2-limites-rigor"],
+          intro: R`Dos caminos distintos ⟹ no existe. Para probar que existe: una cota en polares que no dependa de $\theta$.` },
+        { id: "c2-diferenciabilidad", title: "Diferenciabilidad", templates: ["c2-direccional-def-num", "c2-dif-vf"], theory: ["c2-diferenciabilidad"],
+          intro: R`Diferenciable: $f(P + \vec h) = f(P) + \nabla f\cdot\vec h + o(|\vec h|)$. Implica continuidad y $D_{\vec u}f = \nabla f\cdot\vec u$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · TAYLOR, FUNCIÓN IMPLÍCITA Y EXTREMOS ABSOLUTOS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw;
+  const { num } = H;
+  const T = {};
+  const nd = (x, d = 4) => String(num(x, d)).replace(".", "{,}");
+  const kx = k => (k === 1 ? "" : k === -1 ? "-" : String(k));
+  // derivadas numéricas de f(x, y) hasta orden 2
+  const D2 = (f, x, y, h = 1e-4) => ({ f: f(x, y), fx: (f(x + h, y) - f(x - h, y)) / (2 * h), fy: (f(x, y + h) - f(x, y - h)) / (2 * h),
+    fxx: (f(x + h, y) - 2 * f(x, y) + f(x - h, y)) / (h * h), fyy: (f(x, y + h) - 2 * f(x, y) + f(x, y - h)) / (h * h),
+    fxy: (f(x + h, y + h) - f(x + h, y - h) - f(x - h, y + h) + f(x - h, y - h)) / (4 * h * h) });
+
+  T["c2-taylor2-num"] = {
+    type: "numeric", concepts: ["c2-taylor2"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-3, 3), b = r.nz(-3, 3), v = r.pick(["exp", "cosexp", "log", "poli"]);
+      const [h, k] = r.pick([[0.1, 0.1], [0.1, -0.1], [0.2, 0.1], [-0.1, 0.2], [0.05, -0.1], [0.1, 0.05]]);
+      let f, tex, P, d;
+      if (v === "exp") { f = (x, y) => Math.exp(a * x + b * y); tex = `e^{${kx(a)}x ${b < 0 ? "-" : "+"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}y}`; P = [0, 0]; d = { f: 1, fx: a, fy: b, fxx: a * a, fxy: a * b, fyy: b * b }; }
+      else if (v === "cosexp") { f = (x, y) => Math.cos(a * x) * Math.exp(b * y); tex = `\\cos(${kx(a)}x)\\,e^{${kx(b)}y}`; P = [0, 0]; d = { f: 1, fx: 0, fy: b, fxx: -a * a, fxy: 0, fyy: b * b }; }
+      else if (v === "log") { if (Math.abs(a) + Math.abs(b) > 4) return null; f = (x, y) => Math.log(1 + a * x + b * y); tex = `\\ln(1 ${a < 0 ? "-" : "+"} ${Math.abs(a) === 1 ? "" : Math.abs(a)}x ${b < 0 ? "-" : "+"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}y)`; P = [0, 0]; d = { f: 0, fx: a, fy: b, fxx: -a * a, fxy: -a * b, fyy: -b * b }; }
+      else { f = (x, y) => x * x * y + a * x * y * y; tex = `x^2y ${a < 0 ? "-" : "+"} ${Math.abs(a) === 1 ? "" : Math.abs(a)}xy^2`; P = [1, 1]; d = { f: 1 + a, fx: 2 + a, fy: 1 + 2 * a, fxx: 2, fxy: 2 + 2 * a, fyy: 2 * a }; }
+      const T2 = d.f + d.fx * h + d.fy * k + 0.5 * (d.fxx * h * h + 2 * d.fxy * h * k + d.fyy * k * k);
+      const pt = `(${nd(P[0] + h, 2)}, ${nd(P[1] + k, 2)})`;
+      return {
+        prompt: `Usando el polinomio de Taylor de orden 2 de $f(x, y) = ${tex}$ centrado en $(${P[0]}, ${P[1]})$, aproximá $f${pt}$.`,
+        answer: T2,
+        solution: [
+          `[[c2-taylor2|Taylor de orden 2]]: $T_2 = f + f_xh + f_yk + \\frac12(f_{xx}h^2 + 2f_{xy}hk + f_{yy}k^2)$, con $h = ${nd(h, 2)}$ y $k = ${nd(k, 2)}$.`,
+          `En $(${P[0]}, ${P[1]})$: $f = ${d.f}$, $f_x = ${d.fx}$, $f_y = ${d.fy}$, $f_{xx} = ${d.fxx}$, $f_{xy} = ${d.fxy}$, $f_{yy} = ${d.fyy}$.`,
+          `$T_2 \\approx ${nd(T2, 5)}$ (el valor exacto es $${nd(f(P[0] + h, P[1] + k), 5)}$).`
+        ],
+        // verificación: derivadas hasta orden 2 por diferencias finitas y armado del polinomio
+        verify: { kind: "value", tol: 1e-6, fn: () => { const q = D2(f, P[0], P[1]); return q.f + q.fx * h + q.fy * k + 0.5 * (q.fxx * h * h + 2 * q.fxy * h * k + q.fyy * k * k); } }
+      };
+    }
+  };
+  T["c2-cadena2-num"] = {
+    type: "numeric", concepts: ["c2-taylor2"], difficulty: 3,
+    generate(r) {
+      const [A, B, C] = [r.int(-3, 3), r.int(-3, 3), r.int(-3, 3)], Dd = r.int(-4, 4), Ee = r.int(-4, 4);
+      const x0 = r.int(-2, 2), y0 = r.int(-2, 2), al = r.nz(-3, 3), be = r.int(-2, 2), ga = r.nz(-3, 3), de = r.int(-2, 2);
+      if (A === 0 && B === 0 && C === 0) return null;
+      const p = (x, y) => A * x * x + B * x * y + C * y * y + Dd * x + Ee * y;
+      const fx = 2 * A * x0 + B * y0 + Dd, fy = B * x0 + 2 * C * y0 + Ee;
+      const h2 = 2 * A * al * al + 2 * B * al * ga + 2 * C * ga * ga + 2 * be * fx + 2 * de * fy;
+      const g1 = H.poly([[be, "t^{2}"], [al, "t"], [x0, ""]]) || "0", g2 = H.poly([[de, "t^{2}"], [ga, "t"], [y0, ""]]) || "0";
+      return {
+        prompt: `Sea $f(x, y) = ${H.poly([[A, "x^{2}"], [B, "xy"], [C, "y^{2}"], [Dd, "x"], [Ee, "y"]])}$ y $h(t) = f(x(t), y(t))$ con $x(t) = ${g1}$, $y(t) = ${g2}$. ¿Cuánto vale $h''(0)$?`,
+        answer: h2,
+        solution: [
+          `[[c2-taylor2|Regla de la cadena de segundo orden]]: $h' = f_xx' + f_yy'$, y derivando otra vez, $h'' = f_{xx}(x')^2 + 2f_{xy}x'y' + f_{yy}(y')^2 + f_xx'' + f_yy''$.`,
+          `En $t = 0$: $(x, y) = (${x0}, ${y0})$, $x' = ${al}$, $y' = ${ga}$, $x'' = ${2 * be}$, $y'' = ${2 * de}$; $f_x = ${fx}$, $f_y = ${fy}$, $f_{xx} = ${2 * A}$, $f_{xy} = ${B}$, $f_{yy} = ${2 * C}$.`,
+          `$h''(0) = ${h2}$.`
+        ],
+        // verificación: segunda derivada numérica de h(t) = f(x(t), y(t))
+        verify: { kind: "deriv2", f: t => p(x0 + al * t + be * t * t, y0 + ga * t + de * t * t), x0: 0 }
+      };
+    }
+  };
+  T["c2-implicita-num"] = {
+    type: "numeric", concepts: ["c2-implicita"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-3, 3), b = r.nz(-3, 3), x0 = r.int(-2, 2), y0 = r.int(-2, 2), z0 = r.nz(-2, 2), ask = r.pick(["x", "y"]);
+      const c = -(x0 ** 3 + a * y0 * y0 + z0 ** 3 + b * x0 * z0);
+      const F = (x, y, z) => x ** 3 + a * y * y + z ** 3 + b * x * z + c;
+      const Fx = 3 * x0 * x0 + b * z0, Fy = 2 * a * y0, Fz = 3 * z0 * z0 + b * x0;
+      if (Fz === 0) return null;
+      const ans = ask === "x" ? -Fx / Fz : -Fy / Fz;
+      if (ans === 0 && r.bool()) return null;
+      return {
+        prompt: `La ecuación $${H.poly([[1, "x^{3}"], [a, "y^{2}"], [1, "z^{3}"], [b, "xz"], [c, ""]])} = 0$ define $z = z(x, y)$ cerca del punto $(${x0}, ${y0}, ${z0})$. ¿Cuánto vale $\\frac{\\partial z}{\\partial ${ask}}$ en ese punto?`,
+        answer: ans,
+        solution: [
+          `[[c2-implicita|Teorema de la función implícita]]: como $F_z = 3z^2 ${b < 0 ? "-" : "+"} ${Math.abs(b)}x$ vale $${Fz} \\ne 0$ en el punto, la ecuación define $z(x, y)$ diferenciable, con $\\frac{\\partial z}{\\partial ${ask}} = -\\frac{F_${ask}}{F_z}$.`,
+          `$F_${ask} = ${ask === "x" ? Fx : Fy}$ en el punto, así que $\\frac{\\partial z}{\\partial ${ask}} = -\\frac{${ask === "x" ? Fx : Fy}}{${Fz}} = ${H.frac(-(ask === "x" ? Fx : Fy), Fz)}$.`
+        ],
+        // verificación: se resuelve F = 0 para z con Newton moviendo x (o y) un poquito y se deriva numéricamente
+        verify: { kind: "value", tol: 1e-6, fn: () => { const zAt = (x, y) => { let z = z0; for (let i = 0; i < 60; i++) { const g = F(x, y, z), dz = (F(x, y, z + 1e-7) - F(x, y, z - 1e-7)) / 2e-7; z -= g / dz; } return z; };
+          const hh = 1e-5; return ask === "x" ? (zAt(x0 + hh, y0) - zAt(x0 - hh, y0)) / (2 * hh) : (zAt(x0, y0 + hh) - zAt(x0, y0 - hh)) / (2 * hh); } }
+      };
+    }
+  };
+  T["c2-implicita-vf"] = {
+    type: "tf", concepts: ["c2-implicita"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["esfera", "esfera", "cilindro"]), R0 = r.pick([3, 5, 13]), want = r.pick(["z", "x"]);
+      const pts = { 3: [[3, 0, 0], [0, 3, 0], [0, 0, 3], [1, 2, 2], [2, -1, 2], [-2, 2, 1]], 5: [[3, 4, 0], [0, 3, 4], [4, 0, 3], [5, 0, 0], [0, 0, -5]], 13: [[12, 5, 0], [5, 0, 12], [0, 12, -5], [3, 4, 12]] }[R0];
+      const P = r.pick(pts);
+      const F = v === "esfera" ? (x, y, z) => x * x + y * y + z * z - R0 * R0 : (x, y, z) => x * x + z * z - R0 * R0;
+      if (v === "cilindro" && Math.abs(P[0] ** 2 + P[2] ** 2 - R0 * R0) > 0) return null;
+      const der = want === "z" ? 2 * P[2] : 2 * P[0];
+      return {
+        prompt: `Sea $S$ la superficie $${v === "esfera" ? `x^2 + y^2 + z^2 = ${R0 * R0}` : `x^2 + z^2 = ${R0 * R0}`}$ y $P = (${P.join(", ")}) \\in S$. <b>Verdadero o falso:</b> el teorema de la función implícita garantiza que, cerca de $P$, $S$ es el gráfico de una función diferenciable ${want === "z" ? "$z = f(x, y)$" : "$x = g(y, z)$"}.`,
+        answer: der !== 0,
+        explanation: `Con $F = ${v === "esfera" ? `x^2 + y^2 + z^2 - ${R0 * R0}$` : `x^2 + z^2 - ${R0 * R0}$`}, el [[c2-implicita|teorema de la función implícita]] pide $F_${want}(P) \\ne 0$. Acá $F_${want} = 2${want} = ${der}$ en $P$: ${der !== 0 ? "**sí** lo garantiza." : "vale cero, y el teorema **no** lo garantiza (de hecho, ahí la superficie es vertical en esa dirección)."}`,
+        solution: [`La condición es que la derivada respecto de la variable que se despeja no se anule en el punto.`],
+        // verificación: derivada parcial numérica de F en P
+        verify: { kind: "truth", fn: () => { const h = 1e-6, Q = P.slice(), S = P.slice(), i = want === "z" ? 2 : 0; Q[i] += h; S[i] -= h; return Math.abs((F(...Q) - F(...S)) / (2 * h)) > 1e-6; } }
+      };
+    }
+  };
+  T["c2-extabs-num"] = {
+    type: "numeric", concepts: ["c2-extremos-abs"], difficulty: 3,
+    generate(r) {
+      const al = r.pick([1, 2, -1, -2]), be = r.pick([1, 2, 3, -1]), ga = r.int(-1, 1), d = r.int(-6, 6), e = r.int(-6, 6), p = r.int(1, 3), q = r.int(1, 3), want = r.pick(["max", "min"]);
+      if (4 * al * be - ga * ga === 0) return null;
+      const f = (x, y) => al * x * x + be * y * y + ga * x * y + d * x + e * y;
+      // candidatos: punto crítico interior, vértices de las parábolas en cada lado y esquinas
+      const C = [];
+      const det = 4 * al * be - ga * ga, xc = (-d * 2 * be + ga * e) / det, yc = (-2 * al * e + ga * d) / det;
+      if (Math.abs(xc) <= p && Math.abs(yc) <= q) C.push([xc, yc, "interior"]);
+      for (const y of [-q, q]) { const xv = -(ga * y + d) / (2 * al); if (Math.abs(xv) <= p) C.push([xv, y, "borde"]); }
+      for (const x of [-p, p]) { const yv = -(ga * x + e) / (2 * be); if (Math.abs(yv) <= q) C.push([x, yv, "borde"]); }
+      for (const x of [-p, p]) for (const y of [-q, q]) C.push([x, y, "esquina"]);
+      const vals = C.map(([x, y]) => f(x, y)), ans = want === "max" ? Math.max(...vals) : Math.min(...vals), best = C[vals.indexOf(ans)];
+      return {
+        prompt: `Hallá el valor ${want === "max" ? "máximo" : "mínimo"} absoluto de $f(x, y) = ${H.poly([[al, "x^{2}"], [be, "y^{2}"], [ga, "xy"], [d, "x"], [e, "y"]])}$ en el rectángulo $|x| \\le ${p}$, $|y| \\le ${q}$.`,
+        answer: ans,
+        solution: [
+          `El rectángulo es cerrado y acotado y $f$ es continua: por el [[c2-extremos-abs|teorema de Weierstrass]] el ${want === "max" ? "máximo" : "mínimo"} existe. Puede estar en un punto crítico interior, en un extremo de $f$ restringida a un lado o en una esquina.`,
+          `Punto crítico: $\\nabla f = 0$ en $(${nd(xc, 3)}, ${nd(yc, 3)})$, ${Math.abs(xc) <= p && Math.abs(yc) <= q ? "que está adentro" : "que queda afuera"}. En cada lado $f$ es una parábola en una variable; se agregan sus vértices si caen en el lado, y las cuatro esquinas.`,
+          `Comparando los ${C.length} candidatos, el ${want === "max" ? "máximo" : "mínimo"} es $${nd(ans, 4)}$, en $(${nd(best[0], 3)}, ${nd(best[1], 3)})$ (${best[2]}).`
+        ],
+        // verificación: búsqueda en una grilla fina del rectángulo, refinada alrededor del mejor punto
+        verify: { kind: "value", tol: 1e-6, fn: () => { let bx = 0, by = 0, bv = want === "max" ? -Infinity : Infinity; const n = 200;
+          const better = v => (want === "max" ? v > bv : v < bv);
+          for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) { const x = -p + 2 * p * i / n, y = -q + 2 * q * j / n, v = f(x, y); if (better(v)) { bv = v; bx = x; by = y; } }
+          let s = 2 * p / n; for (let it = 0; it < 60; it++) { for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const x = Math.min(p, Math.max(-p, bx + i * s)), y = Math.min(q, Math.max(-q, by + j * s)), v = f(x, y); if (better(v)) { bv = v; bx = x; by = y; } } s /= 2; }
+          return bv; } }
+      };
+    }
+  };
+
+  const cards = {
+    "c2-taylor2": {
+      title: "Taylor de orden 2 en dos variables y regla de la cadena de segundo orden", aliases: ["Taylor en varias variables", "polinomio de Taylor de orden 2 en dos variables", "regla de la cadena de segundo orden"], concepts: ["c2-taylor2"],
+      summary: "T₂(P + (h, k)) = f + f_x h + f_y k + ½(f_xx h² + 2f_xy hk + f_yy k²). Es la mejor aproximación cuadrática; su parte de orden 2 es la forma del hessiano.",
+      def: [R`Si $f$ es de clase $C^2$ cerca de $P$, su **polinomio de Taylor de orden 2** es $$T_2(P + (h, k)) = f(P) + f_xh + f_yk + \frac12\left(f_{xx}h^2 + 2f_{xy}hk + f_{yy}k^2\right),$$ con las derivadas evaluadas en $P$, y $f(P + (h, k)) - T_2 = o(h^2 + k^2)$.`,
+        R`La parte de orden 2 es $\frac12(h, k)\,H_f(P)\,(h, k)^T$, con la [[c2-extremos|matriz hessiana]]: de ahí sale el criterio para clasificar puntos críticos.`,
+        R`**Regla de la cadena de segundo orden:** si $h(t) = f(x(t), y(t))$, entonces $h'' = f_{xx}(x')^2 + 2f_{xy}x'y' + f_{yy}(y')^2 + f_xx'' + f_yy''$.`],
+      idea: [R`Es la extensión de la [[c2-taylor|serie de Taylor]] de una variable: cerca de $P$, $f$ se parece a un paraboloide. Si $P$ es crítico, los términos lineales desaparecen y la forma cuadrática dice si es un mínimo, un máximo o una silla.`],
+      demo: [R`**Paso 1 (restringir a una recta).** Fijamos la dirección $(h, k)$ y miramos $g(t) = f(P + t(h, k))$, una función de una variable.`,
+        R`**Paso 2 (derivar g).** Por la regla de la cadena, $g'(t) = f_xh + f_yk$, y derivando otra vez, $g''(t) = f_{xx}h^2 + 2f_{xy}hk + f_{yy}k^2$ (usando $f_{xy} = f_{yx}$, por Schwarz).`,
+        R`**Paso 3 (Taylor en una variable).** $g(1) \approx g(0) + g'(0) + \frac12g''(0)$. Reemplazando las derivadas del paso 2, evaluadas en $t = 0$, sale $T_2$.`,
+        R`**Paso 4 (cadena de segundo orden).** Para una curva cualquiera, $h' = f_x(x(t), y(t))\,x' + f_y(\dots)\,y'$. Derivando cada producto: $(f_x)' = f_{xx}x' + f_{xy}y'$, $(f_y)' = f_{yx}x' + f_{yy}y'$, y quedan además $f_xx'' + f_yy''$. Juntando, sale la fórmula. $\blacksquare$`],
+      examples: [{ q: R`Aproximá $e^{x + 2y}$ en $(0{,}1;\ 0{,}05)$ con $T_2$ en el origen.`, steps: [R`$h + 2k = 0{,}2$: $T_2 = 1 + 0{,}2 + \frac12(0{,}2)^2 = 1{,}22$ (exacto: $1{,}2214$).`] }],
+      see: ["c2-taylor", "c2-extremos", "c2-parciales"]
+    },
+    "c2-implicita": {
+      title: "Teorema de la función implícita", aliases: ["teorema de la función implícita", "función implícita", "funciones implícitas", "derivación implícita en varias variables"], concepts: ["c2-implicita"],
+      summary: "Si F es C¹, F(P) = 0 y F_z(P) ≠ 0, cerca de P la ecuación F = 0 define z = z(x, y) diferenciable, con z_x = −F_x/F_z y z_y = −F_y/F_z.",
+      def: [R`Sea $F(x, y, z)$ de clase $C^1$ con $F(P) = 0$. Si $F_z(P) \ne 0$, existe un entorno de $P$ donde la ecuación $F(x, y, z) = 0$ define una única función $z = z(x, y)$ de clase $C^1$, y $$\frac{\partial z}{\partial x} = -\frac{F_x}{F_z}, \qquad \frac{\partial z}{\partial y} = -\frac{F_y}{F_z}.$$`,
+        R`El [[c2-gradiente|plano tangente]] a la superficie $F = 0$ en $P$ es perpendicular a $\nabla F(P)$.`],
+      idea: [R`La condición $F_z \ne 0$ dice que la superficie no es "vertical" en la dirección $z$: cerca de $P$, cada $(x, y)$ tiene un solo $z$. En el ecuador de una esfera ($z = 0$) falla, porque ahí la esfera se dobla y no es un gráfico sobre el plano $xy$.`],
+      demo: [R`**Paso 1 (suponer que existe).** Si $z(x, y)$ es diferenciable y cumple $F(x, y, z(x, y)) = 0$ para todo $(x, y)$ cercano, la función compuesta es constante.`,
+        R`**Paso 2 (derivar).** Derivando respecto de $x$ con la [[c2-parciales|regla de la cadena]]: $F_x + F_z\frac{\partial z}{\partial x} = 0$.`,
+        R`**Paso 3 (despejar).** Como $F_z \ne 0$, $\frac{\partial z}{\partial x} = -\frac{F_x}{F_z}$; igual para $y$. (Que $z(x, y)$ exista es la parte difícil del teorema: se prueba con que $F$ es estrictamente monótona en $z$ cerca de $P$, porque $F_z$ no cambia de signo.) $\blacksquare$`],
+      examples: [{ q: R`$x^2 + y^2 + z^2 = 9$ en $(1, 2, 2)$. ¿$z_x$?`, steps: [R`$z_x = -\frac{2x}{2z} = -\frac12$.`] }],
+      see: ["c2-parciales", "c2-gradiente"]
+    },
+    "c2-extremos-abs": {
+      title: "Extremos absolutos en regiones cerradas y acotadas", aliases: ["extremos absolutos", "máximo absoluto en un compacto", "extremos en una región cerrada y acotada"], concepts: ["c2-extremos-abs"],
+      summary: "Una función continua en un conjunto cerrado y acotado alcanza máximo y mínimo. Se buscan entre los puntos críticos interiores y los extremos sobre el borde, y se comparan los valores.",
+      def: [R`**Teorema de Weierstrass:** si $f$ es continua en un conjunto $K$ cerrado y acotado (compacto), existen puntos de $K$ donde $f$ alcanza su máximo y su mínimo absolutos.`,
+        R`**Método:** 1) puntos críticos de $f$ en el interior ($\nabla f = 0$); 2) extremos de $f$ sobre el borde, parametrizándolo o con [[c2-lagrange|multiplicadores de Lagrange]]; 3) puntos donde el borde no es suave (esquinas). Se evalúa $f$ en todos y se elige el mayor y el menor.`],
+      idea: [R`El [[c2-extremos|criterio del hessiano]] solo encuentra extremos **locales** en el interior. En una región acotada, el máximo absoluto suele estar en el borde, donde $\nabla f$ no tiene por qué anularse.`],
+      demo: [R`**Paso 1 (dónde puede estar).** Sea $P$ el punto donde $f$ alcanza su máximo en $K$ (existe por Weierstrass). O $P$ está en el interior, o está en el borde.`,
+        R`**Paso 2 (interior).** Si está en el interior, es un máximo local de una función diferenciable, y sus derivadas parciales se anulan: $\nabla f(P) = 0$ (cada parcial es la derivada de una función de una variable con un máximo).`,
+        R`**Paso 3 (borde).** Si está en el borde, es un máximo de $f$ restringida al borde: lo encuentra el método que usemos para el borde (vértices en cada lado, Lagrange o esquinas).`,
+        R`**Paso 4 (comparar).** Por lo anterior, $P$ está en la lista de candidatos; el máximo es el mayor valor de $f$ sobre esa lista. Igual para el mínimo. $\blacksquare$`],
+      examples: [{ q: R`Máximo de $f = x^2 + y^2 - 2x$ en $|x| \le 1$, $|y| \le 1$.`, steps: [R`Crítico interior: $(1, 0)$, sobre el borde. En las esquinas: $f(-1, \pm1) = 4$, $f(1, \pm1) = 0$. Máximo: $4$.`] }],
+      see: ["c2-extremos", "c2-lagrange"]
+    }
+  };
+
+  E.extendCourse("m102", {
+    concepts: { "c2-taylor2": { name: "Taylor en dos variables" }, "c2-implicita": { name: "Función implícita" }, "c2-extremos-abs": { name: "Extremos absolutos" } },
+    templates: T,
+    units: [{
+      id: "c2-taylor-implicita-u", order: 10, program: "Extra UBA", title: "Taylor, función implícita y extremos absolutos", icon: "sigma",
+      diagnostic: ["c2-taylor2-num", "c2-implicita-num", "c2-extabs-num"],
+      lessons: [
+        { id: "c2-taylor2", title: "Taylor y cadena de orden 2", templates: ["c2-taylor2-num", "c2-cadena2-num"], theory: ["c2-taylor2"],
+          intro: R`$T_2 = f + f_xh + f_yk + \frac12(f_{xx}h^2 + 2f_{xy}hk + f_{yy}k^2)$.` },
+        { id: "c2-implicita", title: "Función implícita", templates: ["c2-implicita-vf", "c2-implicita-num"], theory: ["c2-implicita"],
+          intro: R`Si $F_z(P) \ne 0$: $z_x = -F_x/F_z$, $z_y = -F_y/F_z$.` },
+        { id: "c2-extremos-abs", title: "Extremos absolutos", templates: ["c2-extabs-num"], theory: ["c2-extremos-abs"],
+          intro: R`Compacto y continua: hay máximo y mínimo. Candidatos: críticos interiores, extremos en el borde y esquinas.` }
       ]
     }],
     cards
