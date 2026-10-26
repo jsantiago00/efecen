@@ -7,6 +7,8 @@
  *   1 Estadística descriptiva · 2 Probabilidad · 3 Variables aleatorias discretas
  *   4 Variables aleatorias continuas · 5 Variables conjuntas y distribuciones muestrales
  *   6 Estimación · 7 Pruebas de hipótesis · 8 Regresión y correlación
+ * Extra UBA (temas de Métodos Estadísticos en Física Experimental, Cs. Físicas, FCEN-UBA):
+ *   Estadística para la física experimental · Bayes, Monte Carlo y Cramér-Rao
  * Ids con prefijo "pe-". Todo el texto y los ejercicios son originales.
  */
 (function () {
@@ -2142,6 +2144,399 @@
           intro: R`$r$ mide qué tan alineados están los puntos; $R^2$, cuánto explica la recta.` },
         { id: "pe-reg-l3", title: "Residuos e inferencia para la pendiente", templates: ["pe-pendiente-num", "pe-residuos-tf"], theory: ["pe-regresion-inferencia"],
           intro: R`¿La pendiente observada es más grande que lo que daría el puro ruido?` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · ESTADÍSTICA PARA LA FÍSICA EXPERIMENTAL: ERRORES, AJUSTES Y POISSON
+ *  Temas de Métodos Estadísticos en Física Experimental (MEFE, Cs. Físicas, FCEN-UBA) que no figuran
+ *  en el temario de M105. Solo se tomó la lista de temas; el texto y los ejercicios son originales.
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, S = E.pye, nf = S.nf;
+  const T = {};
+
+  T["pe-propag-num"] = {
+    type: "numeric", concepts: ["pe-propagacion"], difficulty: 2,
+    generate(r) {
+      const x = r.int(20, 80) / 10, y = r.int(10, 50) / 10, sx = r.int(1, 5) / 20, sy = r.int(1, 5) / 20, rho = r.pick([0, 0, 0.5, -0.5, 0.8]), v = r.pick(["prod", "coc", "suma2"]);
+      const f = { prod: (a, b) => a * b, coc: (a, b) => a / b, suma2: (a, b) => a * a + 3 * b }[v], tex = { prod: "f = xy", coc: "f = x/y", suma2: "f = x^2 + 3y" }[v];
+      const fx = { prod: y, coc: 1 / y, suma2: 2 * x }[v], fy = { prod: x, coc: -x / (y * y), suma2: 3 }[v];
+      const sf = Math.sqrt(fx * fx * sx * sx + fy * fy * sy * sy + 2 * fx * fy * rho * sx * sy);
+      return {
+        prompt: `Se miden $x = ${nf(x, 2)} \\pm ${nf(sx, 2)}$ e $y = ${nf(y, 2)} \\pm ${nf(sy, 2)}$, con coeficiente de correlación $\\rho = ${nf(rho, 1)}$ entre los dos errores. ¿Cuánto vale la incerteza de $${tex}$?`,
+        answer: sf,
+        solution: [
+          `[[pe-propagacion|Propagación con covarianza]]: $\\sigma_f^2 \\approx f_x^2\\sigma_x^2 + f_y^2\\sigma_y^2 + 2f_xf_y\\,\\rho\\sigma_x\\sigma_y$, con las derivadas en el valor medido.`,
+          `$f_x = ${nf(fx)}$, $f_y = ${nf(fy)}$. ${rho === 0 ? "Sin correlación, el término cruzado no está." : `El término cruzado vale $${nf(2 * fx * fy * rho * sx * sy)}$.`}`,
+          `$\\sigma_f \\approx ${nf(sf)}$.`
+        ],
+        // verificación: derivadas por diferencias finitas y la forma cuadrática ∇fᵀ Σ ∇f con la matriz de covarianza
+        verify: { kind: "value", tol: 1e-6, fn: () => { const h = 1e-6, gx = (f(x + h, y) - f(x - h, y)) / (2 * h), gy = (f(x, y + h) - f(x, y - h)) / (2 * h), C = [[sx * sx, rho * sx * sy], [rho * sx * sy, sy * sy]];
+          return Math.sqrt(gx * (C[0][0] * gx + C[0][1] * gy) + gy * (C[1][0] * gx + C[1][1] * gy)); } }
+      };
+    }
+  };
+  T["pe-cambiovar-num"] = {
+    type: "numeric", concepts: ["pe-propagacion"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["cuad", "exp", "raiz"]);
+      if (v === "cuad") {
+        const a = r.int(1, 4) / 10, b = a + r.int(1, 4) / 10, fY = y => 1 / (2 * Math.sqrt(y)), P = Math.sqrt(b) - Math.sqrt(a);
+        return { prompt: `$X$ es uniforme en $(0, 1)$ e $Y = X^2$. Con la densidad de $Y$, calculá $P(${nf(a, 1)} < Y < ${nf(b, 1)})$.`, answer: P,
+          solution: [`[[pe-propagacion|Cambio de variables]]: con $y = x^2$ creciente en $(0, 1)$, $f_Y(y) = f_X(\\sqrt y)\\left|\\frac{d\\sqrt y}{dy}\\right| = \\frac{1}{2\\sqrt y}$ en $(0, 1)$.`, `$P = \\int_{${nf(a, 1)}}^{${nf(b, 1)}}\\frac{dy}{2\\sqrt y} = \\sqrt{${nf(b, 1)}} - \\sqrt{${nf(a, 1)}} \\approx ${nf(P)}$.`],
+          // verificación: probabilidad directa sobre X, sin pasar por la densidad de Y
+          verify: { kind: "value", fn: () => { let c = 0; const n = 200000; for (let i = 0; i < n; i++) { const xx = (i + 0.5) / n, yy = xx * xx; if (yy > a && yy < b) c++; } return c / n; }, tol: 1e-4 } };
+      }
+      if (v === "exp") {
+        const lam = r.int(1, 4), y0 = r.int(2, 6) / 10, fy = lam * Math.pow(y0, lam - 1);
+        return { prompt: `$X$ es exponencial de parámetro $1$ e $Y = e^{-X/${lam}}$, con valores en $(0, 1)$. ¿Cuánto vale la densidad $f_Y(${nf(y0, 1)})$?`, answer: fy,
+          solution: [`La inversa es $x = -${lam}\\ln y$, con $\\left|\\frac{dx}{dy}\\right| = \\frac{${lam}}{y}$. Entonces $f_Y(y) = e^{${lam}\\ln y}\\cdot\\frac{${lam}}{y} = ${lam}y^{${lam - 1}}$ ([[pe-propagacion|cambio de variables]]).`, `$f_Y(${nf(y0, 1)}) \\approx ${nf(fy)}$.`],
+          // verificación: derivada numérica de la acumulada F_Y(y) = P(X ≥ −λ ln y), calculada sobre X
+          verify: { kind: "deriv", f: yy => Math.exp(lam * Math.log(yy)), x0: y0 } };
+      }
+      const s = r.int(1, 3), y0 = r.int(5, 20) / 10, fy = (2 * y0 / (s * s)) * Math.exp(-y0 * y0 / (s * s));
+      return { prompt: `$X$ es exponencial de media $${s * s}$ e $Y = \\sqrt X$. ¿Cuánto vale la densidad $f_Y(${nf(y0, 1)})$?`, answer: fy,
+        solution: [`Con $x = y^2$ y $\\frac{dx}{dy} = 2y$: $f_Y(y) = \\frac{1}{${s * s}}e^{-y^2/${s * s}}\\cdot2y$ para $y > 0$ ([[pe-propagacion|cambio de variables]]; es una distribución de Rayleigh).`, `$f_Y(${nf(y0, 1)}) \\approx ${nf(fy)}$.`],
+        // verificación: derivada numérica de F_Y(y) = P(X ≤ y²), con la acumulada de la exponencial
+        verify: { kind: "deriv", f: yy => 1 - Math.exp(-yy * yy / (s * s)), x0: y0 } };
+    }
+  };
+  T["pe-mediapond-num"] = {
+    type: "numeric", concepts: ["pe-ajuste-chi2"], difficulty: 2,
+    generate(r) {
+      const n = r.int(2, 4), xs = Array.from({ length: n }, () => r.int(90, 110) / 10), ss = Array.from({ length: n }, () => r.int(1, 6) / 10), ask = r.pick(["media", "sigma"]);
+      const w = ss.map(s => 1 / (s * s)), W = w.reduce((a, b) => a + b, 0), m = xs.reduce((a, x, i) => a + w[i] * x, 0) / W, sm = 1 / Math.sqrt(W);
+      const chi2 = mu => xs.reduce((a, x, i) => a + ((x - mu) / ss[i]) ** 2, 0);
+      return {
+        prompt: `Se midió la misma magnitud ${n} veces, con distintos instrumentos: ${xs.map((x, i) => `$${nf(x, 1)} \\pm ${nf(ss[i], 1)}$`).join(", ")}. ¿Cuánto vale ${ask === "media" ? "el promedio ponderado" : "la incerteza del promedio ponderado"}?`,
+        answer: ask === "media" ? m : sm,
+        solution: [
+          `[[pe-ajuste-chi2|Promedio ponderado]]: minimizando $\\chi^2(\\mu) = \\sum\\frac{(x_i - \\mu)^2}{\\sigma_i^2}$ sale $\\bar x = \\frac{\\sum x_i/\\sigma_i^2}{\\sum 1/\\sigma_i^2}$: cada medición pesa como $\\frac{1}{\\sigma_i^2}$.`,
+          `$\\sum\\frac{1}{\\sigma_i^2} = ${nf(W, 3)}$, $\\bar x \\approx ${nf(m)}$ y $\\sigma_{\\bar x} = \\frac{1}{\\sqrt{\\sum 1/\\sigma_i^2}} \\approx ${nf(sm)}$, menor que la mejor de las incertezas.`
+        ],
+        // verificación: mínimo de χ²(μ) por sección áurea y su ancho con Δχ² = 1
+        verify: ask === "media" ? { kind: "value", tol: 1e-7, fn: () => S.golden(chi2, 5, 15) }
+          : { kind: "zero", fn: s => [chi2(S.golden(chi2, 5, 15) + s) - chi2(S.golden(chi2, 5, 15)) - 1], tol: 1e-6 }
+      };
+    }
+  };
+  T["pe-ajuste-num"] = {
+    type: "numeric", concepts: ["pe-ajuste-chi2"], difficulty: 3,
+    generate(r) {
+      const k = r.int(2, 5), xs = [1, 2, 3, 4].slice(0, r.int(3, 4)), ss = xs.map(() => r.int(1, 4) / 10), ys = xs.map(x => Math.round((k * x + r.int(-3, 3) / 10) * 10) / 10), ask = r.pick(["a", "sa", "chi2"]);
+      const Sxx = xs.reduce((s, x, i) => s + x * x / ss[i] ** 2, 0), Sxy = xs.reduce((s, x, i) => s + x * ys[i] / ss[i] ** 2, 0), a = Sxy / Sxx, sa = 1 / Math.sqrt(Sxx);
+      const chi2 = aa => xs.reduce((s, x, i) => s + ((ys[i] - aa * x) / ss[i]) ** 2, 0);
+      return {
+        prompt: `Se ajustan los puntos ${xs.map((x, i) => `$(${x};\\ ${nf(ys[i], 1)} \\pm ${nf(ss[i], 1)})$`).join(", ")} con una recta por el origen, $y = ax$, por cuadrados mínimos ponderados. ¿Cuánto vale ${{ a: "$\\hat a$", sa: "la incerteza $\\sigma_{\\hat a}$", chi2: "el $\\chi^2$ del ajuste" }[ask]}?`,
+        answer: { a, sa, chi2: chi2(a) }[ask],
+        solution: [
+          `[[pe-ajuste-chi2|Ajuste por χ²]]: se minimiza $\\chi^2(a) = \\sum\\frac{(y_i - ax_i)^2}{\\sigma_i^2}$. Derivando e igualando a cero: $\\hat a = \\frac{\\sum x_iy_i/\\sigma_i^2}{\\sum x_i^2/\\sigma_i^2}$.`,
+          `$\\sum\\frac{x_i^2}{\\sigma_i^2} = ${nf(Sxx, 3)}$ y $\\sum\\frac{x_iy_i}{\\sigma_i^2} = ${nf(Sxy, 3)}$: $\\hat a \\approx ${nf(a)}$, con $\\sigma_{\\hat a} = \\frac{1}{\\sqrt{\\sum x_i^2/\\sigma_i^2}} \\approx ${nf(sa)}$.`,
+          ask === "chi2" ? `$\\chi^2_{min} \\approx ${nf(chi2(a), 3)}$ con $\\nu = ${xs.length - 1}$ grados de libertad (puntos menos parámetros): ${chi2(a) / (xs.length - 1) < 2 ? "es compatible con un buen ajuste" : "es alto: las incertezas parecen subestimadas o el modelo no anda"}.` : `La incerteza también sale de $\\chi^2(\\hat a \\pm \\sigma_{\\hat a}) = \\chi^2_{min} + 1$.`
+        ],
+        // verificación: minimización numérica de χ²(a) y criterio Δχ² = 1 para la incerteza
+        verify: ask === "sa" ? { kind: "zero", fn: s => [chi2(S.golden(chi2, 0, 10) + s) - chi2(S.golden(chi2, 0, 10)) - 1], tol: 1e-6 }
+          : { kind: "value", tol: 1e-7, fn: () => { const am = S.golden(chi2, 0, 10); return ask === "a" ? am : chi2(am); } }
+      };
+    }
+  };
+  T["pe-poisson-sup-num"] = {
+    type: "numeric", concepts: ["pe-poisson-limites"], difficulty: 3,
+    generate(r) {
+      const n = r.int(0, 5), cl = r.pick([0.9, 0.95]);
+      // límite superior: P(N ≤ n | μ) = 1 − CL, por bisección sobre la suma de la Poisson
+      const cdf = mu => { let s = 0; for (let k = 0; k <= n; k++) s += S.poispmf(k, mu); return s; };
+      let lo = 0, hi = 50; for (let i = 0; i < 200; i++) { const m = (lo + hi) / 2; if (cdf(m) > 1 - cl) lo = m; else hi = m; }
+      const up = (lo + hi) / 2;
+      return {
+        prompt: `Un experimento de conteo sin fondo observa $${n}$ evento${n === 1 ? "" : "s"}. ¿Cuál es el límite superior frecuentista al $${Math.round(cl * 100)}\\,\\%$ de confianza para la media $\\mu$ de la Poisson?`,
+        answer: up,
+        solution: [
+          `[[pe-poisson-limites|Límite superior de Poisson]]: es el $\\mu_{sup}$ para el que observar $${n}$ o menos sería tan raro como $1 - \\text{CL}$: $\\sum_{k=0}^{${n}}\\frac{\\mu^ke^{-\\mu}}{k!} = ${nf(1 - cl, 2)}$.`,
+          n === 0 ? `Con cero eventos: $e^{-\\mu} = ${nf(1 - cl, 2)} \\Rightarrow \\mu_{sup} = -\\ln ${nf(1 - cl, 2)} \\approx ${nf(up, 3)}$.` : `Resolviendo numéricamente: $\\mu_{sup} \\approx ${nf(up, 3)}$.`,
+          `Se informa "$\\mu < ${nf(up, 2)}$ al $${Math.round(cl * 100)}\\,\\%$".`
+        ],
+        // verificación: la acumulada de la Poisson se escribe con la gamma incompleta, P(N ≤ n | μ) = 1 − P(n + 1, μ)
+        verify: { kind: "zero", fn: mu => [1 - S.gammaP(n + 1, mu) - (1 - cl)], tol: 1e-8 }
+      };
+    }
+  };
+  T["pe-chi2-vf"] = {
+    type: "tf", concepts: ["pe-ajuste-chi2"], difficulty: 2,
+    generate(r) {
+      const nu = r.int(3, 15), ratio = r.pick([0.3, 0.8, 1, 1.2, 2, 2.5, 3]), chi2 = Math.round(nu * ratio * 10) / 10, p = 1 - S.chi2cdf(chi2, nu), q = r.pick(["acepta", "sospecha"]);
+      if (Math.abs(p - 0.05) < 0.01 || Math.abs(p - 0.95) < 0.01) return null;
+      const truth = q === "acepta" ? p > 0.05 : p > 0.95;
+      return {
+        prompt: `Un ajuste con $\\nu = ${nu}$ grados de libertad da $\\chi^2_{min} = ${nf(chi2, 1)}$. <b>Verdadero o falso:</b> ${q === "acepta" ? "el modelo es compatible con los datos al 5 % (el valor p es mayor que 0,05)" : "el $\\chi^2$ es sospechosamente bajo (valor p mayor que 0,95), como si las incertezas estuvieran sobreestimadas"}.`,
+        answer: truth,
+        explanation: `Si el modelo es correcto y las incertezas son gaussianas, $\\chi^2_{min}$ sigue una [[pe-chi-cuadrado|distribución χ²]] con $\\nu$ grados de libertad, con media $\\nu$. El valor p es $P(\\chi^2_{${nu}} > ${nf(chi2, 1)}) \\approx ${nf(p, 3)}$ ([[pe-ajuste-chi2]]).`,
+        solution: [`Regla práctica: $\\chi^2/\\nu \\approx 1$ es un buen ajuste; mucho mayor indica un modelo malo o errores subestimados; mucho menor, errores sobreestimados.`],
+        // verificación: valor p integrando la densidad χ² (sin la gamma incompleta)
+        verify: { kind: "truth", fn: () => { const pp = 1 - S.chi2cdfNum(chi2, nu); return q === "acepta" ? pp > 0.05 : pp > 0.95; } }
+      };
+    }
+  };
+
+  const cards = {
+    "pe-propagacion": {
+      title: "Propagación de errores con covarianza y cambio de variables", aliases: ["propagación con covarianza", "matriz de covarianza", "cambio de variables en densidades", "densidad de una función de una variable aleatoria"], concepts: ["pe-propagacion"],
+      summary: "σ_f² ≈ ∇fᵀ Σ ∇f = f_x²σ_x² + f_y²σ_y² + 2f_xf_y cov(x, y). Si Y = g(X) con g monótona, f_Y(y) = f_X(g⁻¹(y))·|dg⁻¹/dy|.",
+      def: [R`La **matriz de covarianza** de $(X, Y)$ es $\Sigma = \begin{pmatrix}\sigma_x^2 & \rho\sigma_x\sigma_y\\ \rho\sigma_x\sigma_y & \sigma_y^2\end{pmatrix}$ (ver [[pe-conjuntas|distribuciones conjuntas]]).`,
+        R`**Propagación lineal:** para $f(X, Y)$ con errores chicos, $$\sigma_f^2 \approx f_x^2\sigma_x^2 + f_y^2\sigma_y^2 + 2f_xf_y\,\rho\sigma_x\sigma_y = \nabla f^T\Sigma\nabla f.$$ Sin correlación se recupera la fórmula de la [[f1-errores|propagación de errores]] de siempre.`,
+        R`**Cambio de variables:** si $Y = g(X)$ con $g$ monótona y derivable, $f_Y(y) = f_X(g^{-1}(y))\left|\frac{d}{dy}g^{-1}(y)\right|$.`],
+      idea: [R`La correlación puede agrandar o achicar la incerteza: si $x$ e $y$ suelen equivocarse para el mismo lado, en $x - y$ los errores se compensan. Ignorar la covarianza es uno de los errores más comunes al analizar datos.`],
+      demo: [R`**Paso 1 (linealizar).** Cerca del valor medio, $f(X, Y) \approx f(\mu) + f_x(X - \mu_x) + f_y(Y - \mu_y)$ (Taylor a primer orden).`,
+        R`**Paso 2 (varianza de una combinación lineal).** $Var(aU + bV) = a^2Var(U) + b^2Var(V) + 2ab\,Cov(U, V)$, desarrollando el cuadrado dentro de la esperanza. Con $a = f_x$, $b = f_y$ sale la fórmula.`,
+        R`**Paso 3 (cambio de variables).** Si $g$ es creciente, $F_Y(y) = P(g(X) \le y) = P(X \le g^{-1}(y)) = F_X(g^{-1}(y))$. Derivando con la regla de la cadena, $f_Y(y) = f_X(g^{-1}(y))\frac{d}{dy}g^{-1}(y)$; si $g$ es decreciente, sale lo mismo con un signo que se absorbe en el valor absoluto. $\blacksquare$`],
+      examples: [{ q: R`$x = 2 \pm 0{,}1$, $y = 3 \pm 0{,}2$, $\rho = 0{,}5$. ¿$\sigma$ de $xy$?`, steps: [R`$f_x = 3$, $f_y = 2$: $\sigma^2 = 0{,}09 + 0{,}16 + 2\cdot6\cdot0{,}5\cdot0{,}02 = 0{,}37$, $\sigma \approx 0{,}61$.`] }],
+      see: ["f1-errores", "pe-conjuntas", "pe-ajuste-chi2"]
+    },
+    "pe-ajuste-chi2": {
+      title: "Promedio ponderado y ajustes por χ²", aliases: ["promedio ponderado", "cuadrados mínimos ponderados", "ajuste por chi cuadrado", "chi cuadrado reducido", "grados de libertad del ajuste"], concepts: ["pe-ajuste-chi2"],
+      summary: "Con incertezas distintas, se minimiza χ² = Σ(yᵢ − modelo)²/σᵢ². Promedio ponderado: pesos 1/σᵢ². La incerteza de un parámetro sale de Δχ² = 1, y χ²_min/ν ≈ 1 indica un buen ajuste.",
+      def: [R`Si las mediciones $y_i$ tienen errores gaussianos independientes $\sigma_i$, la [[pe-max-verosimilitud|máxima verosimilitud]] equivale a minimizar $$\chi^2(\theta) = \sum_i\frac{(y_i - f(x_i; \theta))^2}{\sigma_i^2}.$$`,
+        R`**Promedio ponderado** (modelo constante): $\bar x = \frac{\sum x_i/\sigma_i^2}{\sum 1/\sigma_i^2}$, con $\sigma_{\bar x}^2 = \frac{1}{\sum 1/\sigma_i^2}$.`,
+        R`**Incerteza de un parámetro:** los valores con $\chi^2 \le \chi^2_{min} + 1$ forman el intervalo de $1\sigma$. **Bondad del ajuste:** si el modelo es correcto, $\chi^2_{min}$ sigue una χ² con $\nu = n - p$ grados de libertad (datos menos parámetros), y se espera $\chi^2_{min}/\nu \approx 1$.`],
+      idea: [R`Una medición con la mitad de error vale como cuatro mediciones comunes: por eso el peso va como $1/\sigma^2$, no como $1/\sigma$.`],
+      demo: [R`**Paso 1 (verosimilitud gaussiana).** Con errores gaussianos, $L(\theta) \propto \prod e^{-(y_i - f_i)^2/(2\sigma_i^2)}$, así que $-2\ln L = \chi^2 + $ constante: maximizar $L$ es minimizar $\chi^2$.`,
+        R`**Paso 2 (promedio).** Para $f = \mu$: $\frac{d\chi^2}{d\mu} = -2\sum\frac{x_i - \mu}{\sigma_i^2} = 0 \Rightarrow \mu = \frac{\sum x_i/\sigma_i^2}{\sum 1/\sigma_i^2}$.`,
+        R`**Paso 3 (su varianza).** $\bar x$ es una combinación lineal $\sum w_ix_i/W$ con $w_i = 1/\sigma_i^2$ y $W = \sum w_i$. Su varianza es $\sum\frac{w_i^2\sigma_i^2}{W^2} = \frac{\sum w_i}{W^2} = \frac1W$.`,
+        R`**Paso 4 (Δχ² = 1).** $\chi^2$ es una parábola en $\mu$: $\chi^2(\mu) = \chi^2_{min} + W(\mu - \bar x)^2$. Sube $1$ cuando $|\mu - \bar x| = \frac{1}{\sqrt W} = \sigma_{\bar x}$. $\blacksquare$`],
+      examples: [{ q: R`$10{,}0 \pm 0{,}1$ y $10{,}4 \pm 0{,}2$. ¿Promedio ponderado?`, steps: [R`Pesos $100$ y $25$: $\bar x = \frac{1000 + 260}{125} = 10{,}08$, $\sigma = \frac{1}{\sqrt{125}} \approx 0{,}089$.`] }],
+      see: ["pe-max-verosimilitud", "pe-chi-cuadrado", "pe-regresion", "pe-propagacion"]
+    },
+    "pe-poisson-limites": {
+      title: "Límites de confianza para conteos de Poisson", aliases: ["límite superior de Poisson", "límites de Poisson", "intervalo de Neyman", "cinturón de confianza"], concepts: ["pe-poisson-limites"],
+      summary: "Con n eventos observados, el límite superior al nivel CL es el μ con P(N ≤ n | μ) = 1 − CL. Con n = 0 y 90 %, μ < 2,30.",
+      def: [R`En un conteo, $N \sim$ [[pe-poisson|Poisson]]$(\mu)$. Si se observan $n$ eventos, el **límite superior** al nivel de confianza CL es el $\mu_{sup}$ que cumple $$P(N \le n\,|\,\mu_{sup}) = \sum_{k=0}^n\frac{\mu_{sup}^ke^{-\mu_{sup}}}{k!} = 1 - \text{CL}.$$`,
+        R`El **intervalo central** usa $P(N \ge n\,|\,\mu_{inf}) = \frac{1 - \text{CL}}{2}$ y $P(N \le n\,|\,\mu_{sup}) = \frac{1 - \text{CL}}{2}$. Es la **construcción de Neyman**: para cada $\mu$ se arma un intervalo de $N$ con probabilidad CL (el cinturón de confianza) y se invierte.`,
+        R`Con cero eventos: $\mu_{sup} = -\ln(1 - \text{CL})$, o sea $2{,}30$ al 90 % y $3{,}00$ al 95 %.`],
+      idea: [R`"No vi nada" no quiere decir $\mu = 0$: quiere decir que $\mu$ es chico. El límite superior dice qué tan grande podría ser $\mu$ sin que fuera muy raro no haber visto nada. Así se informan las búsquedas de partículas que no aparecen.`],
+      demo: [R`**Paso 1 (qué garantiza).** Fijemos el $\mu$ verdadero. El intervalo $[0, \mu_{sup}(n)]$ deja afuera a $\mu$ solo si $\mu_{sup}(n) < \mu$.`,
+        R`**Paso 2 (monotonía).** $P(N \le n\,|\,\mu)$ decrece con $\mu$. Entonces $\mu_{sup}(n) < \mu$ pasa exactamente cuando $P(N \le n\,|\,\mu) < 1 - \text{CL}$, o sea cuando $n$ es de los valores "demasiado chicos" para ese $\mu$.`,
+        R`**Paso 3 (probabilidad).** La probabilidad de caer en esos valores chicos es, como mucho, $1 - \text{CL}$ (por ser una distribución discreta, puede ser menor). Así, el intervalo contiene al $\mu$ verdadero con probabilidad al menos CL. $\blacksquare$`],
+      examples: [{ q: R`Se observan 0 eventos. ¿Límite superior al 95 %?`, steps: [R`$e^{-\mu} = 0{,}05 \Rightarrow \mu_{sup} = \ln 20 \approx 3{,}00$.`] }],
+      see: ["pe-poisson", "pe-ic-proporcion-varianza", "pe-bayes-conjugada"]
+    }
+  };
+
+  E.extendCourse("m105", {
+    concepts: { "pe-propagacion": { name: "Propagación y cambio de variables" }, "pe-ajuste-chi2": { name: "Ajustes por χ²" }, "pe-poisson-limites": { name: "Límites de Poisson" } },
+    templates: T,
+    units: [{
+      id: "pe-experimental-u", order: 9, program: "Extra UBA", title: "Estadística para la física experimental", icon: "target",
+      diagnostic: ["pe-propag-num", "pe-mediapond-num", "pe-poisson-sup-num"],
+      lessons: [
+        { id: "pe-propagacion", title: "Propagación y cambio de variables", templates: ["pe-propag-num", "pe-cambiovar-num"], theory: ["pe-propagacion"],
+          intro: R`$\sigma_f^2 \approx \nabla f^T\Sigma\nabla f$. Si $Y = g(X)$: $f_Y(y) = f_X(g^{-1}(y))\left|\frac{dg^{-1}}{dy}\right|$.` },
+        { id: "pe-ajuste-chi2", title: "Promedios y ajustes por χ²", templates: ["pe-mediapond-num", "pe-ajuste-num", "pe-chi2-vf"], theory: ["pe-ajuste-chi2"],
+          intro: R`Pesos $1/\sigma_i^2$. Incerteza: $\Delta\chi^2 = 1$. Buen ajuste: $\chi^2_{min}/\nu \approx 1$.` },
+        { id: "pe-poisson-limites", title: "Límites de Poisson", templates: ["pe-poisson-sup-num"], theory: ["pe-poisson-limites"],
+          intro: R`$P(N \le n\,|\,\mu_{sup}) = 1 - \text{CL}$. Con $n = 0$ y 90 %: $\mu < 2{,}30$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  EXTRA UBA · INFERENCIA BAYESIANA, MONTE CARLO Y CRAMÉR-RAO
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, S = E.pye, nf = S.nf;
+  const T = {};
+  // posterior numérico en una grilla: prior(θ)·verosimilitud(θ), normalizado con Simpson
+  const postMoment = (prior, like, a, b, k) => { const g = t => prior(t) * like(t), Z = S.simpson(g, a, b, 40000); return S.simpson(t => t ** k * g(t), a, b, 40000) / Z; };
+
+  T["pe-betabin-num"] = {
+    type: "numeric", concepts: ["pe-bayes-conjugada"], difficulty: 2,
+    generate(r) {
+      const a = r.int(1, 5), b = r.int(1, 5), n = r.int(5, 30), k = r.int(0, n), ask = r.pick(["media", "moda"]);
+      const A = a + k, B = b + n - k, mean = A / (A + B), mode = (A - 1) / (A + B - 2);
+      if (ask === "moda" && (A <= 1 || B <= 1)) return null;
+      return {
+        prompt: `Para la eficiencia $p$ de un detector se usa un prior $\\text{Beta}(${a}, ${b})$. De $${n}$ partículas que lo atraviesan, detecta $${k}$. ¿Cuánto vale ${ask === "media" ? "la media" : "la moda"} del posterior?`,
+        answer: ask === "media" ? mean : mode,
+        solution: [
+          `[[pe-bayes-conjugada|Prior conjugado]]: la verosimilitud binomial es $p^k(1 - p)^{n-k}$ y el prior $\\text{Beta}(a, b) \\propto p^{a-1}(1 - p)^{b-1}$. El producto es otra beta: el posterior es $\\text{Beta}(a + k, b + n - k) = \\text{Beta}(${A}, ${B})$.`,
+          ask === "media" ? `Media: $\\frac{${A}}{${A} + ${B}} \\approx ${nf(mean)}$, entre la del prior ($${nf(a / (a + b), 3)}$) y la frecuencia observada ($${nf(k / n, 3)}$).` : `Moda: $\\frac{${A} - 1}{${A} + ${B} - 2} \\approx ${nf(mode)}$.`
+        ],
+        // verificación: posterior armado numéricamente en una grilla (media por Simpson, moda por sección áurea)
+        verify: { kind: "value", tol: 1e-6, fn: () => { const pr = t => t ** (a - 1) * (1 - t) ** (b - 1), lk = t => t ** k * (1 - t) ** (n - k);
+          return ask === "media" ? postMoment(pr, lk, 0, 1, 1) : S.golden(t => -pr(t) * lk(t), 1e-9, 1 - 1e-9); } }
+      };
+    }
+  };
+  T["pe-gammapois-num"] = {
+    testN: 120, // integración fina del posterior: menos instancias en los tests
+    type: "numeric", concepts: ["pe-bayes-conjugada"], difficulty: 2,
+    generate(r) {
+      const al = r.int(1, 6), be = r.int(1, 4), m = r.int(2, 5), counts = Array.from({ length: m }, () => r.int(0, 8)), ask = r.pick(["media", "var"]);
+      const A = al + counts.reduce((s, c) => s + c, 0), B = be + m, mean = A / B, v = A / (B * B);
+      return {
+        prompt: `Para la tasa $\\lambda$ (eventos por minuto) de una fuente se usa el prior $\\text{Gamma}(\\alpha = ${al}, \\beta = ${be})$, con densidad $\\propto\\lambda^{\\alpha-1}e^{-\\beta\\lambda}$. En ${m} minutos se cuentan ${counts.map(c => `$${c}$`).join(", ")} eventos. ¿Cuánto vale ${ask === "media" ? "la media" : "la varianza"} del posterior?`,
+        answer: ask === "media" ? mean : v,
+        solution: [
+          `La verosimilitud de Poisson es $\\prod\\lambda^{n_i}e^{-\\lambda} = \\lambda^{\\sum n_i}e^{-m\\lambda}$. Por ser [[pe-bayes-conjugada|conjugado]], el posterior es $\\text{Gamma}(\\alpha + \\sum n_i, \\beta + m) = \\text{Gamma}(${A}, ${B})$.`,
+          ask === "media" ? `Media: $\\frac{${A}}{${B}} \\approx ${nf(mean)}$ eventos por minuto.` : `Varianza: $\\frac{${A}}{${B}^2} \\approx ${nf(v)}$: se achica a medida que se cuentan más minutos.`
+        ],
+        // verificación: posterior numérico en una grilla de λ
+        verify: { kind: "value", tol: 1e-6, fn: () => { const pr = t => t ** (al - 1) * Math.exp(-be * t), lk = t => t ** (A - al) * Math.exp(-m * t), hi = 60;
+          const m1 = postMoment(pr, lk, 0, hi, 1); return ask === "media" ? m1 : postMoment(pr, lk, 0, hi, 2) - m1 * m1; } }
+      };
+    }
+  };
+  T["pe-conjugada-mc"] = {
+    type: "mc", concepts: ["pe-bayes-conjugada"], difficulty: 1,
+    generate(r) {
+      const a = r.int(1, 4), b = r.int(1, 4), n = r.int(4, 15), k = r.int(1, n - 1);
+      const opts = [[a + k, b + n - k], [a + n - k, b + k], [a + k, b + n], [k, n - k], [a + k - 1, b + n - k - 1], [a + k + 1, b + n - k + 1]];
+      const tex = ([p, q]) => `\\text{Beta}(${p}, ${q})`, correct = tex(opts[0]), seen = new Set([correct]);
+      const ds = opts.slice(1).map(tex).filter(t => !seen.has(t) && seen.add(t));
+      return {
+        prompt: `Con un prior $\\text{Beta}(${a}, ${b})$ para una probabilidad $p$, se observan $${k}$ éxitos en $${n}$ intentos independientes. ¿Cuál es el posterior?`,
+        ...H.mc(r, correct, ds),
+        solution: [`Posterior $\\propto$ prior $\\times$ verosimilitud $= p^{${a}-1}(1 - p)^{${b}-1}\\cdot p^{${k}}(1 - p)^{${n - k}} = p^{${a + k}-1}(1 - p)^{${b + n - k}-1}$: es una $${correct}$ ([[pe-bayes-conjugada]]).`,
+          `Los éxitos se suman al primer parámetro y los fracasos al segundo: el prior funciona como si ya se hubieran visto $${a - 1}$ éxitos y $${b - 1}$ fracasos.`],
+        // verificación: la densidad posterior armada en una grilla coincide con la Beta correcta y no con las otras
+        verify: { kind: "truth", target: true, fn: () => { const post = t => t ** (a - 1) * (1 - t) ** (b - 1) * t ** k * (1 - t) ** (n - k), Z = S.simpson(post, 0, 1, 4000);
+          const dens = ([p, q]) => t => Math.exp((p - 1) * Math.log(t) + (q - 1) * Math.log(1 - t) + S.lgamma(p + q) - S.lgamma(p) - S.lgamma(q));
+          const dist = pq => [0.2, 0.4, 0.5, 0.6, 0.8].reduce((s, t) => s + Math.abs(post(t) / Z - dens(pq)(t)), 0);
+          return dist(opts[0]) < 1e-6 && opts.slice(1).filter(o => tex(o) !== correct).every(o => o[0] < 1 || o[1] < 1 || dist(o) > 1e-3); } }
+      };
+    }
+  };
+  T["pe-inversa-num"] = {
+    type: "numeric", concepts: ["pe-montecarlo"], difficulty: 2,
+    generate(r) {
+      const v = r.pick(["exp", "pot", "tri"]), u = r.int(5, 95) / 100;
+      let tex, x, F;
+      if (v === "exp") { const lam = r.int(1, 5) / 2; tex = `f(x) = ${nf(lam, 1)}e^{-${nf(lam, 1)}x}$ para $x \\ge 0`; x = -Math.log(1 - u) / lam; F = t => S.simpson(s => lam * Math.exp(-lam * s), 0, t, 2000); }
+      else if (v === "pot") { const k = r.int(1, 4); tex = `f(x) = ${k + 1}x^{${k}}$ en $[0, 1]`; x = Math.pow(u, 1 / (k + 1)); F = t => S.simpson(s => (k + 1) * s ** k, 0, t, 2000); }
+      else { const a = r.int(1, 4); tex = `f(x) = \\frac{2x}{${a * a}}$ en $[0, ${a}]`; x = a * Math.sqrt(u); F = t => S.simpson(s => 2 * s / (a * a), 0, t, 2000); }
+      return {
+        prompt: `Para simular una variable con densidad $${tex}$ por el método de la transformada inversa, se sortea $u$ uniforme en $(0, 1)$ y se toma $x = F^{-1}(u)$. ¿Qué $x$ corresponde a $u = ${nf(u, 2)}$?`,
+        answer: x,
+        solution: [
+          `[[pe-montecarlo|Transformada inversa]]: si $U$ es uniforme, $X = F^{-1}(U)$ tiene acumulada $F$. Hay que integrar la densidad para tener $F$ y despejar.`,
+          v === "exp" ? `$F(x) = 1 - e^{-\\lambda x}$, así que $x = -\\frac{\\ln(1 - u)}{\\lambda} \\approx ${nf(x)}$.` : v === "pot" ? `$F(x) = x^{k+1}$, así que $x = u^{1/(k+1)} \\approx ${nf(x)}$.` : `$F(x) = \\frac{x^2}{a^2}$, así que $x = a\\sqrt u \\approx ${nf(x)}$.`
+        ],
+        // verificación: la acumulada en x, integrando la densidad por Simpson, tiene que dar u
+        verify: { kind: "zero", fn: xx => [F(xx) - u], tol: 1e-8 }
+      };
+    }
+  };
+  const INTS = [
+    { tex: "x^2", f: x => x * x }, { tex: "\\sqrt x", f: x => Math.sqrt(x) }, { tex: "e^x", f: x => Math.exp(x) }, { tex: "\\sin(\\pi x)", f: x => Math.sin(Math.PI * x) }, { tex: "x^3", f: x => x ** 3 }
+  ];
+  T["pe-mcerror-num"] = {
+    type: "numeric", concepts: ["pe-montecarlo"], difficulty: 3,
+    generate(r) {
+      const I = r.pick(INTS), ask = r.pick(["err", "N"]);
+      // E[f] y E[f²] para U uniforme en (0, 1), analíticos
+      const m1 = { "x^2": 1 / 3, "\\sqrt x": 2 / 3, "e^x": Math.E - 1, "\\sin(\\pi x)": 2 / Math.PI, "x^3": 1 / 4 }[I.tex], m2 = { "x^2": 1 / 5, "\\sqrt x": 1 / 2, "e^x": (Math.E ** 2 - 1) / 2, "\\sin(\\pi x)": 1 / 2, "x^3": 1 / 7 }[I.tex];
+      const sd = Math.sqrt(m2 - m1 * m1);
+      if (ask === "err") {
+        const N = r.pick([100, 400, 1000, 2500, 10000]), err = sd / Math.sqrt(N);
+        return { prompt: `Se estima $\\int_0^1 ${I.tex}\\,dx$ por Monte Carlo, promediando $f(U)$ sobre $N = ${N}$ números uniformes. ¿Cuál es el error estándar del estimador?`, answer: err,
+          solution: [`[[pe-montecarlo|Integración Monte Carlo]]: $\\hat I = \\frac1N\\sum f(U_i)$ tiene varianza $\\frac{Var(f(U))}{N}$, con $Var(f(U)) = E[f^2] - E[f]^2 = ${nf(m2)} - ${nf(m1)}^2 \\approx ${nf(sd * sd)}$.`, `Error estándar: $\\frac{${nf(sd)}}{\\sqrt{${N}}} \\approx ${nf(err)}$. Baja como $\\frac{1}{\\sqrt N}$: para un decimal más hacen falta 100 veces más puntos.`],
+          // verificación: E[f] y E[f²] por Simpson
+          verify: { kind: "value", tol: 1e-7, fn: () => { const a = S.simpson(t => I.f(t * t) * 2 * t, 0, 1, 4000), b = S.simpson(t => I.f(t * t) ** 2 * 2 * t, 0, 1, 4000); return Math.sqrt((b - a * a) / N); } } };
+      }
+      const eps = r.pick([0.01, 0.005, 0.002, 0.001]), N = (sd / eps) ** 2;
+      return { prompt: `Se estima $\\int_0^1 ${I.tex}\\,dx$ por Monte Carlo con números uniformes. ¿Cuántos puntos hacen falta para que el error estándar sea $${nf(eps, 3)}$? (respondé el número sin redondear)`, answer: N,
+        solution: [`El error estándar es $\\frac{\\sigma_f}{\\sqrt N}$ con $\\sigma_f = \\sqrt{E[f^2] - E[f]^2} \\approx ${nf(sd)}$ ([[pe-montecarlo]]).`, `$N = \\left(\\frac{\\sigma_f}{\\varepsilon}\\right)^2 \\approx ${nf(N, 0)}$.`],
+        verify: { kind: "zero", fn: x => { const a = S.simpson(t => I.f(t * t) * 2 * t, 0, 1, 4000), b = S.simpson(t => I.f(t * t) ** 2 * 2 * t, 0, 1, 4000); return [Math.sqrt((b - a * a) / x) / eps - 1]; }, tol: 1e-7 } };
+    }
+  };
+  const CR = [
+    { id: "exp", txt: (n, th) => `$${n}$ tiempos de vida de una exponencial de media $\\tau = ${th}$ s`, th: r => r.int(1, 10), logf: (x, t) => -Math.log(t) - x / t, grid: t => [0, 60 * t], bound: (n, t) => t * t / n, f: "\\frac{\\tau^2}{n}" },
+    { id: "pois", txt: (n, th) => `$${n}$ conteos de una Poisson de media $\\mu = ${th}$`, th: r => r.int(2, 15), logf: (k, m) => k * Math.log(m) - m - S.lgamma(k + 1), disc: true, bound: (n, m) => m / n, f: "\\frac{\\mu}{n}" },
+    { id: "norm", txt: (n, th) => `$${n}$ mediciones gaussianas de media $\\mu$ desconocida y $\\sigma = ${th}$ conocida`, th: r => r.int(1, 5), logf: null, bound: (n, s) => s * s / n, f: "\\frac{\\sigma^2}{n}" },
+    { id: "bern", txt: (n, th) => `$${n}$ ensayos de Bernoulli con $p = ${nf(th / 10, 1)}$`, th: r => r.int(1, 9), logf: (k, p) => k * Math.log(p) + (1 - k) * Math.log(1 - p), disc2: true, bound: (n, t) => (t / 10) * (1 - t / 10) / n, f: "\\frac{p(1 - p)}{n}" }
+  ];
+  T["pe-cramer-num"] = {
+    type: "numeric", concepts: ["pe-cramer-rao"], difficulty: 3,
+    generate(r) {
+      const C = r.pick(CR), n = r.pick([10, 20, 25, 50, 100]), th = C.th(r), b = C.bound(n, th);
+      return {
+        prompt: `Con ${C.txt(n, th)}, ¿cuál es la mínima desviación estándar posible de un estimador insesgado del parámetro (cota de Cramér-Rao)?`,
+        answer: Math.sqrt(b),
+        solution: [
+          `[[pe-cramer-rao|Cramér-Rao]]: $Var(\\hat\\theta) \\ge \\frac{1}{nI(\\theta)}$, con la información de Fisher $I(\\theta) = E\\left[\\left(\\frac{\\partial\\ln f}{\\partial\\theta}\\right)^2\\right]$.`,
+          `Acá la cota es $${C.f} = ${nf(b, 5)}$, así que $\\sigma \\ge ${nf(Math.sqrt(b))}$. La alcanza el estimador de máxima verosimilitud (el promedio), que es eficiente.`
+        ],
+        // verificación: información de Fisher calculada numéricamente (derivada del log de la densidad y esperanza por suma o Simpson)
+        verify: { kind: "value", tol: 1e-5, fn: () => {
+          if (C.id === "norm") { const s = th, lf = (x, m) => -((x - m) ** 2) / (2 * s * s); const sc = x => (lf(x, 1e-5) - lf(x, -1e-5)) / 2e-5; return 1 / Math.sqrt(n * S.simpson(x => sc(x) ** 2 * Math.exp(-x * x / (2 * s * s)) / (s * Math.sqrt(2 * Math.PI)), -12 * s, 12 * s, 6000)); }
+          const t = C.id === "bern" ? th / 10 : th, h = 1e-6 * t, sc = x => (C.logf(x, t + h) - C.logf(x, t - h)) / (2 * h); let I;
+          if (C.id === "pois") { I = 0; for (let k = 0; k < 200; k++) I += sc(k) ** 2 * S.poispmf(k, t); }
+          else if (C.id === "bern") I = sc(1) ** 2 * t + sc(0) ** 2 * (1 - t);
+          else { const [a, bb] = C.grid(t); I = S.simpson(x => sc(x) ** 2 * Math.exp(-x / t) / t, a, bb, 8000); }
+          return 1 / Math.sqrt(n * I); } }
+      };
+    }
+  };
+
+  const cards = {
+    "pe-bayes-conjugada": {
+      title: "Inferencia bayesiana y priors conjugados", aliases: ["inferencia bayesiana", "prior conjugado", "priors conjugados", "distribución a priori", "distribución a posteriori", "intervalo de credibilidad"], concepts: ["pe-bayes-conjugada"],
+      summary: "Posterior ∝ prior × verosimilitud. Con priors conjugados el posterior es de la misma familia: Beta + binomial → Beta(a + k, b + n − k); Gamma + Poisson → Gamma(α + Σn, β + m).",
+      def: [R`En el enfoque bayesiano, el parámetro $\theta$ tiene una distribución que expresa lo que sabemos. Por el [[pe-bayes|teorema de Bayes]], $$\pi(\theta\,|\,\text{datos}) \propto L(\text{datos}\,|\,\theta)\,\pi(\theta):$$ el **posterior** es el **prior** multiplicado por la verosimilitud, y normalizado.`,
+        R`Un prior es **conjugado** si el posterior queda en la misma familia. **Beta-binomial:** prior $\text{Beta}(a, b)$, $k$ éxitos en $n$: posterior $\text{Beta}(a + k, b + n - k)$, con media $\frac{a + k}{a + b + n}$. **Gamma-Poisson:** prior $\text{Gamma}(\alpha, \beta)$, conteos $n_1, \dots, n_m$: posterior $\text{Gamma}(\alpha + \sum n_i, \beta + m)$, con media $\frac{\alpha + \sum n_i}{\beta + m}$.`,
+        R`Se informa un estimador (la media o la moda del posterior) y un **intervalo de credibilidad**: un intervalo con probabilidad posterior CL.`],
+      idea: [R`El prior funciona como datos ficticios previos: $\text{Beta}(a, b)$ es como haber visto $a - 1$ éxitos y $b - 1$ fracasos. Con muchos datos reales el prior casi no importa, y el resultado se parece al frecuentista.`,
+        R`El intervalo bayesiano dice "con probabilidad 90 %, $\theta$ está acá" (dado lo que sé); el frecuentista dice "este procedimiento acierta el 90 % de las veces". Suenan parecidos, pero responden preguntas distintas.`],
+      demo: [R`**Paso 1 (multiplicar).** Con prior $\pi(p) \propto p^{a-1}(1 - p)^{b-1}$ y verosimilitud binomial $L \propto p^k(1 - p)^{n-k}$ (el coeficiente binomial no depende de $p$ y se va al normalizar), el producto es $p^{a+k-1}(1 - p)^{b+n-k-1}$.`,
+        R`**Paso 2 (reconocer).** Esa es, salvo la constante, la densidad $\text{Beta}(a + k, b + n - k)$. Como el posterior tiene que integrar $1$, la constante queda determinada.`,
+        R`**Paso 3 (Gamma-Poisson).** Igual: $\lambda^{\alpha-1}e^{-\beta\lambda}\cdot\prod\lambda^{n_i}e^{-\lambda} = \lambda^{\alpha + \sum n_i - 1}e^{-(\beta + m)\lambda}$, una $\text{Gamma}(\alpha + \sum n_i, \beta + m)$. $\blacksquare$`],
+      examples: [{ q: R`Prior uniforme ($\text{Beta}(1, 1)$), 3 éxitos en 10. ¿Media del posterior?`, steps: [R`Posterior $\text{Beta}(4, 8)$: media $\frac{4}{12} \approx 0{,}33$ (la frecuencia es $0{,}3$).`] }],
+      see: ["pe-bayes", "pe-max-verosimilitud", "pe-poisson-limites"]
+    },
+    "pe-montecarlo": {
+      title: "Métodos de Monte Carlo", aliases: ["Monte Carlo", "método de Monte Carlo", "transformada inversa", "método de la transformada inversa", "aceptación y rechazo", "integración Monte Carlo"], concepts: ["pe-montecarlo"],
+      summary: "Se simulan variables con X = F⁻¹(U) (U uniforme) o por aceptación y rechazo. Una integral se estima promediando f en puntos al azar, con error σ_f/√N.",
+      def: [R`**Transformada inversa:** si $U$ es uniforme en $(0, 1)$ y $F$ es una acumulada continua y creciente, $X = F^{-1}(U)$ tiene acumulada $F$.`,
+        R`**Aceptación y rechazo:** para una densidad $f \le M$ en $[a, b]$, se sortean $x$ uniforme en $[a, b]$ e $y$ uniforme en $[0, M]$, y se acepta $x$ si $y < f(x)$. Los $x$ aceptados tienen densidad $f$.`,
+        R`**Integración:** $\int_0^1f(x)\,dx = E[f(U)] \approx \frac1N\sum f(U_i)$, con error estándar $\frac{\sigma_f}{\sqrt N}$ por el [[pe-tcl|teorema central del límite]].`],
+      idea: [R`El error $\frac{1}{\sqrt N}$ no depende de la dimensión: para integrales en muchas variables (física estadística, detectores de partículas) Monte Carlo le gana a cualquier grilla.`],
+      demo: [R`**Paso 1 (transformada inversa).** $P(X \le x) = P(F^{-1}(U) \le x) = P(U \le F(x))$, porque $F$ es creciente y se puede aplicar a los dos lados.`,
+        R`**Paso 2 (uniforme).** Para $U$ uniforme en $(0, 1)$, $P(U \le t) = t$. Con $t = F(x)$: $P(X \le x) = F(x)$, que es lo que queríamos.`,
+        R`**Paso 3 (error de la integral).** Los $f(U_i)$ son independientes, con media $I$ y varianza $\sigma_f^2$. Su promedio tiene media $I$ y varianza $\frac{\sigma_f^2}{N}$ (varianza de un promedio de independientes). $\blacksquare$`],
+      examples: [{ q: R`¿Cómo se simula una exponencial de parámetro 2 con un número uniforme?`, steps: [R`$F(x) = 1 - e^{-2x}$, así que $x = -\frac{\ln(1 - u)}{2}$.`] }],
+      see: ["pe-tcl", "pe-uniforme-exponencial"]
+    },
+    "pe-cramer-rao": {
+      title: "Información de Fisher y cota de Cramér-Rao", aliases: ["cota de Cramér-Rao", "Cramér-Rao", "información de Fisher", "estimador eficiente"], concepts: ["pe-cramer-rao"],
+      summary: "Ningún estimador insesgado tiene varianza menor que 1/(nI(θ)), con I(θ) = E[(∂ ln f/∂θ)²]. Si la alcanza, es eficiente.",
+      def: [R`La **información de Fisher** de una observación es $I(\theta) = E\left[\left(\frac{\partial}{\partial\theta}\ln f(X; \theta)\right)^2\right]$. Con $n$ observaciones independientes es $nI(\theta)$.`,
+        R`**Cota de Cramér-Rao:** todo [[pe-estimadores|estimador insesgado]] cumple $Var(\hat\theta) \ge \frac{1}{nI(\theta)}$. Si la alcanza, se dice **eficiente**.`,
+        R`**Ejemplos:** exponencial de media $\tau$: $\frac{\tau^2}{n}$; Poisson: $\frac{\mu}{n}$; normal con $\sigma$ conocida: $\frac{\sigma^2}{n}$; Bernoulli: $\frac{p(1 - p)}{n}$. En los cuatro, el promedio la alcanza.`],
+      idea: [R`La información mide cuánto cambia la verosimilitud al mover el parámetro: si la función es muy picuda, los datos "señalan" bien a $\theta$ y se puede estimar con precisión. Pone un límite a lo que cualquier análisis puede sacar de los datos.`],
+      demo: [R`**Paso 1 (el score tiene media cero).** Con $s = \frac{\partial\ln f}{\partial\theta} = \frac{f_\theta}{f}$: $E[s] = \int f_\theta\,dx = \frac{\partial}{\partial\theta}\int f\,dx = 0$, porque $\int f = 1$ para todo $\theta$.`,
+        R`**Paso 2 (covarianza con el estimador).** Si $E[\hat\theta] = \theta$, derivando $\int\hat\theta f\,dx = \theta$ respecto de $\theta$: $\int\hat\theta f_\theta\,dx = E[\hat\theta s] = 1$. Como $E[s] = 0$, eso es $Cov(\hat\theta, s) = 1$.`,
+        R`**Paso 3 (Cauchy-Schwarz).** $Cov(\hat\theta, s)^2 \le Var(\hat\theta)Var(s)$, o sea $1 \le Var(\hat\theta)\,I(\theta)$ (para una observación; con $n$, la información se suma). $\blacksquare$`],
+      examples: [{ q: R`Poisson de media 4, 25 conteos. ¿Mínima desviación de un estimador insesgado?`, steps: [R`$\sqrt{\mu/n} = \sqrt{4/25} = 0{,}4$.`] }],
+      see: ["pe-estimadores", "pe-max-verosimilitud"]
+    }
+  };
+
+  E.extendCourse("m105", {
+    concepts: { "pe-bayes-conjugada": { name: "Inferencia bayesiana" }, "pe-montecarlo": { name: "Monte Carlo" }, "pe-cramer-rao": { name: "Cramér-Rao" } },
+    templates: T,
+    units: [{
+      id: "pe-bayes-mc-u", order: 10, program: "Extra UBA", title: "Bayes, Monte Carlo y Cramér-Rao", icon: "sparkles",
+      diagnostic: ["pe-betabin-num", "pe-inversa-num", "pe-cramer-num"],
+      lessons: [
+        { id: "pe-bayes-conjugada", title: "Inferencia bayesiana", templates: ["pe-conjugada-mc", "pe-betabin-num", "pe-gammapois-num"], theory: ["pe-bayes-conjugada"],
+          intro: R`Posterior $\propto$ verosimilitud $\times$ prior. Beta + binomial: $\text{Beta}(a + k, b + n - k)$. Gamma + Poisson: $\text{Gamma}(\alpha + \sum n_i, \beta + m)$.` },
+        { id: "pe-montecarlo-cr", title: "Monte Carlo y Cramér-Rao", templates: ["pe-inversa-num", "pe-mcerror-num", "pe-cramer-num"], theory: ["pe-montecarlo", "pe-cramer-rao"],
+          intro: R`$X = F^{-1}(U)$. Error de Monte Carlo: $\sigma_f/\sqrt N$. Cramér-Rao: $Var(\hat\theta) \ge \frac{1}{nI(\theta)}$.` }
       ]
     }],
     cards
