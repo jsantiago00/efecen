@@ -394,6 +394,8 @@ Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 
+**Otras orientaciones (26/10, pedido del usuario).** [docs/orientaciones.md](docs/orientaciones.md) compara Física, Matemática, Química y Biología: materias, horas y temarios, con los programas 2024-2026. Es para elegir qué cursar; por ahora no se suma contenido a la app. Las carpetas de programas son públicas: se listan con `https://drive.google.com/embeddedfolderview?id=<carpeta>` y se bajan con `https://drive.google.com/uc?export=download&id=<archivo>`.
+
 ## Fuentes de los temarios
 
 - **M101 Cálculo I:** programa oficial 2026 (prof. Romina Calvo), en la carpeta «Programas 2026, 2.º semestre» de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias).
