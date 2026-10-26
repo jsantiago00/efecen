@@ -901,6 +901,7 @@
           return {
             prompt: `Si $f(x) = \\sqrt{${U}}$, calculá $f'(${x0})$.`,
             answer: ans,
+            traps: [{ value: 1 / (2 * Math.sqrt(u0)), msg: "Te faltó multiplicar por la derivada de lo de adentro: $(\\sqrt u)' = \\dfrac{u'}{2\\sqrt u}$." }],
             solution: [
               `$(\\sqrt{u})' = \\dfrac{u'}{2\\sqrt{u}}$ con $u = ${U}$, $u' = ${2 * a}x$.`,
               `$f'(x) = \\dfrac{${2 * a}x}{2\\sqrt{${U}}} = \\dfrac{${a === 1 ? "" : a}x}{\\sqrt{${U}}}$`,
@@ -912,6 +913,7 @@
         return {
           prompt: `Si $f(x) = \\ln(${U})$, calculá $f'(${x0})$.`,
           answer: 2 * a * x0 / u0, answerTex: frac(2 * a * x0, u0),
+          traps: [{ value: 1 / u0, msg: "Te faltó multiplicar por la derivada de lo de adentro: $(\\ln u)' = \\dfrac{u'}{u}$." }],
           solution: [
             `$(\\ln u)' = \\dfrac{u'}{u}$ con $u = ${U}$, $u' = ${2 * a}x$.`,
             `$f'(${x0}) = \\dfrac{${2 * a}\\cdot ${par(x0)}}{${u0}} = ${frac(2 * a * x0, u0)}$`

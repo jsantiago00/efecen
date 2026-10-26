@@ -156,10 +156,13 @@
       const n = r.int(5, 9), a = dataset(r, n, 2, 25), ask = r.pick(["var", "sd", "cv", "rango"]), m = S.mean(a), v = S.var(a), sd = Math.sqrt(v);
       const ans = ask === "var" ? v : ask === "sd" ? sd : ask === "cv" ? 100 * sd / m : Math.max(...a) - Math.min(...a);
       const name = { var: "la varianza muestral $s^2$", sd: "el desvío estándar muestral $s$", cv: "el coeficiente de variación (en %)", rango: "el recorrido (máximo menos mínimo)" }[ask];
-      const ssq = a.reduce((s, x) => s + (x - m) ** 2, 0);
+      const ssq = a.reduce((s, x) => s + (x - m) ** 2, 0), vn = ssq / n;
+      // error típico: dividir por n (la varianza poblacional) en lugar de n − 1
+      const byN = { var: vn, sd: Math.sqrt(vn), cv: 100 * Math.sqrt(vn) / m }[ask];
       return {
         prompt: `Para los datos $${S.list(a)}$, calculá ${name}.`,
         answer: ans,
+        traps: byN && ssq > 0 ? [{ value: byN, msg: "Dividiste por $n$: la varianza muestral divide por $n - 1$, porque los desvíos se miden respecto de $\\bar x$, que sale de los mismos datos." }] : [],
         solution: ask === "rango" ? [`Recorrido: $${Math.max(...a)} - ${Math.min(...a)} = ${ans}$.`] : [
           `Media: $\\bar x = ${nf(m)}$. Suma de los cuadrados de los desvíos: $\\sum (x_i - \\bar x)^2 \\approx ${nf(ssq)}$.`,
           `[[pe-dispersion|Varianza muestral]]: $s^2 = \\frac{${nf(ssq)}}{${n} - 1} \\approx ${nf(v)}$${ask === "var" ? "" : `, y $s = \\sqrt{s^2} \\approx ${nf(sd)}$`}.`,

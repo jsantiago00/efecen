@@ -50,7 +50,10 @@
       const q = [r.nz(-9, 9), r.nz(-9, 9), r.nz(-9, 9)], d = r.int(10, 40), x3 = r.pick([-1, 1, 2]) === 1 ? d * r.pick([0.25, 0.5, 0.75]) : r.pick([-1, 2]) === -1 ? -r.int(5, 20) : d + r.int(5, 20);
       const xs = [0, d, x3].map(v => v / 100), Q = q.map(v => v * 1e-6);
       const Fx = [0, 1].reduce((s, i) => s + F.k * Q[2] * Q[i] * Math.sign(xs[2] - xs[i]) / (xs[2] - xs[i]) ** 2, 0);
+      // error típico: dividir por r en lugar de r²
+      const Fr = [0, 1].reduce((s, i) => s + F.k * Q[2] * Q[i] * Math.sign(xs[2] - xs[i]) / Math.abs(xs[2] - xs[i]), 0);
       return {
+        traps: Math.abs(Fr - Fx) > 0.02 * Math.abs(Fx) ? [{ value: Fr, msg: "La fuerza de Coulomb va con $1/r^2$: te faltó elevar la distancia al cuadrado." }] : [],
         prompt: `Sobre el eje $x$ hay tres cargas: $q_1 = ${F.uC(q[0])}$ en $x = 0$, $q_2 = ${F.uC(q[1])}$ en $x = ${d}$ cm y $q_3 = ${F.uC(q[2])}$ en $x = ${String(x3).replace(".", "{,}")}$ cm. ¿Cuál es la fuerza neta sobre $q_3$ (en N, positiva hacia $+x$)? ($${K}$)`,
         answer: Fx,
         solution: [`[[f2a-coulomb|Ley de Coulomb]]: cada carga ejerce $F = k\\frac{|q_iq_3|}{r^2}$, repulsiva si tienen el mismo signo. Por superposición se suman con su signo.`,
@@ -581,7 +584,10 @@
       if (cfg === "s-p") { const p = c[1] + c[2]; Ceq = c[0] * p / (c[0] + p); const Q = Ceq * V, Vp = Q / p; q = [Q, c[1] * Vp, c[2] * Vp]; v = [Q / c[0], Vp, Vp]; }
       else { const s = c[0] * c[1] / (c[0] + c[1]); Ceq = s + c[2]; const Qs = s * V; q = [Qs, Qs, c[2] * V]; v = [Qs / c[0], Qs / c[1], V]; }
       const ans = { Ceq, Q1: q[0], V2: v[1], Q3: q[2] }[ask];
+      // error típico: combinarlos como resistencias (en serie se suman, en paralelo, las inversas)
+      const asR = cfg === "s-p" ? c[0] + c[1] * c[2] / (c[1] + c[2]) : (c[0] + c[1]) * c[2] / (c[0] + c[1] + c[2]);
       return {
+        traps: ask === "Ceq" && Math.abs(asR - Ceq) > 0.02 * Ceq ? [{ value: asR, msg: "Los capacitores se combinan al revés que las resistencias: en paralelo se suman y en serie se suman las inversas." }] : [],
         prompt: `Tres capacitores, $C_1 = ${c[0]}$ μF, $C_2 = ${c[1]}$ μF y $C_3 = ${c[2]}$ μF, se conectan ${cfg === "s-p" ? "así: $C_2$ y $C_3$ en paralelo, y ese par en serie con $C_1$" : "así: $C_1$ y $C_2$ en serie, y ese par en paralelo con $C_3$"}. El conjunto se conecta a una batería de $${V}$ V. ${{ Ceq: "¿Cuál es la capacitancia equivalente (en μF)?", Q1: "¿Qué carga tiene $C_1$ (en μC)?", V2: "¿Qué diferencia de potencial hay en $C_2$ (en V)?", Q3: "¿Qué carga tiene $C_3$ (en μC)?" }[ask]}`,
         answer: ans,
         solution: [`En [[f2a-asociacion-capacitores|paralelo]] las capacitancias se suman; en serie se suman las inversas.`,
@@ -981,6 +987,7 @@
       return {
         prompt: `¿Cuál es la resistencia equivalente (en Ω) de este arreglo: ${desc}?`,
         answer: Req,
+        traps: [{ value: Rs.slice(0, cfg === "c" ? 4 : 3).reduce((s, x) => s + x, 0), msg: "Sumaste todas como si estuvieran en serie: en paralelo se suman las inversas, y el equivalente queda menor que cada una." }],
         solution: [`En [[f2a-resistores|serie]] se suman las resistencias; en paralelo, las inversas (para dos, $\\frac{R_aR_b}{R_a + R_b}$).`,
           { a: `$R_{23} = ${nf(par(b, c))}\\ \\Omega$ y $R_{eq} = R_1 + R_{23} \\approx ${nf(Req)}\\ \\Omega$.`, b: `$R_{12} = ${a + b}\\ \\Omega$ y $R_{eq} = \\frac{${a + b}\\cdot${c}}{${a + b + c}} \\approx ${nf(Req)}\\ \\Omega$.`, c: `$R_{12} = ${nf(par(a, b))}\\ \\Omega$, $R_{34} = ${nf(par(c, d))}\\ \\Omega$ y $R_{eq} \\approx ${nf(Req)}\\ \\Omega$.` }[cfg]],
         // otro camino: análisis nodal con 1 V aplicado; R = V/I

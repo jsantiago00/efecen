@@ -956,6 +956,8 @@
       return {
         prompt: `${desc} tiene un objeto a $${dobj}$ cm. ¿Cuál es ${ask === "di" ? "la distancia de la imagen (cm, positiva si es real)" : "el aumento lateral"}?`,
         answer: ask === "di" ? di : mag,
+        // error típico al despejar: sumar 1/f y 1/d_o en lugar de restarlos
+        traps: ask === "di" && Math.abs(1 / (1 / f + 1 / dobj) - di) > 0.02 * Math.abs(di) ? [{ value: 1 / (1 / f + 1 / dobj), msg: "Revisá el despeje: $\\frac{1}{d_i} = \\frac1f - \\frac{1}{d_o}$, con resta." }] : [],
         solution: [`[[f2b-lentes|Ecuación de lentes y espejos]]: $\\frac{1}{d_o} + \\frac{1}{d_i} = \\frac1f$ y $m = -\\frac{d_i}{d_o}$.`, `$d_i = \\left(\\frac{1}{${f}} - \\frac{1}{${dobj}}\\right)^{-1} \\approx ${num(di, 4)}$ cm (${di > 0 ? "imagen real" : "imagen virtual"}); $m \\approx ${num(mag, 4)}$ (${mag < 0 ? "invertida" : "derecha"}, ${Math.abs(mag) > 1 ? "aumentada" : "reducida"}).`],
         // verificación: trazado de rayos con matrices ABCD; el plano imagen es donde B = 0 y el aumento es A
         verify: ask === "di"

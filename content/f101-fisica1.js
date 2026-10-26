@@ -280,7 +280,10 @@
       const vx = v0 * Math.cos(rad(th)), vy = v0 * Math.sin(rad(th));
       const tv = (vy + Math.sqrt(vy * vy + 2 * g * h0)) / g;
       const ans = ask === "alcance" ? vx * tv : ask === "hmax" ? h0 + vy * vy / (2 * g) : tv;
+      const traps = ask === "tvuelo" ? [{ value: vy / g, msg: "Ese es el tiempo hasta la altura máxima: falta lo que tarda en bajar desde ahí hasta el suelo." }]
+        : ask === "hmax" && h0 ? [{ value: vy * vy / (2 * g), msg: `Eso es lo que sube desde el punto de lanzamiento: la altura sobre el suelo suma los $${h0}$ m iniciales.` }] : [];
       return {
+        traps,
         prompt: `Se lanza un proyectil desde ${h0 ? `una altura de $${h0}$ m` : "el suelo"} con $v_0 = ${v0}$ m/s a $${th}^\\circ$ sobre la horizontal ($g = 9{,}8$ m/s²). ¿${ask === "alcance" ? "Cuál es su alcance horizontal" : ask === "hmax" ? "Qué altura máxima (desde el suelo) alcanza" : "Cuánto tiempo está en el aire"}?`,
         answer: ans,
         solution: [
@@ -498,7 +501,11 @@
         verify: { kind: "zero", fn: mus => [mus * Math.cos(rad(th)) - Math.sin(rad(th))] }
       };
       const ans = ask === "a" ? a : Math.sqrt(2 * a * d);
+      const traps = ask === "a" && mu > 0 ? [
+        { value: g * Math.sin(rad(th)), msg: "Te faltó el rozamiento: a lo largo del plano, además de $mg\\sin\\theta$, actúa $\\mu N = \\mu mg\\cos\\theta$ en contra del movimiento." },
+        { value: g * (Math.sin(rad(th)) + mu * Math.cos(rad(th))), msg: "El rozamiento se opone al movimiento: como el bloque baja, apunta hacia arriba del plano y se resta." }] : [];
       return {
+        traps,
         prompt: `Un bloque se suelta en un plano inclinado a $${th}^\\circ$ con coeficiente de rozamiento dinámico $${dec(mu)}$ ($g = 9{,}8$ m/s²). ¿${ask === "a" ? "Cuál es su aceleración" : `Qué velocidad tiene después de deslizar $${d}$ m`}?`,
         answer: ans,
         solution: [
