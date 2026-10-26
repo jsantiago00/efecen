@@ -2,7 +2,7 @@
 
 **efecen** es una PWA estilo Duolingo para repasar la **Licenciatura en Ciencias Básicas con orientación en Física** (FCEN, UNCuyo, Plan Ord. 77/15 C.S.). Está hecha en HTML, CSS y JS vanilla, sin build; usa KaTeX y canvas, guarda en localStorage y sincroniza opcionalmente con Firebase. Todo el texto visible está en español rioplatense (voseo). La mascota es **Schrödi**, un gato de Schrödinger: en el texto se escribe con ö, y en ids y archivos va como `schrodi`.
 
-- **Publicada:** https://santiagososa.com.ar/efecen/ (GitHub Pages del repo `jsantiago00/efecen`, rama `main`).
+- **Publicada:** https://efecen.com.ar/ (GitHub Pages del repo `jsantiago00/efecen`, rama `main`; dominio propio desde el 26/10, con DNS en Cloudflare y el archivo `CNAME`. Antes estaba en santiagososa.com.ar/efecen/).
 - **Estado detallado:** [PROGRESO.md](PROGRESO.md) tiene lo hecho, lo pendiente, las decisiones y las fuentes. **Leelo primero y mantenelo actualizado.**
 
 ## Cómo trabajar (acordado con el usuario)
