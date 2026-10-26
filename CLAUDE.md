@@ -22,7 +22,7 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. **3.º año** (pedido del usuario, 26/10: terminó la pausa del 20/10). Se sigue el trayecto: F104 Física General III (en curso), M103, M203, F203, M209 y F205.
+1. **3.º año** (pedido del usuario, 26/10: terminó la pausa del 20/10). Se sigue el trayecto: F104 Física General III (completa, 26/10), M103, M203, F203, M209 y F205.
 
 Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, sus unidades «Extra UBA» y un «Examen Extra UBA».
 
@@ -43,7 +43,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 | `PROGRESO.md` | Bitácora del proyecto. |
 | `firestore.rules`, `firebase.json`, `.firebaserc` | Reglas de Firestore (proyecto `efecen-46bfd`). |
 
-Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística y F102A Física General II A.
+Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística, F102A Física General II A y F104 Física General III.
 
 ## Cómo se arma una materia
 

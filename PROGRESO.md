@@ -16,7 +16,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 6 | M106 Geometría Analítica | **completa**: las 6 unidades del programa (repasada el 24/10) | 61 | 33 |
 | 7 | M105 Probabilidad y Estadística | **completa**: 8 unidades de un temario estándar (no hay programa publicado; repasada el 24/10), más 3 unidades «Extra UBA» | 73 | 41 |
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10), más 4 unidades «Extra UBA» | 77 | 53 |
-| 9 | F104 Física General III | **en curso** (desde el 26/10): las 7 unidades (relatividad; fotones; Bohr; ondas de materia e incerteza; Schrödinger y pozo infinito; oscilador, escalón, barrera y pozo finito; hidrógeno). Faltan figuras y evaluaciones. No se encontró el programa; el temario sale de los parciales de 2021 (`docs/parciales/f104.md`) | 36 | 18 |
+| 9 | F104 Física General III | **completa** (26/10): las 7 unidades (relatividad; fotones; Bohr; ondas de materia e incerteza; Schrödinger y pozo infinito; oscilador, escalón, barrera y pozo finito; hidrógeno), 9 figuras y las evaluaciones (dos parciales y el final). No se encontró el programa; el temario sale de los parciales de 2021 (`docs/parciales/f104.md`) | 36 | 18 |
 | 10+ | resto de 3.º y 4.º año | pendientes; aparecen como "Próximamente" | — | — |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
@@ -314,6 +314,9 @@ Pedido del usuario: dejar bien terminados 1.º y 2.º año antes de seguir con 3
 - **Biblioteca `E.f3`** (primer bloque de `content/f104-fisica3.js`): constantes CODATA (con la constante de Rydberg y el radio de Bohr calculados a partir de ellas), Simpson, bisección, sección áurea, boosts con la rapidez, el método del disparo para la ecuación de Schrödinger (`F.shoot`, `F.eigen`) y la transmisión por un potencial a tramos (`F.transmit`, con ψ complejo integrado desde la onda transmitida).
 - **Verificaciones:** boosts armados con la rapidez; pulsos emitidos y recibidos para el Doppler; masa invariante y bisección para umbrales y decaimientos; máximo e integral del espectro de Planck; frenado del fotoelectrón simulado; cuadrimomento conservado en Compton; la órbita de Bohr resuelta en SI (con masa reducida para el deuterio); aceleración relativista simulada para De Broglie; suma de 200 ondas para Davisson-Germer; paquetes gaussianos integrados con derivadas numéricas; autovalores del pozo y del oscilador por disparo; escalón y barrera integrando la ecuación compleja; estados ligados del pozo finito por el teorema de oscilación de Sturm; funciones radiales del hidrógeno integradas con Simpson; y L² armado con matrices escalera.
 
+- **Evaluaciones (`content/f104-examenes.js`):** 1.er parcial (cuántica en una dimensión: dos preguntas conceptuales de 15 puntos, un problema corto y dos de 30: paquete con φ(k) rectangular, y superposición con kets), 2.º parcial (cinco preguntas de hidrógeno y relatividad, y problemas de suma de velocidades o núcleo en una nave, oscilador y orbital 1s o 2p) y final (cinco preguntas de toda la materia; pozo con ⟨x⟩ y ⟨H⟩, relatividad, y virial en el hidrógeno). Los problemas se verifican con la transformada calculada numéricamente, integrales con Simpson, suma de rapideces y boosts.
+- **Figuras (`content/f104-figuras.js`):** diagrama de Minkowski con los ejes de otro observador, espectro de Planck, niveles de Bohr con la transición, paquete gaussiano en x y en k, autofunciones del pozo, superposición animada, transmisión por una barrera, oscilador con niveles y autofunciones, y densidades radiales del hidrógeno. No se pudieron mirar en Chromium (en esta compu no está Playwright); la suite las dibuja con el lápiz falso.
+
 ## Juegos
 
 - **Jefe de unidad.** Al completar una unidad aparece un nodo rojo al final de su camino, con un jefe: una paradoja famosa (Zenón, el demonio de Maxwell, el hotel de Hilbert, el monstruo de Weierstrass…). El jefe tiene 8 de vida y vos 3 vidas. Cada acierto le saca 1, y desde el tercero seguido, 2. Las preguntas salen de todas las plantillas de la unidad, de menor a mayor dificultad, y no hay reintentos. Si lo vencés, el nodo queda con una corona y suma 30 XP (15 las veces siguientes).
@@ -384,8 +387,8 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **F104 Física General III** (pedido del usuario, 26/10, que levantó la pausa de 3.º año): faltan las figuras y las evaluaciones (dos parciales y el final, con preguntas conceptuales y problemas, como en `docs/parciales/f104.md`).
-2. **Resto de 3.º año**, en el orden del trayecto: M103, M203, F203, M209 y F205.
+1. **Resto de 3.º año** (pedido del usuario, 26/10), en el orden del trayecto: M103 Cálculo III, M203 Álgebra Lineal, F203 Mecánica, M209 Matemática Especial I y F205 Termodinámica.
+2. **Extra UBA de F104** (Física 4 de la UBA) cuando se retome esa tabla.
 3. **Extra UBA de M106:** sin equivalente directo en la UBA; queda para después.
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
