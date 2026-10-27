@@ -22,7 +22,8 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. **3.º año** (pedido del usuario, 26/10: terminó la pausa del 20/10). Se sigue el trayecto: F104 Física General III (completa, 26/10), M103, M203, F203, M209 y F205.
+1. **Q101 Química General** (pedido del usuario, 26/10): para que la app sirva también a quien cursa Química o Biología. Unidades 1 a 3 hechas; faltan 4 a 9, evaluaciones y Extra UBA.
+2. **3.º año** de Física: F104 Física General III (completa, 26/10), después M103, M203, F203, M209 y F205.
 
 Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, sus unidades «Extra UBA» y un «Examen Extra UBA».
 
@@ -33,7 +34,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 | `index.html` | La UI (`<script id="app-script">`) y el CSS. |
 | `engine.js` | El motor: RNG, helpers `H`, parser de números y expresiones, repaso espaciado, registro de materias, exámenes y estado (`E.store`). Lo cargan `index.html` y los tests. |
 | `content/carrera.js` | Las carreras, una por orientación (`fis`, `mat`, `qui`, `bio`): años → semestres → materias, con `code`, `title`, `course` (si ya tiene contenido) y `via` (si se repasa con otra materia). Los pasos se numeran solos. Cada cuenta elige la suya (`S.career`). |
-| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`, `f104-fisica3.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
+| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`, `f104-fisica3.js`, `q101-quimica-general.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
 | `board.js` | Pizarra para escribir con lápiz en tablets: el motor de la pizarra del usuario (`jsantiago00/pizarra`) en JS sin build, con lazo, goma por área, texto, fórmulas (MathJax, bajo demanda) y figuras (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. Usa `assets/vendor/perfect-freehand/`, `asciimath2tex/` y `mathjax/`. |
 | `content/<código>-practica.js` | Ejercicios de escribir la expresión (`expr`) y paso a paso (`multi`) que se suman a lecciones existentes con `E.addPractice`. |
@@ -67,7 +68,7 @@ Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101
 })();
 ```
 
-- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106), `pe-` (M105; su primer bloque define la biblioteca estadística `E.pye`), `f2a-` (F102A; su primer bloque define `E.f2a`, con constantes, Simpson, RK4 y el campo de cargas puntuales), `f3-` (F104; su primer bloque define `E.f3`, con constantes de física moderna, Simpson, bisección, sección áurea y boosts). Para M101 no hay prefijo: sus ids vienen del MVP.
+- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106), `pe-` (M105; su primer bloque define la biblioteca estadística `E.pye`), `f2a-` (F102A; su primer bloque define `E.f2a`, con constantes, Simpson, RK4 y el campo de cargas puntuales), `f3-` (F104; su primer bloque define `E.f3`, con constantes de física moderna, Simpson, bisección, sección áurea y boosts), `qg-` (Q101; su primer bloque define `E.qg`, con masas atómicas, lector de fórmulas, balanceo por el núcleo de la matriz y configuraciones electrónicas). Para M101 no hay prefijo: sus ids vienen del MVP.
 - **Requisitos por unidad** (los chequean los tests):
   - al menos 4 plantillas de al menos 2 tipos;
   - teoría con hipervínculos;

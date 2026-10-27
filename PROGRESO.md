@@ -18,6 +18,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10), más 4 unidades «Extra UBA» | 77 | 53 |
 | 9 | F104 Física General III | **completa** (26/10): las 7 unidades (relatividad; fotones; Bohr; ondas de materia e incerteza; Schrödinger y pozo infinito; oscilador, escalón, barrera y pozo finito; hidrógeno), 9 figuras y las evaluaciones (dos parciales y el final). No se encontró el programa; el temario sale de los parciales de 2021 (`docs/parciales/f104.md`) | 36 | 18 |
 | 10+ | resto de 3.º y 4.º año | pendientes; aparecen como "Próximamente" | — | — |
+| básico | Q101 Química General | **en curso** (26/10): unidades 1 a 3 de 9 (estructura atómica; enlace; estequiometría). Es del ciclo básico de las cuatro orientaciones | 25 | 14 |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
@@ -388,9 +389,10 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **Resto de 3.º año** (pedido del usuario, 26/10), en el orden del trayecto: M103 Cálculo III, M203 Álgebra Lineal, F203 Mecánica, M209 Matemática Especial I y F205 Termodinámica.
-2. **Extra UBA de F104** (Física 4 de la UBA) cuando se retome esa tabla.
-3. **Extra UBA de M106:** sin equivalente directo en la UBA; queda para después.
+1. **Q101 Química General** (pedido del usuario, 26/10: que la app sirva también a quien cursa Química o Biología). Faltan las unidades 4 a 9 (estados de agregación, soluciones, cinética, equilibrio, ácidos y bases, electroquímica), las evaluaciones y el Extra UBA. Al hacer la unidad 9, enlazar `qg-redox` desde la ficha `qg-balanceo`.
+2. **Resto de 3.º año**, en el orden del trayecto: M103 Cálculo III, M203 Álgebra Lineal, F203 Mecánica, M209 Matemática Especial I y F205 Termodinámica.
+3. **Extra UBA de F104** (Física 4 de la UBA) cuando se retome esa tabla.
+4. **Extra UBA de M106:** sin equivalente directo en la UBA; queda para después.
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 
@@ -402,6 +404,7 @@ Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Fí
 
 ## Fuentes de los temarios
 
+- **Q101 Química General:** programa oficial 2025, en la carpeta «Primer semestre 2025» de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias) (Drive, id `176j1bRUNS2GDxQOBChAnngwyfo7F2dT_`). 9 unidades: estructura atómica y tabla periódica, enlace, estequiometría, estados de agregación, soluciones, cinética, equilibrio, ácidos y bases, electroquímica.
 - **M101 Cálculo I:** programa oficial 2026 (prof. Romina Calvo), en la carpeta «Programas 2026, 2.º semestre» de [Programas de las materias](https://fcen.uncuyo.edu.ar/programas-de-las-materias).
 - **M104 Introducción al Álgebra Lineal:** [programa 2020](https://fcen.uncuyo.edu.ar/upload/programa-ial-2020-def.pdf).
 - **F101 Física General I:** [programa 2021](https://fcen.uncuyo.edu.ar/upload/fisica-general-i-2021.pdf).

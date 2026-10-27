@@ -32,7 +32,7 @@
   const F102A = { code: "F102A", title: "Física General II A", course: "f102a" };
   const F102B = { code: "F102B", title: "Física General II B", course: "f102b" };
   const F104 = { code: "F104", title: "Física General III", course: "f104" };
-  const Q101 = { code: "Q101", title: "Química General" };
+  const Q101 = { code: "Q101", title: "Química General", course: "q101" };
   const Q102 = { code: "Q102", title: "Química Orgánica" };
   const B101 = { code: "B101", title: "Biología General" };
   const C101 = { code: "C101", title: "Historia de la Ciencia" };
