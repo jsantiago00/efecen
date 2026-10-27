@@ -1693,3 +1693,377 @@ Las tres juntas: $\frac{P_1V_1}{T_1} = \frac{P_2V_2}{T_2}$, siempre con la **tem
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 5 · SOLUCIONES (a) CONCENTRACIÓN, DILUCIÓN Y SOLUBILIDAD
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  const tx = f => Q.tex(f);
+  const mm2 = f => Object.entries(Q.count2(f)).reduce((s, [el, n]) => s + Q.A[el] * n, 0);
+  const SOLUTES = ["NaCl", "KCl", "NaOH", "KNO3", "C6H12O6", "C12H22O11", "CuSO4", "H2SO4", "HCl", "Na2CO3", "CaCl2", "NH4Cl"];
+
+  T["qg-molaridad-num"] = {
+    type: "numeric", concepts: ["qg-concentracion"], difficulty: 1,
+    generate(r) {
+      const f = r.pick(SOLUTES), M = Q.mm(f), ask = r.pick(["M", "masa"]), V = r.pick([100, 250, 500, 1000, 2000]), c = r.pick([0.05, 0.1, 0.2, 0.25, 0.5, 1, 1.5, 2]);
+      const m = +(c * V / 1000 * M).toFixed(2), ans = ask === "M" ? m / M / (V / 1000) : c * V / 1000 * M;
+      return {
+        prompt: ask === "M" ? `Se disuelven $${dn(m, 2)}$ g de $${tx(f)}$ en agua hasta completar $${V}$ mL de solución. ¿Cuál es la molaridad (mol/L)?` : `¿Cuántos gramos de $${tx(f)}$ hacen falta para preparar $${V}$ mL de solución $${dn(c, 2)}$ M?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`[[qg-concentracion|Molaridad]]: $M = \\frac{n_{soluto}}{V_{\\text{solución}}\\ (\\mathrm L)}$. Masa molar: $${dn(M, 2)}$ g/mol.`,
+          ask === "M" ? `$n = \\frac{${dn(m, 2)}}{${dn(M, 2)}} \\approx ${nf(m / M, 4)}$ mol en $${dn(V / 1000, 3)}$ L: $M \\approx ${dn(ans, 3)}$ mol/L.` : `$n = ${dn(c, 2)}\\cdot${dn(V / 1000, 3)} = ${nf(c * V / 1000, 4)}$ mol, que son $${dn(ans, 2)}$ g.`],
+        traps: [{ value: ask === "M" ? m / M / V : c * V * M, msg: "El volumen va en litros: pasá los mililitros dividiendo por 1000." }],
+        // verificación: se cuentan las unidades fórmula con el otro lector de fórmulas y se reparten en el volumen
+        verify: { kind: "zero", tol: 1e-6, fn: x => {
+          const per = mm2(f);
+          return ask === "M" ? [(m / per * Q.NA) / (V * 1e-3) / Q.NA / x - 1] : [x / per / (V * 1e-3) / c - 1];
+        } }
+      };
+    }
+  };
+  // soluciones comerciales: % m/m y densidad
+  const COMM = [["H2SO4", 98, 1.84], ["HCl", 37, 1.19], ["HNO3", 65, 1.39], ["NaOH", 20, 1.22], ["NH3", 28, 0.90], ["C2H6O", 40, 0.94], ["NaCl", 10, 1.07], ["C6H12O6", 20, 1.08]];
+  T["qg-conversion-num"] = {
+    type: "numeric", concepts: ["qg-concentracion"], difficulty: 3,
+    generate(r) {
+      const [f, pct, d] = r.pick(COMM), M = Q.mm(f), ask = r.pick(["M", "m", "x", "mv"]);
+      const Mol = pct * 10 * d / M, molal = (pct / M) / ((100 - pct) / 1000), x = (pct / M) / (pct / M + (100 - pct) / Q.mm("H2O")), mv = pct * d;
+      const ans = { M: Mol, m: molal, x, mv }[ask];
+      return {
+        prompt: `Una solución acuosa de $${tx(f)}$ tiene $${pct}\\,\\%$ m/m y densidad $${dn(d, 2)}$ g/mL. ¿Cuál es su ${{ M: "molaridad (mol/L)", m: "molalidad (mol/kg de solvente)", x: "fracción molar de soluto", mv: "concentración en % m/V (g de soluto cada 100 mL de solución)" }[ask]}?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`Base de cálculo: 100 g de solución, con $${pct}$ g de soluto ($${nf(pct / M, 4)}$ mol) y $${100 - pct}$ g de agua. Su volumen es $\\frac{100}{${dn(d, 2)}} \\approx ${dn(100 / d, 2)}$ mL.`,
+          ask === "M" ? `[[qg-concentracion|Molaridad]]: $\\frac{${nf(pct / M, 4)}\\ \\mathrm{mol}}{${dn(0.1 / d, 5)}\\ \\mathrm L} \\approx ${dn(Mol, 3)}$ M.`
+            : ask === "m" ? `[[qg-concentracion|Molalidad]]: $\\frac{${nf(pct / M, 4)}\\ \\mathrm{mol}}{${dn((100 - pct) / 1000, 3)}\\ \\mathrm{kg}} \\approx ${dn(molal, 3)}$ m.`
+            : ask === "x" ? `Moles de agua: $\\frac{${100 - pct}}{18{,}02} \\approx ${nf((100 - pct) / Q.mm("H2O"), 4)}$. $x = \\frac{n_s}{n_s + n_{agua}} \\approx ${dn(x, 4)}$.`
+            : `En $${dn(100 / d, 2)}$ mL hay $${pct}$ g: cada 100 mL, $${dn(mv, 2)}$ g. Es $${dn(mv, 1)}\\,\\%$ m/V.`],
+        traps: ask === "M" ? [{ value: pct * 10 / M, msg: "Faltó la densidad: el % m/m da masas, y la molaridad pide volumen de solución." }] : ask === "m" ? [{ value: pct / M / 0.1, msg: "La molalidad se calcula por kilo de **solvente**, no de solución." }] : [],
+        // verificación: se arma un litro de solución, se pesan soluto y solvente por separado y se recalcula
+        verify: { kind: "zero", tol: 1e-6, fn: v => {
+          const massSol = 1000 * d, ms = massSol * pct / 100, mw = massSol - ms, ns = ms / mm2(f), nw = mw / mm2("H2O");
+          const got = { M: ns / 1, m: ns / (mw / 1000), x: ns / (ns + nw), mv: ms / 10 }[ask];
+          return [got / v - 1];
+        } }
+      };
+    }
+  };
+  T["qg-dilucion-num"] = {
+    type: "numeric", concepts: ["qg-dilucion"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["dil", "dil", "mezcla"]);
+      if (kind === "dil") {
+        const C1 = r.pick([0.5, 1, 2, 6, 12, 18]), C2 = r.pick([0.05, 0.1, 0.2, 0.25, 0.5]), V2 = r.pick([100, 250, 500, 1000]), ask = r.pick(["V1", "C2"]);
+        if (C2 >= C1) return null;
+        const V1 = C2 * V2 / C1, V1s = +V1.toFixed(1), c2 = C1 * V1s / V2;
+        return {
+          prompt: ask === "V1" ? `¿Qué volumen (mL) de una solución $${dn(C1, 1)}$ M hay que tomar para preparar $${V2}$ mL de solución $${dn(C2, 2)}$ M?` : `Se toman $${dn(V1s, 1)}$ mL de una solución $${dn(C1, 1)}$ M y se diluyen con agua hasta $${V2}$ mL. ¿Cuál es la nueva molaridad?`,
+          answer: ask === "V1" ? V1 : c2, tolerance: 0.01,
+          solution: [`Al [[qg-dilucion|diluir]] no cambia la cantidad de soluto: $C_1V_1 = C_2V_2$.`, ask === "V1" ? `$V_1 = \\frac{C_2V_2}{C_1} = \\frac{${dn(C2, 2)}\\cdot${V2}}{${dn(C1, 1)}} \\approx ${dn(V1, 2)}$ mL.` : `$C_2 = \\frac{C_1V_1}{V_2} = \\frac{${dn(C1, 1)}\\cdot${dn(V1s, 1)}}{${V2}} \\approx ${dn(c2, 4)}$ M.`],
+          // verificación: se cuentan los moles que pasan de un recipiente al otro
+          verify: { kind: "zero", tol: 1e-9, fn: x => ask === "V1" ? [(C1 * x / 1000) / (V2 / 1000) / C2 - 1] : [(C1 * V1s / 1000) / (V2 / 1000) / x - 1] }
+        };
+      }
+      const Ca = r.pick([0.1, 0.2, 0.5, 1]), Va = r.pick([50, 100, 200, 300]), Cb = r.pick([0.05, 0.3, 0.8, 1.5, 2]), Vb = r.pick([25, 50, 150, 250]);
+      const Cf = (Ca * Va + Cb * Vb) / (Va + Vb);
+      return {
+        prompt: `Se mezclan $${Va}$ mL de solución $${dn(Ca, 2)}$ M de NaCl con $${Vb}$ mL de solución $${dn(Cb, 2)}$ M de NaCl. Suponiendo volúmenes aditivos, ¿cuál es la molaridad final?`,
+        answer: Cf, tolerance: 0.01,
+        solution: [`Se suman los moles y los volúmenes ([[qg-dilucion|mezcla de soluciones]]): $n = ${dn(Ca, 2)}\\cdot${dn(Va / 1000, 3)} + ${dn(Cb, 2)}\\cdot${dn(Vb / 1000, 3)} = ${nf(Ca * Va / 1000 + Cb * Vb / 1000, 4)}$ mol.`, `$C = \\frac{n}{V_a + V_b} = \\frac{${nf(Ca * Va / 1000 + Cb * Vb / 1000, 4)}}{${dn((Va + Vb) / 1000, 3)}} \\approx ${dn(Cf, 4)}$ M.`],
+        traps: [{ value: (Ca + Cb) / 2, msg: "El promedio simple solo vale si los volúmenes son iguales: hay que sumar moles." }].filter(t => Va !== Vb && Math.abs(t.value / Cf - 1) > 0.02),
+        // verificación: se vierte de a 1 mL de cada solución en un vaso y se cuentan los moles
+        verify: { kind: "zero", tol: 1e-9, fn: x => { let n = 0, V = 0; for (let i = 0; i < Va; i++) { n += Ca / 1000; V += 1; } for (let i = 0; i < Vb; i++) { n += Cb / 1000; V += 1; } return [n / (V / 1000) / x - 1]; } }
+      };
+    }
+  };
+  // constantes de Henry a 25 °C (mol/(L·atm)) y fracción en el aire
+  const HENRY = { O2: [1.3e-3, 0.21], N2: [6.1e-4, 0.78], CO2: [3.4e-2, 0.0004] };
+  T["qg-henry-num"] = {
+    type: "numeric", concepts: ["qg-solubilidad"], difficulty: 2,
+    generate(r) {
+      const g = r.pick(Object.keys(HENRY)), [kH, frac] = HENRY[g], ask = r.pick(["aire", "puro"]), P = r.pick([1, 2, 2.5, 3, 4, 5]);
+      const p = ask === "aire" ? frac * P : P, c = kH * p, mgL = c * Q.mm(g) * 1000;
+      return {
+        prompt: ask === "aire" ? `El aire tiene ${String(frac * 100).replace(".", ",")} % de $${tx(g)}$ en moles. ¿Cuántos mg de $${tx(g)}$ se disuelven por litro de agua a 25 °C en equilibrio con aire a $${P}$ atm? ($k_H = ${nf(kH, 2)}$ mol/(L·atm))`
+          : `¿Cuántos mg de $${tx(g)}$ se disuelven por litro de agua a 25 °C bajo $${P}$ atm de $${tx(g)}$ puro? ($k_H = ${nf(kH, 2)}$ mol/(L·atm))`,
+        answer: mgL, tolerance: 0.01,
+        solution: [`[[qg-solubilidad|Ley de Henry]]: la solubilidad de un gas es proporcional a su **presión parcial**: $C = k_H\\,p$.`,
+          ask === "aire" ? `$p = ${String(frac).replace(".", "{,}")}\\cdot${P} = ${nf(p, 3)}$ atm ([[qg-dalton|Dalton]]).` : `$p = ${P}$ atm.`,
+          `$C = ${nf(kH, 2)}\\cdot${nf(p, 3)} \\approx ${nf(c, 3)}$ mol/L, o sea $${nf(mgL, 3)}$ mg/L.`],
+        traps: ask === "aire" ? [{ value: kH * P * Q.mm(g) * 1000, msg: "Va la presión parcial del gas, no la presión total del aire." }] : [],
+        // verificación: con la presión parcial en Pa y la constante pasada a mol/(m³·Pa)
+        verify: { kind: "zero", tol: 1e-9, fn: x => { const kSI = kH * 1000 / 101325, pPa = (ask === "aire" ? frac : 1) * P * 101325; return [kSI * pPa / 1000 * Q.mm(g) * 1000 / x - 1]; } }
+      };
+    }
+  };
+  // solubilidad del KNO3 en agua (g cada 100 g de agua)
+  const SOLKNO3 = { 0: 13.3, 10: 20.9, 20: 31.6, 30: 45.8, 40: 63.9, 50: 85.5, 60: 110, 70: 138, 80: 169 };
+  T["qg-saturacion-mc"] = {
+    type: "mc", concepts: ["qg-solubilidad"], difficulty: 2,
+    generate(r) {
+      const t = r.pick(Object.keys(SOLKNO3).map(Number)), s = SOLKNO3[t], w = r.pick([50, 100, 200]), kind = r.pick(["in", "sat", "cristal"]);
+      const ms = kind === "in" ? +(s * w / 100 * r.pick([0.5, 0.7, 0.85])).toFixed(1) : kind === "sat" ? +(s * w / 100).toFixed(1) : +(s * w / 100 * r.pick([1.2, 1.5])).toFixed(1);
+      const lab = kind === "in" ? "insaturada" : kind === "sat" ? "saturada" : "saturada, con sólido sin disolver en el fondo";
+      const mcq = H.mc(r, lab, ["insaturada", "saturada", "saturada, con sólido sin disolver en el fondo", "sobresaturada (sin sólido)"].filter(x => x !== lab), { text: true });
+      return {
+        prompt: `La solubilidad del $${tx("KNO3")}$ a $${t}$ °C es de $${dn(s, 1)}$ g cada 100 g de agua. Si se agregan $${dn(ms, 1)}$ g de $${tx("KNO3")}$ a $${w}$ g de agua a esa temperatura y se agita, ¿qué se obtiene?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`En $${w}$ g de agua se disuelven como máximo $${dn(s * w / 100, 1)}$ g ([[qg-solubilidad|solubilidad]]).`,
+          kind === "in" ? `Se agregó menos: queda una solución **insaturada**.` : kind === "sat" ? `Se agregó justo eso: la solución queda **saturada**.` : `Se agregó más: se disuelven $${dn(s * w / 100, 1)}$ g, la solución queda **saturada** y sobran $${dn(ms - s * w / 100, 1)}$ g de sólido. (Una sobresaturada solo se obtiene enfriando con cuidado una saturada, y es inestable.)`],
+        // verificación: se agrega el sólido de a 0,1 g y se disuelve mientras quepa
+        verify: { kind: "truth", target: true, fn: () => {
+          let dis = 0, left = 0;
+          const cap = SOLKNO3[t] * w / 100 + 1e-9;
+          for (let i = 0; i < Math.round(ms * 10); i++) { if (dis + 0.1 <= cap + 1e-6) dis += 0.1; else left += 0.1; }
+          const k2 = left > 0.5 ? "saturada, con sólido sin disolver en el fondo" : cap - dis < 0.15 ? "saturada" : "insaturada";
+          return k2 === lab;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-concentracion": {
+      title: "Soluciones y unidades de concentración", aliases: ["solución", "soluciones", "soluto", "solvente", "concentración", "molaridad", "molalidad", "porcentaje en masa", "% m/m", "% m/V", "partes por millón"], concepts: ["qg-concentracion"],
+      summary: "Una solución es una mezcla homogénea de soluto en solvente. Molaridad M = mol de soluto / L de solución; molalidad m = mol de soluto / kg de solvente; % m/m = g de soluto cada 100 g de solución; % m/V = g cada 100 mL; fracción molar x = n_i / n_total.",
+      def: [R`Una **solución** es una mezcla homogénea. El componente en mayor proporción (casi siempre el agua) es el **solvente**, y los otros, los **solutos**.`,
+        R`Unidades de **concentración**:
+- **físicas:** % m/m (g de soluto en 100 g de solución), % m/V (g en 100 mL de solución), % V/V, ppm (mg por kg o por L);
+- **químicas:** **molaridad** $M = \frac{n_{soluto}}{V_{\text{solución}}\ (\mathrm L)}$; **molalidad** $m = \frac{n_{soluto}}{m_{solvente}\ (\mathrm{kg})}$; **fracción molar** $x_i = \frac{n_i}{n_{tot}}$.`,
+        R`Para pasar de unas a otras hace falta la **densidad** de la solución, que vincula su masa con su volumen. Conviene tomar una base de cálculo: 100 g de solución si el dato es un % m/m, o 1 L si es una molaridad.`],
+      idea: [R`La molaridad es la más práctica en el laboratorio (se mide un volumen), pero cambia con la temperatura porque el volumen se dilata. La molalidad usa masas y no cambia: por eso es la que aparece en las [[qg-coligativas|propiedades coligativas]].`],
+      demo: [R`**Paso 1 (base 100 g).** Con un % m/m $p$: en 100 g de solución hay $p$ g de soluto ($\frac pM$ mol) y $100 - p$ g de solvente.`,
+        R`**Paso 2 (volumen).** Esos 100 g ocupan $\frac{100}{d}$ mL $= \frac{0{,}1}{d}$ L.`,
+        R`**Paso 3 (molaridad).** $M = \frac{p/M_s}{0{,}1/d} = \frac{10\,p\,d}{M_s}$ (con $d$ en g/mL). **Molalidad:** $m = \frac{p/M_s}{(100 - p)/1000}$. $\blacksquare$`],
+      examples: [{ q: R`H₂SO₄ 98 % m/m, $d = 1{,}84$ g/mL.`, steps: [R`$M = \frac{10\cdot98\cdot1{,}84}{98{,}08} \approx 18{,}4$ M.`] }],
+      see: ["qg-dilucion", "qg-mol", "qg-coligativas"]
+    },
+    "qg-dilucion": {
+      title: "Dilución y mezcla de soluciones", aliases: ["dilución", "diluir", "C1V1 = C2V2", "mezcla de soluciones", "solución madre"], concepts: ["qg-dilucion"],
+      summary: "Al diluir, la cantidad de soluto no cambia: C₁V₁ = C₂V₂. Al mezclar soluciones del mismo soluto se suman los moles y (aproximadamente) los volúmenes: C = (C₁V₁ + C₂V₂)/(V₁ + V₂).",
+      def: [R`**Dilución:** se agrega solvente a una solución. Como los moles de soluto se conservan, $C_1V_1 = C_2V_2$ (con cualquier unidad de volumen, la misma de los dos lados).`,
+        R`**Mezcla:** $C_f = \frac{C_1V_1 + C_2V_2}{V_1 + V_2}$, suponiendo volúmenes aditivos (en soluciones diluidas es una buena aproximación).`],
+      idea: [R`Diluir no saca soluto: lo reparte en más volumen. Por eso la concentración baja en la misma proporción en que sube el volumen. En el laboratorio se prepara una **solución madre** concentrada y se diluye según lo que haga falta.`],
+      demo: [R`**Paso 1.** Los moles de soluto en la solución inicial son $n = C_1V_1$.`, R`**Paso 2.** Al agregar agua, $n$ no cambia y el volumen pasa a $V_2$: $C_2 = \frac{n}{V_2} = \frac{C_1V_1}{V_2}$. $\blacksquare$`, R`**Paso 3 (mezcla).** Los moles totales son $C_1V_1 + C_2V_2$ y el volumen $V_1 + V_2$; dividiendo sale $C_f$.`],
+      examples: [{ q: R`¿Cuánto HCl 12 M para 500 mL de HCl 0,1 M?`, steps: [R`$V_1 = \frac{0{,}1\cdot500}{12} \approx 4{,}17$ mL, completando con agua hasta 500 mL.`] }],
+      tips: [R`Con ácidos concentrados: siempre el ácido sobre el agua, nunca al revés (el calor de dilución puede hacer hervir y salpicar).`],
+      see: ["qg-concentracion"]
+    },
+    "qg-solubilidad": {
+      title: "Solubilidad, saturación y ley de Henry", aliases: ["solubilidad", "solución saturada", "solución insaturada", "solución sobresaturada", "curva de solubilidad", "ley de Henry"], concepts: ["qg-solubilidad"],
+      summary: "La solubilidad es la máxima cantidad de soluto que se disuelve a una temperatura. Por debajo, la solución es insaturada; en el máximo, saturada; por encima (inestable), sobresaturada. Los gases se disuelven en proporción a su presión parcial: C = k_H·p (Henry), y menos cuanto más caliente.",
+      def: [R`La **solubilidad** es la concentración de una solución **saturada**, en equilibrio con el soluto sin disolver. Una solución con menos soluto es **insaturada**; una con más, **sobresaturada** (se logra enfriando con cuidado una saturada, y cristaliza al menor golpe).`,
+        R`Factores: la naturaleza de soluto y solvente ("lo similar disuelve lo similar": polares en polares), la temperatura (la mayoría de los sólidos son más solubles en caliente; las **curvas de solubilidad** lo muestran) y, para gases, la presión.`,
+        R`**Ley de Henry:** la concentración de un gas disuelto es proporcional a su presión parcial sobre el líquido: $C = k_H\,p$. Los gases son menos solubles en caliente.`],
+      idea: [R`Una gaseosa cerrada tiene CO₂ a varias atmósferas: al abrirla, la presión parcial baja a la del aire y el gas sale en burbujas. Los buzos que suben rápido sufren lo mismo con el N₂ de la sangre. Y los peces sufren en el agua caliente: tiene menos oxígeno disuelto.`],
+      examples: [{ q: R`O₂ disuelto en agua con aire a 1 atm (21 % O₂, $k_H = 1{,}3\times10^{-3}$ mol/(L·atm)).`, steps: [R`$C = 1{,}3\times10^{-3}\cdot0{,}21 \approx 2{,}7\times10^{-4}$ M, unos 8,7 mg/L.`] }],
+      see: ["qg-concentracion", "qg-dalton", "qg-fuerzas"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-concentracion": { name: "Concentración" }, "qg-dilucion": { name: "Dilución" }, "qg-solubilidad": { name: "Solubilidad y Henry" } },
+    templates: T,
+    units: [{
+      id: "qg-soluciones-u", order: 6, program: "Unidad 5", title: "Soluciones y concentración", icon: "flask-conical",
+      diagnostic: ["qg-molaridad-num", "qg-dilucion-num", "qg-saturacion-mc"],
+      lessons: [
+        { id: "qg-l-molaridad", title: "Molaridad", templates: ["qg-molaridad-num"], theory: ["qg-concentracion"],
+          intro: R`$M = \frac{n_{soluto}}{V\ (\mathrm L)}$.` },
+        { id: "qg-l-conversion", title: "Unidades de concentración", templates: ["qg-conversion-num"], theory: ["qg-concentracion"],
+          intro: R`Con % m/m y densidad: base de 100 g de solución. Molalidad: por kg de **solvente**.` },
+        { id: "qg-l-dilucion", title: "Diluciones y mezclas", templates: ["qg-dilucion-num"], theory: ["qg-dilucion"],
+          intro: R`$C_1V_1 = C_2V_2$.` },
+        { id: "qg-l-solubilidad", title: "Solubilidad y gases disueltos", templates: ["qg-saturacion-mc", "qg-henry-num"], theory: ["qg-solubilidad"],
+          intro: R`Saturada: en el máximo. Henry: $C = k_H\,p$, con la presión parcial.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 5 · SOLUCIONES (b) PROPIEDADES COLIGATIVAS Y COLOIDES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  const tx = f => Q.tex(f);
+  // solventes: Kf, Kb (°C·kg/mol), punto de fusión y ebullición (°C), masa molar y entalpías de fusión y vaporización (kJ/mol)
+  const SOLV = {
+    agua: { Kf: 1.86, Kb: 0.512, tf: 0, tb: 100, M: 18.015, Hf: 6.01, Hv: 40.65 },
+    benceno: { Kf: 5.12, Kb: 2.53, tf: 5.5, tb: 80.1, M: 78.11, Hf: 9.87, Hv: 30.72 }
+  };
+  // la constante a partir de la termodinámica: K = R·T²·M / ΔH (otra forma de obtenerla, para verificar)
+  const Kthermo = (s, kind) => { const S = SOLV[s], Tk = (kind === "f" ? S.tf : S.tb) + 273.15; return Q.Rsi * Tk * Tk * (S.M / 1000) / ((kind === "f" ? S.Hf : S.Hv) * 1000); };
+  const SOLU = [["C6H12O6", 1, "glucosa"], ["C12H22O11", 1, "sacarosa"], ["CH4N2O", 1, "urea"], ["NaCl", 2, "cloruro de sodio"], ["KNO3", 2, "nitrato de potasio"], ["CaCl2", 3, "cloruro de calcio"], ["MgSO4", 2, "sulfato de magnesio"], ["Na2SO4", 3, "sulfato de sodio"], ["AlCl3", 4, "cloruro de aluminio"]];
+  T["qg-crioscopia-num"] = {
+    type: "numeric", concepts: ["qg-coligativas"], difficulty: 2,
+    generate(r) {
+      const [f, i, nm] = r.pick(SOLU), sv = i > 1 ? "agua" : r.pick(["agua", "benceno"]), S = SOLV[sv], ask = r.pick(["Tf", "Tb", "M"]);
+      const ms = r.int(5, 60), mw = r.pick([100, 200, 250, 500]), m = ms / Q.mm(f) / (mw / 1000);
+      if ((ask === "M" && i > 1) || (sv === "benceno" && ask === "Tb") || m > 2) return null;
+      const dTf = i * S.Kf * m, dTb = i * S.Kb * m;
+      const dShow = +dTf.toFixed(3), Mx = S.Kf * ms / (mw / 1000) / dShow;
+      const ans = ask === "Tf" ? S.tf - dTf : ask === "Tb" ? dTb : Mx;
+      return {
+        prompt: ask === "M" ? `Se disuelven $${ms}$ g de un compuesto molecular desconocido (no electrolito) en $${mw}$ g de ${sv}, y el punto de congelación baja $${dn(dShow, 3)}$ °C. ¿Cuál es su masa molar (g/mol)? ($K_f = ${dn(S.Kf, 2)}$ °C·kg/mol)`
+          : `¿${ask === "Tf" ? "A qué temperatura (°C) congela" : "Cuántos grados (°C) más alto que el solvente puro hierve, a 1 atm,"} una solución de $${ms}$ g de ${nm} ($${tx(f)}$) en $${mw}$ g de ${sv}? ($${ask === "Tf" ? `K_f = ${dn(S.Kf, 2)}` : `K_b = ${dn(S.Kb, 3)}`}$ °C·kg/mol; ${sv === "agua" ? "" : `el benceno ${ask === "Tf" ? "funde a 5,5 °C" : "hierve a 80,1 °C"}; `}${i > 1 ? `suponé disociación completa` : "no es electrolito"})`,
+        answer: ans, tolerance: ask === "M" ? 0.01 : 2e-3,
+        solution: [`[[qg-coligativas|Propiedades coligativas]]: $\\Delta T = i\\,K\\,m$, con $m$ la molalidad y $i$ el factor de van 't Hoff (las partículas que da cada unidad: ${i}).`,
+          ask === "M" ? `$m = \\frac{\\Delta T}{K_f} = \\frac{${dn(dShow, 3)}}{${dn(S.Kf, 2)}} \\approx ${nf(dShow / S.Kf, 4)}$ mol/kg; en $${mw / 1000}$ kg hay $${nf(dShow / S.Kf * mw / 1000, 4)}$ mol, así que $M = \\frac{${ms}}{${nf(dShow / S.Kf * mw / 1000, 4)}} \\approx ${dn(Mx, 1)}$ g/mol.`
+            : `$m = \\frac{${ms}/${dn(Q.mm(f), 2)}}{${mw / 1000}} \\approx ${nf(m, 4)}$ mol/kg. $\\Delta T = ${i}\\cdot${ask === "Tf" ? dn(S.Kf, 2) : dn(S.Kb, 3)}\\cdot${nf(m, 4)} \\approx ${dn(ask === "Tf" ? dTf : dTb, 3)}$ °C.`,
+          ask === "Tf" ? `Congela a $${dn(S.tf, 1)} - ${dn(dTf, 3)} \\approx ${dn(ans, 3)}$ °C.` : ask === "Tb" ? `Hierve $${dn(dTb, 3)}$ °C más alto: a $${dn(S.tb + dTb, 3)}$ °C.` : ``].filter(Boolean),
+        traps: i > 1 && ask !== "M" ? [{ value: ask === "Tf" ? S.tf - S.Kf * m : S.Kb * m, msg: `Faltó el factor de van 't Hoff: cada unidad de $${tx(f)}$ da ${i} partículas en solución.` }] : [],
+        // verificación: la constante se recalcula con la termodinámica del solvente, K = R·T²·M/ΔH
+        verify: { kind: "zero", tol: 3e-3, fn: x => {
+          const Kf = Kthermo(sv, "f"), Kb = Kthermo(sv, "b");
+          if (ask === "Tf") return [(S.tf - x) / (i * Kf * m) - 1];
+          if (ask === "Tb") return [x / (i * Kb * m) - 1];
+          return [(Kf * ms / (mw / 1000) / dShow) / x - 1];
+        } }
+      };
+    }
+  };
+  T["qg-osmotica-num"] = {
+    type: "numeric", concepts: ["qg-coligativas"], difficulty: 2,
+    generate(r) {
+      const [f, i, nm] = r.pick(SOLU), tC = r.pick([20, 25, 27, 37]), TK = tC + 273.15, c = r.pick([0.005, 0.01, 0.02, 0.05, 0.1]), ask = r.pick(["pi", "c"]);
+      const pi = i * c * Q.R * TK, piShow = +pi.toFixed(3), cAns = piShow / (i * Q.R * TK);
+      return {
+        prompt: ask === "pi" ? `¿Cuál es la presión osmótica (atm) de una solución $${dn(c, 3)}$ M de ${nm} a $${tC}$ °C?${i > 1 ? " (disociación completa)" : ""}` : `Una solución acuosa de ${nm} tiene una presión osmótica de $${dn(piShow, 3)}$ atm a $${tC}$ °C. ¿Cuál es su molaridad?${i > 1 ? " (disociación completa)" : ""}`,
+        answer: ask === "pi" ? pi : cAns, tolerance: 0.01,
+        solution: [`[[qg-coligativas|Presión osmótica]] (van 't Hoff): $\\pi = i\\,M\\,RT$, con $i = ${i}$.`,
+          ask === "pi" ? `$\\pi = ${i}\\cdot${dn(c, 3)}\\cdot0{,}082\\cdot${dn(TK, 2)} \\approx ${dn(pi, 3)}$ atm.` : `$M = \\frac{\\pi}{iRT} = \\frac{${dn(piShow, 3)}}{${i}\\cdot0{,}082\\cdot${dn(TK, 2)}} \\approx ${nf(cAns, 4)}$ M.`],
+        traps: i > 1 ? [{ value: ask === "pi" ? pi / i : cAns * i, msg: "Faltó el factor de van 't Hoff (cuántas partículas da cada unidad)." }] : [],
+        // verificación: por el potencial químico del agua, π = −(RT/V̄) ln x_agua (sin aproximar la solución diluida)
+        verify: { kind: "zero", tol: 1e-2, fn: v => {
+          const cc = ask === "pi" ? c : v, nw = 1000 / 18.015, ns = i * cc, Vm = 0.018068;   // ~1 L de agua; volumen molar del agua (L/mol)
+          const piT = -Q.R * TK / Vm * Math.log(nw / (nw + ns));
+          return ask === "pi" ? [piT / v - 1] : [piT / piShow - 1];
+        } }
+      };
+    }
+  };
+  T["qg-raoult-num"] = {
+    type: "numeric", concepts: ["qg-raoult"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["novolatil", "ideal"]);
+      if (kind === "novolatil") {
+        const [f, , nm] = r.pick(SOLU.filter(s => s[1] === 1)), ms = r.int(20, 150), mw = r.pick([100, 200, 250]), tC = r.pick([20, 25, 30]), p0 = { 20: 17.54, 25: 23.76, 30: 31.82 }[tC];
+        const ns = ms / Q.mm(f), nw = mw / Q.mm("H2O"), p = p0 * nw / (nw + ns);
+        return {
+          prompt: `¿Cuál es la presión de vapor (mmHg) a $${tC}$ °C de una solución de $${ms}$ g de ${nm} ($${tx(f)}$) en $${mw}$ g de agua? (Presión de vapor del agua pura: $${dn(p0, 2)}$ mmHg)`,
+          answer: p, tolerance: 2e-3,
+          solution: [`[[qg-raoult|Ley de Raoult]]: $p = x_{agua}\\,p^\\circ$. Moles: soluto $${nf(ns, 4)}$, agua $${nf(nw, 4)}$; $x_{agua} \\approx ${dn(nw / (nw + ns), 4)}$.`, `$p \\approx ${dn(nw / (nw + ns), 4)}\\cdot${dn(p0, 2)} \\approx ${dn(p, 2)}$ mmHg.`],
+          traps: [{ value: p0 * ns / (nw + ns), msg: "Esa es la fracción molar del soluto: en Raoult va la del solvente." }],
+          // verificación: contando moléculas (en unidades de N_A) de cada especie
+          verify: { kind: "zero", tol: 1e-9, fn: x => { const N1 = ms / Object.entries(Q.count2(f)).reduce((s, [e, k]) => s + Q.A[e] * k, 0), N2 = mw / (2 * Q.A.H + Q.A.O); return [p0 * N2 / (N1 + N2) / x - 1]; } }
+        };
+      }
+      const pB = 95.1, pT = 28.4, nB = r.int(1, 9) / 10, ask = r.pick(["P", "yB"]);
+      const P = nB * pB + (1 - nB) * pT, yB = nB * pB / P;
+      return {
+        prompt: `Una mezcla líquida de benceno y tolueno, que se comporta como solución ideal, tiene fracción molar de benceno $${dn(nB, 1)}$. A 25 °C las presiones de vapor puras son $${dn(pB, 1)}$ mmHg (benceno) y $${dn(pT, 1)}$ mmHg (tolueno). ${ask === "P" ? "¿Cuál es la presión de vapor total (mmHg)?" : "¿Cuál es la fracción molar de benceno en el vapor?"}`,
+        answer: ask === "P" ? P : yB, tolerance: 0.01,
+        solution: [`[[qg-raoult|Raoult]] para cada componente: $p_B = x_Bp_B^\\circ = ${dn(nB * pB, 2)}$ mmHg y $p_T = x_Tp_T^\\circ = ${dn((1 - nB) * pT, 2)}$ mmHg.`,
+          ask === "P" ? `Por [[qg-dalton|Dalton]], $P = p_B + p_T \\approx ${dn(P, 2)}$ mmHg.` : `En el vapor, $y_B = \\frac{p_B}{P} = \\frac{${dn(nB * pB, 2)}}{${dn(P, 2)}} \\approx ${dn(yB, 3)}$: el vapor es más rico en el componente más volátil (base de la destilación).`],
+        traps: ask === "yB" ? [{ value: nB, msg: "Esa es la fracción en el líquido: el vapor se enriquece en el más volátil." }] : [],
+        // verificación: se cuentan las moléculas de cada especie en el vapor como gases ideales en 1 L a 25 °C
+        verify: { kind: "zero", tol: 1e-9, fn: x => {
+          const nBv = nB * pB / 760 * 1 / (Q.R * 298.15), nTv = (1 - nB) * pT / 760 * 1 / (Q.R * 298.15);
+          return ask === "P" ? [(nBv + nTv) * Q.R * 298.15 * 760 / x - 1] : [nBv / (nBv + nTv) / x - 1];
+        } }
+      };
+    }
+  };
+  T["qg-coligativas-order"] = {
+    type: "order", concepts: ["qg-coligativas"], difficulty: 2,
+    generate(r) {
+      const opts = r.sample([[0.1, "C6H12O6"], [0.1, "NaCl"], [0.1, "CaCl2"], [0.15, "C12H22O11"], [0.05, "Na2SO4"], [0.08, "KNO3"], [0.2, "CH4N2O"], [0.04, "AlCl3"], [0.06, "MgSO4"]], 4);
+      const iOf = f => SOLU.find(s => s[0] === f)[1], part = ([c, f]) => c * iOf(f);
+      if (new Set(opts.map(o => +part(o).toFixed(6))).size < 4) return null;
+      // de mayor a menor punto de congelación = de menos a más partículas
+      const sorted = opts.slice().sort((a, b) => part(a) - part(b));
+      return {
+        prompt: `Ordená estas soluciones acuosas de **mayor a menor punto de congelación** (disociación completa de las sales): ${opts.map(([c, f]) => `$${dn(c, 2)}$ m de $${tx(f)}$`).join(", ")}.`,
+        steps: sorted.map(([c, f]) => `$${dn(c, 2)}$ m de $${tx(f)}$ ($i\\,m = ${dn(c * iOf(f), 2)}$)`),
+        solution: [`El descenso del punto de congelación es $\\Delta T_f = i\\,K_f\\,m$: depende de la concentración de **partículas** $i\\,m$, no de qué partículas son ([[qg-coligativas|propiedad coligativa]]).`, `Menos partículas → menor descenso → congela a mayor temperatura.`],
+        // verificación: con K_f del agua calculada por la termodinámica, se calculan los puntos de congelación y se ordenan
+        verify: { kind: "truth", target: true, fn: () => {
+          const K = Kthermo("agua", "f"), tf = o => 0 - iOf(o[1]) * K * o[0];
+          return opts.slice().sort((a, b) => tf(b) - tf(a)).map(o => o[1]).join() === sorted.map(o => o[1]).join();
+        } }
+      };
+    }
+  };
+  T["qg-coloides-vf"] = {
+    type: "tf", concepts: ["qg-coligativas"], difficulty: 1,
+    generate(r) {
+      // tamaño de partícula (nm) de distintos sistemas: solución < 1 nm, coloide 1–1000 nm, suspensión > 1000 nm
+      const SYS = [["agua salada", 0.3], ["leche", 400], ["niebla", 800], ["agua con arena", 50000], ["gelatina", 30], ["humo", 200], ["agua azucarada", 0.8], ["sangre (plasma con proteínas)", 8], ["agua barrosa", 20000], ["mayonesa", 600]];
+      const [sys, d] = r.pick(SYS), kind = d < 1 ? "solución" : d <= 1000 ? "coloide" : "suspensión", claim = r.pick(["solución", "coloide", "suspensión"]);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${sys} es ${claim === "coloide" ? "un sistema coloidal" : claim === "solución" ? "una solución verdadera" : "una suspensión"}.`,
+        answer: kind === claim,
+        explanation: `Sus partículas dispersas miden del orden de ${dn(d, 1).replace("{,}", ",")} nm: es ${kind === "coloide" ? "un **coloide** (entre 1 y 1000 nm: dispersa la luz, efecto Tyndall, y no sedimenta)" : kind === "solución" ? "una **solución** (partículas de menos de 1 nm: no dispersa la luz)" : "una **suspensión** (partículas de más de 1 μm: sedimenta y se puede filtrar)"}.`,
+        solution: [`La diferencia entre solución, [[qg-coligativas|coloide]] y suspensión es el tamaño de las partículas dispersas.`],
+        // verificación: clasificación por el tamaño, con los límites expresados en metros
+        verify: { kind: "truth", fn: () => { const m = d * 1e-9, k2 = m < 1e-9 ? "solución" : m <= 1e-6 ? "coloide" : "suspensión"; return k2 === claim; } }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-raoult": {
+      title: "Presión de vapor de soluciones: ley de Raoult", aliases: ["ley de Raoult", "descenso de la presión de vapor", "solución ideal", "destilación fraccionada"], concepts: ["qg-raoult"],
+      summary: "En una solución ideal, cada componente volátil aporta p_i = x_i·p_i° (Raoult). Un soluto no volátil baja la presión de vapor del solvente en proporción a su fracción molar. El vapor es más rico en el componente más volátil.",
+      def: [R`**Ley de Raoult:** en una solución ideal, la presión parcial de vapor de cada componente es su fracción molar en el líquido por su presión de vapor puro: $p_i = x_i\,p_i^\circ$ (ver [[qg-liquidos|presión de vapor]]).`,
+        R`Con un soluto **no volátil**, solo el solvente aporta vapor: $p = x_{solv}\,p^\circ$, y el **descenso** es $\Delta p = x_{soluto}\,p^\circ$.`,
+        R`Con dos componentes volátiles, la presión total es $P = x_Ap_A^\circ + x_Bp_B^\circ$ ([[qg-dalton|Dalton]]) y la fracción en el vapor es $y_A = \frac{x_Ap_A^\circ}{P}$: el vapor se enriquece en el más volátil, lo que permite separarlos por **destilación fraccionada**.`],
+      idea: [R`Las moléculas de soluto ocupan parte de la superficie y "le quitan lugar" al solvente para escaparse. Por eso la presión de vapor baja en proporción a cuántas moléculas de soluto hay, sin importar cuáles son: es el origen de todas las [[qg-coligativas|propiedades coligativas]].`],
+      demo: [R`**Paso 1 (equilibrio dinámico).** En equilibrio, las moléculas de solvente que se evaporan por unidad de tiempo igualan a las que se condensan. La evaporación es proporcional a cuántas moléculas de solvente hay en la superficie, o sea a $x_{solv}$; la condensación, a la presión del vapor $p$.`,
+        R`**Paso 2 (solvente puro).** Con $x_{solv} = 1$, el equilibrio se da a $p^\circ$: $k_{ev}\cdot1 = k_{cond}\,p^\circ$.`,
+        R`**Paso 3 (solución).** Con soluto, $k_{ev}\,x_{solv} = k_{cond}\,p$. Dividiendo por la igualdad del paso 2: $p = x_{solv}\,p^\circ$. $\blacksquare$`],
+      examples: [{ q: R`50 g de glucosa en 200 g de agua a 25 °C ($p^\circ = 23{,}76$ mmHg).`, steps: [R`$n_{gluc} = 0{,}2775$; $n_{agua} = 11{,}10$; $x_{agua} = 0{,}9756$.`, R`$p \approx 23{,}18$ mmHg.`] }],
+      see: ["qg-liquidos", "qg-coligativas", "qg-dalton"]
+    },
+    "qg-coligativas": {
+      title: "Propiedades coligativas y coloides", aliases: ["propiedades coligativas", "propiedad coligativa", "descenso crioscópico", "ascenso ebulloscópico", "presión osmótica", "ósmosis", "factor de van 't Hoff", "constante crioscópica", "coloide", "coloides", "efecto Tyndall"], concepts: ["qg-coligativas"],
+      summary: "Dependen solo de la concentración de partículas de soluto: descenso crioscópico ΔT_f = i·K_f·m, ascenso ebulloscópico ΔT_b = i·K_b·m y presión osmótica π = i·M·R·T. Sirven para medir masas molares. Un coloide tiene partículas de 1 a 1000 nm y dispersa la luz (Tyndall).",
+      def: [R`Las **propiedades coligativas** de una solución diluida dependen de cuántas partículas de soluto hay, no de cuáles:
+- **descenso de la presión de vapor** ([[qg-raoult|Raoult]]);
+- **descenso crioscópico:** $\Delta T_f = i\,K_f\,m$ (para el agua, $K_f = 1{,}86$ °C·kg/mol);
+- **ascenso ebulloscópico:** $\Delta T_b = i\,K_b\,m$ (agua: $K_b = 0{,}512$);
+- **presión osmótica:** $\pi = i\,M\,RT$ (ecuación de van 't Hoff), la presión que hay que aplicar para frenar el paso de solvente a través de una membrana semipermeable (**ósmosis**).`,
+        R`El **factor de van 't Hoff** $i$ es la cantidad de partículas que da cada unidad de soluto: 1 para no electrolitos (glucosa), 2 para NaCl, 3 para CaCl₂ (en la práctica algo menor, por los pares iónicos).`,
+        R`**Coloides:** sistemas con partículas dispersas de 1 a 1000 nm (leche, gelatina, niebla, humo). No sedimentan ni se filtran con papel, pero dispersan la luz (**efecto Tyndall**). Son **hidrofílicos** si la fase dispersa tiene afinidad por el agua (proteínas) o **hidrofóbicos** si no (y se estabilizan con cargas adsorbidas).`],
+      idea: [R`Todo sale de que el soluto "diluye" al solvente y le baja la tendencia a escapar (su potencial químico). Para que el líquido vuelva a estar en equilibrio con el sólido o con el vapor, hay que bajar la temperatura de congelación o subir la de ebullición. Por eso se echa sal en las rutas heladas, y por eso un glóbulo rojo revienta en agua pura.`,
+        R`La presión osmótica es enorme: una solución 0,1 M a 25 °C tiene $\pi \approx 2{,}4$ atm. Por eso se usa para medir masas molares de proteínas, que dan descensos crioscópicos ínfimos.`],
+      demo: [R`**Paso 1 (de dónde sale $K_b$).** Por [[qg-raoult|Raoult]], el soluto baja la presión de vapor en $\Delta p \approx x_s\,p^\circ$. Para volver a hervir, hay que subir $T$ hasta recuperar esa presión, siguiendo la curva de [[qg-liquidos|Clausius-Clapeyron]]: $\frac{\Delta p}{p^\circ} \approx \frac{\Delta H_{vap}}{RT_b^2}\Delta T_b$.`,
+        R`**Paso 2 (despejar).** $\Delta T_b \approx \frac{RT_b^2}{\Delta H_{vap}}x_s$. En una solución diluida, $x_s \approx \frac{n_s}{n_{solv}} = m\,M_{solv}$ (con $M_{solv}$ en kg/mol).`,
+        R`**Paso 3 (la constante).** Queda $\Delta T_b = K_b\,m$ con $K_b = \frac{RT_b^2M_{solv}}{\Delta H_{vap}}$. Para el agua: $\frac{8{,}314\cdot373{,}15^2\cdot0{,}018}{40\,650} \approx 0{,}512$. Lo mismo con la fusión da $K_f = 1{,}86$. Con $i$ partículas por unidad, se multiplica por $i$. $\blacksquare$`],
+      examples: [{ q: R`¿Dónde congela el agua con 58,4 g de NaCl por kg?`, steps: [R`$m = 1$; $i = 2$: $\Delta T_f = 2\cdot1{,}86\cdot1 = 3{,}72$ °C.`, R`Congela a −3,72 °C.`] }],
+      see: ["qg-raoult", "qg-concentracion", "qg-liquidos"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-raoult": { name: "Ley de Raoult" }, "qg-coligativas": { name: "Propiedades coligativas" } },
+    templates: T,
+    units: [{
+      id: "qg-coligativas-u", order: 7, program: "Unidad 5", title: "Propiedades coligativas", icon: "flask-conical",
+      diagnostic: ["qg-raoult-num", "qg-crioscopia-num", "qg-osmotica-num"],
+      lessons: [
+        { id: "qg-l-raoult", title: "Ley de Raoult", templates: ["qg-raoult-num"], theory: ["qg-raoult"],
+          intro: R`$p_i = x_i\,p_i^\circ$. Un soluto no volátil baja la presión de vapor.` },
+        { id: "qg-l-crioscopia", title: "Crioscopía y ebulloscopía", templates: ["qg-crioscopia-num", "qg-coligativas-order"], theory: ["qg-coligativas"],
+          intro: R`$\Delta T = i\,K\,m$: cuentan las partículas.` },
+        { id: "qg-l-osmosis", title: "Presión osmótica y coloides", templates: ["qg-osmotica-num", "qg-coloides-vf"], theory: ["qg-coligativas"],
+          intro: R`$\pi = i\,M\,RT$. Coloide: partículas de 1 a 1000 nm, efecto Tyndall.` }
+      ]
+    }],
+    cards
+  });
+})();

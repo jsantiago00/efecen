@@ -22,7 +22,7 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. **Q101 Química General** (pedido del usuario, 26/10): para que la app sirva también a quien cursa Química o Biología. Unidades 1 a 4 hechas; faltan 5 a 9, evaluaciones y Extra UBA.
+1. **Q101 Química General** (pedido del usuario, 26/10): para que la app sirva también a quien cursa Química o Biología. Unidades 1 a 5 hechas; faltan 6 a 9, evaluaciones y Extra UBA.
 2. **3.º año** de Física: F104 Física General III (completa, 26/10), después M103, M203, F203, M209 y F205.
 
 Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, sus unidades «Extra UBA» y un «Examen Extra UBA».
