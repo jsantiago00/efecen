@@ -40,6 +40,7 @@ ok(E.checkNumeric(4.71, 1.5 * Math.PI), "checkNumeric", "4.71 ≈ 3π/2");
 ok(!E.checkNumeric(0.3, 1 / 3), "checkNumeric", "0.3 no es 1/3");
 ok(E.checkNumeric(0, 0) && !E.checkNumeric(0.1, 0), "checkNumeric", "cero");
 ok(!E.checkNumeric(Infinity, 1), "checkNumeric", "infinito");
+ok(!E.checkNumeric(0, 1.8e-5) && !E.checkNumeric(0.01, 0.0144) && E.checkNumeric(1.8e-5, 1.81e-5), "checkNumeric", "respuestas chicas: no vale el redondeo a 2 decimales");
 
 // ---------- 1b. expresiones (respuestas de tipo expr) ----------
 {

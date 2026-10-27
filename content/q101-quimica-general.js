@@ -1130,7 +1130,7 @@
       see: ["qg-balanceo", "qg-mol"]
     },
     "qg-mol": {
-      title: "Mol, masa molar y número de Avogadro", aliases: ["mol", "moles", "masa molar", "número de Avogadro", "constante de Avogadro", "cantidad de sustancia", "unidad fórmula"], concepts: ["qg-mol"],
+      title: "Mol, masa molar y número de Avogadro", aliases: ["masa molar", "número de Avogadro", "constante de Avogadro", "cantidad de sustancia", "unidad fórmula"], concepts: ["qg-mol"],
       summary: "Un mol son N_A = 6,022 × 10²³ partículas. La masa molar M (g/mol) es la masa de un mol y numéricamente igual a la masa de la fórmula en u. n = m/M; partículas = n·N_A.",
       def: [R`El **mol** es la unidad de cantidad de sustancia: contiene $N_A = 6{,}022\times10^{23}$ entidades (átomos, moléculas, iones o unidades fórmula). $N_A$ es el **número de Avogadro**.`,
         R`La **masa molar** $M$ es la masa de un mol, en g/mol. Se calcula sumando las [[qg-atomo|masas atómicas]] de la fórmula: $M(\mathrm{H_2O}) = 2\cdot1{,}008 + 15{,}999 = 18{,}015$ g/mol.`,
@@ -1150,7 +1150,7 @@
 - **síntesis** (A + B → AB), **descomposición** (AB → A + B);
 - **sustitución simple** (A + BC → AC + B), **doble sustitución** (AB + CD → AD + CB, como las neutralizaciones y las precipitaciones);
 - **combustión** (un combustible con O₂ da CO₂ y H₂O);
-- **redox**: cambian números de oxidación (óxido-reducción).`],
+- **redox**: cambian números de oxidación ([[qg-redox|óxido-reducción]]).`],
       idea: [R`Balancear es plantear un sistema lineal: una ecuación por elemento, una incógnita por sustancia. Siempre hay una incógnita más que ecuaciones independientes, porque si multiplicás todos los coeficientes por 2 la ecuación sigue balanceada: por eso se elige la solución entera más chica.`],
       demo: [R`**Paso 1 (el sistema).** Para $a\,\mathrm{CH_4} + b\,\mathrm{O_2} \to c\,\mathrm{CO_2} + d\,\mathrm{H_2O}$: carbono $a = c$; hidrógeno $4a = 2d$; oxígeno $2b = 2c + d$.`,
         R`**Paso 2 (una libre).** Son 3 ecuaciones y 4 incógnitas. Fijando $a = 1$: $c = 1$, $d = 2$, y $2b = 2 + 2$, $b = 2$.`,
@@ -1825,7 +1825,7 @@ Las tres juntas: $\frac{P_1V_1}{T_1} = \frac{P_2V_2}{T_2}$, siempre con la **tem
 
   const cards = {
     "qg-concentracion": {
-      title: "Soluciones y unidades de concentración", aliases: ["solución", "soluciones", "soluto", "solvente", "concentración", "molaridad", "molalidad", "porcentaje en masa", "% m/m", "% m/V", "partes por millón"], concepts: ["qg-concentracion"],
+      title: "Soluciones y unidades de concentración", aliases: ["molaridad", "molalidad", "porcentaje en masa", "% m/m", "% m/V", "partes por millón"], concepts: ["qg-concentracion"],
       summary: "Una solución es una mezcla homogénea de soluto en solvente. Molaridad M = mol de soluto / L de solución; molalidad m = mol de soluto / kg de solvente; % m/m = g de soluto cada 100 g de solución; % m/V = g cada 100 mL; fracción molar x = n_i / n_total.",
       def: [R`Una **solución** es una mezcla homogénea. El componente en mayor proporción (casi siempre el agua) es el **solvente**, y los otros, los **solutos**.`,
         R`Unidades de **concentración**:
@@ -1840,7 +1840,7 @@ Las tres juntas: $\frac{P_1V_1}{T_1} = \frac{P_2V_2}{T_2}$, siempre con la **tem
       see: ["qg-dilucion", "qg-mol", "qg-coligativas"]
     },
     "qg-dilucion": {
-      title: "Dilución y mezcla de soluciones", aliases: ["dilución", "diluir", "C1V1 = C2V2", "mezcla de soluciones", "solución madre"], concepts: ["qg-dilucion"],
+      title: "Dilución y mezcla de soluciones", aliases: ["dilución", "C1V1 = C2V2", "mezcla de soluciones", "solución madre"], concepts: ["qg-dilucion"],
       summary: "Al diluir, la cantidad de soluto no cambia: C₁V₁ = C₂V₂. Al mezclar soluciones del mismo soluto se suman los moles y (aproximadamente) los volúmenes: C = (C₁V₁ + C₂V₂)/(V₁ + V₂).",
       def: [R`**Dilución:** se agrega solvente a una solución. Como los moles de soluto se conservan, $C_1V_1 = C_2V_2$ (con cualquier unidad de volumen, la misma de los dos lados).`,
         R`**Mezcla:** $C_f = \frac{C_1V_1 + C_2V_2}{V_1 + V_2}$, suponiendo volúmenes aditivos (en soluciones diluidas es una buena aproximación).`],
@@ -2062,6 +2062,922 @@ Las tres juntas: $\frac{P_1V_1}{T_1} = \frac{P_2V_2}{T_2}$, siempre con la **tem
           intro: R`$\Delta T = i\,K\,m$: cuentan las partículas.` },
         { id: "qg-l-osmosis", title: "Presión osmótica y coloides", templates: ["qg-osmotica-num", "qg-coloides-vf"], theory: ["qg-coligativas"],
           intro: R`$\pi = i\,M\,RT$. Coloide: partículas de 1 a 1000 nm, efecto Tyndall.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 6 · CINÉTICA QUÍMICA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  const tx = f => Q.tex(f);
+  // RK4 de una ecuación escalar, devuelve y(t1)
+  const rk4 = (f, y, a, b, n = 4000) => { const h = (b - a) / n; let t = a; for (let i = 0; i < n; i++) { const k1 = f(t, y), k2 = f(t + h / 2, y + h * k1 / 2), k3 = f(t + h / 2, y + h * k2 / 2), k4 = f(t + h, y + h * k3); y += h * (k1 + 2 * k2 + 2 * k3 + k4) / 6; t += h; } return y; };
+  Q.rk4 = rk4;
+
+  const RXV = [
+    { tex: R`2\,\mathrm{N_2O_5} \to 4\,\mathrm{NO_2} + \mathrm{O_2}`, sp: [["N_2O_5", -2], ["NO_2", 4], ["O_2", 1]] },
+    { tex: R`\mathrm{N_2} + 3\,\mathrm{H_2} \to 2\,\mathrm{NH_3}`, sp: [["N_2", -1], ["H_2", -3], ["NH_3", 2]] },
+    { tex: R`2\,\mathrm{NO} + \mathrm{O_2} \to 2\,\mathrm{NO_2}`, sp: [["NO", -2], ["O_2", -1], ["NO_2", 2]] },
+    { tex: R`4\,\mathrm{NH_3} + 5\,\mathrm{O_2} \to 4\,\mathrm{NO} + 6\,\mathrm{H_2O}`, sp: [["NH_3", -4], ["O_2", -5], ["NO", 4], ["H_2O", 6]] },
+    { tex: R`2\,\mathrm{H_2O_2} \to 2\,\mathrm{H_2O} + \mathrm{O_2}`, sp: [["H_2O_2", -2], ["H_2O", 2], ["O_2", 1]] }
+  ];
+  T["qg-velocidad-relativa-num"] = {
+    type: "numeric", concepts: ["qg-velocidad"], difficulty: 1,
+    generate(r) {
+      const x = r.pick(RXV), [a, b] = r.sample(x.sp, 2), v = r.pick([12, 25, 40, 60, 150, 300]);   // en mM/s
+      const ans = v * Math.abs(b[1]) / Math.abs(a[1]);
+      const verb = s => (s[1] < 0 ? "se consume" : "se forma");
+      return {
+        prompt: `En la reacción $${x.tex}$, en cierto instante el $\\mathrm{${a[0]}}$ ${verb(a)} a $${dn(v, 3)}$ mM/s. ¿A qué velocidad (mM/s) ${verb(b)} el $\\mathrm{${b[0]}}$?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`La [[qg-velocidad|velocidad de reacción]] es la misma para todas las especies si se divide por el coeficiente: $v = \\frac{1}{|\\nu_i|}\\left|\\frac{d[i]}{dt}\\right|$.`,
+          `$\\frac{${dn(v, 3)}}{${Math.abs(a[1])}} = ${nf(v / Math.abs(a[1]), 4)}$ mM/s; para el $\\mathrm{${b[0]}}$: $${Math.abs(b[1])}\\cdot${nf(v / Math.abs(a[1]), 4)} = ${nf(ans, 4)}$ mM/s.`],
+        traps: Math.abs(a[1]) !== Math.abs(b[1]) ? [{ value: v * Math.abs(a[1]) / Math.abs(b[1]), msg: "Invertiste la proporción: la especie con coeficiente mayor cambia más rápido." }] : [],
+        // verificación: la reacción avanza en pasitos de un "mol de reacción" y se miden los cambios de cada especie
+        verify: { kind: "zero", tol: 1e-9, fn: y => {
+          const c = Object.fromEntries(x.sp.map(([s]) => [s, 1])), dt = 1e-3, xi = v / Math.abs(a[1]) * dt;
+          for (const [s, nu] of x.sp) c[s] += nu * xi;
+          return [Math.abs(c[b[0]] - 1) / dt / y - 1];
+        } }
+      };
+    }
+  };
+  T["qg-orden-inicial-num"] = {
+    type: "numeric", concepts: ["qg-velocidad"], difficulty: 3,
+    generate(r) {
+      const m = r.int(0, 2), n = r.int(1, 2), k = r.pick([0.02, 0.15, 0.5, 1.2, 3.4, 8]), ask = r.pick(["m", "n", "k"]);
+      const A = [0.1, 0.2, 0.1], B = [0.1, 0.1, 0.3];
+      const v = A.map((a, i) => k * a ** m * B[i] ** n);
+      const vs = v.map(x => +x.toPrecision(3));
+      const kAns = vs[0] / (A[0] ** m * B[0] ** n);
+      return {
+        prompt: `Para $\\mathrm{A} + \\mathrm{B} \\to$ productos se midieron las velocidades iniciales: ${A.map((a, i) => `exp. ${i + 1}: $[\\mathrm A]_0 = ${dn(a, 2)}$ M, $[\\mathrm B]_0 = ${dn(B[i], 2)}$ M, $v_0 = ${nf(vs[i], 3)}$ M/s`).join("; ")}. ${ask === "m" ? "¿Cuál es el orden respecto de A?" : ask === "n" ? "¿Cuál es el orden respecto de B?" : `Sabiendo que la ley es $v = k[\\mathrm A]^{${m}}[\\mathrm B]^{${n}}$, ¿cuánto vale $k$?`}`,
+        answer: ask === "m" ? m : ask === "n" ? n : kAns, tolerance: 0.01,
+        solution: [`[[qg-velocidad|Método de las velocidades iniciales]]: se comparan experimentos donde cambia una sola concentración.`,
+          `Exp. 1 y 2: $[\\mathrm A]$ se duplica y $v$ se multiplica por $${dn(vs[1] / vs[0], 2)} = 2^{${m}}$: orden ${m} en A. Exp. 1 y 3: $[\\mathrm B]$ se triplica y $v$ se multiplica por $${dn(vs[2] / vs[0], 2)} = 3^{${n}}$: orden ${n} en B.`,
+          ask === "k" ? `$k = \\frac{v_1}{[\\mathrm A]^{${m}}[\\mathrm B]^{${n}}} = \\frac{${nf(vs[0], 3)}}{${dn(A[0], 2)}^{${m}}\\cdot${dn(B[0], 2)}^{${n}}} \\approx ${nf(kAns, 3)}$ (unidades de $\\mathrm{M^{${1 - m - n}}\\,s^{-1}}$).` : `La ley es $v = k[\\mathrm A]^{${m}}[\\mathrm B]^{${n}}$.`],
+        // verificación: ajuste por mínimos cuadrados de ln v = ln k + m ln[A] + n ln[B] con los tres experimentos (sistema 3×3 por Gauss)
+        verify: { kind: "zero", tol: 1e-2, fn: y => {
+          const M3 = A.map((a, i) => [1, Math.log(a), Math.log(B[i]), Math.log(vs[i])]);
+          for (let c = 0; c < 3; c++) { const p = M3.reduce((bi, row, j) => (j >= c && Math.abs(row[c]) > Math.abs(M3[bi][c]) ? j : bi), c); [M3[c], M3[p]] = [M3[p], M3[c]]; for (let j = 0; j < 3; j++) if (j !== c) { const f = M3[j][c] / M3[c][c]; for (let q = c; q < 4; q++) M3[j][q] -= f * M3[c][q]; } }
+          const sol = M3.map((row, i) => row[3] / row[i]), mi = Math.round(sol[1]), ni = Math.round(sol[2]);
+          const kfit = Math.exp(A.reduce((t, a, i) => t + Math.log(vs[i]) - mi * Math.log(a) - ni * Math.log(B[i]), 0) / 3);
+          const got = ask === "m" ? sol[1] : ask === "n" ? sol[2] : kfit;
+          return [ask === "k" ? got / y - 1 : got - y];
+        } }
+      };
+    }
+  };
+  T["qg-integrada-num"] = {
+    type: "numeric", concepts: ["qg-integradas"], difficulty: 2,
+    generate(r) {
+      const ord = r.int(0, 2), A0 = r.pick([0.2, 0.5, 0.8, 1, 1.5, 2]), ask = r.pick(["C", "t"]);
+      const k = ord === 0 ? r.pick([0.002, 0.005, 0.01]) : ord === 1 ? r.pick([0.0025, 0.01, 0.035, 0.12]) : r.pick([0.01, 0.05, 0.2, 0.6]);
+      const C = t => (ord === 0 ? A0 - k * t : ord === 1 ? A0 * Math.exp(-k * t) : A0 / (1 + k * A0 * t));
+      const tq = r.pick([10, 20, 30, 60, 100]), frac = r.pick([0.25, 0.4, 0.6, 0.75]), Cf = frac * A0;
+      const tAns = ord === 0 ? (A0 - Cf) / k : ord === 1 ? Math.log(A0 / Cf) / k : (1 / Cf - 1 / A0) / k;
+      if (ask === "C" && C(tq) <= 0.02 * A0) return null;
+      const unitK = ord === 0 ? "M/s" : ord === 1 ? "s^{-1}" : "M^{-1}\\,s^{-1}";
+      return {
+        prompt: ask === "C" ? `Una reacción $\\mathrm A \\to$ productos es de orden ${ord} con $k = ${nf(k, 3)}\\ \\mathrm{${unitK}}$. Si $[\\mathrm A]_0 = ${dn(A0, 2)}$ M, ¿cuánto vale $[\\mathrm A]$ (M) a los $${tq}$ s?`
+          : `Una reacción $\\mathrm A \\to$ productos es de orden ${ord} con $k = ${nf(k, 3)}\\ \\mathrm{${unitK}}$ y $[\\mathrm A]_0 = ${dn(A0, 2)}$ M. ¿Cuántos segundos tarda en quedar el $${dn(frac * 100, 0)}\\,\\%$ de A?`,
+        answer: ask === "C" ? C(tq) : tAns, tolerance: 0.01,
+        solution: [`[[qg-integradas|Ley integrada]] de orden ${ord}: ${ord === 0 ? "$[\\mathrm A] = [\\mathrm A]_0 - kt$" : ord === 1 ? "$\\ln[\\mathrm A] = \\ln[\\mathrm A]_0 - kt$" : "$\\frac1{[\\mathrm A]} = \\frac1{[\\mathrm A]_0} + kt$"}.`,
+          ask === "C" ? `$[\\mathrm A] \\approx ${nf(C(tq), 4)}$ M.` : `Con $[\\mathrm A] = ${nf(Cf, 3)}$ M: $t \\approx ${dn(tAns, 1)}$ s.`],
+        traps: ord !== 1 && ask === "t" ? [{ value: Math.log(1 / frac) / k, msg: "Esa es la fórmula de primer orden; la reacción es de otro orden." }].filter(t => Math.abs(t.value / tAns - 1) > 0.02) : [],
+        // verificación: se integra d[A]/dt = −k[A]^n con RK4 (hasta el tiempo dado, o hasta que [A] llegue al valor pedido)
+        verify: ask === "C"
+          ? { kind: "ode", f: (t, y) => [-k * Math.max(y[0], 0) ** ord], y0: [A0], t1: tq, dt: tq / 4000, out: (t, y) => y[0] }
+          : { kind: "ode", f: (t, y) => [-k * Math.max(y[0], 0) ** ord], y0: [A0], t1: 0, dt: tAns / 4000, until: (t, y) => y[0] <= Cf, g: (t, y) => y[0] - Cf, tmax: 10 * tAns, out: t => t }
+      };
+    }
+  };
+  T["qg-vida-media-num"] = {
+    type: "numeric", concepts: ["qg-integradas"], difficulty: 2,
+    generate(r) {
+      const ask = r.pick(["thalf", "k", "resto"]), k = r.pick([0.0069, 0.0231, 0.0462, 0.1155, 0.3466]), th = Math.log(2) / k;
+      const thShow = +th.toFixed(1), nHalf = r.int(2, 5), m0 = r.pick([80, 100, 160, 200]);
+      const ans = ask === "thalf" ? th : ask === "k" ? Math.log(2) / thShow : m0 * 0.5 ** nHalf;
+      return {
+        prompt: ask === "thalf" ? `Una reacción de primer orden tiene $k = ${dn(k, 4)}\\ \\mathrm{min^{-1}}$. ¿Cuál es su vida media (min)?`
+          : ask === "k" ? `Una reacción de primer orden tiene vida media de $${dn(thShow, 1)}$ min. ¿Cuánto vale $k$ ($\\mathrm{min^{-1}}$)?`
+          : `Un reactivo se descompone con cinética de primer orden y vida media de $${dn(thShow, 1)}$ min. Si al principio hay $${m0}$ mg, ¿cuántos mg quedan a los $${dn(nHalf * thShow, 1)}$ min?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`En primer orden, la [[qg-integradas|vida media]] no depende de la concentración: $t_{1/2} = \\frac{\\ln 2}{k}$.`,
+          ask === "thalf" ? `$t_{1/2} = \\frac{0{,}693}{${dn(k, 4)}} \\approx ${dn(th, 1)}$ min.` : ask === "k" ? `$k = \\frac{0{,}693}{${dn(thShow, 1)}} \\approx ${dn(ans, 4)}\\ \\mathrm{min^{-1}}$.` : `Pasaron ${nHalf} vidas medias: queda $${m0}\\cdot\\left(\\frac12\\right)^{${nHalf}} = ${dn(ans, 2)}$ mg.`],
+        traps: ask === "resto" ? [{ value: m0 / (2 * nHalf), msg: "Cada vida media se reduce a la **mitad** lo que había: es $(\\frac12)^n$, no $\\frac1{2n}$." }].filter(t => Math.abs(t.value / ans - 1) > 0.02) : [],
+        // verificación: integración de dm/dt = −km con RK4 (para la vida media: hasta que quede la mitad)
+        verify: ask === "resto" ? { kind: "ode", f: (t, y) => [-Math.log(2) / thShow * y[0]], y0: [m0], t1: nHalf * thShow, dt: 0.01, out: (t, y) => y[0] }
+          : ask === "thalf" ? { kind: "ode", f: (t, y) => [-k * y[0]], y0: [1], t1: 0, dt: th / 4000, until: (t, y) => y[0] <= 0.5, g: (t, y) => y[0] - 0.5, tmax: 10 * th, out: t => t }
+          : { kind: "zero", tol: 1e-6, fn: x => [rk4((t, y) => -x * y, 1, 0, thShow) - 0.5] }
+      };
+    }
+  };
+  T["qg-arrhenius-num"] = {
+    type: "numeric", concepts: ["qg-arrhenius"], difficulty: 3,
+    generate(r) {
+      const Ea = r.pick([40, 50, 75, 90, 120]), T1 = r.pick([290, 298, 300, 310]), T2 = T1 + r.pick([10, 20, 30, 50]), k1 = r.pick([0.002, 0.015, 0.08, 1.4]), ask = r.pick(["k2", "Ea", "factor"]);
+      const k2 = k1 * Math.exp(-Ea * 1000 / Q.Rsi * (1 / T2 - 1 / T1)), k2s = +k2.toPrecision(3);
+      const EaAns = Q.Rsi * Math.log(k2s / k1) / (1 / T1 - 1 / T2) / 1000;
+      return {
+        prompt: ask === "k2" ? `Una reacción tiene $E_a = ${Ea}$ kJ/mol y $k = ${nf(k1, 3)}\\ \\mathrm{s^{-1}}$ a $${T1}$ K. ¿Cuánto vale $k$ ($\\mathrm{s^{-1}}$) a $${T2}$ K?`
+          : ask === "Ea" ? `La constante de velocidad de una reacción vale $${nf(k1, 3)}\\ \\mathrm{s^{-1}}$ a $${T1}$ K y $${nf(k2s, 3)}\\ \\mathrm{s^{-1}}$ a $${T2}$ K. ¿Cuál es la energía de activación (kJ/mol)?`
+          : `Una reacción tiene $E_a = ${Ea}$ kJ/mol. ¿Por cuánto se multiplica su velocidad al pasar de $${T1}$ K a $${T2}$ K?`,
+        answer: ask === "k2" ? k2 : ask === "Ea" ? EaAns : k2 / k1, tolerance: 0.01,
+        solution: [`[[qg-arrhenius|Arrhenius]]: $k = A\\,e^{-E_a/RT}$, así que $\\ln\\frac{k_2}{k_1} = -\\frac{E_a}{R}\\left(\\frac1{T_2} - \\frac1{T_1}\\right)$, con $R = 8{,}314$ J/(mol·K).`,
+          ask === "Ea" ? `$E_a = \\frac{R\\ln(k_2/k_1)}{\\frac1{T_1} - \\frac1{T_2}} = \\frac{8{,}314\\cdot${dn(Math.log(k2s / k1), 4)}}{${nf(1 / T1 - 1 / T2, 4)}} \\approx ${dn(EaAns, 1)}$ kJ/mol.`
+            : `$\\ln\\frac{k_2}{k_1} = -\\frac{${Ea * 1000}}{8{,}314}\\left(\\frac1{${T2}} - \\frac1{${T1}}\\right) \\approx ${dn(Math.log(k2 / k1), 4)}$: $\\frac{k_2}{k_1} \\approx ${dn(k2 / k1, 3)}$${ask === "k2" ? `, $k_2 \\approx ${nf(k2, 3)}\\ \\mathrm{s^{-1}}$` : ""}.`],
+        traps: ask === "Ea" ? [{ value: EaAns * 1000, msg: "Eso está en J/mol: pasalo a kJ/mol." }] : [],
+        // verificación: se integra d(ln k)/dT = Ea/(RT²) con RK4 entre las dos temperaturas
+        verify: { kind: "zero", tol: 1e-6, fn: x => {
+          const ea = (ask === "Ea" ? x : Ea) * 1000, lnk2 = rk4((t, y) => ea / (Q.Rsi * t * t), Math.log(k1), T1, T2);
+          return ask === "k2" ? [lnk2 - Math.log(x)] : ask === "Ea" ? [lnk2 - Math.log(k2s)] : [lnk2 - Math.log(k1 * x)];
+        } }
+      };
+    }
+  };
+  T["qg-grafico-mc"] = {
+    type: "mc", concepts: ["qg-integradas"], difficulty: 2,
+    generate(r) {
+      const ord = r.int(0, 2), PLOT = ["[A] en función de t", "ln[A] en función de t", "1/[A] en función de t", "[A]² en función de t"], inverse = r.bool();
+      const ORD = ["orden 0", "orden 1", "orden 2", "orden 3"];
+      const ok = inverse ? ORD[ord] : PLOT[ord], mcq = H.mc(r, ok, (inverse ? ORD : PLOT).filter(p => p !== ok), { text: true });
+      return {
+        prompt: inverse ? `En una reacción $\\mathrm A \\to$ productos, el gráfico de ${PLOT[ord]} da una recta. ¿De qué orden es la reacción?` : `Para una reacción $\\mathrm A \\to$ productos de orden ${ord}, ¿qué gráfico da una recta?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`Las [[qg-integradas|leyes integradas]] son rectas: orden 0, $[\\mathrm A] = [\\mathrm A]_0 - kt$; orden 1, $\\ln[\\mathrm A] = \\ln[\\mathrm A]_0 - kt$; orden 2, $\\frac1{[\\mathrm A]} = \\frac1{[\\mathrm A]_0} + kt$.`, `Para orden ${ord}: **${PLOT[ord]}**, con pendiente ${ord === 2 ? "$k$" : "$-k$"}. Así se determina el orden con datos de concentración y tiempo.`],
+        // verificación: se simulan los datos con RK4 y se mide la linealidad (R²) de cada gráfico
+        verify: { kind: "truth", target: true, fn: () => {
+          const k = 0.04, A0 = 1, ts = [0, 4, 8, 12, 16, 20], cs = ts.map(t => rk4((s, y) => -k * Math.max(y, 0) ** ord, A0, 0, t || 1e-9, 400));
+          const tr = [c => c, c => Math.log(c), c => 1 / c, c => c * c];
+          const r2 = f => { const y = cs.map(f), mx = ts.reduce((a, b) => a + b) / 6, my = y.reduce((a, b) => a + b) / 6;
+            let sxy = 0, sxx = 0, syy = 0; ts.forEach((t, i) => { sxy += (t - mx) * (y[i] - my); sxx += (t - mx) ** 2; syy += (y[i] - my) ** 2; }); return sxy * sxy / (sxx * syy); };
+          const best = tr.map(r2).reduce((bi, v, i, arr) => (v > arr[bi] ? i : bi), 0);
+          return best === ord && r2(tr[ord]) > 1 - 1e-9;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-velocidad": {
+      title: "Velocidad de reacción y ley de velocidad", aliases: ["velocidad de reacción", "ley de velocidad", "orden de reacción", "constante de velocidad", "método de las velocidades iniciales", "cinética química"], concepts: ["qg-velocidad"],
+      summary: "Para aA + bB → cC, v = −(1/a)d[A]/dt = (1/c)d[C]/dt. La ley de velocidad v = k[A]^m[B]^n se determina experimentalmente: los órdenes m y n no tienen por qué coincidir con los coeficientes. Con velocidades iniciales se comparan experimentos donde cambia una sola concentración.",
+      def: [R`La **velocidad de reacción** mide cuánto cambian las concentraciones por unidad de tiempo, dividido por los coeficientes para que dé lo mismo con cualquier especie: para $a\mathrm A + b\mathrm B \to c\mathrm C$, $v = -\frac1a\frac{d[\mathrm A]}{dt} = -\frac1b\frac{d[\mathrm B]}{dt} = \frac1c\frac{d[\mathrm C]}{dt}$.`,
+        R`**Ley de velocidad:** $v = k[\mathrm A]^m[\mathrm B]^n$. Los **órdenes** $m$ y $n$ se miden; el orden global es $m + n$. La **constante de velocidad** $k$ depende de la temperatura, y sus unidades dependen del orden ($\mathrm{M^{1 - (m+n)}\,s^{-1}}$).`,
+        R`**Método de las velocidades iniciales:** se mide $v_0$ con distintas concentraciones iniciales. Si al multiplicar $[\mathrm A]$ por $f$ (con $[\mathrm B]$ fijo) la velocidad se multiplica por $f^m$, el orden en A es $m$.`,
+        R`Factores que afectan la velocidad: concentración, temperatura ([[qg-arrhenius|Arrhenius]]), superficie de contacto (en sólidos), naturaleza de los reactivos y catalizadores.`],
+      idea: [R`Los órdenes no se leen de la ecuación balanceada porque la reacción global suele ocurrir en varios pasos (el **mecanismo**), y la velocidad la fija el más lento. Solo para un paso elemental el orden coincide con el coeficiente.`],
+      demo: [R`**Paso 1 (dos experimentos).** Con $[\mathrm B]$ igual: $\frac{v_2}{v_1} = \frac{k[\mathrm A]_2^m[\mathrm B]^n}{k[\mathrm A]_1^m[\mathrm B]^n} = \left(\frac{[\mathrm A]_2}{[\mathrm A]_1}\right)^m$.`,
+        R`**Paso 2 (despejar).** Tomando logaritmos: $m = \frac{\ln(v_2/v_1)}{\ln([\mathrm A]_2/[\mathrm A]_1)}$. Si se duplicó $[\mathrm A]$ y $v$ se cuadruplicó, $m = 2$. $\blacksquare$`],
+      examples: [{ q: R`Al duplicar [A] la velocidad se duplica; al triplicar [B], se multiplica por 9.`, steps: [R`Orden 1 en A, orden 2 en B: $v = k[\mathrm A][\mathrm B]^2$, orden global 3.`] }],
+      see: ["qg-integradas", "qg-arrhenius"]
+    },
+    "qg-integradas": {
+      title: "Leyes integradas y vida media", aliases: ["ley de velocidad integrada", "leyes integradas", "tiempo de vida media", "reacción de primer orden", "reacción de segundo orden"], concepts: ["qg-integradas"],
+      summary: "Orden 0: [A] = [A]₀ − kt. Orden 1: ln[A] = ln[A]₀ − kt, con t½ = ln2/k (constante). Orden 2: 1/[A] = 1/[A]₀ + kt, con t½ = 1/(k[A]₀). El gráfico que da recta indica el orden.",
+      def: [R`Para $\mathrm A \to$ productos con $v = -\frac{d[\mathrm A]}{dt} = k[\mathrm A]^n$:
+- **orden 0:** $[\mathrm A] = [\mathrm A]_0 - kt$, $t_{1/2} = \frac{[\mathrm A]_0}{2k}$;
+- **orden 1:** $[\mathrm A] = [\mathrm A]_0e^{-kt}$, o sea $\ln[\mathrm A] = \ln[\mathrm A]_0 - kt$, $t_{1/2} = \frac{\ln 2}k$;
+- **orden 2:** $\frac1{[\mathrm A]} = \frac1{[\mathrm A]_0} + kt$, $t_{1/2} = \frac1{k[\mathrm A]_0}$.`,
+        R`La **vida media** $t_{1/2}$ es el tiempo en que la concentración baja a la mitad. Solo en primer orden es constante: después de $n$ vidas medias queda $(\frac12)^n$ (como en la desintegración radiactiva).`],
+      idea: [R`Graficando los datos de tres formas ($[\mathrm A]$, $\ln[\mathrm A]$ y $\frac1{[\mathrm A]}$ contra $t$), la que da una recta revela el orden, y la pendiente da $k$.`],
+      demo: [R`**Paso 1 (orden 1).** $\frac{d[\mathrm A]}{dt} = -k[\mathrm A]$. Separando: $\frac{d[\mathrm A]}{[\mathrm A]} = -k\,dt$; integrando desde 0: $\ln\frac{[\mathrm A]}{[\mathrm A]_0} = -kt$.`,
+        R`**Paso 2 (vida media).** Con $[\mathrm A] = \frac{[\mathrm A]_0}2$: $\ln\frac12 = -kt_{1/2}$, así que $t_{1/2} = \frac{\ln2}{k}$, sin $[\mathrm A]_0$.`,
+        R`**Paso 3 (orden 2).** $\frac{d[\mathrm A]}{[\mathrm A]^2} = -k\,dt$; integrando, $-\frac1{[\mathrm A]} + \frac1{[\mathrm A]_0} = -kt$, o sea $\frac1{[\mathrm A]} = \frac1{[\mathrm A]_0} + kt$. Con la mitad: $\frac2{[\mathrm A]_0} - \frac1{[\mathrm A]_0} = kt_{1/2}$. $\blacksquare$`],
+      examples: [{ q: R`Primer orden con $t_{1/2} = 20$ min. ¿Qué fracción queda a la hora?`, steps: [R`Son 3 vidas medias: $(\frac12)^3 = \frac18$.`] }],
+      see: ["qg-velocidad", "edo", "c2-edo-modelos"]
+    },
+    "qg-arrhenius": {
+      title: "Energía de activación, Arrhenius y catálisis", aliases: ["ecuación de Arrhenius", "energía de activación", "factor de frecuencia", "teoría de las colisiones", "estado de transición", "complejo activado", "catalizador", "catálisis"], concepts: ["qg-arrhenius"],
+      summary: "k = A·e^(−Ea/RT): la constante crece exponencialmente con la temperatura. Con dos temperaturas, ln(k₂/k₁) = −(Ea/R)(1/T₂ − 1/T₁). Un catalizador ofrece un camino con menor Ea, sin consumirse y sin cambiar el equilibrio.",
+      def: [R`**Ecuación de Arrhenius:** $k = A\,e^{-E_a/RT}$. $E_a$ es la **energía de activación**, la barrera que hay que superar, y $A$ el **factor de frecuencia** (relacionado con cuántos choques ocurren y con qué orientación).`,
+        R`**Teoría de las colisiones:** reaccionan solo los choques con energía mayor que $E_a$ y con la orientación correcta; la fracción de choques con suficiente energía es $e^{-E_a/RT}$. **Teoría del estado de transición:** en el máximo de energía se forma un **complejo activado** inestable que puede seguir a productos o volver.`,
+        R`Un **catalizador** abre un mecanismo alternativo de menor $E_a$: acelera la reacción directa y la inversa por igual, no se consume y no cambia la constante de equilibrio. Es **homogéneo** si está en la misma fase que los reactivos y **heterogéneo** si no (el convertidor catalítico de un auto, las enzimas sobre su sustrato).`],
+      idea: [R`Como la temperatura aparece en un exponente, un aumento chico tiene un efecto grande: con $E_a \approx 50$ kJ/mol, subir 10 °C cerca de la temperatura ambiente casi duplica la velocidad. Por eso la heladera conserva los alimentos.`],
+      demo: [R`**Paso 1 (dos temperaturas).** $\ln k_1 = \ln A - \frac{E_a}{RT_1}$ y $\ln k_2 = \ln A - \frac{E_a}{RT_2}$.`,
+        R`**Paso 2 (restar).** $\ln\frac{k_2}{k_1} = -\frac{E_a}{R}\left(\frac1{T_2} - \frac1{T_1}\right)$: se elimina $A$. $\blacksquare$`,
+        R`**Paso 3 (gráfico).** $\ln k = \ln A - \frac{E_a}R\cdot\frac1T$ es una recta en función de $\frac1T$ con pendiente $-\frac{E_a}R$: así se mide $E_a$.`],
+      examples: [{ q: R`$E_a = 50$ kJ/mol: ¿cuánto acelera de 298 K a 308 K?`, steps: [R`$\ln\frac{k_2}{k_1} = \frac{50\,000}{8{,}314}\left(\frac1{298} - \frac1{308}\right) \approx 0{,}655$: casi el doble (1,93 veces).`] }],
+      see: ["qg-velocidad", "qg-equilibrio"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-velocidad": { name: "Ley de velocidad" }, "qg-integradas": { name: "Leyes integradas" }, "qg-arrhenius": { name: "Arrhenius y catálisis" } },
+    templates: T,
+    units: [{
+      id: "qg-cinetica-u", order: 8, program: "Unidad 6", title: "Cinética química", icon: "timer",
+      diagnostic: ["qg-velocidad-relativa-num", "qg-integrada-num", "qg-arrhenius-num"],
+      lessons: [
+        { id: "qg-l-velocidad", title: "Velocidad y ley de velocidad", templates: ["qg-velocidad-relativa-num", "qg-orden-inicial-num"], theory: ["qg-velocidad"],
+          intro: R`$v = -\frac1a\frac{d[\mathrm A]}{dt}$; $v = k[\mathrm A]^m[\mathrm B]^n$ con órdenes medidos.` },
+        { id: "qg-l-integradas", title: "Leyes integradas y vida media", templates: ["qg-grafico-mc", "qg-integrada-num", "qg-vida-media-num"], theory: ["qg-integradas"],
+          intro: R`Orden 1: $\ln[\mathrm A] = \ln[\mathrm A]_0 - kt$ y $t_{1/2} = \frac{\ln2}k$.` },
+        { id: "qg-l-arrhenius", title: "Temperatura y catálisis", templates: ["qg-arrhenius-num"], theory: ["qg-arrhenius"],
+          intro: R`$\ln\frac{k_2}{k_1} = -\frac{E_a}R\left(\frac1{T_2} - \frac1{T_1}\right)$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 7 · EQUILIBRIO QUÍMICO
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  // reacciones en fase gaseosa: especies con coeficiente (−reactivo, +producto), ΔH° (kJ/mol)
+  const EQ = {
+    nh3: { tex: R`\mathrm{N_2(g)} + 3\,\mathrm{H_2(g)} \rightleftharpoons 2\,\mathrm{NH_3(g)}`, sp: [["N_2", -1], ["H_2", -3], ["NH_3", 2]], dH: -92 },
+    hi: { tex: R`\mathrm{H_2(g)} + \mathrm{I_2(g)} \rightleftharpoons 2\,\mathrm{HI(g)}`, sp: [["H_2", -1], ["I_2", -1], ["HI", 2]], dH: -9.5 },
+    n2o4: { tex: R`\mathrm{N_2O_4(g)} \rightleftharpoons 2\,\mathrm{NO_2(g)}`, sp: [["N_2O_4", -1], ["NO_2", 2]], dH: 57 },
+    so3: { tex: R`2\,\mathrm{SO_2(g)} + \mathrm{O_2(g)} \rightleftharpoons 2\,\mathrm{SO_3(g)}`, sp: [["SO_2", -2], ["O_2", -1], ["SO_3", 2]], dH: -198 },
+    pcl5: { tex: R`\mathrm{PCl_5(g)} \rightleftharpoons \mathrm{PCl_3(g)} + \mathrm{Cl_2(g)}`, sp: [["PCl_5", -1], ["PCl_3", 1], ["Cl_2", 1]], dH: 88 },
+    wgs: { tex: R`\mathrm{CO(g)} + \mathrm{H_2O(g)} \rightleftharpoons \mathrm{CO_2(g)} + \mathrm{H_2(g)}`, sp: [["CO", -1], ["H_2O", -1], ["CO_2", 1], ["H_2", 1]], dH: -41 },
+    no: { tex: R`\mathrm{N_2(g)} + \mathrm{O_2(g)} \rightleftharpoons 2\,\mathrm{NO(g)}`, sp: [["N_2", -1], ["O_2", -1], ["NO", 2]], dH: 181 }
+  };
+  const Qc = (x, c) => x.sp.reduce((q, [s, nu]) => q * Math.max(c[s], 1e-300) ** nu, 1);
+  const dn_gas = x => x.sp.reduce((s, [, nu]) => s + nu, 0);
+  // simulación cinética: v = kf·Π[R]^ν − kr·Π[P]^ν con kf/kr = K, hasta el equilibrio (RK4 en el avance por litro)
+  const simulate = (x, c0, K, tEnd = 400) => {
+    const kf = 1, kr = 1 / K, conc = xi => Object.fromEntries(x.sp.map(([s, nu]) => [s, c0[s] + nu * xi]));
+    const rate = xi => { const c = conc(xi); let f = kf, b = kr; for (const [s, nu] of x.sp) { if (nu < 0) f *= Math.max(c[s], 0) ** -nu; else b *= Math.max(c[s], 0) ** nu; } return f - b; };
+    let xi = 0; const h = 0.01;
+    for (let t = 0; t < tEnd; t += h) { const k1 = rate(xi); if (Math.abs(k1) < 1e-14) break; const k2 = rate(xi + h * k1 / 2), k3 = rate(xi + h * k2 / 2), k4 = rate(xi + h * k3); xi += h * (k1 + 2 * k2 + 2 * k3 + k4) / 6; }
+    return conc(xi);
+  };
+  Q.eqSimulate = simulate;
+
+  T["qg-kc-num"] = {
+    type: "numeric", concepts: ["qg-equilibrio"], difficulty: 2, testN: 60,
+    generate(r) {
+      const key = r.pick(["pcl5", "n2o4", "hi", "wgs", "nh3"]), x = EQ[key], c0 = {}, react = x.sp.filter(s => s[1] < 0);
+      for (const [s, nu] of x.sp) c0[s] = nu < 0 ? r.pick([0.5, 1, 1.5, 2]) : 0;
+      const lim = Math.min(...react.map(([s, nu]) => c0[s] / -nu)), xi = +(lim * r.pick([0.2, 0.3, 0.45, 0.6, 0.75])).toFixed(3);
+      const ceq = Object.fromEntries(x.sp.map(([s, nu]) => [s, c0[s] + nu * xi])), prod = x.sp.find(s => s[1] > 0), K = Qc(x, ceq);
+      return {
+        prompt: `En un recipiente de 1 L se colocan ${react.map(([s]) => `$${dn(c0[s], 1)}$ mol de $\\mathrm{${s}}$`).join(" y ")}, y se alcanza el equilibrio $${x.tex}$ con $${dn(ceq[prod[0]], 3)}$ mol de $\\mathrm{${prod[0]}}$. ¿Cuánto vale $K_c$?`,
+        answer: K, tolerance: 0.01,
+        solution: [`Tabla de [[qg-equilibrio|equilibrio]] (inicial, cambio, equilibrio): si reaccionan $x$ "moles de reacción", cada especie cambia $\\nu x$. Del dato, $x = ${dn(xi, 3)}$.`,
+          `En el equilibrio: ${x.sp.map(([s]) => `$[\\mathrm{${s}}] = ${dn(ceq[s], 3)}$`).join(", ")}.`,
+          `$K_c = \\frac{${x.sp.filter(s => s[1] > 0).map(([s, nu]) => `[\\mathrm{${s}}]${nu > 1 ? `^{${nu}}` : ""}`).join("")}}{${react.map(([s, nu]) => `[\\mathrm{${s}}]${-nu > 1 ? `^{${-nu}}` : ""}`).join("")}} \\approx ${nf(K, 4)}$.`],
+        traps: [{ value: 1 / K, msg: "Invertiste el cociente: en $K_c$ van los productos arriba." }].filter(t => Math.abs(t.value / K - 1) > 0.05),
+        // verificación: con ese K se simula la reacción directa e inversa (kf/kr = K) desde el estado inicial hasta el equilibrio
+        verify: { kind: "zero", tol: 1e-3, fn: Kx => { const c = simulate(x, c0, Kx, 300); return [c[prod[0]] / ceq[prod[0]] - 1]; } }
+      };
+    }
+  };
+  T["qg-ice-num"] = {
+    type: "numeric", concepts: ["qg-equilibrio"], difficulty: 3, testN: 60,
+    generate(r) {
+      const key = r.pick(["pcl5", "n2o4", "hi", "wgs"]), x = EQ[key], c = r.pick([0.2, 0.5, 1, 2]), K = r.pick([0.04, 0.1, 0.5, 1.6, 4, 9, 25, 49]);
+      // solución por la fórmula de cada caso
+      let xi;
+      if (key === "pcl5") xi = (-K + Math.sqrt(K * K + 4 * K * c)) / 2;               // x²/(c − x) = K
+      else if (key === "n2o4") xi = (-K + Math.sqrt(K * K + 16 * K * c)) / 8;         // 4x²/(c − x) = K
+      else if (key === "hi") xi = Math.sqrt(K) * c / (2 + Math.sqrt(K));              // (2x)²/(c − x)² = K
+      else xi = Math.sqrt(K) * c / (1 + Math.sqrt(K));                                // x²/(c − x)² = K
+      const prod = x.sp.find(s => s[1] > 0), ans = prod[1] * xi;
+      const c0 = Object.fromEntries(x.sp.map(([s, nu]) => [s, nu < 0 ? c : 0]));
+      return {
+        prompt: `Para $${x.tex}$, $K_c = ${dn(K, 2)}$ a cierta temperatura. Si se parte de ${x.sp.filter(s => s[1] < 0).map(([s]) => `$${dn(c, 1)}$ M de $\\mathrm{${s}}$`).join(" y ")} (sin productos), ¿cuál es la concentración de $\\mathrm{${prod[0]}}$ (M) en el equilibrio?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`Tabla de [[qg-equilibrio|equilibrio]]: ${x.sp.map(([s, nu]) => `$[\\mathrm{${s}}] = ${nu < 0 ? `${dn(c, 1)} - ${-nu === 1 ? "" : -nu}x` : `${nu === 1 ? "" : nu}x`}$`).join(", ")}.`,
+          key === "pcl5" ? `$\\frac{x^2}{${dn(c, 1)} - x} = ${dn(K, 2)}$: cuadrática, $x \\approx ${nf(xi, 4)}$.` : key === "n2o4" ? `$\\frac{4x^2}{${dn(c, 1)} - x} = ${dn(K, 2)}$: cuadrática, $x \\approx ${nf(xi, 4)}$.` : `Es un cuadrado perfecto: sacando raíz, $\\frac{${key === "hi" ? "2x" : "x"}}{${dn(c, 1)} - x} = \\sqrt{${dn(K, 2)}}$, $x \\approx ${nf(xi, 4)}$.`,
+          `$[\\mathrm{${prod[0]}}] = ${prod[1] === 1 ? "" : prod[1]}x \\approx ${nf(ans, 4)}$ M.`],
+        traps: prod[1] === 2 ? [{ value: xi, msg: "Ese es $x$; el producto tiene coeficiente 2, así que su concentración es $2x$." }] : [],
+        // verificación: simulación cinética (kf = 1, kr = 1/K) desde las concentraciones iniciales hasta el equilibrio
+        verify: { kind: "zero", tol: 1e-3, fn: v => [simulate(x, c0, K, 400)[prod[0]] / v - 1] }
+      };
+    }
+  };
+  T["qg-kp-num"] = {
+    type: "numeric", concepts: ["qg-equilibrio"], difficulty: 2,
+    generate(r) {
+      const key = r.pick(["nh3", "n2o4", "so3", "pcl5", "hi"]), x = EQ[key], TK = r.pick([400, 500, 600, 700, 800]), Kc = r.pick([0.05, 0.5, 2.4, 15, 280]), ask = r.pick(["Kp", "Kc"]);
+      const d = dn_gas(x), Kp = Kc * (Q.R * TK) ** d, KpS = +Kp.toPrecision(3);
+      const ans = ask === "Kp" ? Kp : KpS / (Q.R * TK) ** d;
+      return {
+        prompt: ask === "Kp" ? `Para $${x.tex}$, $K_c = ${nf(Kc, 3)}$ a $${TK}$ K. ¿Cuánto vale $K_p$ (presiones en atm)?` : `Para $${x.tex}$, $K_p = ${nf(KpS, 3)}$ (presiones en atm) a $${TK}$ K. ¿Cuánto vale $K_c$?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`Con $p_i = [i]RT$: $K_p = K_c(RT)^{\\Delta n}$, donde $\\Delta n = ${d}$ son los moles gaseosos de productos menos los de reactivos ([[qg-equilibrio|Kp y Kc]]).`,
+          `$(RT)^{\\Delta n} = (0{,}082\\cdot${TK})^{${d}} \\approx ${nf((Q.R * TK) ** d, 4)}$, así que $${ask === "Kp" ? `K_p \\approx ${nf(Kp, 4)}` : `K_c \\approx ${nf(ans, 4)}`}$.`],
+        traps: d !== 0 ? [{ value: ask === "Kp" ? Kc * (Q.R * TK) ** -d : KpS * (Q.R * TK) ** d, msg: "El exponente es Δn = (moles gaseosos de productos) − (de reactivos): revisá el signo." }] : [],
+        // verificación: se arma un estado de equilibrio con concentraciones que cumplen Kc, se pasan a presiones (p = cRT) y se calcula Kp
+        verify: { kind: "zero", tol: 1e-9, fn: v => {
+          const kc = ask === "Kp" ? Kc : v, c = {}, react = x.sp.filter(s => s[1] < 0), prods = x.sp.filter(s => s[1] > 0);
+          for (const [s] of react) c[s] = 0.37;
+          const rest = prods.slice(1);
+          for (const [s] of rest) c[s] = 0.21;
+          const need = kc * react.reduce((q, [s, nu]) => q * c[s] ** -nu, 1) / rest.reduce((q, [s, nu]) => q * c[s] ** nu, 1);
+          c[prods[0][0]] = need ** (1 / prods[0][1]);
+          const kp = x.sp.reduce((q, [s, nu]) => q * (c[s] * Q.R * TK) ** nu, 1);
+          return ask === "Kp" ? [kp / v - 1] : [kp / KpS - 1];
+        } }
+      };
+    }
+  };
+  T["qg-cociente-mc"] = {
+    type: "mc", concepts: ["qg-equilibrio"], difficulty: 2,
+    generate(r) {
+      const key = r.pick(Object.keys(EQ)), x = EQ[key], K = r.pick([0.01, 0.2, 1.5, 8, 60]), c = Object.fromEntries(x.sp.map(([s]) => [s, r.pick([0.05, 0.1, 0.2, 0.5, 1, 2])]));
+      const q = Qc(x, c), dir = Math.abs(q / K - 1) < 0.02 ? null : q < K ? "hacia los productos (a la derecha)" : "hacia los reactivos (a la izquierda)";
+      if (!dir) return null;
+      const mcq = H.mc(r, dir, ["hacia los productos (a la derecha)", "hacia los reactivos (a la izquierda)", "no avanza: ya está en equilibrio"].filter(o => o !== dir), { text: true, fallback: ["no avanza: K cambia hasta valer Q"] });
+      return {
+        prompt: `Para $${x.tex}$, $K_c = ${nf(K, 2)}$. En un instante, ${x.sp.map(([s]) => `$[\\mathrm{${s}}] = ${dn(c[s], 2)}$ M`).join(", ")}. ¿Hacia dónde evoluciona el sistema?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`Se calcula el [[qg-equilibrio|cociente de reacción]] $Q$ con las concentraciones del momento: $Q \\approx ${nf(q, 3)}$.`, `$Q ${q < K ? "<" : ">"} K$: ${q < K ? "faltan productos, la reacción avanza a la derecha" : "sobran productos, retrocede a la izquierda"}.`],
+        // verificación: signo de la velocidad neta con kf = 1 y kr = 1/K en ese instante
+        verify: { kind: "truth", target: true, fn: () => {
+          let f = 1, b = 1 / K;
+          for (const [s, nu] of x.sp) { if (nu < 0) f *= c[s] ** -nu; else b *= c[s] ** nu; }
+          return (f - b > 0) === dir.startsWith("hacia los productos");
+        } }
+      };
+    }
+  };
+  const PERT = ["agregar", "quitar", "comprimir", "calentar", "catalizador", "inerte"];
+  T["qg-lechatelier-mc"] = {
+    type: "mc", concepts: ["qg-le-chatelier"], difficulty: 2,
+    generate(r) {
+      const key = r.pick(Object.keys(EQ)), x = EQ[key], p = r.pick(PERT), sp = r.pick(x.sp), d = dn_gas(x);
+      let desc, shift;
+      const RIGHT = "se desplaza hacia los productos", LEFT = "se desplaza hacia los reactivos", NONE = "no se desplaza";
+      if (p === "agregar") { desc = `se agrega $\\mathrm{${sp[0]}}$`; shift = sp[1] < 0 ? RIGHT : LEFT; }
+      else if (p === "quitar") { desc = `se retira parte del $\\mathrm{${sp[0]}}$`; shift = sp[1] < 0 ? LEFT : RIGHT; }
+      else if (p === "comprimir") { desc = "se reduce el volumen a la mitad (a temperatura constante)"; shift = d < 0 ? RIGHT : d > 0 ? LEFT : NONE; }
+      else if (p === "calentar") { desc = `se aumenta la temperatura ($\\Delta H^\\circ = ${x.dH}$ kJ/mol)`; shift = x.dH > 0 ? RIGHT : LEFT; }
+      else if (p === "catalizador") { desc = "se agrega un catalizador"; shift = NONE; }
+      else { desc = "se agrega argón a volumen constante"; shift = NONE; }
+      const mcq = H.mc(r, shift, [RIGHT, LEFT, NONE].filter(o => o !== shift), { text: true, fallback: ["se detiene la reacción"] });
+      return {
+        prompt: `El sistema $${x.tex}$ está en equilibrio. Si ${desc}, el equilibrio…`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`[[qg-le-chatelier|Le Chatelier]]: el sistema se desplaza en el sentido que contrarresta la perturbación.`,
+          p === "agregar" || p === "quitar" ? `Cambia una concentración: $Q$ ${shift === RIGHT ? "queda menor que $K$" : "queda mayor que $K$"} y el sistema ${shift}.`
+            : p === "comprimir" ? (d === 0 ? `Hay los mismos moles gaseosos de cada lado ($\\Delta n = 0$): la presión no lo desplaza.` : `Al comprimir, se favorece el lado con menos moles gaseosos ($\\Delta n = ${d}$): ${shift}.`)
+            : p === "calentar" ? `Calentar favorece el sentido **endotérmico**, que absorbe el calor. Como $\\Delta H^\\circ ${x.dH > 0 ? "> 0" : "< 0"}$, ${shift}. (Además cambia el valor de $K$.)`
+            : p === "catalizador" ? `El catalizador acelera por igual la reacción directa y la inversa: se llega antes al equilibrio, pero $K$ y las concentraciones no cambian.`
+            : `Un gas inerte a volumen constante no cambia las concentraciones (ni las presiones parciales) de los que reaccionan: $Q$ sigue igual a $K$.`],
+        // verificación: se calcula Q justo después de la perturbación (o el nuevo K, por van 't Hoff, si se calienta) y se compara
+        verify: { kind: "truth", target: true, fn: () => {
+          const K = 2, c = {};
+          // un equilibrio cualquiera: todas las especies menos una a 0,5 M, y la última ajustada para que Q = K
+          x.sp.forEach(([s]) => (c[s] = 0.5));
+          const [ls, lnu] = x.sp[x.sp.length - 1]; c[ls] = (K / Qc(x, Object.assign({}, c, { [ls]: 1 }))) ** (1 / lnu);
+          let c2 = Object.assign({}, c), K2 = K;
+          if (p === "agregar") c2[sp[0]] *= 1.5;
+          if (p === "quitar") c2[sp[0]] *= 0.5;
+          if (p === "comprimir") for (const s in c2) c2[s] *= 2;
+          if (p === "calentar") K2 = K * Math.exp(-x.dH * 1000 / Q.Rsi * (1 / 330 - 1 / 300));
+          const q = Qc(x, c2), got = Math.abs(q / K2 - 1) < 1e-9 ? NONE : q < K2 ? RIGHT : LEFT;
+          return got === shift;
+        } }
+      };
+    }
+  };
+  T["qg-expresion-k-mc"] = {
+    type: "mc", concepts: ["qg-equilibrio"], difficulty: 1,
+    generate(r) {
+      const HET = [
+        { tex: R`\mathrm{CaCO_3(s)} \rightleftharpoons \mathrm{CaO(s)} + \mathrm{CO_2(g)}`, ok: R`K_c = [\mathrm{CO_2}]`, bad: [R`K_c = \frac{[\mathrm{CaO}][\mathrm{CO_2}]}{[\mathrm{CaCO_3}]}`, R`K_c = \frac{1}{[\mathrm{CO_2}]}`, R`K_c = [\mathrm{CaO}][\mathrm{CO_2}]`], gas: { CO2: 1 } },
+        { tex: R`\mathrm{C(s)} + \mathrm{CO_2(g)} \rightleftharpoons 2\,\mathrm{CO(g)}`, ok: R`K_c = \frac{[\mathrm{CO}]^2}{[\mathrm{CO_2}]}`, bad: [R`K_c = \frac{[\mathrm{CO}]^2}{[\mathrm{C}][\mathrm{CO_2}]}`, R`K_c = \frac{2[\mathrm{CO}]}{[\mathrm{CO_2}]}`, R`K_c = \frac{[\mathrm{CO_2}]}{[\mathrm{CO}]^2}`], gas: { CO: 2, CO2: -1 } },
+        { tex: R`\mathrm{NH_4Cl(s)} \rightleftharpoons \mathrm{NH_3(g)} + \mathrm{HCl(g)}`, ok: R`K_c = [\mathrm{NH_3}][\mathrm{HCl}]`, bad: [R`K_c = \frac{[\mathrm{NH_3}][\mathrm{HCl}]}{[\mathrm{NH_4Cl}]}`, R`K_c = [\mathrm{NH_3}] + [\mathrm{HCl}]`, R`K_c = \frac{1}{[\mathrm{NH_3}][\mathrm{HCl}]}`], gas: { NH3: 1, HCl: 1 } },
+        { tex: R`2\,\mathrm{SO_2(g)} + \mathrm{O_2(g)} \rightleftharpoons 2\,\mathrm{SO_3(g)}`, ok: R`K_c = \frac{[\mathrm{SO_3}]^2}{[\mathrm{SO_2}]^2[\mathrm{O_2}]}`, bad: [R`K_c = \frac{2[\mathrm{SO_3}]}{2[\mathrm{SO_2}][\mathrm{O_2}]}`, R`K_c = \frac{[\mathrm{SO_2}]^2[\mathrm{O_2}]}{[\mathrm{SO_3}]^2}`, R`K_c = \frac{[\mathrm{SO_3}]}{[\mathrm{SO_2}][\mathrm{O_2}]}`], gas: { SO3: 2, SO2: -2, O2: -1 } },
+        { tex: R`\mathrm{N_2(g)} + 3\,\mathrm{H_2(g)} \rightleftharpoons 2\,\mathrm{NH_3(g)}`, ok: R`K_c = \frac{[\mathrm{NH_3}]^2}{[\mathrm{N_2}][\mathrm{H_2}]^3}`, bad: [R`K_c = \frac{[\mathrm{NH_3}]}{[\mathrm{N_2}][\mathrm{H_2}]}`, R`K_c = \frac{[\mathrm{N_2}][\mathrm{H_2}]^3}{[\mathrm{NH_3}]^2}`, R`K_c = \frac{2[\mathrm{NH_3}]}{[\mathrm{N_2}]\,3[\mathrm{H_2}]}`], gas: { NH3: 2, N2: -1, H2: -3 } }
+      ];
+      const h = r.pick(HET), mcq = H.mc(r, h.ok, h.bad);
+      return {
+        prompt: `¿Cuál es la expresión de $K_c$ para $${h.tex}$?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`En la [[qg-equilibrio|constante de equilibrio]] van los productos sobre los reactivos, cada concentración elevada a su coeficiente. Los sólidos y los líquidos puros no aparecen (su "concentración" es constante y queda dentro de $K$).`, `Queda $${h.ok}$.`],
+        // verificación: con concentraciones de prueba, la expresión correcta coincide con Π[gas]^ν (sin sólidos)
+        verify: { kind: "truth", target: true, fn: () => {
+          const c = { CO2: 0.3, CO: 0.7, NH3: 0.2, HCl: 0.45, SO3: 0.6, SO2: 0.25, O2: 0.15, N2: 0.4, H2: 0.9 };
+          const want = Object.entries(h.gas).reduce((q, [s, nu]) => q * c[s] ** nu, 1);
+          const prodOf = part => (part.match(/\[\\mathrm\{\w+\}\](\^\d)?/g) || []).reduce((q, t) => { const [, sp, e] = /\[\\mathrm\{(\w+)\}\](?:\^(\d))?/.exec(t); return q * c[sp.replace(/_/g, "")] ** +(e || 1); }, 1);
+          const fr = /\\frac\{(.*)\}\{(.*)\}$/.exec(h.ok.replace(/^K_c = /, ""));
+          const got = fr ? prodOf(fr[1]) / prodOf(fr[2]) : prodOf(h.ok);
+          return Math.abs(got / want - 1) < 1e-12;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-equilibrio": {
+      title: "Equilibrio químico, K y cociente de reacción", aliases: ["equilibrio químico", "constante de equilibrio", "cociente de reacción", "ley de acción de masas", "tabla de equilibrio", "equilibrio heterogéneo"], concepts: ["qg-equilibrio"],
+      summary: "En el equilibrio las reacciones directa e inversa ocurren a la misma velocidad y las concentraciones quedan fijas. Para aA + bB ⇌ cC + dD, K_c = [C]^c[D]^d/([A]^a[B]^b) (sin sólidos ni líquidos puros). Q tiene la misma forma con concentraciones cualesquiera: si Q < K avanza a productos. K_p = K_c(RT)^Δn.",
+      def: [R`El **equilibrio químico** es dinámico: la reacción directa y la inversa siguen ocurriendo, a la misma velocidad, y las concentraciones ya no cambian.`,
+        R`**Ley de acción de masas:** para $a\mathrm A + b\mathrm B \rightleftharpoons c\mathrm C + d\mathrm D$, en el equilibrio $K_c = \frac{[\mathrm C]^c[\mathrm D]^d}{[\mathrm A]^a[\mathrm B]^b}$, que solo depende de la temperatura. En los **equilibrios heterogéneos** los sólidos y líquidos puros no aparecen.`,
+        R`Con presiones parciales (en atm), $K_p = K_c(RT)^{\Delta n}$, con $\Delta n$ los moles gaseosos de productos menos los de reactivos.`,
+        R`El **cociente de reacción** $Q$ tiene la misma expresión con las concentraciones de cualquier momento: si $Q < K$ el sistema avanza hacia los productos; si $Q > K$, hacia los reactivos; si $Q = K$, está en equilibrio.`,
+        R`**Tabla de equilibrio:** se anotan las concentraciones iniciales, el cambio ($\nu_i\,x$ para cada especie, con el signo de su lado) y las de equilibrio; se reemplazan en $K$ y se despeja $x$.`],
+      idea: [R`$K$ grande ($\gg 1$) significa que en el equilibrio dominan los productos; $K$ chico, los reactivos. $K$ no dice nada de cuán rápido se llega: eso es [[qg-velocidad|cinética]]. Un catalizador hace llegar antes, pero al mismo lugar.`],
+      demo: [R`**Paso 1 (pasos elementales).** Para una reacción elemental, la velocidad directa es $v_d = k_d[\mathrm A]^a[\mathrm B]^b$ y la inversa $v_i = k_i[\mathrm C]^c[\mathrm D]^d$.`,
+        R`**Paso 2 (equilibrio dinámico).** En el equilibrio, $v_d = v_i$: $k_d[\mathrm A]^a[\mathrm B]^b = k_i[\mathrm C]^c[\mathrm D]^d$.`,
+        R`**Paso 3 (la constante).** Reordenando, $\frac{[\mathrm C]^c[\mathrm D]^d}{[\mathrm A]^a[\mathrm B]^b} = \frac{k_d}{k_i} = K_c$, una constante a $T$ fija. (Para reacciones de varios pasos se llega a lo mismo multiplicando las constantes de cada paso, y la termodinámica lo garantiza en general.)`,
+        R`**Paso 4 ($K_p$).** Con $p_i = [i]RT$: $K_p = \prod(p_i)^{\nu_i} = \prod([i]RT)^{\nu_i} = K_c(RT)^{\sum\nu_i}$, y $\sum\nu_i = \Delta n$. $\blacksquare$`],
+      examples: [{ q: R`$\mathrm{PCl_5} \rightleftharpoons \mathrm{PCl_3} + \mathrm{Cl_2}$, $K_c = 0{,}5$, con 1 M de PCl₅.`, steps: [R`$\frac{x^2}{1 - x} = 0{,}5$: $x^2 + 0{,}5x - 0{,}5 = 0$, $x \approx 0{,}5$.`, R`$[\mathrm{PCl_3}] = [\mathrm{Cl_2}] \approx 0{,}5$ M y $[\mathrm{PCl_5}] \approx 0{,}5$ M.`] }],
+      see: ["qg-le-chatelier", "qg-velocidad", "qg-acido-base"]
+    },
+    "qg-le-chatelier": {
+      title: "Principio de Le Chatelier", aliases: ["principio de Le Chatelier", "Le Chatelier", "desplazamiento del equilibrio", "ecuación de van 't Hoff"], concepts: ["qg-le-chatelier"],
+      summary: "Si se perturba un equilibrio, el sistema se desplaza en el sentido que contrarresta la perturbación: agregar un reactivo lo lleva a productos; comprimir favorece el lado con menos moles gaseosos; calentar favorece el sentido endotérmico (y cambia K). Un catalizador o un gas inerte a volumen constante no lo desplazan.",
+      def: [R`**Principio de Le Chatelier:** si un sistema en equilibrio se perturba, evoluciona en el sentido que contrarresta la perturbación, hasta un nuevo equilibrio.`,
+        R`- **Concentración:** agregar un reactivo o quitar un producto desplaza hacia los productos (baja $Q$ por debajo de $K$).
+- **Presión (cambiando el volumen):** al comprimir se favorece el lado con menos moles gaseosos; si $\Delta n = 0$, no hay desplazamiento.
+- **Temperatura:** calentar favorece el sentido endotérmico. Es la única perturbación que cambia $K$: $\ln\frac{K_2}{K_1} = -\frac{\Delta H^\circ}{R}\left(\frac1{T_2} - \frac1{T_1}\right)$ (**van 't Hoff**).
+- **Catalizador** o **gas inerte a volumen constante:** no lo desplazan.`],
+      idea: [R`La síntesis del amoníaco (Haber) es exotérmica y reduce los moles de gas: conviene alta presión y, para el equilibrio, baja temperatura. Pero a baja temperatura es lentísima, así que se trabaja a unos 450 °C con catalizador de hierro y a 200 atm, y se va retirando el NH₃: un compromiso entre equilibrio y cinética.`],
+      demo: [R`**Paso 1 (concentración).** Al agregar un reactivo, crece el denominador de $Q$: $Q < K$, y para recuperar $Q = K$ la reacción tiene que avanzar.`,
+        R`**Paso 2 (volumen).** Si el volumen se reduce a la mitad, todas las concentraciones se duplican y $Q' = 2^{\Delta n}Q = 2^{\Delta n}K$. Con $\Delta n < 0$, $Q' < K$: avanza a productos (el lado con menos moles de gas). Con $\Delta n = 0$, $Q' = K$.`,
+        R`**Paso 3 (temperatura).** Por van 't Hoff, si $\Delta H^\circ > 0$, $K$ crece con $T$: el $Q$ del equilibrio viejo queda por debajo del nuevo $K$ y avanza a productos. Si $\Delta H^\circ < 0$, al revés. $\blacksquare$`],
+      examples: [{ q: R`$\mathrm{N_2O_4} \rightleftharpoons 2\,\mathrm{NO_2}$ ($\Delta H > 0$): ¿qué pasa al calentar?`, steps: [R`Se favorece el sentido endotérmico: más NO₂ (marrón). La mezcla se oscurece.`] }],
+      see: ["qg-equilibrio", "qg-arrhenius"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-equilibrio": { name: "Constante de equilibrio" }, "qg-le-chatelier": { name: "Le Chatelier" } },
+    templates: T,
+    units: [{
+      id: "qg-equilibrio-u", order: 9, program: "Unidad 7", title: "Equilibrio químico", icon: "target",
+      diagnostic: ["qg-expresion-k-mc", "qg-ice-num", "qg-lechatelier-mc"],
+      lessons: [
+        { id: "qg-l-k", title: "Constante de equilibrio", templates: ["qg-expresion-k-mc", "qg-kc-num", "qg-kp-num"], theory: ["qg-equilibrio"],
+          intro: R`$K_c = \frac{[\mathrm C]^c[\mathrm D]^d}{[\mathrm A]^a[\mathrm B]^b}$, sin sólidos ni líquidos puros. $K_p = K_c(RT)^{\Delta n}$.` },
+        { id: "qg-l-ice", title: "Cálculos de equilibrio", templates: ["qg-ice-num", "qg-cociente-mc"], theory: ["qg-equilibrio"],
+          intro: R`Tabla de equilibrio: inicial, cambio ($\nu x$) y equilibrio. $Q < K$: avanza a productos.` },
+        { id: "qg-l-lechatelier", title: "Le Chatelier", templates: ["qg-lechatelier-mc"], theory: ["qg-le-chatelier"],
+          intro: R`El sistema contrarresta la perturbación. Solo la temperatura cambia $K$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 8 · ÁCIDOS Y BASES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  const tx = (f, q) => Q.tex(f, q);
+  const KW = 1e-14;
+  // [H⁺] por balance de cargas (bisección en log[H⁺]); `neg(h)` da la suma de las cargas negativas menos las positivas que no son H⁺
+  const solveH = neg => { const f = lh => { const h = 10 ** lh; return h - KW / h - neg(h); }; return 10 ** Q.bisect(f, -15, 1, 200); };
+  Q.solveH = solveH;
+  const pH = h => -Math.log10(h);
+  const WEAK = [["CH3COOH", 1.8e-5, "ácido acético"], ["HF", 6.8e-4, "ácido fluorhídrico"], ["HCN", 4.9e-10, "ácido cianhídrico"], ["HNO2", 4.5e-4, "ácido nitroso"], ["C6H5COOH", 6.3e-5, "ácido benzoico"], ["HClO", 3.0e-8, "ácido hipocloroso"]];
+  const WBASE = [["NH3", 1.8e-5, "amoníaco"], ["CH3NH2", 4.4e-4, "metilamina"], ["C5H5N", 1.7e-9, "piridina"]];
+
+  T["qg-ph-fuerte-num"] = {
+    type: "numeric", concepts: ["qg-acido-base"], difficulty: 1,
+    generate(r) {
+      const [f, n, kind, nm] = r.pick([["HCl", 1, "a", "ácido clorhídrico"], ["HNO3", 1, "a", "ácido nítrico"], ["HClO4", 1, "a", "ácido perclórico"], ["NaOH", 1, "b", "hidróxido de sodio"], ["KOH", 1, "b", "hidróxido de potasio"], ["Ba(OH)2", 2, "b", "hidróxido de bario"], ["Ca(OH)2", 2, "b", "hidróxido de calcio"]]);
+      const C = r.pick([1e-4, 5e-4, 1e-3, 2.5e-3, 0.01, 0.02, 0.05, 0.1, 0.5]), ask = r.pick(["pH", "pH", "pOH"]);
+      const h = kind === "a" ? n * C : KW / (n * C), p = ask === "pH" ? pH(h) : 14 - pH(h);
+      return {
+        prompt: `¿Cuál es el ${ask} de una solución $${nf(C, 2)}$ M de ${nm} ($${tx(f)}$) a 25 °C?`,
+        answer: p, tolerance: 0.005,
+        solution: [`Es ${kind === "a" ? "un ácido" : "una base"} [[qg-acido-base|fuerte]]: se disocia por completo${n > 1 ? ` y cada unidad libera ${n} OH⁻` : ""}. ${kind === "a" ? `$[\\mathrm{H^+}] = ${nf(n * C, 3)}$ M.` : `$[\\mathrm{OH^-}] = ${nf(n * C, 3)}$ M, $\\mathrm{pOH} = ${dn(pH(n * C), 2)}$.`}`,
+          `${kind === "a" ? `$\\mathrm{pH} = -\\log[\\mathrm{H^+}] = ${dn(pH(h), 2)}$` : `$\\mathrm{pH} = 14 - \\mathrm{pOH} = ${dn(pH(h), 2)}$`}${ask === "pOH" ? `, y $\\mathrm{pOH} = 14 - \\mathrm{pH} = ${dn(p, 2)}$` : ""}.`],
+        traps: [{ value: 14 - p, msg: ask === "pH" ? "Ese es el pOH: pH + pOH = 14." : "Ese es el pH: pOH = 14 − pH." }, ...(n > 1 ? [{ value: ask === "pH" ? 14 - pH(C) : pH(C), msg: `Cada unidad de $${tx(f)}$ libera ${n} OH⁻.` }] : [])].filter(t => Math.abs(t.value - p) > 0.05),
+        // verificación: balance de cargas con la autoionización del agua, [H⁺] + [catión] = [anión] + [OH⁻]
+        verify: { kind: "zero", tol: 1e-4, fn: x => { const hh = solveH(h0 => (kind === "a" ? n * C : -n * C)); return [(ask === "pH" ? pH(hh) : 14 - pH(hh)) - x]; } }
+      };
+    }
+  };
+  T["qg-ph-debil-num"] = {
+    type: "numeric", concepts: ["qg-ph-debil"], difficulty: 2,
+    generate(r) {
+      const base = r.bool() && r.bool(), [f, K, nm] = base ? r.pick(WBASE) : r.pick(WEAK), C = r.pick([0.001, 0.01, 0.05, 0.1, 0.2, 0.5, 1]), ask = r.pick(["pH", "pH", "ion"]);
+      const x = (-K + Math.sqrt(K * K + 4 * K * C)) / 2;        // [H⁺] (o [OH⁻]) sin el agua
+      if (x < 1e-6) return null;
+      const p = base ? 14 - pH(x) : pH(x), ion = 100 * x / C;
+      return {
+        prompt: ask === "pH" ? `¿Cuál es el pH de una solución $${dn(C, 3)}$ M de ${nm} ($${tx(f)}$, $K_${base ? "b" : "a"} = ${nf(K, 2)}$) a 25 °C?` : `¿Qué porcentaje de las moléculas de ${nm} está ${base ? "protonado" : "ionizado"} en una solución $${dn(C, 3)}$ M? ($K_${base ? "b" : "a"} = ${nf(K, 2)}$)`,
+        answer: ask === "pH" ? p : ion, tolerance: ask === "pH" ? 0.005 : 0.01,
+        solution: [`${base ? "Base" : "Ácido"} [[qg-ph-debil|débil]]: ${base ? `$\\mathrm B + \\mathrm{H_2O} \\rightleftharpoons \\mathrm{BH^+} + \\mathrm{OH^-}$` : `$\\mathrm{HA} \\rightleftharpoons \\mathrm{H^+} + \\mathrm{A^-}$`}. Con $x = [${base ? "\\mathrm{OH^-}" : "\\mathrm{H^+}"}]$: $\\frac{x^2}{${dn(C, 3)} - x} = ${nf(K, 2)}$.`,
+          `Resolviendo la cuadrática: $x \\approx ${nf(x, 3)}$ M.${x / C < 0.05 ? ` (Como $x \\ll C$, también sirve $x \\approx \\sqrt{K C}$.)` : ""}`,
+          ask === "pH" ? (base ? `$\\mathrm{pOH} = ${dn(pH(x), 2)}$ y $\\mathrm{pH} = ${dn(p, 2)}$.` : `$\\mathrm{pH} = ${dn(p, 2)}$.`) : `Porcentaje: $\\frac{x}{C}\\cdot100 \\approx ${dn(ion, 2)}\\,\\%$.`],
+        traps: ask === "pH" ? [{ value: base ? 14 - pH(C) : pH(C), msg: "Así sería si fuera fuerte: un débil se disocia solo en parte." }, ...(base ? [{ value: pH(x), msg: "Ese es el pOH." }] : [])].filter(t => Math.abs(t.value - p) > 0.05) : [],
+        // verificación: balance de cargas exacto con la disociación parcial y la del agua
+        verify: { kind: "zero", tol: 2e-3, fn: v => {
+          let hh;
+          if (!base) hh = solveH(h => C * K / (K + h));                                   // [A⁻]
+          else hh = solveH(h => { const oh = KW / h; return -C * K / (K + oh); });         // −[BH⁺]
+          const got = ask === "pH" ? pH(hh) : 100 * (base ? (KW / hh) : hh) / C;
+          return [ask === "pH" ? got - v : got / v - 1];
+        } }
+      };
+    }
+  };
+  T["qg-ka-desde-ph-num"] = {
+    type: "numeric", concepts: ["qg-ph-debil"], difficulty: 3,
+    generate(r) {
+      const [, K0] = r.pick(WEAK.filter(w => w[1] > 1e-8)), C = r.pick([0.01, 0.05, 0.1, 0.25]), x = (-K0 + Math.sqrt(K0 * K0 + 4 * K0 * C)) / 2, p = +pH(x).toFixed(2), h = 10 ** -p;
+      const Ka = h * h / (C - h);
+      return {
+        prompt: `Una solución $${dn(C, 2)}$ M de un ácido débil monoprótico HA tiene pH $${dn(p, 2)}$. ¿Cuánto vale $K_a$?`,
+        answer: Ka, tolerance: 0.01,
+        solution: [`$[\\mathrm{H^+}] = 10^{-${dn(p, 2)}} \\approx ${nf(h, 3)}$ M, y por la estequiometría $[\\mathrm{A^-}] = [\\mathrm{H^+}]$ y $[\\mathrm{HA}] = ${dn(C, 2)} - ${nf(h, 3)}$.`,
+          `$K_a = \\frac{[\\mathrm{H^+}][\\mathrm{A^-}]}{[\\mathrm{HA}]} \\approx ${nf(Ka, 3)}$ ([[qg-ph-debil|ácido débil]]).`],
+        traps: [{ value: h * h / C, msg: "Aproximaste [HA] ≈ C; acá el ácido se disocia bastante y conviene restar." }].filter(t => Math.abs(t.value / Ka - 1) > 0.02),
+        // verificación: con ese Ka se resuelve el balance de cargas y tiene que dar el pH del dato
+        verify: { kind: "zero", tol: 2e-3, fn: v => [pH(solveH(hh => C * v / (v + hh))) - p] }
+      };
+    }
+  };
+  T["qg-neutralizacion-num"] = {
+    type: "numeric", concepts: ["qg-neutralizacion"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["vol", "vol", "ph"]);
+      if (kind === "vol") {
+        const [f, n, nm] = r.pick([["HCl", 1, "ácido clorhídrico"], ["H2SO4", 2, "ácido sulfúrico"], ["CH3COOH", 1, "ácido acético"], ["H3PO4", 3, "ácido fosfórico"], ["HNO3", 1, "ácido nítrico"]]);
+        const Va = r.pick([10, 20, 25, 50]), Ca = r.pick([0.05, 0.1, 0.2, 0.5]), Cb = r.pick([0.1, 0.2, 0.25, 0.5, 1]);
+        const Vb = n * Ca * Va / Cb;
+        return {
+          prompt: `¿Qué volumen (mL) de NaOH $${dn(Cb, 2)}$ M hace falta para neutralizar por completo $${Va}$ mL de ${nm} ($${tx(f)}$) $${dn(Ca, 2)}$ M?`,
+          answer: Vb, tolerance: 0.01,
+          solution: [`En la [[qg-neutralizacion|neutralización]] completa, cada H⁺ ácido reacciona con un OH⁻. El ${nm} aporta ${n} H⁺ por molécula: $${n}\\cdot${dn(Ca, 2)}\\cdot${Va} = ${dn(n * Ca * Va, 2)}$ mmol de H⁺.`,
+            `$V_b = \\frac{${dn(n * Ca * Va, 2)}\\ \\mathrm{mmol}}{${dn(Cb, 2)}\\ \\mathrm M} \\approx ${dn(Vb, 2)}$ mL.${f === "CH3COOH" ? " Aunque el ácido es débil, la estequiometría es la misma: el OH⁻ va arrastrando el equilibrio." : ""}`],
+          traps: n > 1 ? [{ value: Ca * Va / Cb, msg: `El $${tx(f)}$ tiene ${n} hidrógenos ácidos: hacen falta ${n} OH⁻ por molécula.` }] : [],
+          // verificación: se agrega la base de a 0,01 mL hasta que los OH⁻ alcanzan a los H⁺ (interpolando el último paso)
+          verify: { kind: "zero", tol: 1e-6, fn: x => {
+            const need = n * Ca * Va; let v = 0, oh = 0;
+            while (oh + Cb * 0.01 < need) { v += 0.01; oh += Cb * 0.01; }
+            v += (need - oh) / Cb;
+            return [v / x - 1];
+          } }
+        };
+      }
+      const Ca = r.pick([0.1, 0.2]), Va = r.pick([25, 50]), Cb = r.pick([0.1, 0.2]), Vb = r.pick([10, 20, 24, 26, 30, 40, 60]);
+      const na = Ca * Va, nb = Cb * Vb, Vt = (Va + Vb) / 1000;
+      if (Math.abs(na - nb) < 1e-9) return null;
+      const h = na > nb ? (na - nb) / 1000 / Vt : KW / ((nb - na) / 1000 / Vt), p = pH(h);
+      return {
+        prompt: `Se mezclan $${Va}$ mL de HCl $${dn(Ca, 2)}$ M con $${Vb}$ mL de NaOH $${dn(Cb, 2)}$ M. ¿Cuál es el pH de la mezcla?`,
+        answer: p, tolerance: 0.005,
+        solution: [`Milimoles: H⁺ $= ${dn(na, 2)}$; OH⁻ $= ${dn(nb, 2)}$. [[qg-neutralizacion|Neutralizan]] entre sí y sobra ${na > nb ? `ácido: $${dn(na - nb, 2)}$ mmol de H⁺` : `base: $${dn(nb - na, 2)}$ mmol de OH⁻`} en $${Va + Vb}$ mL.`,
+          na > nb ? `$[\\mathrm{H^+}] \\approx ${nf(h, 3)}$ M, $\\mathrm{pH} \\approx ${dn(p, 2)}$.` : `$[\\mathrm{OH^-}] \\approx ${nf(KW / h, 3)}$ M, $\\mathrm{pOH} \\approx ${dn(14 - p, 2)}$ y $\\mathrm{pH} \\approx ${dn(p, 2)}$.`],
+        traps: [{ value: na > nb ? pH((na - nb) / 1000 / (Va / 1000)) : 14 - pH((nb - na) / 1000 / (Va / 1000)), msg: "Al mezclar, el volumen es la suma de los dos." }].filter(t => Math.abs(t.value - p) > 0.03),
+        // verificación: balance de cargas en la mezcla, [H⁺] + [Na⁺] = [Cl⁻] + [OH⁻]
+        verify: { kind: "zero", tol: 1e-4, fn: x => [pH(solveH(() => (na - nb) / 1000 / Vt)) - x] }
+      };
+    }
+  };
+  // sales: catión y anión con su comportamiento (Ka del catión ácido o Kb del anión básico)
+  const SALTS = [["NaCl", "neutra", 0, 0], ["KNO3", "neutra", 0, 0], ["NH4Cl", "ácida", 5.6e-10, 0], ["NH4NO3", "ácida", 5.6e-10, 0], ["NaCH3COO", "básica", 0, KW / 1.8e-5], ["NaF", "básica", 0, KW / 6.8e-4],
+    ["KCN", "básica", 0, KW / 4.9e-10], ["Na2CO3", "básica", 0, KW / 4.7e-11], ["NaNO2", "básica", 0, KW / 4.5e-4], ["KBr", "neutra", 0, 0], ["NaClO4", "neutra", 0, 0], ["NaClO", "básica", 0, KW / 3.0e-8]];
+  T["qg-hidrolisis-mc"] = {
+    type: "mc", concepts: ["qg-neutralizacion"], difficulty: 2,
+    generate(r) {
+      const [f, kind, Ka, Kb] = r.pick(SALTS), C = 0.1, mcq = H.mc(r, kind, ["ácida", "neutra", "básica"].filter(k => k !== kind), { text: true, fallback: ["depende del volumen de la solución"] });
+      return {
+        prompt: `Una solución $0{,}1$ M de $${tx(f)}$ en agua, ¿es ácida, neutra o básica?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`[[qg-neutralizacion|Hidrólisis]]: los iones que vienen de ácidos o bases **fuertes** (Na⁺, K⁺, Cl⁻, NO₃⁻, Br⁻, ClO₄⁻) no reaccionan con el agua. Los que vienen de débiles sí.`,
+          kind === "ácida" ? `El NH₄⁺ es el ácido conjugado del NH₃ (base débil): cede H⁺ al agua, **ácida**.` : kind === "básica" ? `El anión es la base conjugada de un ácido débil: toma H⁺ del agua y libera OH⁻, **básica**.` : `Ningún ion reacciona con el agua: **neutra**, pH 7.`],
+        // verificación: pH por balance de cargas con la hidrólisis del ion correspondiente
+        verify: { kind: "truth", target: true, fn: () => {
+          const h = Ka ? solveH(hh => C * Ka / (Ka + hh)) : Kb ? solveH(hh => -C * Kb / (Kb + KW / hh)) : solveH(() => 0);
+          const p = pH(h), k2 = p < 6.9 ? "ácida" : p > 7.1 ? "básica" : "neutra";
+          return k2 === kind;
+        } }
+      };
+    }
+  };
+  // pares conjugados (Brønsted-Lowry)
+  const PAIRS = [["HCl", 0, "Cl", -1], ["H2O", 0, "OH", -1], ["H3O", 1, "H2O", 0], ["NH4", 1, "NH3", 0], ["NH3", 0, "NH2", -1], ["H2SO4", 0, "HSO4", -1], ["HSO4", -1, "SO4", -2], ["H2CO3", 0, "HCO3", -1],
+    ["HCO3", -1, "CO3", -2], ["H3PO4", 0, "H2PO4", -1], ["H2PO4", -1, "HPO4", -2], ["CH3COOH", 0, "CH3COO", -1], ["HF", 0, "F", -1], ["HCN", 0, "CN", -1]];
+  const qs = q => (q === 0 ? "" : (Math.abs(q) === 1 ? "" : Math.abs(q)) + (q > 0 ? "+" : "-"));
+  T["qg-conjugado-mc"] = {
+    type: "mc", concepts: ["qg-acido-base"], difficulty: 1,
+    generate(r) {
+      const [a, qa, b, qb] = r.pick(PAIRS), askBase = r.bool();
+      const ok = askBase ? tx(b, qs(qb)) : tx(a, qs(qa));
+      // distractores: con un H de más o de menos y la carga mal
+      const addH = (f, k) => { const c = Q.count2(f); c.H = (c.H || 0) + k; return c.H < 0 ? null : f; };
+      const ds = askBase ? [tx(a, qs(qa - 1)), tx(b, qs(qb + 1)), tx(a, qs(qa + 1))] : [tx(b, qs(qb + 1)), tx(a, qs(qa - 1)), tx(b, qs(qb - 1))];
+      const mcq = H.mc(r, ok, ds.filter(d => d !== ok && addH));
+      return {
+        prompt: askBase ? `¿Cuál es la base conjugada de $${tx(a, qs(qa))}$?` : `¿Cuál es el ácido conjugado de $${tx(b, qs(qb))}$?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`[[qg-acido-base|Brønsted-Lowry]]: un ácido cede un H⁺ y queda su base conjugada; una base acepta un H⁺ y queda su ácido conjugado. Difieren en un H y en una unidad de carga.`,
+          askBase ? `$${tx(a, qs(qa))} \\to ${tx(b, qs(qb))} + \\mathrm{H^+}$.` : `$${tx(b, qs(qb))} + \\mathrm{H^+} \\to ${tx(a, qs(qa))}$.`],
+        // verificación: contando átomos con el lector de fórmulas: mismos elementos, un H menos y una carga negativa más
+        verify: { kind: "truth", target: true, fn: () => {
+          const ca = Q.count2(a), cb = Q.count2(b), keys = new Set([...Object.keys(ca), ...Object.keys(cb)]);
+          return [...keys].every(k => (ca[k] || 0) - (cb[k] || 0) === (k === "H" ? 1 : 0)) && qa - qb === 1;
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-acido-base": {
+      title: "Ácidos y bases: Arrhenius, Brønsted-Lowry y pH", aliases: ["teoría de Arrhenius", "teoría de Brønsted-Lowry", "par conjugado", "pares conjugados", "producto iónico del agua", "ácido fuerte", "base fuerte"], concepts: ["qg-acido-base"],
+      summary: "Arrhenius: un ácido libera H⁺ en agua y una base, OH⁻. Brønsted-Lowry: un ácido cede H⁺ y una base lo acepta; cada ácido tiene su base conjugada. El agua se autoioniza: Kw = [H⁺][OH⁻] = 10⁻¹⁴ a 25 °C. pH = −log[H⁺], pH + pOH = 14. Los fuertes se disocian por completo.",
+      def: [R`**Arrhenius:** un ácido libera $\mathrm{H^+}$ en agua (HCl) y una base libera $\mathrm{OH^-}$ (NaOH). **Brønsted-Lowry:** un ácido **cede** un protón y una base lo **acepta**; así el NH₃ es base aunque no tenga OH. Al ceder el H⁺, el ácido queda convertido en su **base conjugada**: $\mathrm{HA}/\mathrm{A^-}$ es un **par conjugado**. (Lewis lo generaliza: un ácido acepta un par de electrones.)`,
+        R`El agua es anfótera y se **autoioniza**: $\mathrm{H_2O} \rightleftharpoons \mathrm{H^+} + \mathrm{OH^-}$, con $K_w = [\mathrm{H^+}][\mathrm{OH^-}] = 1{,}0\times10^{-14}$ a 25 °C. En agua pura, $[\mathrm{H^+}] = 10^{-7}$ M.`,
+        R`$\mathrm{pH} = -\log[\mathrm{H^+}]$ y $\mathrm{pOH} = -\log[\mathrm{OH^-}]$, con $\mathrm{pH} + \mathrm{pOH} = 14$. Ácida: pH < 7; neutra: pH = 7; básica: pH > 7 (a 25 °C).`,
+        R`Los **ácidos y bases fuertes** (HCl, HNO₃, HClO₄, H₂SO₄ en su primera disociación; NaOH, KOH, Ba(OH)₂) se disocian por completo: $[\mathrm{H^+}]$ es directamente la concentración (por la cantidad de H⁺ que aporta cada unidad). Los **débiles** se disocian en parte ([[qg-ph-debil|Ka y Kb]]).`],
+      idea: [R`El pH es una escala logarítmica: cada unidad es un factor 10 en $[\mathrm{H^+}]$. El jugo de limón (pH 2) tiene diez mil veces más H⁺ que el agua pura. Por eso un ácido fuerte muy diluido no puede dar pH mayor que 7: cuando aporta menos H⁺ que el agua, manda el agua.`],
+      demo: [R`**Paso 1 ($K_w$).** El equilibrio del agua es $K = \frac{[\mathrm{H^+}][\mathrm{OH^-}]}{[\mathrm{H_2O}]}$; como el agua es el solvente (líquido puro) no entra en la constante: $K_w = [\mathrm{H^+}][\mathrm{OH^-}]$.`,
+        R`**Paso 2 (logaritmos).** Tomando $-\log$: $-\log[\mathrm{H^+}] - \log[\mathrm{OH^-}] = -\log K_w = 14$, o sea $\mathrm{pH} + \mathrm{pOH} = 14$. $\blacksquare$`],
+      examples: [{ q: R`pH de Ba(OH)₂ 0,005 M.`, steps: [R`$[\mathrm{OH^-}] = 2\cdot0{,}005 = 0{,}01$ M, pOH = 2.`, R`pH = 12.`] }],
+      see: ["qg-ph-debil", "qg-neutralizacion", "qg-equilibrio"]
+    },
+    "qg-ph-debil": {
+      title: "Ácidos y bases débiles: Ka y Kb", aliases: ["ácido débil", "base débil", "constante de acidez", "constante de basicidad", "grado de disociación", "porcentaje de ionización"], concepts: ["qg-ph-debil"],
+      summary: "Un ácido débil HA ⇌ H⁺ + A⁻ tiene Ka = [H⁺][A⁻]/[HA]; con concentración C, [H⁺] sale de x²/(C − x) = Ka (≈ √(Ka·C) si x ≪ C). Igual para bases con Kb y OH⁻. Para un par conjugado, Ka·Kb = Kw.",
+      def: [R`Para un **ácido débil**, $\mathrm{HA} \rightleftharpoons \mathrm{H^+} + \mathrm{A^-}$, con $K_a = \frac{[\mathrm{H^+}][\mathrm{A^-}]}{[\mathrm{HA}]}$. Para una **base débil**, $\mathrm B + \mathrm{H_2O} \rightleftharpoons \mathrm{BH^+} + \mathrm{OH^-}$, con $K_b = \frac{[\mathrm{BH^+}][\mathrm{OH^-}]}{[\mathrm B]}$. A mayor $K_a$ (menor $pK_a = -\log K_a$), más fuerte el ácido.`,
+        R`Con concentración inicial $C$ y $x = [\mathrm{H^+}]$: $\frac{x^2}{C - x} = K_a$, una cuadrática ([[qg-equilibrio|tabla de equilibrio]]). Si $x \ll C$ (menos del 5 %), $x \approx \sqrt{K_aC}$. El **porcentaje de ionización** es $\frac xC\cdot100$, y crece al diluir.`,
+        R`Para un par conjugado: $K_a\cdot K_b = K_w$. Cuanto más débil el ácido, más fuerte su base conjugada.`],
+      idea: [R`Un ácido débil es como alguien que suelta el H⁺ "a regañadientes": en una solución 0,1 M de ácido acético, solo una de cada 75 moléculas está disociada. Diluir lo empuja a disociarse más (Le Chatelier: del lado de las partículas sueltas).`],
+      demo: [R`**Paso 1 (tabla).** Inicial: $[\mathrm{HA}] = C$, $[\mathrm{H^+}] = [\mathrm{A^-}] \approx 0$ (despreciando el agua). Equilibrio: $C - x$, $x$, $x$.`,
+        R`**Paso 2 (cuadrática).** $K_a = \frac{x^2}{C - x}$, o sea $x^2 + K_ax - K_aC = 0$, y la raíz positiva es $x = \frac{-K_a + \sqrt{K_a^2 + 4K_aC}}{2}$.`,
+        R`**Paso 3 (aproximación).** Si $x \ll C$, $C - x \approx C$ y $x \approx \sqrt{K_aC}$.`,
+        R`**Paso 4 ($K_aK_b$).** Para $\mathrm A^- + \mathrm{H_2O} \rightleftharpoons \mathrm{HA} + \mathrm{OH^-}$: $K_aK_b = \frac{[\mathrm{H^+}][\mathrm{A^-}]}{[\mathrm{HA}]}\cdot\frac{[\mathrm{HA}][\mathrm{OH^-}]}{[\mathrm{A^-}]} = [\mathrm{H^+}][\mathrm{OH^-}] = K_w$. $\blacksquare$`],
+      examples: [{ q: R`pH de ácido acético 0,1 M ($K_a = 1{,}8\times10^{-5}$).`, steps: [R`$x \approx \sqrt{1{,}8\times10^{-6}} \approx 1{,}34\times10^{-3}$ M (1,3 %: la aproximación vale).`, R`pH ≈ 2,87.`] }],
+      see: ["qg-acido-base", "qg-equilibrio", "qg-neutralizacion"]
+    },
+    "qg-neutralizacion": {
+      title: "Neutralización, titulación e hidrólisis de sales", aliases: ["neutralización", "titulación", "valoración ácido-base", "punto de equivalencia", "hidrólisis", "hidrólisis de sales", "sal ácida", "sal básica", "indicador ácido-base"], concepts: ["qg-neutralizacion"],
+      summary: "Un ácido y una base reaccionan: H⁺ + OH⁻ → H₂O. En una titulación se agrega base de concentración conocida hasta el punto de equivalencia (moles de OH⁻ = moles de H⁺ ácidos). Las sales de ácido débil con base fuerte dan soluciones básicas; las de base débil con ácido fuerte, ácidas; las de fuerte con fuerte, neutras.",
+      def: [R`**Neutralización:** ácido + base → sal + agua; en forma iónica, $\mathrm{H^+} + \mathrm{OH^-} \to \mathrm{H_2O}$. En el **punto de equivalencia**, los moles de OH⁻ agregados igualan a los de H⁺ ácidos: $n_{H}\,C_aV_a = n_{OH}\,C_bV_b$ (con $n$ los H⁺ u OH⁻ por unidad).`,
+        R`En una **titulación** (valoración) se agrega una solución de concentración conocida con una bureta y se detecta la equivalencia con un **indicador** que cambia de color (fenolftaleína, de incolora a rosa cerca de pH 8-10) o con un pHmetro. La **curva de titulación** muestra el salto de pH cerca de la equivalencia.`,
+        R`**Hidrólisis:** los iones de una sal pueden reaccionar con el agua. Los que vienen de ácidos o bases fuertes no lo hacen (Na⁺, K⁺, Cl⁻, NO₃⁻). El anión de un ácido débil (CH₃COO⁻, F⁻, CO₃²⁻) es básico; el catión de una base débil (NH₄⁺) es ácido. Por eso en la titulación de un ácido débil con base fuerte la equivalencia está en pH > 7.`],
+      idea: [R`En la equivalencia "se neutralizaron" los moles, pero no necesariamente el pH: si el ácido era débil, en la solución queda su base conjugada, que hidroliza y la vuelve básica. Por eso hay que elegir un indicador que vire cerca del pH de equivalencia.`],
+      demo: [R`**Paso 1 (moles).** El ácido aporta $n_H C_aV_a$ moles de H⁺ (cada molécula, $n_H$ protones ácidos).`,
+        R`**Paso 2 (reacción 1:1).** Cada OH⁻ consume un H⁺, así que en la equivalencia $n_{OH}C_bV_b = n_HC_aV_a$.`,
+        R`**Paso 3 (despejar).** $V_b = \frac{n_HC_aV_a}{n_{OH}C_b}$ (con los volúmenes en la misma unidad). $\blacksquare$`],
+      examples: [{ q: R`25 mL de H₂SO₄ 0,1 M con NaOH 0,2 M.`, steps: [R`H⁺: $2\cdot0{,}1\cdot25 = 5$ mmol. $V_b = \frac{5}{0{,}2} = 25$ mL.`] }],
+      see: ["qg-acido-base", "qg-ph-debil", "qg-estequiometria"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-acido-base": { name: "pH y ácidos fuertes" }, "qg-ph-debil": { name: "Ácidos y bases débiles" }, "qg-neutralizacion": { name: "Neutralización e hidrólisis" } },
+    templates: T,
+    units: [{
+      id: "qg-acidos-u", order: 10, program: "Unidad 8", title: "Ácidos y bases", icon: "flask-conical",
+      diagnostic: ["qg-ph-fuerte-num", "qg-ph-debil-num", "qg-neutralizacion-num"],
+      lessons: [
+        { id: "qg-l-ph", title: "pH de ácidos y bases fuertes", templates: ["qg-conjugado-mc", "qg-ph-fuerte-num"], theory: ["qg-acido-base"],
+          intro: R`$\mathrm{pH} = -\log[\mathrm{H^+}]$, $\mathrm{pH} + \mathrm{pOH} = 14$. Fuertes: disociación completa.` },
+        { id: "qg-l-debiles", title: "Ácidos y bases débiles", templates: ["qg-ph-debil-num", "qg-ka-desde-ph-num"], theory: ["qg-ph-debil"],
+          intro: R`$\frac{x^2}{C - x} = K_a$; si $x \ll C$, $x \approx \sqrt{K_aC}$.` },
+        { id: "qg-l-neutralizacion", title: "Neutralización e hidrólisis", templates: ["qg-neutralizacion-num", "qg-hidrolisis-mc"], theory: ["qg-neutralizacion"],
+          intro: R`Equivalencia: moles de OH⁻ = moles de H⁺. Sal de ácido débil: básica; de base débil: ácida.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 9 · ELECTROQUÍMICA
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  const tx = (f, q) => Q.tex(f, q);
+  const qs = q => (q === 0 ? "" : (Math.abs(q) === 1 ? "" : Math.abs(q)) + (q > 0 ? "+" : "-"));
+
+  // ---- números de oxidación (tabla escrita a mano) ----
+  const OX = [["MnO4", -1, "Mn", 7], ["Cr2O7", -2, "Cr", 6], ["SO4", -2, "S", 6], ["SO3", -2, "S", 4], ["S2O3", -2, "S", 2], ["NO3", -1, "N", 5], ["NO2", -1, "N", 3], ["NH4", 1, "N", -3],
+    ["H2O2", 0, "O", -1], ["ClO3", -1, "Cl", 5], ["ClO4", -1, "Cl", 7], ["ClO", -1, "Cl", 1], ["PO4", -3, "P", 5], ["CrO4", -2, "Cr", 6], ["K2MnO4", 0, "Mn", 6], ["Fe2O3", 0, "Fe", 3], ["H2S", 0, "S", -2], ["N2O", 0, "N", 1], ["C2O4", -2, "C", 3], ["CH4", 0, "C", -4]];
+  T["qg-oxidacion-num"] = {
+    type: "numeric", concepts: ["qg-redox"], difficulty: 1,
+    generate(r) {
+      const [f, q, el, st] = r.pick(OX);
+      return {
+        prompt: `¿Cuál es el número de oxidación del ${el} en $${tx(f, qs(q))}$?`,
+        answer: st,
+        solution: [`Con O = −2 (salvo en peróxidos, donde es −1), H = +1 y K = +1, la suma de los [[qg-redox|números de oxidación]] tiene que dar la carga, ${q}.`,
+          `Despejando, el ${el} queda en ${st > 0 ? "+" : ""}${st}.`],
+        traps: [{ value: -st, msg: "Revisá el signo: el oxígeno aporta cargas negativas y el elemento central compensa." }].filter(t => t.value !== st),
+        // verificación: se reparten las cargas átomo por átomo con los valores fijos y se despeja el que falta
+        verify: { kind: "value", fn: () => {
+          const c = Q.count2(f), fixed = { O: f === "H2O2" ? null : -2, H: f === "H2O2" ? 1 : 1, K: 1 };
+          if (f === "H2O2") return (q - 2 * 1) / 2;
+          let rest = q;
+          for (const [e, k] of Object.entries(c)) if (e !== el) rest -= (fixed[e] ?? 0) * k;
+          return rest / c[el];
+        } }
+      };
+    }
+  };
+  // ---- balanceo por ion-electrón (medio ácido): [fórmula, carga, coeficiente], reactivos y productos ----
+  const IONE = [
+    { r: [["MnO4", -1, 1], ["Fe", 2, 5], ["H", 1, 8]], p: [["Mn", 2, 1], ["Fe", 3, 5], ["H2O", 0, 4]] },
+    { r: [["Cr2O7", -2, 1], ["Fe", 2, 6], ["H", 1, 14]], p: [["Cr", 3, 2], ["Fe", 3, 6], ["H2O", 0, 7]] },
+    { r: [["MnO4", -1, 2], ["H2C2O4", 0, 5], ["H", 1, 6]], p: [["Mn", 2, 2], ["CO2", 0, 10], ["H2O", 0, 8]] },
+    { r: [["Cu", 0, 1], ["H", 1, 4], ["NO3", -1, 2]], p: [["Cu", 2, 1], ["NO2", 0, 2], ["H2O", 0, 2]] },
+    { r: [["Cu", 0, 3], ["H", 1, 8], ["NO3", -1, 2]], p: [["Cu", 2, 3], ["NO", 0, 2], ["H2O", 0, 4]] },
+    { r: [["Cr2O7", -2, 1], ["SO3", -2, 3], ["H", 1, 8]], p: [["Cr", 3, 2], ["SO4", -2, 3], ["H2O", 0, 4]] },
+    { r: [["MnO4", -1, 2], ["SO3", -2, 5], ["H", 1, 6]], p: [["Mn", 2, 2], ["SO4", -2, 5], ["H2O", 0, 3]] },
+    { r: [["H2O2", 0, 1], ["Fe", 2, 2], ["H", 1, 2]], p: [["Fe", 3, 2], ["H2O", 0, 2]] },
+    { r: [["I", -1, 2], ["H2O2", 0, 1], ["H", 1, 2]], p: [["I2", 0, 1], ["H2O", 0, 2]] },
+    { r: [["MnO4", -1, 2], ["Cl", -1, 10], ["H", 1, 16]], p: [["Mn", 2, 2], ["Cl2", 0, 5], ["H2O", 0, 8]] }
+  ];
+  const spTex = ([f, q, c], show) => `${show && c > 1 ? c : ""}${tx(f, qs(q))}`;
+  const ionTex = (x, show) => `${x.r.map(s => spTex(s, show)).join(" + ")} \\to ${x.p.map(s => spTex(s, show)).join(" + ")}`;
+  T["qg-ion-electron-num"] = {
+    type: "numeric", concepts: ["qg-redox"], difficulty: 3,
+    generate(r) {
+      const x = r.pick(IONE), all = [...x.r, ...x.p], k = r.int(0, all.length - 1), [f, q, c] = all[k];
+      return {
+        prompt: `Balanceá en medio ácido, con coeficientes enteros mínimos: $${ionTex(x, false)}$. ¿Qué coeficiente lleva $${tx(f, qs(q))}$?`,
+        answer: c,
+        solution: [`Método del [[qg-redox|ion-electrón]]: se separan las hemirreacciones, se balancea cada una (primero el elemento que cambia, después O con H₂O, H con H⁺ y la carga con electrones) y se multiplican para que los electrones se cancelen.`,
+          `Queda $${ionTex(x, true)}$: el coeficiente de $${tx(f, qs(q))}$ es ${c}.`],
+        // verificación: núcleo de la matriz de elementos y carga, por eliminación de Gauss
+        verify: { kind: "value", fn: () => Q.balance([...x.r.map(([f2, q2]) => ({ f: f2, q: q2, side: -1 })), ...x.p.map(([f2, q2]) => ({ f: f2, q: q2, side: 1 }))])[k] }
+      };
+    }
+  };
+  // ---- pilas: potenciales estándar de reducción (V) y electrones ----
+  const EH = { Li: [-3.04, 1, "Li^+"], K: [-2.93, 1, "K^+"], Mg: [-2.37, 2, "Mg^{2+}"], Al: [-1.66, 3, "Al^{3+}"], Zn: [-0.76, 2, "Zn^{2+}"], Cr: [-0.74, 3, "Cr^{3+}"], Fe: [-0.44, 2, "Fe^{2+}"], Ni: [-0.25, 2, "Ni^{2+}"],
+    Sn: [-0.14, 2, "Sn^{2+}"], Pb: [-0.13, 2, "Pb^{2+}"], Cu: [0.34, 2, "Cu^{2+}"], Ag: [0.80, 1, "Ag^+"], Au: [1.50, 3, "Au^{3+}"] };
+  const METALS = Object.keys(EH);
+  // ΔG° (kJ) de la reducción M^n+ + n e⁻ → M, por mol de metal
+  const dGred = m => -EH[m][1] * Q.F * EH[m][0] / 1000;
+  T["qg-pila-num"] = {
+    type: "numeric", concepts: ["qg-pilas"], difficulty: 2,
+    generate(r) {
+      const [a, b] = r.sample(METALS.filter(m => !["Li", "K"].includes(m)), 2), ask = r.pick(["E", "E", "G"]);
+      const [cat, an] = EH[a][0] > EH[b][0] ? [a, b] : [b, a], Ec = EH[cat][0] - EH[an][0];
+      const nc = EH[cat][1], na = EH[an][1], L = nc * na / H.gcd(nc, na), n = L;
+      const G = -n * Q.F * Ec / 1000;
+      return {
+        prompt: ask === "E" ? `Se arma una pila con un electrodo de ${an} en solución de $\\mathrm{${EH[an][2]}}$ 1 M y otro de ${cat} en $\\mathrm{${EH[cat][2]}}$ 1 M. ¿Cuál es su fem estándar (V)? ($E^\\circ$: ${an} $${dn(EH[an][0], 2)}$ V; ${cat} $${dn(EH[cat][0], 2)}$ V)`
+          : `Para la pila estándar de ${an} y ${cat} ($E^\\circ$: ${an} $${dn(EH[an][0], 2)}$ V; ${cat} $${dn(EH[cat][0], 2)}$ V), ¿cuánto vale $\\Delta G^\\circ$ (kJ) para la reacción balanceada con los coeficientes mínimos? ($F = 96\\,485$ C/mol)`,
+        answer: ask === "E" ? Ec : G, tolerance: 0.01,
+        solution: [`En una [[qg-pilas|pila]] se reduce el de mayor $E^\\circ$ (cátodo: ${cat}) y se oxida el otro (ánodo: ${an}). $E^\\circ_{pila} = E^\\circ_{\\text{cát}} - E^\\circ_{\\text{án}} = ${dn(EH[cat][0], 2)} - (${dn(EH[an][0], 2)}) = ${dn(Ec, 2)}$ V.`,
+          ask === "G" ? `Reacción: $${L / nc > 1 ? L / nc : ""}\\,\\mathrm{${EH[cat][2]}} + ${L / na > 1 ? L / na : ""}\\,\\mathrm{${an}} \\to ${L / nc > 1 ? L / nc : ""}\\,\\mathrm{${cat}} + ${L / na > 1 ? L / na : ""}\\,\\mathrm{${EH[an][2]}}$, con $n = ${n}$ electrones. $\\Delta G^\\circ = -nFE^\\circ = -${n}\\cdot96\\,485\\cdot${dn(Ec, 2)} \\approx ${dn(G, 1)}$ kJ.` : `Es positiva: la reacción es espontánea.`],
+        traps: ask === "E" ? [{ value: EH[cat][0] + EH[an][0], msg: "Se restan: $E^\\circ_{\\text{cátodo}} - E^\\circ_{\\text{ánodo}}$ (los dos como potenciales de reducción)." }].filter(t => Math.abs(t.value - Ec) > 0.02) : (n > 1 ? [{ value: -Q.F * Ec / 1000, msg: "Revisá n: son los electrones que se transfieren en la reacción balanceada, no uno." }] : []),
+        // verificación: por Hess con energías libres: ΔG° = (L/nc)·ΔG°red(cátodo) − (L/na)·ΔG°red(ánodo), y E = −ΔG/(nF)
+        verify: { kind: "zero", tol: 1e-9, fn: v => {
+          const dG = (L / nc) * dGred(cat) - (L / na) * dGred(an);
+          return ask === "E" ? [-dG * 1000 / (n * Q.F) / v - 1] : [dG / v - 1];
+        } }
+      };
+    }
+  };
+  T["qg-espontanea-vf"] = {
+    type: "tf", concepts: ["qg-pilas"], difficulty: 1,
+    generate(r) {
+      const [m, ion] = r.sample(METALS, 2), spont = EH[ion][0] > EH[m][0];
+      return {
+        prompt: `<b>Verdadero o falso:</b> una lámina de ${m} sumergida en una solución de $\\mathrm{${EH[ion][2]}}$ 1 M se recubre de ${ion} (el ${m} reduce al ion). ($E^\\circ$: ${m} $${dn(EH[m][0], 2)}$ V; ${ion} $${dn(EH[ion][0], 2)}$ V)`,
+        answer: spont,
+        explanation: `La reacción es $\\mathrm{${m}} + \\mathrm{${EH[ion][2]}} \\to \\mathrm{${EH[m][2]}} + \\mathrm{${ion}}$ (sin balancear), con $E^\\circ = ${dn(EH[ion][0], 2)} - (${dn(EH[m][0], 2)}) = ${dn(EH[ion][0] - EH[m][0], 2)}$ V. ${spont ? "Es positiva: ocurre sola. Un metal desplaza de sus sales a los que están más arriba en la [[qg-pilas|serie electromotriz]]." : "Es negativa: no ocurre (ocurriría la inversa)."}`,
+        solution: [`Espontánea si $E^\\circ = E^\\circ_{red}(\\text{el que se reduce}) - E^\\circ_{red}(\\text{el que se oxida}) > 0$, o sea $\\Delta G^\\circ < 0$.`],
+        // verificación: ΔG° por mol de electrones con las energías libres de reducción
+        verify: { kind: "truth", fn: () => dGred(ion) / EH[ion][1] - dGred(m) / EH[m][1] < 0 }
+      };
+    }
+  };
+  T["qg-anodo-mc"] = {
+    type: "mc", concepts: ["qg-pilas"], difficulty: 2,
+    generate(r) {
+      const [a, b] = r.sample(METALS.filter(m => !["Li", "K"].includes(m)), 2), [cat, an] = EH[a][0] > EH[b][0] ? [a, b] : [b, a], ask = r.pick(["anodo", "catodo", "electrones", "masa"]);
+      const ok = ask === "anodo" ? `el de ${an}` : ask === "catodo" ? `el de ${cat}` : ask === "electrones" ? `del ${an} al ${cat}` : `el de ${an} pierde masa y el de ${cat} gana`;
+      const ds = ask === "anodo" ? [`el de ${cat}`, "los dos, alternadamente", "depende de las masas de los electrodos"] : ask === "catodo" ? [`el de ${an}`, "los dos, alternadamente", "depende de las masas de los electrodos"]
+        : ask === "electrones" ? [`del ${cat} al ${an}`, "no circulan electrones por el cable", "por el puente salino, de un vaso al otro"] : [`el de ${cat} pierde masa y el de ${an} gana`, "ninguno cambia de masa", "los dos pierden masa"];
+      const mcq = H.mc(r, ok, ds, { text: true });
+      return {
+        prompt: `En la pila $\\mathrm{${a}}|\\mathrm{${EH[a][2]}}\\ (1\\ \\mathrm M)$ y $\\mathrm{${b}}|\\mathrm{${EH[b][2]}}\\ (1\\ \\mathrm M)$ ($E^\\circ$: ${a} $${dn(EH[a][0], 2)}$ V; ${b} $${dn(EH[b][0], 2)}$ V), ${ask === "anodo" ? "¿cuál electrodo es el ánodo?" : ask === "catodo" ? "¿cuál electrodo es el cátodo?" : ask === "electrones" ? "¿en qué sentido van los electrones por el cable?" : "¿qué pasa con las masas de los electrodos?"}`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`Se reduce el de mayor potencial de reducción (${cat}, $${dn(EH[cat][0], 2)}$ V): es el **cátodo**. El ${an} se oxida: es el **ánodo** ([[qg-pilas|pila galvánica]]).`,
+          `Los electrones salen del ánodo y van por el cable al cátodo. El ${an} se disuelve como iones (pierde masa) y en el cátodo se deposita ${cat} (gana masa).`],
+        // verificación: se calcula ΔG° para las dos direcciones posibles y se elige la espontánea
+        verify: { kind: "truth", target: true, fn: () => {
+          const dir1 = dGred(a) / EH[a][1] - dGred(b) / EH[b][1];      // a se reduce y b se oxida (por electrón)
+          const reduced = dir1 < 0 ? a : b;
+          return reduced === cat;
+        } }
+      };
+    }
+  };
+  T["qg-nernst-num"] = {
+    type: "numeric", concepts: ["qg-pilas"], difficulty: 3,
+    generate(r) {
+      const pairs = [["Zn", "Cu"], ["Ni", "Ag"], ["Fe", "Cu"], ["Zn", "Ag"], ["Mg", "Cu"], ["Pb", "Ag"]], [an, cat] = r.pick(pairs);
+      const ca = r.pick([0.001, 0.01, 0.1, 0.5, 1, 2]), cc = r.pick([0.001, 0.01, 0.1, 0.5, 1, 2]);
+      const na = EH[an][1], nc = EH[cat][1], n = na * nc / H.gcd(na, nc), E0 = EH[cat][0] - EH[an][0];
+      const Qr = ca ** (n / na) / cc ** (n / nc), Ecell = E0 - 0.0592 / n * Math.log10(Qr);
+      return {
+        prompt: `Calculá la fem (V) a 25 °C de la pila $\\mathrm{${an}}|\\mathrm{${EH[an][2]}}\\ (${dn(ca, 3)}\\ \\mathrm M)\\,||\\,\\mathrm{${EH[cat][2]}}\\ (${dn(cc, 3)}\\ \\mathrm M)|\\mathrm{${cat}}$. ($E^\\circ$: ${an} $${dn(EH[an][0], 2)}$ V; ${cat} $${dn(EH[cat][0], 2)}$ V)`,
+        answer: Ecell, tolerance: 0.005,
+        solution: [`$E^\\circ = ${dn(EH[cat][0], 2)} - (${dn(EH[an][0], 2)}) = ${dn(E0, 2)}$ V, con $n = ${n}$ electrones.`,
+          `[[qg-pilas|Ecuación de Nernst]]: $E = E^\\circ - \\frac{0{,}0592}{n}\\log Q$, con $Q = \\frac{[\\mathrm{${EH[an][2]}}]${n / na > 1 ? `^{${n / na}}` : ""}}{[\\mathrm{${EH[cat][2]}}]${n / nc > 1 ? `^{${n / nc}}` : ""}} \\approx ${nf(Qr, 3)}$ (los metales sólidos no entran).`,
+          `$E \\approx ${dn(E0, 2)} - \\frac{0{,}0592}{${n}}\\log(${nf(Qr, 3)}) \\approx ${dn(Ecell, 3)}$ V.`],
+        traps: [{ value: E0, msg: "Esa es la fem estándar: con concentraciones distintas de 1 M hay que corregir con Nernst." }].filter(t => Math.abs(t.value - Ecell) > 0.01),
+        // verificación: E = E° − (RT/nF)·ln Q con R, T y F (sin el 0,0592 redondeado)
+        verify: { kind: "zero", tol: 2e-4, fn: v => [(E0 - Q.Rsi * 298.15 / (n * Q.F) * Math.log(Qr)) - v] }
+      };
+    }
+  };
+  T["qg-faraday-num"] = {
+    type: "numeric", concepts: ["qg-electrolisis"], difficulty: 2,
+    generate(r) {
+      const m = r.pick(["Cu", "Ag", "Zn", "Ni", "Au", "Al"]), [, n] = EH[m], M = Q.A[m], ask = r.pick(["masa", "tiempo", "I"]);
+      const I = r.pick([0.5, 1, 1.5, 2, 2.5, 5, 10]), tmin = r.pick([10, 15, 30, 45, 60, 90, 120]), t = tmin * 60;
+      const mass = I * t / (n * Q.F) * M, ms = +mass.toFixed(3);
+      const ans = ask === "masa" ? mass : ask === "tiempo" ? ms * n * Q.F / (M * I) / 60 : ms * n * Q.F / (M * t);
+      return {
+        prompt: ask === "masa" ? `¿Cuántos gramos de ${m} se depositan en el cátodo al electrolizar una solución de $\\mathrm{${EH[m][2]}}$ con $${dn(I, 1)}$ A durante $${tmin}$ min? ($F = 96\\,485$ C/mol)`
+          : ask === "tiempo" ? `¿Cuántos minutos hay que electrolizar una solución de $\\mathrm{${EH[m][2]}}$ con $${dn(I, 1)}$ A para depositar $${dn(ms, 3)}$ g de ${m}? ($F = 96\\,485$ C/mol)`
+          : `¿Qué corriente (A) deposita $${dn(ms, 3)}$ g de ${m} desde una solución de $\\mathrm{${EH[m][2]}}$ en $${tmin}$ min? ($F = 96\\,485$ C/mol)`,
+        answer: ans, tolerance: 0.01,
+        solution: [`[[qg-electrolisis|Leyes de Faraday]]: la carga es $q = It$ y cada mol de electrones transporta $F = 96\\,485$ C. Para depositar un mol de ${m} hacen falta ${n} mol de electrones ($\\mathrm{${EH[m][2]}} + ${n}e^- \\to \\mathrm{${m}}$).`,
+          ask === "masa" ? `$q = ${dn(I, 1)}\\cdot${t} = ${I * t}$ C; $n_{e} = \\frac{${I * t}}{96\\,485} \\approx ${nf(I * t / Q.F, 4)}$ mol; $m = \\frac{n_e}{${n}}\\cdot${dn(M, 2)} \\approx ${dn(mass, 3)}$ g.`
+            : `$n_{e} = ${n}\\cdot\\frac{${dn(ms, 3)}}{${dn(M, 2)}} \\approx ${nf(n * ms / M, 4)}$ mol, o sea $q \\approx ${dn(n * ms / M * Q.F, 0)}$ C. ${ask === "tiempo" ? `$t = \\frac qI \\approx ${dn(ans * 60, 0)}$ s $\\approx ${dn(ans, 1)}$ min.` : `$I = \\frac qt \\approx ${dn(ans, 2)}$ A.`}`],
+        traps: n > 1 ? [{ value: ask === "masa" ? mass * n : ask === "tiempo" ? ans / n : ans / n, msg: `Cada ion $\\mathrm{${EH[m][2]}}$ necesita ${n} electrones para depositarse.` }] : [],
+        // verificación: contando electrones uno por uno (carga / e) y átomos (electrones / n), y pasando a gramos con N_A
+        verify: { kind: "zero", tol: 1e-4, fn: v => {
+          const charge = ask === "I" ? v * t : ask === "tiempo" ? I * v * 60 : I * t;
+          const atoms = charge / Q.e / n, grams = atoms / Q.NA * M;
+          return [grams / (ask === "masa" ? v : ms) - 1];
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-redox": {
+      title: "Óxido-reducción y método del ion-electrón", aliases: ["óxido-reducción", "reacción redox", "reacciones redox", "agente oxidante", "agente reductor", "método del ion-electrón", "hemirreacción"], concepts: ["qg-redox"],
+      summary: "Oxidación: pérdida de electrones (sube el número de oxidación). Reducción: ganancia (baja). El oxidante se reduce y el reductor se oxida. Ion-electrón: se balancea cada hemirreacción (elemento, O con H₂O, H con H⁺, carga con e⁻) y se iguala la cantidad de electrones.",
+      def: [R`En una reacción **redox** se transfieren electrones. **Oxidación:** pérdida de electrones (el [[qg-sistemas|número de oxidación]] sube). **Reducción:** ganancia (baja). El **agente oxidante** es el que se reduce (le saca electrones al otro) y el **reductor**, el que se oxida.`,
+        R`**Método del ion-electrón** (en medio ácido):
+1. Se escriben las dos **hemirreacciones** (oxidación y reducción).
+2. En cada una se balancea el elemento que cambia, después el O agregando H₂O, el H agregando H⁺ y la carga agregando electrones.
+3. Se multiplican para que los electrones ganados y perdidos sean iguales, y se suman.
+En medio básico, al final se neutralizan los H⁺ agregando OH⁻ a los dos lados.`],
+      idea: [R`Los electrones no se crean ni se destruyen: los que pierde el reductor son exactamente los que gana el oxidante. Ese conteo es lo que hace funcionar el método, y es también lo que aprovecha una [[qg-pilas|pila]]: separar las dos mitades y hacer pasar los electrones por un cable.`],
+      demo: [R`**Paso 1 (hemirreacción del permanganato).** $\mathrm{MnO_4^-} \to \mathrm{Mn^{2+}}$: el Mn ya está balanceado. Faltan 4 O a la derecha: $+4\,\mathrm{H_2O}$. Eso suma 8 H: $+8\,\mathrm{H^+}$ a la izquierda. Carga: izquierda $-1 + 8 = +7$, derecha $+2$: se agregan 5 e⁻ a la izquierda. $\mathrm{MnO_4^-} + 8\mathrm{H^+} + 5e^- \to \mathrm{Mn^{2+}} + 4\mathrm{H_2O}$.`,
+        R`**Paso 2 (la otra).** $\mathrm{Fe^{2+}} \to \mathrm{Fe^{3+}} + e^-$.`,
+        R`**Paso 3 (igualar electrones).** Multiplicando la segunda por 5 y sumando, los 5 e⁻ se cancelan: $\mathrm{MnO_4^-} + 5\mathrm{Fe^{2+}} + 8\mathrm{H^+} \to \mathrm{Mn^{2+}} + 5\mathrm{Fe^{3+}} + 4\mathrm{H_2O}$. Masa y carga ($+17$ a cada lado) quedan balanceadas. $\blacksquare$`],
+      examples: [{ q: R`Número de oxidación del Cr en $\mathrm{Cr_2O_7^{2-}}$.`, steps: [R`$2x + 7(-2) = -2$: $x = +6$.`] }],
+      see: ["qg-sistemas", "qg-balanceo", "qg-pilas"]
+    },
+    "qg-pilas": {
+      title: "Pilas galvánicas, potenciales y ecuación de Nernst", aliases: ["pila galvánica", "celda galvánica", "celda voltaica", "ánodo", "cátodo", "puente salino", "potencial estándar de reducción", "serie electromotriz", "electrodo normal de hidrógeno", "ecuación de Nernst", "celda de combustible"], concepts: ["qg-pilas"],
+      summary: "En una pila, la oxidación ocurre en el ánodo y la reducción en el cátodo; los electrones van por el cable del ánodo al cátodo y el puente salino cierra el circuito. E°pila = E°cátodo − E°ánodo (potenciales de reducción, medidos contra el electrodo de hidrógeno). ΔG° = −nFE°. Nernst: E = E° − (0,0592/n)·log Q a 25 °C.",
+      def: [R`Una **pila galvánica** separa una reacción redox espontánea en dos **hemiceldas**: en el **ánodo** ocurre la oxidación y en el **cátodo** la reducción. Los electrones circulan por el conductor externo del ánodo al cátodo, y un **puente salino** permite el paso de iones para mantener la neutralidad. Notación: $\mathrm{Zn}|\mathrm{Zn^{2+}}\,||\,\mathrm{Cu^{2+}}|\mathrm{Cu}$ (ánodo a la izquierda).`,
+        R`El **potencial estándar de reducción** $E^\circ$ de cada hemicelda se mide contra el **electrodo normal de hidrógeno** ($\mathrm{2H^+} + 2e^- \to \mathrm{H_2}$, $E^\circ = 0$). Ordenados forman la **serie electromotriz**. La fem de la pila es $E^\circ_{pila} = E^\circ_{\text{cátodo}} - E^\circ_{\text{ánodo}}$: se reduce el de mayor $E^\circ$.`,
+        R`**Energía libre:** $\Delta G^\circ = -nFE^\circ$, con $n$ los electrones transferidos y $F = 96\,485$ C/mol. Si $E > 0$, la reacción es espontánea.`,
+        R`**Ecuación de Nernst:** $E = E^\circ - \frac{RT}{nF}\ln Q$, que a 25 °C es $E = E^\circ - \frac{0{,}0592}{n}\log Q$. En el equilibrio $E = 0$ y $Q = K$.`,
+        R`Una **celda de combustible** es una pila alimentada continuamente: $\mathrm{2H_2} + \mathrm{O_2} \to \mathrm{2H_2O}$ da 1,23 V sin combustión.`],
+      idea: [R`Multiplicar una hemirreacción por 2 no cambia su potencial: $E^\circ$ es una "presión" de electrones (energía por carga), no una cantidad. Lo que sí se multiplica es $\Delta G$. Por eso, para combinar potenciales en pasos que no son una pila, hay que pasar por $\Delta G$.`],
+      demo: [R`**Paso 1 (trabajo eléctrico).** Al pasar $n$ moles de electrones por una diferencia de potencial $E$, la carga es $nF$ y el trabajo eléctrico máximo que puede hacer la pila es $nFE$.`,
+        R`**Paso 2 (energía libre).** Ese trabajo máximo es la disminución de la energía libre: $\Delta G = -nFE$, y en condiciones estándar $\Delta G^\circ = -nFE^\circ$.`,
+        R`**Paso 3 (Nernst).** Como $\Delta G = \Delta G^\circ + RT\ln Q$, dividiendo por $-nF$: $E = E^\circ - \frac{RT}{nF}\ln Q$. A 298 K, $\frac{RT}F\ln 10 = 0{,}0592$ V. $\blacksquare$`],
+      examples: [{ q: R`Pila de Daniell: Zn (−0,76 V) y Cu (+0,34 V).`, steps: [R`$E^\circ = 0{,}34 - (-0{,}76) = 1{,}10$ V; $n = 2$.`, R`$\Delta G^\circ = -2\cdot96\,485\cdot1{,}10 \approx -212$ kJ.`] }],
+      see: ["qg-redox", "qg-electrolisis", "qg-equilibrio"]
+    },
+    "qg-electrolisis": {
+      title: "Electrólisis y leyes de Faraday", aliases: ["electrólisis", "celda electrolítica", "leyes de Faraday", "constante de Faraday", "galvanoplastia"], concepts: ["qg-electrolisis"],
+      summary: "En la electrólisis una fuente externa fuerza una reacción redox no espontánea. Faraday: la masa transformada es proporcional a la carga, m = (I·t / nF)·M, con n los electrones por unidad y F = 96 485 C/mol.",
+      def: [R`En una **celda electrolítica** una fuente de corriente continua obliga a ocurrir una reacción no espontánea: en el cátodo (conectado al polo negativo) hay reducción y en el ánodo (positivo) oxidación. Así se obtienen Al, Na y Cl₂, se refina el cobre y se recubren piezas metálicas (**galvanoplastia**).`,
+        R`**Leyes de Faraday:** la cantidad de sustancia que reacciona en un electrodo es proporcional a la carga que pasa: $n_{sust} = \frac{q}{nF}$, con $q = It$ y $n$ los electrones por unidad (2 para $\mathrm{Cu^{2+}} \to \mathrm{Cu}$). La masa es $m = \frac{It}{nF}M$.`],
+      idea: [R`$F$ es la carga de un mol de electrones: $F = N_A\,e = 6{,}022\times10^{23}\cdot1{,}602\times10^{-19} \approx 96\,485$ C/mol. Así, la electrólisis permite "contar" átomos midiendo corriente y tiempo.`],
+      demo: [R`**Paso 1 (carga).** Una corriente $I$ durante $t$ transporta $q = It$ coulombs, o sea $\frac{q}{e}$ electrones, que son $\frac{q}{N_Ae} = \frac qF$ moles de electrones.`,
+        R`**Paso 2 (átomos).** Cada ion $\mathrm{M^{n+}}$ necesita $n$ electrones para depositarse: se depositan $\frac{q}{nF}$ moles de M.`,
+        R`**Paso 3 (masa).** Multiplicando por la masa molar: $m = \frac{It}{nF}M$. $\blacksquare$`],
+      examples: [{ q: R`2 A durante 1 h sobre Cu²⁺.`, steps: [R`$q = 7200$ C; $\frac{7200}{2\cdot96\,485} \approx 0{,}0373$ mol de Cu.`, R`$m \approx 2{,}37$ g.`] }],
+      see: ["qg-pilas", "qg-mol"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-redox": { name: "Redox e ion-electrón" }, "qg-pilas": { name: "Pilas y potenciales" }, "qg-electrolisis": { name: "Electrólisis" } },
+    templates: T,
+    units: [{
+      id: "qg-electroquimica-u", order: 11, program: "Unidad 9", title: "Electroquímica", icon: "zap",
+      diagnostic: ["qg-oxidacion-num", "qg-pila-num", "qg-faraday-num"],
+      lessons: [
+        { id: "qg-l-redox", title: "Óxido-reducción", templates: ["qg-oxidacion-num", "qg-ion-electron-num"], theory: ["qg-redox"],
+          intro: R`Oxidación: pierde electrones; reducción: gana. Ion-electrón: O con H₂O, H con H⁺, carga con e⁻.` },
+        { id: "qg-l-pilas", title: "Pilas", templates: ["qg-espontanea-vf", "qg-anodo-mc", "qg-pila-num"], theory: ["qg-pilas"],
+          intro: R`$E^\circ_{pila} = E^\circ_{\text{cát}} - E^\circ_{\text{án}}$; $\Delta G^\circ = -nFE^\circ$.` },
+        { id: "qg-l-nernst", title: "Ecuación de Nernst", templates: ["qg-nernst-num"], theory: ["qg-pilas"],
+          intro: R`$E = E^\circ - \frac{0{,}0592}{n}\log Q$ a 25 °C.` },
+        { id: "qg-l-electrolisis", title: "Electrólisis", templates: ["qg-faraday-num"], theory: ["qg-electrolisis"],
+          intro: R`$m = \frac{It}{nF}M$.` }
       ]
     }],
     cards

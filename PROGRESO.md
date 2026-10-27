@@ -18,7 +18,7 @@ Trabajo en la rama `carrera-fcen`. Por pedido durante la noche, cada bloque term
 | 8 | F102A Física General II A | **completa**: las 9 unidades del programa (electrostática, circuitos, magnetismo, inducción y alterna; repasada el 21/10), más 4 unidades «Extra UBA» | 77 | 53 |
 | 9 | F104 Física General III | **completa** (26/10): las 7 unidades (relatividad; fotones; Bohr; ondas de materia e incerteza; Schrödinger y pozo infinito; oscilador, escalón, barrera y pozo finito; hidrógeno), 9 figuras y las evaluaciones (dos parciales y el final). No se encontró el programa; el temario sale de los parciales de 2021 (`docs/parciales/f104.md`) | 36 | 18 |
 | 10+ | resto de 3.º y 4.º año | pendientes; aparecen como "Próximamente" | — | — |
-| básico | Q101 Química General | **en curso** (26/10): unidades 1 a 5 de 9 (estructura atómica; enlace; estequiometría; gases, líquidos y sólidos; soluciones y propiedades coligativas; las unidades 4 y 5 van en dos unidades de la app cada una). Es del ciclo básico de las cuatro orientaciones | 49 | 25 |
+| básico | Q101 Química General | **completa** (27/10): las 9 unidades del programa 2025 (11 unidades en la app: estados de agregación y soluciones van partidas en dos), y las evaluaciones (tres parciales y el examen global, `docs/parciales/q101.md`). Es del ciclo básico de las cuatro orientaciones | 74 | 36 |
 
 Cada unidad tiene teoría con hipervínculos (definición, idea, demostración, ejemplos, errores comunes), al menos 4 plantillas de al menos 2 tipos, y test de unidad.
 
@@ -361,6 +361,8 @@ Pedido del usuario: aplicar las mejoras que surgieron de una revisión de la app
 
 ## Decisiones tomadas
 
+- **Corrección de respuestas chicas (27/10).** `E.checkNumeric` aceptaba también la respuesta redondeada a dos decimales. Con las respuestas de química del orden de $10^{-5}$ eso aceptaba un «0», así que ese redondeo ahora vale solo si la respuesta es de 0,1 o más. Tiene un test.
+- **Química General (27/10).** Las verificaciones usan caminos de otra naturaleza que las fórmulas de la respuesta: el balance por el núcleo de la matriz de elementos, las reacciones simuladas en pasitos, la cinética integrada con RK4, el equilibrio alcanzado simulando las reacciones directa e inversa, el pH por balance de cargas, las constantes crioscópica y ebulloscópica calculadas con la termodinámica del solvente y las pilas por suma de energías libres.
 - **Temarios.**
   - Cálculo I usa el programa 2026.
   - Física General II B usa el programa 2026.
@@ -389,7 +391,7 @@ La pausa del 14/10 terminó el 18/10. M106 quedó hecha el 19/10.
 
 Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
-1. **Q101 Química General** (pedido del usuario, 26/10: que la app sirva también a quien cursa Química o Biología). Faltan las unidades 6 a 9 (cinética, equilibrio, ácidos y bases, electroquímica), las evaluaciones y el Extra UBA. Al hacer la unidad 9, enlazar `qg-redox` desde la ficha `qg-balanceo`.
+1. **Ciclo básico de Química y Biología** (pedido del usuario, 26/10: que la app sirva también a quien cursa esas orientaciones). Q101 Química General quedó completa el 27/10. Siguen, si el usuario lo pide: Q205Q Química General II (termoquímica, cinética, equilibrio iónico y Nernst; reusa mucho de Q101), Q102 Química Orgánica, C102 Ciencias de la Tierra y B101 Biología General (casi todo conceptual). Q101 no tiene Extra UBA: en la UBA la química está en el CBC y no hay una materia equivalente en la Lic. en Física.
 2. **Resto de 3.º año**, en el orden del trayecto: M103 Cálculo III, M203 Álgebra Lineal, F203 Mecánica, M209 Matemática Especial I y F205 Termodinámica.
 3. **Extra UBA de F104** (Física 4 de la UBA) cuando se retome esa tabla.
 4. **Extra UBA de M106:** sin equivalente directo en la UBA; queda para después.

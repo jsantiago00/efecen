@@ -299,7 +299,8 @@
     if (!isFinite(user)) return false;
     const diff = Math.abs(user - answer);
     if (diff <= tol * Math.abs(answer) + 1e-9) return true;
-    if (Math.abs(user - Math.round(answer * 100) / 100) < 1e-9) return true;
+    // el redondeo a 2 decimales solo para respuestas no muy chicas (con 1,8·10⁻⁵ no tiene que valer un 0)
+    if (Math.abs(answer) >= 0.1 && Math.abs(user - Math.round(answer * 100) / 100) < 1e-9) return true;
     return Math.abs(answer) < 1e-9 && Math.abs(user) < 1e-6;
   };
 

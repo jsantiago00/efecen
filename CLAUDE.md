@@ -22,7 +22,7 @@
 
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
-1. **Q101 Química General** (pedido del usuario, 26/10): para que la app sirva también a quien cursa Química o Biología. Unidades 1 a 5 hechas; faltan 6 a 9, evaluaciones y Extra UBA.
+1. **Ciclo básico de Química y Biología** (pedido del usuario, 26/10): para que la app sirva también a quien cursa esas orientaciones. Q101 Química General está completa (27/10); las que siguen, si el usuario las pide, están en PROGRESO.md.
 2. **3.º año** de Física: F104 Física General III (completa, 26/10), después M103, M203, F203, M209 y F205.
 
 Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, sus unidades «Extra UBA» y un «Examen Extra UBA».
@@ -44,7 +44,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 | `PROGRESO.md` | Bitácora del proyecto. |
 | `firestore.rules`, `firebase.json`, `.firebaserc` | Reglas de Firestore (proyecto `efecen-46bfd`). |
 
-Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística, F102A Física General II A y F104 Física General III.
+Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística, F102A Física General II A, F104 Física General III y Q101 Química General.
 
 ## Cómo se arma una materia
 
