@@ -1208,3 +1208,488 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 4 · ESTADOS DE AGREGACIÓN (a) GASES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  const tx = f => Q.tex(f);
+  const ATM = 101325, KB = 1.380649e-23;
+  // estado de un gas en el SI: p (Pa), V (m³), T (K) → n
+  const nSI = (pAtm, VL, TK) => pAtm * ATM * VL * 1e-3 / (Q.Rsi * TK);
+  const GASES = ["He", "Ne", "Ar", "N2", "O2", "CO2", "CH4", "NH3", "H2", "Cl2", "SO2", "C3H8"];
+
+  T["qg-gas-ideal-num"] = {
+    type: "numeric", concepts: ["qg-gases"], difficulty: 2,
+    generate(r) {
+      const g = r.pick(GASES), M = Q.mm(g), ask = r.pick(["V", "P", "T", "m"]);
+      const P = r.pick([0.5, 0.8, 1, 1.5, 2, 2.5, 3, 5]), V = r.pick([0.5, 1, 2, 2.5, 5, 10, 22.4, 50]), tC = r.pick([-20, 0, 15, 25, 37, 100, 150, 250]), TK = tC + 273.15;
+      const n = P * V / (Q.R * TK), m = +(n * M).toFixed(2);
+      const ans = ask === "V" ? (m / M) * Q.R * TK / P : ask === "P" ? (m / M) * Q.R * TK / V : ask === "T" ? P * V / (Q.R * m / M) - 273.15 : n * M;
+      return {
+        prompt: ask === "V" ? `¿Qué volumen (L) ocupan $${dn(m, 2)}$ g de $${tx(g)}$ a $${tC}$ °C y $${dn(P, 1)}$ atm?`
+          : ask === "P" ? `$${dn(m, 2)}$ g de $${tx(g)}$ están en un recipiente de $${dn(V, 1)}$ L a $${tC}$ °C. ¿Qué presión (atm) ejercen?`
+          : ask === "T" ? `$${dn(m, 2)}$ g de $${tx(g)}$ ocupan $${dn(V, 1)}$ L a $${dn(P, 1)}$ atm. ¿A qué temperatura (°C) están?`
+          : `¿Cuántos gramos de $${tx(g)}$ hay en un tubo de $${dn(V, 1)}$ L a $${tC}$ °C y $${dn(P, 1)}$ atm?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`[[qg-gases|Gas ideal]]: $PV = nRT$, con $R = 0{,}082\\ \\mathrm{\\frac{atm\\,L}{mol\\,K}}$ y $T$ en kelvin ($T = t + 273{,}15$).`,
+          ask === "m" ? `$n = \\frac{PV}{RT} = \\frac{${dn(P, 1)}\\cdot${dn(V, 1)}}{0{,}082\\cdot${dn(TK, 2)}} \\approx ${nf(n, 4)}$ mol; $m = nM \\approx ${nf(n, 4)}\\cdot${dn(M, 2)} \\approx ${dn(ans, 2)}$ g.`
+            : `$n = \\frac mM = \\frac{${dn(m, 2)}}{${dn(M, 2)}} \\approx ${nf(m / M, 4)}$ mol. ${ask === "V" ? `$V = \\frac{nRT}{P} \\approx ${dn(ans, 2)}$ L.` : ask === "P" ? `$P = \\frac{nRT}{V} \\approx ${dn(ans, 3)}$ atm.` : `$T = \\frac{PV}{nR} \\approx ${dn(ans + 273.15, 1)}$ K, o sea $${dn(ans, 1)}$ °C.`}`],
+        traps: ask === "T" ? [{ value: ans + 273.15, msg: "Eso está en kelvin: pasalo a grados Celsius." }] : ask === "V" || ask === "P" ? [{ value: ans * tC / TK, msg: "Usaste la temperatura en °C: en $PV = nRT$ va en kelvin." }].filter(t => tC !== 0 && Math.abs(t.value / ans - 1) > 0.05) : [],
+        // verificación: todo en el SI (Pa, m³, J/(mol·K))
+        verify: { kind: "zero", tol: 5e-4, fn: x => {
+          const nn = (ask === "m" ? x : m) / M;
+          if (ask === "V") return [nn * Q.Rsi * TK / (P * ATM) * 1e3 / x - 1];
+          if (ask === "P") return [nn * Q.Rsi * TK / (V * 1e-3) / ATM / x - 1];
+          if (ask === "T") return [P * ATM * V * 1e-3 / (nn * Q.Rsi) / (x + 273.15) - 1];
+          return [nSI(P, V, TK) / nn - 1];
+        } }
+      };
+    }
+  };
+  T["qg-gas-proporcion-mc"] = {
+    type: "mc", concepts: ["qg-gases"], difficulty: 1,
+    generate(r) {
+      // se cambia una variable por un factor, con otra fija; ¿qué le pasa a la tercera?
+      const cases = [["T", "P", "V"], ["P", "T", "V"], ["V", "T", "P"], ["T", "V", "P"], ["n", "T", "V"], ["n", "P", "V"]];
+      const [chg, fix, out] = r.pick(cases), f = r.pick([2, 3, 4, 0.5]);
+      const NAME = { T: "la temperatura absoluta", P: "la presión", V: "el volumen", n: "la cantidad de gas (moles)" };
+      // con PV = nRT: la variable de salida es proporcional o inversamente proporcional a la que cambia
+      const inv = (out === "V" && chg === "P") || (out === "P" && chg === "V");
+      const k = inv ? 1 / f : f;
+      const word = x => (x === 1 ? "no cambia" : x > 1 ? `se multiplica por ${String(x).replace(".", ",")}` : `se divide por ${String(1 / x).replace(".", ",")}`);
+      const mcq = H.mc(r, word(k), [word(1 / k), word(1), word(k * k), word(Math.sqrt(k))], { text: true });
+      return {
+        prompt: `Si ${NAME[chg]} de un gas ideal se ${f > 1 ? `multiplica por ${f}` : "reduce a la mitad"} manteniendo constantes ${NAME[fix]}${chg === "n" ? "" : " y la cantidad de gas"}, ¿qué le pasa a ${NAME[out]}?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`De $PV = nRT$ ([[qg-gases|gas ideal]]), con ${NAME[fix]}${chg === "n" ? "" : " y $n$"} fijos, ${NAME[out]} es ${inv ? "inversamente proporcional" : "proporcional"} a ${NAME[chg]}.`, `Entonces ${NAME[out]} ${word(k)}.`],
+        // verificación: dos estados calculados en el SI y el cociente de la variable pedida
+        verify: { kind: "truth", target: true, fn: () => {
+          const s1 = { n: 1, T: 300, P: 101325, V: null }, s2 = Object.assign({}, s1);
+          s2[chg] = s1[chg] * f;
+          const solve = st => { const o = Object.assign({}, st); if (out === "V") o.V = o.n * Q.Rsi * o.T / o.P; else o.P = o.n * Q.Rsi * o.T / o.V; return o; };
+          if (out === "P") { s1.V = 0.0246; s2.V = chg === "V" ? 0.0246 * f : 0.0246; s1.P = null; s2.P = null; }
+          const a = solve(s1), b = solve(s2), ratio = b[out] / a[out];
+          return Math.abs(ratio - k) < 1e-12 * Math.max(1, k);
+        } }
+      };
+    }
+  };
+  T["qg-gas-cambio-num"] = {
+    type: "numeric", concepts: ["qg-gases"], difficulty: 2,
+    generate(r) {
+      const P1 = r.pick([1, 1.2, 2, 3, 0.9]), V1 = r.pick([2, 5, 10, 12, 20]), t1 = r.pick([0, 20, 25, 27, 50]), k = r.pick(["V", "P", "T"]);
+      const P2 = k === "P" ? null : r.pick([0.5, 1.5, 2.5, 4]), V2 = k === "V" ? null : r.pick([1, 3, 8, 15, 25]), t2 = k === "T" ? null : r.pick([-10, 80, 100, 127, 200]);
+      const T1 = t1 + 273.15, c = P1 * V1 / T1;
+      const ans = k === "V" ? c * (t2 + 273.15) / P2 : k === "P" ? c * (t2 + 273.15) / V2 : P2 * V2 / c - 273.15;
+      return {
+        prompt: `Una cantidad fija de gas ocupa $${V1}$ L a $${dn(P1, 1)}$ atm y $${t1}$ °C. ${k === "V" ? `¿Qué volumen (L) ocupa a $${dn(P2, 1)}$ atm y $${t2}$ °C?` : k === "P" ? `Si se lo lleva a $${V2}$ L y $${t2}$ °C, ¿qué presión (atm) tiene?` : `¿A qué temperatura (°C) ocupa $${V2}$ L a $${dn(P2, 1)}$ atm?`}`,
+        answer: ans, tolerance: 0.01,
+        solution: [`Con $n$ fijo, $\\frac{PV}{T}$ es constante ([[qg-gases|ecuación general]]): $\\frac{P_1V_1}{T_1} = \\frac{P_2V_2}{T_2}$, con las temperaturas en kelvin.`,
+          `$\\frac{P_1V_1}{T_1} = \\frac{${dn(P1, 1)}\\cdot${V1}}{${dn(T1, 2)}} \\approx ${nf(c, 4)}$. Despejando: ${k === "T" ? `$T_2 = \\frac{P_2V_2}{${nf(c, 4)}} \\approx ${dn(ans + 273.15, 1)}$ K $= ${dn(ans, 1)}$ °C.` : `$${k}_2 \\approx ${dn(ans, 3)}$.`}`],
+        traps: k === "T" ? [{ value: ans + 273.15, msg: "Eso está en kelvin: pasalo a grados Celsius." }] : [],
+        // verificación: se calculan los moles en el SI con el estado 1 y se usa $PV = nRT$ en el estado 2
+        verify: { kind: "zero", tol: 1e-6, fn: x => {
+          const n = nSI(P1, V1, T1);
+          if (k === "V") return [n * Q.Rsi * (t2 + 273.15) / (P2 * ATM) * 1e3 / x - 1];
+          if (k === "P") return [n * Q.Rsi * (t2 + 273.15) / (V2 * 1e-3) / ATM / x - 1];
+          return [P2 * ATM * V2 * 1e-3 / (n * Q.Rsi) / (x + 273.15) - 1];
+        } }
+      };
+    }
+  };
+  T["qg-gas-densidad-num"] = {
+    type: "numeric", concepts: ["qg-gases"], difficulty: 2,
+    generate(r) {
+      const g = r.pick(GASES), M = Q.mm(g), P = r.pick([0.8, 1, 1.5, 2, 3]), tC = r.pick([0, 25, 50, 100, 200]), TK = tC + 273.15, ask = r.pick(["d", "M"]);
+      const d = P * M / (Q.R * TK), dShow = +d.toFixed(3);
+      const ans = ask === "d" ? d : dShow * Q.R * TK / P;
+      return {
+        prompt: ask === "d" ? `¿Cuál es la densidad (g/L) del $${tx(g)}$ a $${dn(P, 1)}$ atm y $${tC}$ °C?` : `Un gas desconocido tiene una densidad de $${dn(dShow, 3)}$ g/L a $${dn(P, 1)}$ atm y $${tC}$ °C. ¿Cuál es su masa molar (g/mol)?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`De $PV = \\frac mM RT$: $d = \\frac mV = \\frac{PM}{RT}$ ([[qg-gases|densidad de un gas]]).`,
+          ask === "d" ? `$d = \\frac{${dn(P, 1)}\\cdot${dn(M, 2)}}{0{,}082\\cdot${dn(TK, 2)}} \\approx ${dn(d, 3)}$ g/L.` : `$M = \\frac{dRT}{P} = \\frac{${dn(dShow, 3)}\\cdot0{,}082\\cdot${dn(TK, 2)}}{${dn(P, 1)}} \\approx ${dn(ans, 1)}$ g/mol (${g === "C3H8" ? "propano" : "es el " + g}).`],
+        // verificación: un litro del gas en el SI, contando moles y pesándolos
+        verify: { kind: "zero", tol: 5e-4, fn: x => {
+          const n1 = nSI(P, 1, TK);
+          return ask === "d" ? [n1 * M / x - 1] : [dShow / n1 / x - 1];
+        } }
+      };
+    }
+  };
+  T["qg-dalton-num"] = {
+    type: "numeric", concepts: ["qg-dalton"], difficulty: 2,
+    generate(r) {
+      const [g1, g2] = r.sample(["N2", "O2", "He", "Ar", "CO2", "CH4", "H2"], 2), m1 = r.int(2, 30), m2 = r.int(2, 30), V = r.pick([5, 10, 20, 25]), tC = r.pick([0, 25, 27, 50]), TK = tC + 273.15;
+      const n1 = m1 / Q.mm(g1), n2 = m2 / Q.mm(g2), ask = r.pick(["p1", "tot", "x"]);
+      const p1 = n1 * Q.R * TK / V, pt = (n1 + n2) * Q.R * TK / V, x1 = n1 / (n1 + n2);
+      const ans = ask === "p1" ? p1 : ask === "tot" ? pt : x1;
+      return {
+        prompt: `En un recipiente de $${V}$ L a $${tC}$ °C hay $${m1}$ g de $${tx(g1)}$ y $${m2}$ g de $${tx(g2)}$. ${ask === "p1" ? `¿Cuál es la presión parcial (atm) del $${tx(g1)}$?` : ask === "tot" ? "¿Cuál es la presión total (atm)?" : `¿Cuál es la fracción molar del $${tx(g1)}$?`}`,
+        answer: ans, tolerance: 0.01,
+        solution: [`Moles: $${tx(g1)}$: $${nf(n1, 4)}$; $${tx(g2)}$: $${nf(n2, 4)}$.`,
+          `[[qg-dalton|Ley de Dalton]]: cada gas ejerce la presión que tendría solo, $p_i = \\frac{n_iRT}{V}$, y la total es la suma. ${ask === "x" ? `La fracción molar es $x_1 = \\frac{n_1}{n_1 + n_2} \\approx ${dn(x1, 4)}$.` : ask === "p1" ? `$p_1 \\approx ${dn(p1, 3)}$ atm.` : `$P = \\frac{(n_1 + n_2)RT}{V} \\approx ${dn(pt, 3)}$ atm.`}`],
+        traps: ask === "x" ? [{ value: m1 / (m1 + m2), msg: "Esa es la fracción en masa; la fracción molar se calcula con moles." }].filter(t => Math.abs(t.value / x1 - 1) > 0.03) : [],
+        // verificación: presiones de cada gas por separado en el SI; la fracción molar como cociente de presiones
+        verify: { kind: "zero", tol: 5e-4, fn: x => {
+          const pa = n1 * Q.Rsi * TK / (V * 1e-3) / ATM, pb = n2 * Q.Rsi * TK / (V * 1e-3) / ATM;
+          return [(ask === "p1" ? pa : ask === "tot" ? pa + pb : pa / (pa + pb)) / x - 1];
+        } }
+      };
+    }
+  };
+  T["qg-sobre-agua-num"] = {
+    type: "numeric", concepts: ["qg-dalton"], difficulty: 3,
+    generate(r) {
+      const tC = r.pick([20, 22, 25, 28, 30]), pv = { 20: 17.5, 22: 19.8, 25: 23.8, 28: 28.3, 30: 31.8 }[tC], Ptot = r.int(735, 770), VmL = r.int(120, 480), TK = tC + 273.15;
+      const g = r.pick(["H2", "O2", "N2"]), pg = (Ptot - pv) / 760, n = pg * VmL / 1000 / (Q.R * TK), ans = n * Q.mm(g) * 1000;
+      return {
+        prompt: `Se recogen $${VmL}$ mL de $${tx(g)}$ sobre agua a $${tC}$ °C, con una presión total de $${Ptot}$ mmHg. La presión de vapor del agua a esa temperatura es $${dn(pv, 1)}$ mmHg. ¿Cuántos miligramos de $${tx(g)}$ se recogieron?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`El gas recogido está mezclado con vapor de agua: por la [[qg-dalton|ley de Dalton]], $p_{${g}} = P - p_{\\mathrm{H_2O}} = ${Ptot} - ${dn(pv, 1)} = ${dn(Ptot - pv, 1)}$ mmHg $\\approx ${dn(pg, 4)}$ atm.`,
+          `$n = \\frac{pV}{RT} \\approx ${nf(n, 4)}$ mol, que son $${dn(ans, 2)}$ mg.`],
+        traps: [{ value: Ptot / 760 * VmL / 1000 / (Q.R * TK) * Q.mm(g) * 1000, msg: "Faltó restar la presión de vapor del agua: el gas recogido está húmedo." }],
+        // verificación: en el SI, con la presión en pascales (760 mmHg = 101 325 Pa)
+        verify: { kind: "zero", tol: 5e-4, fn: x => [((Ptot - pv) * ATM / 760) * VmL * 1e-6 / (Q.Rsi * TK) * Q.mm(g) * 1000 / x - 1] }
+      };
+    }
+  };
+  // velocidades moleculares: distribución de Maxwell (para verificar con integrales numéricas)
+  const maxwell = (v, Mkg, TK) => { const a = Mkg / (2 * Q.Rsi * TK); return 4 * Math.PI * (a / Math.PI) ** 1.5 * v * v * Math.exp(-a * v * v); };
+  const simpson = (f, a, b, n = 4000) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  T["qg-graham-num"] = {
+    type: "numeric", concepts: ["qg-graham"], difficulty: 2,
+    generate(r) {
+      const [g1, g2] = r.sample(["He", "H2", "N2", "O2", "CO2", "Cl2", "CH4", "SO2", "Ar"], 2), M1 = Q.mm(g1), M2 = Q.mm(g2), ask = r.pick(["ratio", "time", "M"]);
+      const ratio = Math.sqrt(M2 / M1), t2 = r.int(30, 200), t1 = t2 / ratio;
+      const tShow = +t1.toFixed(1), Mx = M2 * (tShow / t2) ** 2;
+      return {
+        prompt: ask === "ratio" ? `¿Cuántas veces más rápido efunde el $${tx(g1)}$ que el $${tx(g2)}$ a la misma temperatura?`
+          : ask === "time" ? `Por un orificio se escapa cierta cantidad de $${tx(g2)}$ en $${t2}$ s. ¿Cuántos segundos tarda en escaparse la misma cantidad (en moles) de $${tx(g1)}$, en iguales condiciones?`
+          : `Un gas desconocido tarda $${dn(tShow, 1)}$ s en efundir, y la misma cantidad de $${tx(g2)}$ tarda $${t2}$ s en iguales condiciones. ¿Cuál es la masa molar (g/mol) del gas desconocido?`,
+        answer: ask === "ratio" ? ratio : ask === "time" ? t1 : Mx, tolerance: 0.01,
+        solution: [`[[qg-graham|Ley de Graham]]: a igual temperatura, la velocidad de efusión es inversamente proporcional a la raíz de la masa molar: $\\frac{v_1}{v_2} = \\sqrt{\\frac{M_2}{M_1}}$, y los tiempos al revés.`,
+          ask === "ratio" ? `$\\sqrt{\\frac{${dn(M2, 2)}}{${dn(M1, 2)}}} \\approx ${dn(ratio, 3)}$.` : ask === "time" ? `$t_1 = t_2\\sqrt{\\frac{M_1}{M_2}} = ${t2}\\sqrt{\\frac{${dn(M1, 2)}}{${dn(M2, 2)}}} \\approx ${dn(t1, 1)}$ s.` : `$M_x = M_2\\left(\\frac{t_x}{t_2}\\right)^2 = ${dn(M2, 2)}\\left(\\frac{${dn(tShow, 1)}}{${t2}}\\right)^2 \\approx ${dn(Mx, 1)}$ g/mol.`],
+        traps: ask === "ratio" ? [{ value: M2 / M1, msg: "Faltó la raíz: la velocidad va como $1/\\sqrt M$." }] : [],
+        // verificación: la velocidad media de cada gas, integrando numéricamente la distribución de Maxwell
+        verify: { kind: "zero", tol: 1e-4, fn: x => {
+          const TK = 300, mean = M => simpson(v => v * maxwell(v, M / 1000, TK), 0, 6000 * Math.sqrt(4 / M));
+          const vr = mean(M1) / mean(M2);
+          return ask === "ratio" ? [vr / x - 1] : ask === "time" ? [t2 / vr / x - 1] : [mean(x) / mean(M2) * tShow / t2 - 1];
+        } }
+      };
+    }
+  };
+  T["qg-vrms-num"] = {
+    type: "numeric", concepts: ["qg-graham"], difficulty: 2,
+    generate(r) {
+      const g = r.pick(["He", "H2", "N2", "O2", "CO2", "Ar", "CH4"]), M = Q.mm(g), tC = r.pick([-73, 0, 25, 27, 100, 227, 500]), TK = tC + 273.15;
+      const v = Math.sqrt(3 * Q.Rsi * TK / (M / 1000));
+      return {
+        prompt: `¿Cuál es la velocidad cuadrática media (m/s) de las moléculas de $${tx(g)}$ a $${tC}$ °C? ($R = 8{,}314$ J/(mol·K))`,
+        answer: v, tolerance: 0.01,
+        solution: [`Por la [[f2b-cinetica|teoría cinética]], $\\frac12 M v_{rms}^2 = \\frac32 RT$ por mol: $v_{rms} = \\sqrt{\\frac{3RT}{M}}$, con $M$ en kg/mol ([[qg-graham|velocidades moleculares]]).`,
+          `$v_{rms} = \\sqrt{\\frac{3\\cdot8{,}314\\cdot${dn(TK, 2)}}{${nf(M / 1000, 4)}}} \\approx ${dn(v, 0)}$ m/s.`],
+        traps: [{ value: Math.sqrt(3 * Q.Rsi * TK / M), msg: "La masa molar tiene que ir en kg/mol para que salga en m/s." }],
+        // verificación: ⟨v²⟩ integrando la distribución de Maxwell
+        verify: { kind: "zero", tol: 1e-4, fn: x => [Math.sqrt(simpson(u => u * u * maxwell(u, M / 1000, TK), 0, 8 * v)) / x - 1] }
+      };
+    }
+  };
+  const VDW = { CO2: [3.64, 0.04267], NH3: [4.225, 0.0371], CH4: [2.283, 0.04278], N2: [1.370, 0.0387], O2: [1.382, 0.03186], Cl2: [6.579, 0.05622], SO2: [6.803, 0.05636], H2O: [5.537, 0.03049] };
+  T["qg-vdw-num"] = {
+    type: "numeric", concepts: ["qg-gas-real"], difficulty: 3,
+    generate(r) {
+      const g = r.pick(Object.keys(VDW)), [a, b] = VDW[g], n = r.pick([1, 2, 5, 10]), V = r.pick([0.5, 1, 2, 5]), tC = r.pick([25, 100, 200, 300]), TK = tC + 273.15, ask = r.pick(["P", "Z"]);
+      // solo por encima de la temperatura crítica (8a/27Rb): ahí la ecuación tiene un único volumen para cada presión
+      if (n / V > 6 || TK < 1.1 * 8 * a / (27 * Q.R * b)) return null;
+      const P = n * Q.R * TK / (V - n * b) - a * n * n / (V * V), Pid = n * Q.R * TK / V;
+      const ans = ask === "P" ? P : P / Pid;
+      return {
+        prompt: `$${n}$ mol de $${tx(g)}$ ocupan $${dn(V, 1)}$ L a $${tC}$ °C. Con la ecuación de van der Waals ($a = ${dn(a, 3)}\\ \\mathrm{atm\\,L^2/mol^2}$, $b = ${dn(b, 5)}$ L/mol), ${ask === "P" ? "¿qué presión (atm) ejercen?" : "¿cuánto vale el factor de compresibilidad $Z = \\frac{PV}{nRT}$?"}`,
+        answer: ans, tolerance: 0.01,
+        solution: [`[[qg-gas-real|Van der Waals]]: $\\left(P + \\frac{an^2}{V^2}\\right)(V - nb) = nRT$, así que $P = \\frac{nRT}{V - nb} - \\frac{an^2}{V^2}$.`,
+          `$P = \\frac{${n}\\cdot0{,}082\\cdot${dn(TK, 2)}}{${dn(V, 1)} - ${dn(n * b, 4)}} - \\frac{${dn(a, 3)}\\cdot${n * n}}{${dn(V * V, 2)}} \\approx ${dn(P, 2)}$ atm${ask === "Z" ? `; ideal: $${dn(Pid, 2)}$ atm, así que $Z \\approx ${dn(ans, 3)}$` : ""}.`,
+          `${P < Pid ? "Da menos que el gas ideal: a esta densidad pesan más las atracciones (el término $a$)." : "Da más que el gas ideal: pesa más el volumen propio de las moléculas (el término $b$)."}`],
+        traps: [{ value: ask === "P" ? Pid : 1, msg: "Ese es el resultado del gas ideal: faltan las correcciones de van der Waals." }].filter(t => Math.abs(t.value / ans - 1) > 0.02),
+        // verificación: con esa presión se busca el volumen por bisección en la ecuación de van der Waals y tiene que dar el dato
+        verify: { kind: "zero", tol: 1e-6, fn: x => {
+          const p = ask === "P" ? x : x * Pid;
+          const Vb = Q.bisect(v => (p + a * n * n / (v * v)) * (v - n * b) - n * Q.R * TK, n * b * 1.0001 + 0.3 * (V - n * b), 50 * V);
+          return [Vb / V - 1];
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-gases": {
+      title: "Leyes de los gases y gas ideal", aliases: ["ley de Boyle", "ley de Charles", "ley de Gay-Lussac", "ecuación general de los gases", "volumen molar", "CNPT", "densidad de un gas", "hipótesis de Avogadro"], concepts: ["qg-gases"],
+      summary: "Boyle (PV constante a T fija), Charles (V/T constante a P fija) y Gay-Lussac (P/T constante a V fija) se resumen en PV = nRT, con T en kelvin y R = 0,082 atm·L/(mol·K). En CNPT (0 °C, 1 atm) un mol ocupa 22,4 L. La densidad es d = PM/RT.",
+      def: [R`Para una cantidad fija de gas:
+- **Boyle-Mariotte:** a $T$ constante, $PV$ es constante.
+- **Charles:** a $P$ constante, $\frac VT$ es constante.
+- **Gay-Lussac:** a $V$ constante, $\frac PT$ es constante.
+Las tres juntas: $\frac{P_1V_1}{T_1} = \frac{P_2V_2}{T_2}$, siempre con la **temperatura absoluta** $T = t + 273{,}15$.`,
+        R`**Hipótesis de Avogadro:** volúmenes iguales de gases a igual $P$ y $T$ tienen el mismo número de moléculas. Con ella sale la **ecuación de estado del gas ideal** $PV = nRT$ ([[f2b-gas-ideal|gas ideal]]), con $R = 0{,}082\ \frac{\mathrm{atm\,L}}{\mathrm{mol\,K}} = 8{,}314\ \frac{\mathrm J}{\mathrm{mol\,K}}$.`,
+        R`En **CNPT** (0 °C y 1 atm), un mol de cualquier gas ideal ocupa el **volumen molar** de 22,4 L. La **densidad** de un gas es $d = \frac{PM}{RT}$, y midiéndola se obtiene su masa molar.`],
+      idea: [R`Un gas ideal es casi todo vacío: las moléculas son puntos que no se atraen. Por eso su comportamiento no depende de qué gas es, solo de cuántas moléculas hay. El cero absoluto aparece al extrapolar Charles: el volumen se anularía a −273,15 °C.`],
+      demo: [R`**Paso 1 (Boyle y Charles juntas).** Llevamos el gas de $(P_1, V_1, T_1)$ a $(P_2, V_2, T_2)$ en dos etapas: primero a $T_1$ constante hasta $P_2$ (Boyle: $V' = \frac{P_1V_1}{P_2}$), y después a $P_2$ constante hasta $T_2$ (Charles: $V_2 = V'\frac{T_2}{T_1}$).`,
+        R`**Paso 2 (combinar).** Reemplazando: $V_2 = \frac{P_1V_1}{P_2}\frac{T_2}{T_1}$, o sea $\frac{P_1V_1}{T_1} = \frac{P_2V_2}{T_2}$: $\frac{PV}T$ depende solo de la cantidad de gas.`,
+        R`**Paso 3 (Avogadro).** Esa constante es proporcional a $n$ (a igual $P$ y $T$, el volumen es proporcional a los moles), así que $\frac{PV}{T} = nR$ con $R$ universal. $\blacksquare$`,
+        R`**Paso 4 (densidad).** Con $n = \frac mM$: $PV = \frac mM RT$, y dividiendo por $V$, $d = \frac mV = \frac{PM}{RT}$.`],
+      examples: [{ q: R`¿Cuánto ocupan 16 g de O₂ a 27 °C y 2 atm?`, steps: [R`$n = 0{,}5$ mol; $V = \frac{0{,}5\cdot0{,}082\cdot300}{2} \approx 6{,}15$ L.`] }],
+      tips: [R`El error más común es usar la temperatura en °C. Otro: mezclar unidades de $R$ (con atm y L va 0,082; con Pa y m³, 8,314).`],
+      see: ["f2b-gas-ideal", "qg-dalton", "qg-gas-real"]
+    },
+    "qg-dalton": {
+      title: "Mezclas de gases: ley de Dalton", aliases: ["ley de Dalton", "presión parcial", "presiones parciales", "fracción molar", "gas recogido sobre agua"], concepts: ["qg-dalton"],
+      summary: "En una mezcla de gases ideales, cada uno ejerce la presión que tendría solo (presión parcial) y la total es la suma. p_i = x_i·P, con x_i = n_i/n_total la fracción molar.",
+      def: [R`La **presión parcial** $p_i$ de un gas en una mezcla es la que ejercería si ocupara solo todo el recipiente: $p_i = \frac{n_iRT}{V}$. **Ley de Dalton:** $P = \sum_i p_i$.`,
+        R`La **fracción molar** es $x_i = \frac{n_i}{n_{tot}}$ (las fracciones suman 1), y $p_i = x_i P$.`,
+        R`**Gas recogido sobre agua:** el gas sale húmedo, mezclado con vapor de agua a su presión de vapor: $p_{gas} = P_{atm} - p_{\mathrm{H_2O}}(T)$.`],
+      idea: [R`En un gas ideal las moléculas no se ven entre sí: cada especie golpea las paredes como si estuviera sola. Por eso las presiones se suman. El aire es ~78 % de N₂ en moles, así que a 1 atm el nitrógeno aporta ~0,78 atm.`],
+      demo: [R`**Paso 1 (cada gas).** Cada componente cumple $p_iV = n_iRT$ en el mismo $V$ y $T$.`,
+        R`**Paso 2 (sumar).** $\sum_i p_i\,V = \left(\sum_i n_i\right)RT = n_{tot}RT = PV$, así que $P = \sum p_i$.`,
+        R`**Paso 3 (fracción).** Dividiendo $p_iV = n_iRT$ por $PV = n_{tot}RT$: $\frac{p_i}P = \frac{n_i}{n_{tot}} = x_i$. $\blacksquare$`],
+      examples: [{ q: R`4 g de He y 32 g de O₂ en 10 L a 0 °C.`, steps: [R`1 mol de cada uno: $p_{He} = p_{O_2} = \frac{1\cdot0{,}082\cdot273}{10} \approx 2{,}24$ atm; total 4,48 atm.`] }],
+      see: ["qg-gases", "qg-graham"]
+    },
+    "qg-graham": {
+      title: "Teoría cinética, difusión y efusión: ley de Graham", aliases: ["ley de Graham", "efusión", "difusión gaseosa", "velocidad media molecular", "teoría cinético-molecular"], concepts: ["qg-graham"],
+      summary: "La energía cinética media de las moléculas depende solo de T: (3/2)RT por mol. Por eso v_rms = √(3RT/M) y, a igual T, las moléculas livianas son más rápidas: v₁/v₂ = √(M₂/M₁) (Graham).",
+      def: [R`**Teoría cinético-molecular:** un gas son moléculas puntuales en movimiento al azar, con choques elásticos y sin fuerzas entre ellas. La presión sale de los choques contra las paredes, y la energía cinética media por mol es $\frac32RT$ ([[f2b-cinetica|teoría cinética]]).`,
+        R`**Velocidad cuadrática media:** $v_{rms} = \sqrt{\frac{3RT}{M}}$ ($M$ en kg/mol). Las velocidades siguen la distribución de Maxwell, y la media y la más probable son algo menores que $v_{rms}$, pero todas son proporcionales a $\sqrt{T/M}$.`,
+        R`**Difusión:** un gas se mezcla con otro. **Efusión:** escapa por un orificio pequeño. **Ley de Graham:** a igual $T$ y $P$, $\frac{v_1}{v_2} = \sqrt{\frac{M_2}{M_1}}$; los tiempos para efundir la misma cantidad cumplen la relación inversa.`],
+      idea: [R`A la misma temperatura, todas las moléculas tienen en promedio la misma energía cinética. Una molécula pesada, para tener la misma energía, tiene que ir más despacio. Así se separó el uranio-235 del 238: como hexafluoruros, que efunden a velocidades que difieren en 0,4 %.`],
+      demo: [R`**Paso 1 (misma energía).** Para dos gases a la misma $T$: $\frac12 M_1 v_{1,rms}^2 = \frac32RT = \frac12 M_2 v_{2,rms}^2$.`,
+        R`**Paso 2 (cociente).** $\frac{v_1^2}{v_2^2} = \frac{M_2}{M_1}$, así que $\frac{v_1}{v_2} = \sqrt{\frac{M_2}{M_1}}$.`,
+        R`**Paso 3 (efusión).** El flujo por el orificio es proporcional a la velocidad media de las moléculas (que también va como $\sqrt{T/M}$): la misma relación vale para las velocidades de efusión. El tiempo para que salga una misma cantidad es inversamente proporcional al flujo. $\blacksquare$`],
+      examples: [{ q: R`¿Cuántas veces más rápido efunde el H₂ que el O₂?`, steps: [R`$\sqrt{\frac{32}{2{,}016}} \approx 3{,}98$: casi 4 veces.`] }],
+      see: ["f2b-cinetica", "qg-gases"]
+    },
+    "qg-gas-real": {
+      title: "Gases reales: ecuación de van der Waals", aliases: ["gas real", "gases reales", "ecuación de van der Waals", "factor de compresibilidad", "constantes de van der Waals"], concepts: ["qg-gas-real"],
+      summary: "Los gases reales se apartan del ideal a alta presión y baja temperatura. Van der Waals corrige el volumen propio (b) y la atracción entre moléculas (a): (P + an²/V²)(V − nb) = nRT. Z = PV/nRT mide el apartamiento.",
+      def: [R`**Ecuación de van der Waals:** $\left(P + \frac{an^2}{V^2}\right)(V - nb) = nRT$.
+- $b$: el volumen que ocupan las propias moléculas, por mol; el espacio libre es $V - nb$.
+- $a$: la atracción entre moléculas, que frena a las que van a chocar con la pared y baja la presión en $\frac{an^2}{V^2}$.`,
+        R`El **factor de compresibilidad** $Z = \frac{PV}{nRT}$ vale 1 para el gas ideal. $Z < 1$: dominan las atracciones; $Z > 1$: domina el volumen propio. Los gases son casi ideales a baja presión y alta temperatura.`],
+      idea: [R`Las dos correcciones van en sentidos opuestos. Por eso a presiones moderadas $Z$ baja de 1 (las moléculas se atraen y el gas se deja comprimir más) y a presiones muy altas sube (ya no hay lugar). Los gases con $a$ grande (NH₃, H₂O) son los más fáciles de licuar.`],
+      demo: [R`**Paso 1 (volumen propio).** Si cada mol de moléculas ocupa $b$, el volumen disponible para moverse es $V - nb$, y la ecuación ideal pasa a $P_{ideal}(V - nb) = nRT$.`,
+        R`**Paso 2 (atracción).** Una molécula que llega a la pared es tirada hacia adentro por las demás. El efecto es proporcional a cuántas la tiran ($\propto n/V$) y a cuántas chocan ($\propto n/V$): la presión medida es $P = P_{ideal} - a\frac{n^2}{V^2}$.`,
+        R`**Paso 3 (juntar).** Despejando $P_{ideal} = P + \frac{an^2}{V^2}$ y reemplazando en el paso 1 queda la ecuación de van der Waals. $\blacksquare$`],
+      examples: [{ q: R`1 mol de CO₂ en 1 L a 25 °C.`, steps: [R`Ideal: 24,4 atm. Van der Waals: $\frac{24{,}45}{1 - 0{,}0427} - 3{,}64 \approx 21{,}9$ atm: $Z \approx 0{,}9$.`] }],
+      see: ["qg-gases", "qg-fuerzas"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-gases": { name: "Leyes de los gases" }, "qg-dalton": { name: "Mezclas de gases" }, "qg-graham": { name: "Teoría cinética y Graham" }, "qg-gas-real": { name: "Gases reales" } },
+    templates: T,
+    units: [{
+      id: "qg-gases-u", order: 4, program: "Unidad 4", title: "Estado gaseoso", icon: "sparkles",
+      diagnostic: ["qg-gas-ideal-num", "qg-dalton-num", "qg-graham-num"],
+      lessons: [
+        { id: "qg-l-gas-ideal", title: "Gas ideal", templates: ["qg-gas-proporcion-mc", "qg-gas-ideal-num", "qg-gas-cambio-num", "qg-gas-densidad-num"], theory: ["qg-gases"],
+          intro: R`$PV = nRT$ con $T$ en kelvin y $R = 0{,}082$ atm·L/(mol·K). Densidad: $d = \frac{PM}{RT}$.` },
+        { id: "qg-l-dalton", title: "Mezclas de gases", templates: ["qg-dalton-num", "qg-sobre-agua-num"], theory: ["qg-dalton"],
+          intro: R`$P = \sum p_i$, $p_i = x_iP$. Sobre agua: hay que restar la presión de vapor.` },
+        { id: "qg-l-graham", title: "Velocidades moleculares", templates: ["qg-vrms-num", "qg-graham-num"], theory: ["qg-graham"],
+          intro: R`$v_{rms} = \sqrt{\frac{3RT}M}$ y $\frac{v_1}{v_2} = \sqrt{\frac{M_2}{M_1}}$.` },
+        { id: "qg-l-gas-real", title: "Gases reales", templates: ["qg-vdw-num"], theory: ["qg-gas-real"],
+          intro: R`$\left(P + \frac{an^2}{V^2}\right)(V - nb) = nRT$.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 4 · ESTADOS DE AGREGACIÓN (b) LÍQUIDOS Y SÓLIDOS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Q = E.qg, nf = Q.nf, dn = Q.dn;
+  const T = {};
+  const tx = f => Q.tex(f);
+  // RK4 de una ecuación escalar (para verificar Clausius-Clapeyron integrando dlnP/dT)
+  const rk4 = (f, y, a, b, n = 2000) => { const h = (b - a) / n; let t = a; for (let i = 0; i < n; i++) { const k1 = f(t, y), k2 = f(t + h / 2, y + h * k1 / 2), k3 = f(t + h / 2, y + h * k2 / 2), k4 = f(t + h, y + h * k3); y += h * (k1 + 2 * k2 + 2 * k3 + k4) / 6; t += h; } return y; };
+  const LIQ = { "agua": [40.7, 100, "H2O"], "etanol": [38.6, 78.4, "C2H6O"], "benceno": [30.8, 80.1, "C6H6"], "acetona": [29.1, 56.1, "C3H6O"], "metanol": [35.2, 64.7, "CH4O"], "hexano": [28.9, 68.7, "C6H14"] };
+  T["qg-clausius-num"] = {
+    type: "numeric", concepts: ["qg-liquidos"], difficulty: 3,
+    generate(r) {
+      const name = r.pick(Object.keys(LIQ)), [dH, tb] = LIQ[name], Tb = tb + 273.15, ask = r.pick(["P", "T"]);
+      const tC = r.pick([20, 25, 30, 40, 50, 60]), T2 = tC + 273.15, Pmm = r.pick([200, 300, 400, 500, 600]);
+      if (tC >= tb) return null;
+      const lnP = (Tk) => -dH * 1000 / Q.Rsi * (1 / Tk - 1 / Tb);   // ln(P/760)
+      const ans = ask === "P" ? 760 * Math.exp(lnP(T2)) : 1 / (1 / Tb - Q.Rsi * Math.log(Pmm / 760) / (dH * 1000)) - 273.15;
+      return {
+        prompt: ask === "P" ? `El ${name} hierve a $${dn(tb, 1)}$ °C a 760 mmHg, y su entalpía de vaporización es $${dn(dH, 1)}$ kJ/mol. ¿Cuál es su presión de vapor (mmHg) a $${tC}$ °C?`
+          : `El ${name} hierve a $${dn(tb, 1)}$ °C a 760 mmHg ($\\Delta H_{vap} = ${dn(dH, 1)}$ kJ/mol). ¿A qué temperatura (°C) hierve donde la presión es de $${Pmm}$ mmHg?`,
+        answer: ans, tolerance: 0.01,
+        solution: [`[[qg-liquidos|Clausius-Clapeyron]]: $\\ln\\frac{P_2}{P_1} = -\\frac{\\Delta H_{vap}}{R}\\left(\\frac1{T_2} - \\frac1{T_1}\\right)$, con $R = 8{,}314$ J/(mol·K) y temperaturas en kelvin. El punto de ebullición normal da $P_1 = 760$ mmHg a $T_1 = ${dn(Tb, 2)}$ K.`,
+          ask === "P" ? `$\\ln\\frac{P}{760} = -\\frac{${dn(dH * 1000, 0)}}{8{,}314}\\left(\\frac1{${dn(T2, 2)}} - \\frac1{${dn(Tb, 2)}}\\right) \\approx ${dn(lnP(T2), 4)}$, así que $P \\approx ${dn(ans, 1)}$ mmHg.`
+            : `$\\frac1{T_2} = \\frac1{${dn(Tb, 2)}} - \\frac{8{,}314}{${dn(dH * 1000, 0)}}\\ln\\frac{${Pmm}}{760}$, así que $T_2 \\approx ${dn(ans + 273.15, 1)}$ K $= ${dn(ans, 1)}$ °C. Hierve antes: la presión externa es menor.`],
+        traps: ask === "T" ? [{ value: ans + 273.15, msg: "Eso está en kelvin: pasalo a grados Celsius." }] : [],
+        // verificación: se integra d(ln P)/dT = ΔH/(RT²) con RK4 desde el punto de ebullición normal
+        verify: { kind: "zero", tol: 1e-6, fn: x => {
+          const f = (t, y) => dH * 1000 / (Q.Rsi * t * t);
+          if (ask === "P") return [rk4(f, Math.log(760), Tb, T2) - Math.log(x)];
+          return [rk4(f, Math.log(760), Tb, x + 273.15) - Math.log(Pmm)];
+        } }
+      };
+    }
+  };
+  // curva de calentamiento del agua
+  T["qg-calentamiento-num"] = {
+    type: "numeric", concepts: ["qg-liquidos"], difficulty: 2,
+    generate(r) {
+      const m = r.pick([10, 18, 25, 50, 100]), t0 = r.pick([-30, -20, -10, -5]), t1 = r.pick([105, 110, 120, 130]), ask = r.pick(["total", "hielo-agua"]);
+      const ch = 2.09, cl = 4.18, cv = 2.01, Lf = 334, Lv = 2257; // J/g
+      const qa = m * ch * (0 - t0), qb = m * Lf, qc = m * cl * 100, qd = m * Lv, qe = m * cv * (t1 - 100);
+      const ans = (ask === "total" ? qa + qb + qc + qd + qe : qa + qb + m * cl * 25) / 1000;
+      return {
+        prompt: ask === "total" ? `¿Cuánta energía (kJ) hace falta para llevar $${m}$ g de hielo a $${t0}$ °C hasta vapor a $${t1}$ °C, a 1 atm? ($c_{hielo} = 2{,}09$, $c_{agua} = 4{,}18$, $c_{vapor} = 2{,}01$ J/(g·°C); $L_f = 334$ J/g; $L_v = 2257$ J/g)`
+          : `¿Cuánta energía (kJ) hace falta para llevar $${m}$ g de hielo a $${t0}$ °C hasta agua líquida a 25 °C? ($c_{hielo} = 2{,}09$, $c_{agua} = 4{,}18$ J/(g·°C); $L_f = 334$ J/g)`,
+        answer: ans, tolerance: 0.01,
+        solution: [`En la [[qg-liquidos|curva de calentamiento]], la temperatura sube en cada fase ($Q = mc\\Delta T$) y queda fija en los cambios de fase ($Q = mL$).`,
+          ask === "total" ? `Hielo: $${dn(qa, 0)}$ J; fusión: $${dn(qb, 0)}$ J; agua de 0 a 100 °C: $${dn(qc, 0)}$ J; ebullición: $${dn(qd, 0)}$ J; vapor: $${dn(qe, 0)}$ J. Total $\\approx ${dn(ans, 2)}$ kJ.`
+            : `Hielo: $${dn(qa, 0)}$ J; fusión: $${dn(qb, 0)}$ J; agua de 0 a 25 °C: $${dn(m * cl * 25, 0)}$ J. Total $\\approx ${dn(ans, 2)}$ kJ.`,
+          ask === "total" ? `Casi todo se va en la vaporización: separar las moléculas del líquido cuesta mucho más que calentarlo.` : ``].filter(Boolean),
+        traps: ask === "total" ? [{ value: (qa + qc + qe) / 1000, msg: "Faltan los calores latentes: en la fusión y la ebullición se absorbe energía sin que cambie la temperatura." }] : [{ value: (qa + m * cl * 25) / 1000, msg: "Falta el calor de fusión del hielo." }],
+        // verificación: se calienta la muestra de a 0,5 J y se lleva la cuenta de la fase y la temperatura
+        verify: { kind: "zero", tol: 2e-4, fn: x => {
+          const goal = ask === "total" ? t1 : 25, dq = 0.5;
+          let t = t0, melted = 0, boiled = 0, q = 0;
+          while (true) {
+            if (t < 0) { t += dq / (m * ch); q += dq; if (t > 0) { q -= (t - 0) * m * ch; t = 0; } }
+            else if (t === 0 && melted < m * Lf) { melted += dq; q += dq; if (melted > m * Lf) { q -= melted - m * Lf; melted = m * Lf; } }
+            else if (t < 100 && t < goal) { t += dq / (m * cl); q += dq; if (t > Math.min(100, goal)) { q -= (t - Math.min(100, goal)) * m * cl; t = Math.min(100, goal); } }
+            else if (t === 100 && goal > 100 && boiled < m * Lv) { boiled += dq; q += dq; if (boiled >= m * Lv) { q -= boiled - m * Lv; boiled = m * Lv; t = 100.0000001; } }
+            else if (t > 100 && t < goal) { t += dq / (m * cv); q += dq; if (t > goal) { q -= (t - goal) * m * cv; t = goal; } }
+            else break;
+          }
+          return [q / 1000 / x - 1];
+        } }
+      };
+    }
+  };
+  // fuerzas intermoleculares: enlaces H–X presentes y momento dipolar (D)
+  const IMF = [
+    { f: "H2O", hx: ["O"], mu: 1.85, k: "puente de hidrógeno" }, { f: "NH3", hx: ["N"], mu: 1.47, k: "puente de hidrógeno" }, { f: "HF", hx: ["F"], mu: 1.82, k: "puente de hidrógeno" },
+    { f: "CH3OH", hx: ["O", "C"], mu: 1.70, k: "puente de hidrógeno" }, { f: "CH4", hx: ["C"], mu: 0, k: "London (dispersión)" }, { f: "CO2", hx: [], mu: 0, k: "London (dispersión)" },
+    { f: "Cl2", hx: [], mu: 0, k: "London (dispersión)" }, { f: "I2", hx: [], mu: 0, k: "London (dispersión)" }, { f: "CCl4", hx: [], mu: 0, k: "London (dispersión)" },
+    { f: "HCl", hx: ["Cl"], mu: 1.08, k: "dipolo-dipolo" }, { f: "H2S", hx: ["S"], mu: 0.97, k: "dipolo-dipolo" }, { f: "SO2", hx: [], mu: 1.63, k: "dipolo-dipolo" },
+    { f: "CH2O", hx: ["C"], mu: 2.33, k: "dipolo-dipolo" }, { f: "CHCl3", hx: ["C"], mu: 1.04, k: "dipolo-dipolo" }, { f: "C3H6O", hx: ["C"], mu: 2.88, k: "dipolo-dipolo" }, { f: "N2", hx: [], mu: 0, k: "London (dispersión)" }
+  ];
+  T["qg-fuerzas-mc"] = {
+    type: "mc", concepts: ["qg-fuerzas"], difficulty: 2,
+    generate(r) {
+      const s = r.pick(IMF), mcq = H.mc(r, s.k, ["London (dispersión)", "dipolo-dipolo", "puente de hidrógeno", "enlace iónico"].filter(x => x !== s.k), { text: true });
+      return {
+        prompt: `¿Cuál es la fuerza intermolecular más importante entre moléculas de $${tx(s.f)}$${s.f === "C3H6O" ? " (acetona)" : s.f === "CH2O" ? " (formaldehído)" : ""}?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`[[qg-fuerzas|Fuerzas intermoleculares]]: puente de hidrógeno si hay H unido a N, O o F; dipolo-dipolo si la molécula es polar; si no, solo fuerzas de London (que están siempre).`,
+          `$${tx(s.f)}$: ${s.k === "puente de hidrógeno" ? `tiene H unido a ${s.hx.filter(x => "NOF".includes(x)).join(" y ")}: **puente de hidrógeno**.` : s.k === "dipolo-dipolo" ? `es polar (momento dipolar de $${dn(s.mu, 2)}$ D) pero no tiene H unido a N, O o F: **dipolo-dipolo**.` : `es no polar: solo **fuerzas de London**.`}`],
+        // verificación: la regla aplicada a los datos de la molécula (enlaces H–X y momento dipolar medido)
+        verify: { kind: "truth", target: true, fn: () => (s.hx.some(x => ["N", "O", "F"].includes(x)) ? "puente de hidrógeno" : s.mu > 0.1 ? "dipolo-dipolo" : "London (dispersión)") === s.k }
+      };
+    }
+  };
+  const SOL = [["NaCl", "iónico"], ["MgO", "iónico"], ["CaF2", "iónico"], ["KBr", "iónico"], ["Cu", "metálico"], ["Fe", "metálico"], ["Al", "metálico"], ["Na", "metálico"],
+    ["C", "covalente (reticular)"], ["SiO2", "covalente (reticular)"], ["Si", "covalente (reticular)"], ["H2O", "molecular"], ["CO2", "molecular"], ["I2", "molecular"], ["C6H12O6", "molecular"], ["S8", "molecular"]];
+  const METALS = new Set(["Na", "K", "Mg", "Ca", "Cu", "Fe", "Al", "Ag", "Zn"]);
+  T["qg-solidos-mc"] = {
+    type: "mc", concepts: ["qg-fuerzas"], difficulty: 1,
+    generate(r) {
+      const [f, k] = r.pick(SOL), mcq = H.mc(r, k, ["iónico", "metálico", "covalente (reticular)", "molecular"].filter(x => x !== k), { text: true });
+      return {
+        prompt: `¿Qué tipo de sólido es $${tx(f)}$${f === "C" ? " (diamante)" : f === "SiO2" ? " (cuarzo)" : f === "H2O" ? " (hielo)" : f === "CO2" ? " (hielo seco)" : ""}?`,
+        options: mcq.options, correct: mcq.correct,
+        solution: [`[[qg-fuerzas|Tipos de sólidos]]: iónico (iones de metal y no metal), metálico (un metal), covalente reticular (átomos unidos por enlaces covalentes en toda la red: C, Si, SiO₂) y molecular (moléculas unidas por fuerzas intermoleculares).`,
+          `$${tx(f)}$ es un sólido **${k}**.`],
+        // verificación: se clasifica por la composición (solo metal, metal con no metal, red covalente conocida o moléculas)
+        verify: { kind: "truth", target: true, fn: () => {
+          const els = Object.keys(Q.count2(f)), allM = els.every(e => METALS.has(e)), someM = els.some(e => METALS.has(e));
+          const k2 = allM ? "metálico" : someM ? "iónico" : ["C", "Si", "SiO2"].includes(f) ? "covalente (reticular)" : "molecular";
+          return k2 === k;
+        } }
+      };
+    }
+  };
+  // ¿quién hierve a mayor temperatura?
+  const BP = [["H2O", 100, "puente de hidrógeno"], ["H2S", -60, "dipolo-dipolo"], ["CH4", -161.5, "London"], ["C2H6", -89, "London"], ["C3H8", -42, "London"], ["C4H10", -0.5, "London"],
+    ["HF", 19.5, "puente de hidrógeno"], ["HCl", -85, "dipolo-dipolo"], ["NH3", -33, "puente de hidrógeno"], ["PH3", -88, "dipolo-dipolo"], ["F2", -188, "London"], ["Cl2", -34, "London"], ["Br2", 59, "London"], ["I2", 184, "London"], ["C2H5OH", 78.4, "puente de hidrógeno"]];
+  const RANK = { "London": 0, "dipolo-dipolo": 1, "puente de hidrógeno": 2 };
+  T["qg-ebullicion-vf"] = {
+    type: "tf", concepts: ["qg-fuerzas"], difficulty: 2,
+    generate(r) {
+      const [a, b] = r.sample(BP, 2);
+      // solo pares que la regla (tipo de fuerza y, a igual tipo, masa molar) decide bien
+      const rule = RANK[a[2]] !== RANK[b[2]] ? RANK[a[2]] > RANK[b[2]] : Q.mm(a[0]) > Q.mm(b[0]);
+      if (rule !== (a[1] > b[1])) return null;
+      if (RANK[a[2]] !== RANK[b[2]] && Math.abs(Q.mm(a[0]) - Q.mm(b[0])) > 40) return null;
+      return {
+        prompt: `<b>Verdadero o falso:</b> el $${tx(a[0])}$ tiene un punto de ebullición más alto que el $${tx(b[0])}$.`,
+        answer: a[1] > b[1],
+        explanation: `$${tx(a[0])}$: ${a[2]}${a[2] === "London" ? "" : " (además de London)"}; $${tx(b[0])}$: ${b[2]}. ${RANK[a[2]] !== RANK[b[2]] ? "Gana el de [[qg-fuerzas|fuerzas intermoleculares]] más intensas." : "Con el mismo tipo de fuerza, hierve más alto el de mayor masa molar (más electrones, más polarizable)."} Puntos de ebullición: ${dn(a[1], 1).replace("{,}", ",")} °C y ${dn(b[1], 1).replace("{,}", ",")} °C.`,
+        solution: [`Cuanto más intensas las fuerzas entre moléculas, más energía hace falta para separarlas y más alto el punto de ebullición.`],
+        // verificación: comparando los puntos de ebullición medidos
+        verify: { kind: "truth", fn: () => rule }
+      };
+    }
+  };
+
+  const cards = {
+    "qg-liquidos": {
+      title: "Líquidos: presión de vapor, ebullición y cambios de fase", aliases: ["presión de vapor", "punto de ebullición", "punto de ebullición normal", "ecuación de Clausius-Clapeyron", "entalpía de vaporización", "curva de calentamiento", "temperatura crítica"], concepts: ["qg-liquidos"],
+      summary: "La presión de vapor de un líquido crece con T: ln(P₂/P₁) = −(ΔH_vap/R)(1/T₂ − 1/T₁). Hierve cuando su presión de vapor iguala la externa. En la curva de calentamiento, la temperatura queda fija mientras cambia la fase. Sobre el punto crítico no hay líquido.",
+      def: [R`En un recipiente cerrado, un líquido se evapora hasta que el vapor alcanza la **presión de vapor** $P_v(T)$, en equilibrio con el líquido. Crece rápido con la temperatura según **Clausius-Clapeyron**: $\ln\frac{P_2}{P_1} = -\frac{\Delta H_{vap}}{R}\left(\frac1{T_2} - \frac1{T_1}\right)$.`,
+        R`El líquido **hierve** cuando $P_v$ iguala la presión externa; el **punto de ebullición normal** es a 1 atm. En la montaña la presión es menor y el agua hierve a menos de 100 °C; en una olla a presión, a más.`,
+        R`En la **curva de calentamiento**, dentro de cada fase $Q = mc\Delta T$, y en cada cambio de fase la temperatura queda fija mientras se absorbe el **calor latente** $Q = mL$ ([[f2b-calor|calor]]). El **diagrama de fases** muestra qué fase es estable para cada $(P, T)$; la curva líquido-vapor termina en el **punto crítico**, por encima del cual no se puede licuar el gas por compresión.`,
+        R`Otras propiedades de los líquidos: la [[f1-tension-sup|tensión superficial]] (energía para aumentar la superficie) y la [[f1-hidrodinamica|viscosidad]] (resistencia a fluir); las dos crecen con las fuerzas intermoleculares.`],
+      idea: [R`La presión de vapor mide cuántas moléculas tienen energía suficiente para escaparse del líquido, y esa fracción crece como $e^{-\Delta H_{vap}/RT}$: por eso crece tan rápido con $T$. Un líquido volátil (acetona) tiene fuerzas intermoleculares débiles y presión de vapor alta.`],
+      demo: [R`**Paso 1 (Clapeyron).** En el equilibrio líquido-vapor, la pendiente de la curva de presión de vapor es $\frac{dP}{dT} = \frac{\Delta H_{vap}}{T\,\Delta V}$ (sale de igualar la energía libre de las dos fases a lo largo de la curva).`,
+        R`**Paso 2 (aproximaciones).** El volumen del vapor es mucho mayor que el del líquido: $\Delta V \approx V_{vapor} = \frac{RT}{P}$ por mol (gas ideal).`,
+        R`**Paso 3 (separar e integrar).** $\frac{dP}{dT} = \frac{\Delta H_{vap}P}{RT^2}$, o sea $\frac{d\ln P}{dT} = \frac{\Delta H_{vap}}{RT^2}$. Integrando entre $T_1$ y $T_2$ con $\Delta H_{vap}$ constante: $\ln\frac{P_2}{P_1} = -\frac{\Delta H_{vap}}{R}\left(\frac1{T_2} - \frac1{T_1}\right)$. $\blacksquare$`],
+      examples: [{ q: R`¿A qué temperatura hierve el agua a 500 mmHg? ($\Delta H_{vap} = 40{,}7$ kJ/mol)`, steps: [R`$\frac1{T_2} = \frac1{373{,}15} - \frac{8{,}314}{40\,700}\ln\frac{500}{760} \approx 0{,}0027653$.`, R`$T_2 \approx 361{,}6$ K, unos 88,5 °C.`] }],
+      see: ["f2b-calor", "f2b-cinetica", "qg-fuerzas"]
+    },
+    "qg-fuerzas": {
+      title: "Fuerzas intermoleculares y tipos de sólidos", aliases: ["fuerzas intermoleculares", "puente de hidrógeno", "puentes de hidrógeno", "fuerzas de London", "fuerzas de dispersión", "fuerzas dipolo-dipolo", "sólido iónico", "sólido molecular", "sólido covalente", "sólido metálico"], concepts: ["qg-fuerzas"],
+      summary: "Entre moléculas actúan fuerzas de London (siempre; crecen con el tamaño), dipolo-dipolo (moléculas polares) y puentes de hidrógeno (H unido a N, O o F). Deciden los puntos de fusión y ebullición. Los sólidos pueden ser iónicos, metálicos, covalentes reticulares o moleculares.",
+      def: [R`- **Fuerzas de London (dispersión):** dipolos instantáneos que inducen otros; están en todas las moléculas y crecen con la cantidad de electrones (con la masa molar).
+- **Dipolo-dipolo:** entre moléculas [[qg-enlace-polaridad|polares]].
+- **Puente de hidrógeno:** un H unido a N, O o F (muy electronegativos y chicos) es atraído por un par libre de otra molécula. Es la más intensa de las tres.
+- **Ion-dipolo:** entre iones y moléculas polares (en la disolución de sales en agua).`,
+        R`**Tipos de sólidos:**
+- **iónicos** (NaCl): red de iones; duros, frágiles, alto punto de fusión;
+- **metálicos** (Cu): cationes en un mar de electrones; conductores, maleables;
+- **covalentes reticulares** (diamante, SiO₂): toda la red unida por enlaces covalentes; durísimos;
+- **moleculares** (hielo, I₂): moléculas unidas por fuerzas intermoleculares; blandos, bajo punto de fusión.`],
+      idea: [R`El agua hierve a 100 °C mientras el H₂S, más pesado, hierve a −60 °C: la diferencia son los puentes de hidrógeno. Sin ellos, el agua sería un gas a temperatura ambiente y no habría océanos. Los puentes de hidrógeno también sostienen la doble hélice del ADN.`],
+      examples: [{ q: R`¿Por qué el I₂ es sólido y el F₂ es gas?`, steps: [R`Los dos son no polares: solo London. El I₂ tiene muchos más electrones y es mucho más polarizable, así que se atrae más.`] }],
+      see: ["qg-enlace-polaridad", "qg-liquidos", "qg-gas-real"]
+    }
+  };
+
+  E.extendCourse("q101", {
+    concepts: { "qg-liquidos": { name: "Líquidos y cambios de fase" }, "qg-fuerzas": { name: "Fuerzas intermoleculares" } },
+    templates: T,
+    units: [{
+      id: "qg-liquidos-u", order: 5, program: "Unidad 4", title: "Líquidos y sólidos", icon: "flask-conical",
+      diagnostic: ["qg-fuerzas-mc", "qg-clausius-num", "qg-solidos-mc"],
+      lessons: [
+        { id: "qg-l-fuerzas", title: "Fuerzas intermoleculares", templates: ["qg-fuerzas-mc", "qg-ebullicion-vf"], theory: ["qg-fuerzas"],
+          intro: R`London siempre; dipolo-dipolo si es polar; puente de hidrógeno si hay H unido a N, O o F.` },
+        { id: "qg-l-solidos", title: "Tipos de sólidos", templates: ["qg-solidos-mc"], theory: ["qg-fuerzas"],
+          intro: R`Iónicos, metálicos, covalentes reticulares y moleculares.` },
+        { id: "qg-l-vapor", title: "Presión de vapor y cambios de fase", templates: ["qg-clausius-num", "qg-calentamiento-num"], theory: ["qg-liquidos"],
+          intro: R`$\ln\frac{P_2}{P_1} = -\frac{\Delta H_{vap}}{R}\left(\frac1{T_2} - \frac1{T_1}\right)$. En los cambios de fase, $Q = mL$ a $T$ fija.` }
+      ]
+    }],
+    cards
+  });
+})();
