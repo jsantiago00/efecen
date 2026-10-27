@@ -32,7 +32,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 |---|---|
 | `index.html` | La UI (`<script id="app-script">`) y el CSS. |
 | `engine.js` | El motor: RNG, helpers `H`, parser de números y expresiones, repaso espaciado, registro de materias, exámenes y estado (`E.store`). Lo cargan `index.html` y los tests. |
-| `content/carrera.js` | La carrera: años → semestres → materias, con `code`, `title`, `course` (si ya tiene contenido) y `step` (orden sugerido). |
+| `content/carrera.js` | Las carreras, una por orientación (`fis`, `mat`, `qui`, `bio`): años → semestres → materias, con `code`, `title`, `course` (si ya tiene contenido) y `via` (si se repasa con otra materia). Los pasos se numeran solos. Cada cuenta elige la suya (`S.career`). |
 | `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`, `f104-fisica3.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
 | `board.js` | Pizarra para escribir con lápiz en tablets: el motor de la pizarra del usuario (`jsantiago00/pizarra`) en JS sin build, con lazo, goma por área, texto, fórmulas (MathJax, bajo demanda) y figuras (ver PROGRESO.md). Expone `E.board`; los trazos van a IndexedDB. Usa `assets/vendor/perfect-freehand/`, `asciimath2tex/` y `mathjax/`. |

@@ -394,6 +394,10 @@ Las evaluaciones de M106, F102B y M102 quedaron hechas el 19/10.
 
 Ideas sueltas: sumar plantillas de tipo «unir» y «encontrá el error» en Física, y gráficos de x(t) y v(t) en cinemática.
 
+**Elegir la carrera (26/10, pedido del usuario).** Para que la app sirva también a quien cursa Química o Biología, `content/carrera.js` registra las cuatro orientaciones (`fis`, `mat`, `qui`, `bio`) con todas las materias del plan, salvo Inglés, Informática, electivas y Seminario. Cada cuenta elige la suya en Inicio (la primera vez) o en Ajustes, y se guarda en `S.career` (con `careerAt`, para que en `merge` gane la elegida último). Inicio, La carrera, Aprender y Ajustes muestran solo esas materias; sin elegir, queda Física. En Biología, Elementos de Cálculo y las tres Elementos de Física se repasan con nuestras materias completas (`via`). Química usa el trayecto del plan nuevo (Ord. 8/2023); de Biología no hay trayecto publicado y van el ciclo básico y el orientado en el orden del plan.
+
+**Pizarras que vencen (26/10, pedido del usuario).** Cada hoja guarda la fecha de su última edición (`u`) y, al abrir la pizarra, se borran las que no cambiaron en 7 días. El menú «Más opciones» lo avisa, junto a exportar. Sigue el tope de 80 hojas.
+
 **Otras orientaciones (26/10, pedido del usuario).** [docs/orientaciones.md](docs/orientaciones.md) compara Física, Matemática, Química y Biología: materias, horas y temarios, con los programas 2024-2026. Es para elegir qué cursar; por ahora no se suma contenido a la app. Las carpetas de programas son públicas: se listan con `https://drive.google.com/embeddedfolderview?id=<carpeta>` y se bajan con `https://drive.google.com/uc?export=download&id=<archivo>`.
 
 ## Fuentes de los temarios

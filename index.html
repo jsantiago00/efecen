@@ -127,6 +127,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .seg { display: flex; background: var(--bg); border: 2px solid var(--line); border-radius: 14px; padding: 3px; gap: 3px; }
 .seg button { flex: 1; border: 0; background: none; border-radius: 10px; padding: 8px 6px; font-weight: 800; color: var(--muted); }
 .seg button.on { background: var(--card); color: var(--primary); box-shadow: var(--shadow); }
+.seg.tight button { padding: 8px 2px; font-size: .9rem; }
 .switch { width: 52px; height: 30px; border-radius: 999px; background: var(--lock); border: 0; position: relative; flex: none; transition: background .2s; }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .switch.on { background: var(--ok); }
@@ -600,6 +601,7 @@ body.board-split .nav { padding-bottom: 0; }
 .bopt { padding: 8px 12px; font-weight: 800; font-size: .85rem; }
 .bitem { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-weight: 700; text-align: left; }
 .bitem .ic { width: 20px; height: 20px; color: var(--muted); }
+.bnote { margin: 4px 12px 6px; max-width: 260px; font-size: .78rem; color: var(--muted); }
 .board-sel { position: absolute; z-index: 4; display: flex; gap: 2px; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.18); }
 .board-sel[hidden] { display: none; }
 .board-sel button { background: none; border: 0; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; color: var(--ink); }
@@ -1222,17 +1224,21 @@ body.board-split .nav { padding-bottom: 0; }
     return ls.length ? ls.filter(l => lessonDone(cid, l)).length / ls.length : 0;
   }
   // materias de la carrera en orden sugerido (las que todavía no tienen contenido quedan marcadas)
+  // la carrera que eligió la cuenta (por defecto, Física)
+  const curCareer = () => E.setCareer(S.career);
   function careerSubjects() {
-    const out = [];
-    if (!E.career) return E.courseOrder.map((id, i) => ({ code: course(id).code || id, title: course(id).title, course: id, step: i + 1, year: 1, sem: 1 }));
-    for (const y of E.career.years) for (const sm of y.semesters) for (const sub of sm.subjects) out.push(Object.assign({ year: y.n, sem: sm.n }, sub));
+    const out = [], car = curCareer();
+    if (!car) return E.courseOrder.map((id, i) => ({ code: course(id).code || id, title: course(id).title, course: id, step: i + 1, year: 1, sem: 1 }));
+    for (const y of car.years) for (const sm of y.semesters) for (const sub of sm.subjects) out.push(Object.assign({ year: y.n, sem: sm.n }, sub));
     return out.sort((a, b) => a.step - b.step);
   }
+  // materias con contenido de la carrera (sin repetir: en Biología, varias se repasan con la misma)
+  const careerCourses = () => [...new Set(careerSubjects().filter(hasContent).map(sub => sub.course))];
   const hasContent = sub => !!(sub.course && E.courses[sub.course] && E.courses[sub.course].lessonList.length);
   // la próxima materia sugerida: la primera del trayecto con contenido y sin terminar
   const suggestedSubject = () => careerSubjects().find(sub => hasContent(sub) && courseProgress(sub.course) < 1) || null;
   const activeCourse = () => {
-    if (S.activeCourse && E.courses[S.activeCourse] && E.courses[S.activeCourse].lessonList.length) return S.activeCourse;
+    if (S.activeCourse && E.courses[S.activeCourse] && E.courses[S.activeCourse].lessonList.length && careerCourses().includes(S.activeCourse)) return S.activeCourse;
     const sg = suggestedSubject();
     return sg ? sg.course : E.courseOrder[0];
   };
@@ -1579,7 +1585,8 @@ body.board-split .nav { padding-bottom: 0; }
     const ok = hasContent(sub), p = ok ? courseProgress(sub.course) : 0, c = ok && course(sub.course);
     return `<button class="course-card subject" ${ok ? `data-act="go" data-r="course" data-id="${sub.course}"` : "disabled"}>
       <span class="course-ico">${icon(ok ? c.icon || "book-open" : "lock")}</span>
-      <span class="grow"><span class="subj-code">${esc(sub.code)}</span>${extra}<b style="display:block;margin-top:4px">${esc(sub.title)}</b>
+      <span class="grow">${sub.code ? `<span class="subj-code">${esc(sub.code)}</span>` : ""}${extra}<b style="display:block;margin-top:4px">${esc(sub.title)}</b>
+      ${sub.via ? `<span class="muted small" style="display:block">Se repasa con ${esc(sub.via)}, que la cubre de más</span>` : ""}
       ${ok ? `<span class="bar" style="margin-top:8px"><i style="width:${p * 100}%"></i></span>
         <span class="muted small">${Math.round(p * 100)}% · ${c.units.filter(u => u.lessons.length).length} unidades · ${c.lessonList.length} lecciones</span>`
         : `<span class="muted small" style="display:block">Próximamente</span>`}</span>${ok ? icon("chevron-right") : ""}</button>`;
@@ -1612,27 +1619,36 @@ body.board-split .nav { padding-bottom: 0; }
       ${firstTime ? "" : `<div id="leagueHome">${leagueHomeCard()}</div>`}
       ${firstTime ? "" : `<button class="btn ghost block" data-act="rush" data-cid="${cid}">${icon("timer")}Contrarreloj · ${esc(c.code || c.title)}${cState(cid).rush ? ` <span class="muted small">(récord ${cState(cid).rush})</span>` : ""}</button>`}
       <h2 class="section-title">Tu carrera</h2>
+      ${S.career ? "" : careerChooser("¿Qué carrera seguís? Así te muestro solo tus materias. Lo podés cambiar cuando quieras en Ajustes.")}
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
       ${sg && sg.course !== cid ? subjectCard(sg, badge("Sugerida")) : ""}
       <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver toda la carrera</button>
     </main>${nav("home")}`;
   }
 
+  // botones para elegir la carrera (en Inicio la primera vez, en La carrera y en Ajustes)
+  function careerChooser(msg) {
+    const cur = S.career ? curCareer() : null;
+    return `<section class="card">${msg ? `<p class="muted small" style="margin:0 0 10px">${esc(msg)}</p>` : ""}
+      <div class="seg tight">${E.careerOrder.map(id => `<button class="${cur && cur.id === id ? "on" : ""}" data-act="career-pick" data-v="${id}">${esc(E.careers[id].short || E.careers[id].title)}</button>`).join("")}</div></section>`;
+  }
+
   // ---------- LA CARRERA: años → semestres → materias ----------
   function renderCareer() {
-    const cid = activeCourse(), sg = suggestedSubject();
+    const cid = activeCourse(), sg = suggestedSubject(), car = curCareer();
     const ord = n => (n === 1 ? "1.er" : n === 2 ? "2.º" : n === 3 ? "3.er" : n + ".º");
-    const years = E.career ? E.career.years : [];
+    const years = car ? car.years : [];
     const total = careerSubjects(), withContent = total.filter(hasContent);
     app.innerHTML = `<main class="screen">
       <div><h1 style="font-size:1.4rem">La carrera</h1>
-        <p class="muted small" style="margin:4px 0 0">${esc(E.career ? E.career.title + " · " + E.career.plan : "")}</p></div>
+        <p class="muted small" style="margin:4px 0 0">${esc(car ? car.title + " · " + car.plan : "")}</p></div>
+      ${E.careerOrder.length > 1 ? careerChooser("") : ""}
       <section class="card diag-card">${mascot("think")}<div class="grow">
-        <b>Trayecto sugerido</b><p class="muted small" style="margin:4px 0 0">Las materias están numeradas en el orden sugerido. Podés entrar a cualquiera: cada unidad tiene su test para desbloquearla si ya la sabés. Hay contenido en ${withContent.length} de ${total.length} materias.</p></div></section>
-      ${years.map(y => `<section class="year"><h2 class="section-title">${ord(y.n)} año</h2>
-        ${y.semesters.map(sm => `<div class="sem-label">${ord(sm.n)} semestre</div>
+        <b>Trayecto sugerido</b><p class="muted small" style="margin:4px 0 0">Las materias están numeradas en el orden sugerido. Podés entrar a cualquiera: cada unidad tiene su test para desbloquearla si ya la sabés. Hay contenido en ${withContent.length} de ${total.length} materias.${car && car.note ? " " + esc(car.note) : ""}</p></div></section>
+      ${years.map(y => `<section class="year"><h2 class="section-title">${y.label ? esc(y.label) : ord(y.n) + " año"}</h2>
+        ${y.semesters.map(sm => `${sm.label === "" ? "" : `<div class="sem-label">${sm.label ? esc(sm.label) : ord(sm.n) + " semestre"}</div>`}
           ${sm.subjects.map(sub => {
-            const b = (sub.course === cid && hasContent(sub) ? badge("Cursando", "on") : "") + (sg && sg.code === sub.code && sub.course !== cid ? badge("Sugerida") : "") + `<span class="subj-step">paso ${sub.step}</span>`;
+            const b = (sub.course === cid && hasContent(sub) ? badge("Cursando", "on") : "") + (sg && sg.step === sub.step && sub.course !== cid ? badge("Sugerida") : "") + `<span class="subj-step">paso ${sub.step}</span>`;
             return subjectCard(Object.assign({}, sub), b);
           }).join("")}`).join("")}</section>`).join("")}
     </main>${nav("career")}`;
@@ -2219,6 +2235,9 @@ body.board-split .nav { padding-bottom: 0; }
         <div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tema</div>
           ${seg("theme", [["auto", "Auto"], ["light", "Claro"], ["dark", "Oscuro"]], st.theme)}</div>
       </section>
+      <section class="card"><div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tu carrera</div>
+        <div class="desc" style="margin-bottom:8px">Inicio, La carrera y Aprender muestran solo sus materias.</div>
+        <div class="seg tight">${E.careerOrder.map(id => `<button class="${S.career && curCareer().id === id ? "on" : ""}" data-act="career-pick" data-v="${id}">${esc(E.careers[id].short || E.careers[id].title)}</button>`).join("")}</div></div></section>
       ${installCard()}
       ${accountCard()}
       ${boardCard()}
@@ -2229,7 +2248,7 @@ body.board-split .nav { padding-bottom: 0; }
           <input type="file" id="importFile" accept="application/json,.json" hidden></div>
       </section>
       <section class="card">
-        ${E.courseOrder.map(id => `<div class="set-row"><div><div class="lbl">${esc(course(id).title)}</div><div class="desc">Volver a hacer el test diagnóstico</div></div>
+        ${careerCourses().map(id => `<div class="set-row"><div><div class="lbl">${esc(course(id).title)}</div><div class="desc">Volver a hacer el test diagnóstico</div></div>
           <button class="btn sm ghost" data-act="diag" data-cid="${id}">Rehacer</button></div>`).join("")}
         <div class="set-row"><div><div class="lbl">Reiniciar progreso</div><div class="desc">Borra XP, racha y repasos. No se puede deshacer.</div></div>
           <button class="btn sm bad" data-act="reset">Borrar</button></div>
@@ -2895,6 +2914,7 @@ body.board-split .nav { padding-bottom: 0; }
         break;
       }
       case "theme": S.settings.theme = el.dataset.v; save(); render(); break;
+      case "career-pick": S.career = el.dataset.v; S.careerAt = Date.now(); curCareer(); save(); toast("Carrera: " + E.careers[S.career].short); render(); break;
       case "board": if (E.board) E.board.toggle(); break;
       case "board-show": E.board.setPref("show", el.dataset.v); boardAvail = E.board.available(); if (!E.board.available()) E.board.close(); render(); break;
       case "board-finger": E.board.setPref("finger", !E.board.fingerDraws()); render(); break;

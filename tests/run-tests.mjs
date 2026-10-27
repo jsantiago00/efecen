@@ -537,14 +537,27 @@ for (const cid of E.courseOrder) {
 }
 // ---------- 5. la carrera y la estructura de cada unidad ----------
 {
-  ok(!!E.career, "carrera", "no hay carrera registrada");
-  const subs = E.career.years.flatMap(y => y.semesters.flatMap(sm => sm.subjects));
-  const steps = subs.map(x => x.step);
-  ok(new Set(steps).size === steps.length, "carrera", "pasos del trayecto repetidos");
+  ok(!!E.career && E.careerOrder.join() === "fis,mat,qui,bio", "carrera", "las carreras registradas son " + E.careerOrder.join());
+  ok(E.setCareer("qui").id === "qui" && E.setCareer(null).id === "fis" && E.setCareer("xyz").id === "fis", "carrera", "E.setCareer: sin carrera elegida (o una que no existe) tiene que quedar la primera");
+  const allSubs = [];
+  for (const id of E.careerOrder) {
+    const car = E.careers[id], w = "carrera/" + id;
+    const subs = car.years.flatMap(y => y.semesters.flatMap(sm => sm.subjects));
+    allSubs.push(...subs);
+    const steps = subs.map(x => x.step);
+    ok(steps.every((n, i) => n === i + 1), w, "pasos del trayecto mal numerados");
+    ok(!!car.title && !!car.short && !!car.plan, w, "falta el título, el nombre corto o el plan");
+    for (const sub of subs) {
+      if (!sub.course) continue;
+      ok(!!E.courses[sub.course], w, `${sub.code}: la materia ${sub.course} no existe`);
+      if (E.courses[sub.course] && !sub.via) ok(E.courses[sub.course].code === sub.code, w, `código ${E.courses[sub.course].code} distinto del de la carrera (${sub.code})`);
+    }
+    const cs = subs.filter(x => x.course).map(x => x.course);
+    ok(new Set(cs).size === cs.length, w, "una materia de la app aparece dos veces en la carrera");
+  }
   for (const cid of E.courseOrder) {
-    const sub = subs.find(x => x.course === cid);
-    ok(!!sub, cid, "materia sin lugar en la carrera");
-    if (sub) ok(E.courses[cid].code === sub.code, cid, `código ${E.courses[cid].code} distinto del de la carrera (${sub.code})`);
+    const sub = allSubs.find(x => x.course === cid);
+    ok(!!sub, cid, "materia sin lugar en ninguna carrera");
     const c = E.courses[cid];
     for (const u of c.units.filter(u => u.lessons.length)) {
       const w = `${cid}/${u.id}`;
@@ -609,6 +622,12 @@ for (const cid of E.courseOrder) {
   const ba = E.store.merge(b, a);
   ok(ba.xp === m.xp && ba.srs["m101/limite"].seen === 9 && ba.lastActive === m.lastActive && ba.log.length === 2, w, "el orden de los argumentos cambia el resultado");
   ok(a.xp === 120 && b.courses.m101.lessons.l1.done === false, w, "modificó sus argumentos");
+  // la carrera: gana la que se eligió último, aunque el otro dispositivo se haya usado después
+  const ca = Object.assign(D(), { lastActive: "2026-10-10", career: "bio", careerAt: 200 }), cb = Object.assign(D(), { lastActive: "2026-10-12", career: "fis", careerAt: 100 });
+  const cm = E.store.merge(ca, cb), cm2 = E.store.merge(cb, ca);
+  ok(cm.career === "bio" && cm2.career === "bio" && cm.careerAt === 200, w, "carrera: debe quedar la elegida más recientemente");
+  ok(E.store.merge(D(), cb).career === "fis" && E.store.merge(cb, D()).career === "fis", w, "carrera: un dispositivo sin elegir no la borra");
+  ok(E.store.migrate({ app: "efecen", version: 1, srs: {}, courses: {} }).career === null, w, "migrate: las cuentas viejas quedan sin carrera elegida");
 }
 
 // liga semanal: semana de lunes a domingo, XP de la semana y nombre visible
@@ -681,6 +700,12 @@ for (const cid of E.courseOrder) {
   ok(B.undoAny(pg) && pg.s.length === 3 && B.undoAny(pg) && pg.s.length === 2 && pg.s[1] === b && pg._redo.length === 3, w, "deshacer en cadena");
   const packed = B.packPage({ id: "x", t: 1, s: [Object.assign(mk([[1.234, 5.678]]), { _bb: {}, _path: {} })] });
   ok(JSON.stringify(packed.s[0]) === '{"c":"ink","w":4,"h":0,"p":[1.2,5.7,0.5]}', w, "guardado compacto: " + JSON.stringify(packed.s[0]));
+  {
+    const now = 100 * B.MAX_AGE, day = 864e5;
+    const list = [{ id: "a", t: now - 30 * day, u: now - day }, { id: "b", t: now - 30 * day, u: now - 8 * day }, { id: "c", t: now - 8 * day }, { id: "d", t: now - 2 * day }];
+    ok(B.expired(list, now).map(p => p.id).join() === "b,c", w, "vencimiento de hojas: cuenta desde la última edición (o la creación si no hay)");
+    ok(B.packPage({ id: "z", t: 5, s: [] }).u === 5 && B.packPage({ id: "z", t: 5, u: 9, s: [] }).u === 9, w, "la hoja guarda la fecha de la última edición");
+  }
   const bb = B.bbox(mk([[10, 20], [30, 5]], 4));
   ok(Math.abs(bb.x0 - (10 - 1.75)) < 1e-9 && Math.abs(bb.y1 - (20 + 1.75)) < 0.01, w, "caja del trazo con el grosor");
   // goma por área: corta el trazo en dos y se deshace y rehace entera

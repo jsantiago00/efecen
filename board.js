@@ -12,6 +12,7 @@
   const E = window.Efecen = window.Efecen || {};
   const PAGE_W = 1000;                 // ancho de la hoja en unidades lógicas (el alto es infinito)
   const MAX_PAGES = 80;
+  const MAX_AGE = 7 * 864e5;           // las hojas sin cambios por 7 días se borran (se pueden exportar antes)
   const SIZES = { pen: [2.5, 4, 7], hl: [16, 26, 38], eraser: [8, 16, 30] };
   const COLORS = {                     // [tema claro, tema oscuro]
     ink: ["#1E1B3A", "#F0EFFF"], blue: ["#2563EB", "#7AA2FF"], red: ["#DC2626", "#FF7B7B"],
@@ -222,7 +223,9 @@
     out.p = p;
     return out;
   }
-  const packPage = p => ({ id: p.id, k: p.k || null, t: p.t, label: p.label || "", s: p.s.map(packStroke) });
+  const packPage = p => ({ id: p.id, k: p.k || null, t: p.t, u: p.u || p.t, label: p.label || "", s: p.s.map(packStroke) });
+  // hojas vencidas: sin cambios desde hace más de MAX_AGE (las viejas, sin `u`, cuentan desde que se crearon)
+  const expired = (list, now) => list.filter(p => now - (p.u || p.t || 0) > MAX_AGE);
 
   // ---------- funciones para graficar (sin eval): «x^2 - 3», «2sin(x)», «y = sqrt(x)/2», «|x|», «e^(-x^2)» ----------
   const Ex = (() => {
@@ -477,7 +480,7 @@
     c.restore();
   }
 
-  const T = { bbox, hits, eraseAt, eraseArea, doAct, undo, redo, undoAny, redoAny, packPage, radiusAt, cutPolyline, fractionInside, transformPts, rectPts, Ex };
+  const T = { bbox, hits, eraseAt, eraseArea, doAct, undo, redo, undoAny, redoAny, packPage, expired, MAX_AGE, radiusAt, cutPolyline, fractionInside, transformPts, rectPts, Ex };
 
   // ---------- preferencias de este dispositivo (no se sincronizan) ----------
   const PREF_KEY = "efecen-board";
@@ -818,6 +821,11 @@
     if (pages) return pages;
     try { pages = (await DB.all()).sort((a, b) => a.t - b.t); }
     catch (e) { pages = []; }
+    const old = expired(pages, Date.now());
+    if (old.length) {
+      pages = pages.filter(p => !old.includes(p));
+      for (const p of old) DB.del(p.id).catch(() => {});
+    }
     return pages;
   }
   const newPage = (k, label) => ({ id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), k: k || null, t: Date.now(), label: label || "", s: [] });
@@ -827,6 +835,7 @@
       pages.push(p);
       while (pages.length > MAX_PAGES) { const old = pages.shift(); DB.del(old.id).catch(() => {}); }
     }
+    p.u = Date.now();
     dirty.add(p);
     clearTimeout(saveTimer);
     saveTimer = setTimeout(flush, 700);
@@ -947,7 +956,8 @@
         <button class="bitem ${prefs.shapes !== false ? "on" : ""}" data-b="shapes">${ICON("sparkles")}${prefs.shapes !== false ? "Formas automáticas: sí" : "Formas automáticas: no"}</button>
         <button class="bitem" data-b="export" data-v="png">${ICON("download")}Exportar la hoja en PNG</button>
         <button class="bitem" data-b="export" data-v="pdf">${ICON("file-text")}Exportar la hoja en PDF</button>
-        <button class="bitem" data-b="clear">${ICON("trash-2")}Borrar todo lo de esta hoja</button>`;
+        <button class="bitem" data-b="clear">${ICON("trash-2")}Borrar todo lo de esta hoja</button>
+        <p class="bnote">Las hojas sin cambios por 7 días se borran solas. Si querés guardar una, exportala.</p>`;
     }
     pop.innerHTML = html;
     pop.hidden = false;

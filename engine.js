@@ -445,8 +445,15 @@
   // cada unidad (conceptos, plantillas, lecciones y apuntes). Así se agrega contenido de a una unidad.
   E.cards = {};      // id -> ficha de apuntes (ids únicos entre materias)
   E.termIndex = [];  // [{ alias, id }] para el autolink
-  E.career = null;
-  E.registerCareer = def => { E.career = def; };
+  // carreras (una por orientación): E.career es la que eligió la cuenta (por defecto, la primera registrada)
+  E.careers = {}; E.careerOrder = []; E.career = null;
+  E.registerCareer = def => {
+    def.id = def.id || "c" + E.careerOrder.length;
+    if (!E.careers[def.id]) E.careerOrder.push(def.id);
+    E.careers[def.id] = def;
+    if (!E.career || E.career.id === def.id) E.career = def;
+  };
+  E.setCareer = id => { E.career = E.careers[id] || E.careers[E.careerOrder[0]] || null; return E.career; };
   E.registerCourse = function (c) {
     c.concepts = c.concepts || {};
     c.templates = c.templates || {};
@@ -641,6 +648,7 @@
       xpByDay: {}, activeCourse: null,
       courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0, read: {},
       exams: {}, // "m101/p1" -> { best, attempts: [{ d, t, score }] } (los más nuevos primero)
+      career: null, careerAt: 0, // carrera elegida ("fis", "mat", "qui", "bio") y cuándo se eligió (ms)
       daily: {} // ejercicio del día: "2026-10-15" -> { cid, tpl, ok }
     }),
     migrate(s) {
@@ -680,6 +688,9 @@
       out.bestStreak = max(a.bestStreak, b.bestStreak);
       if (a.lastActive === b.lastActive) out.streak = max(a.streak, b.streak);
       out.activeCourse = newer.activeCourse || older.activeCourse;
+      // la carrera: la que se eligió último (a igualdad, la del más reciente)
+      const ch = (older.careerAt || 0) > (newer.careerAt || 0) ? older : newer;
+      out.career = ch.career || null; out.careerAt = ch.careerAt || 0;
       for (const [d, x] of Object.entries(older.xpByDay)) out.xpByDay[d] = max(out.xpByDay[d], x);
       for (const id of Object.keys(older.read)) out.read[id] = true;
       // tarjetas de repaso: la que más se practicó (a igualdad, la de repaso más reciente)
