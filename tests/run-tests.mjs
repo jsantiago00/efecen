@@ -713,6 +713,16 @@ for (const cid of E.courseOrder) {
     ok(sims.length === 2 && sims.every(d => d < "2027-01-30" && d >= "2027-01-25"), w, "simulacros fuera de lugar: " + sims.join());
     ok((pl.days["2027-01-29"] || []).every(b => b.kind === "vispera"), w, "la víspera tiene temas nuevos");
   }
+  // con una fecha lejana se usa todo el tiempo de cada día (no 30 min parejos hasta febrero), y la segunda
+  // vuelta (repaso e integración) queda después de la primera, cerca de la fecha
+  {
+    const p = Object.assign(P.defaults(), { hours: [2, 2, 2, 2, 2, 3, 0], goals: [{ id: "g1", cid: "b", kind: "final", date: "2027-02-19", from: today, units: null, intensity: 1 }] });
+    const pl = P.build(p, today, info), used = d => (pl.days[d] || []).reduce((t, b) => t + b.min, 0);
+    ok(used(today) === P.capacity(p, today) && used("2026-11-09") === 120, w, `fecha lejana: hoy ${used(today)} min de ${P.capacity(p, today)}`);
+    const first = Object.entries(pl.days).filter(([, bl]) => bl.some(b => ["teoria", "practica", "app"].includes(b.kind))).map(([d]) => d);
+    const second = Object.entries(pl.days).filter(([, bl]) => bl.some(b => b.kind === "repaso" || b.kind === "integrar")).map(([d]) => d);
+    ok(first.length && second.length && second[0] > first[first.length - 1] && second[0] >= "2027-01-15", w, "la segunda vuelta no quedó cerca de la fecha");
+  }
   // sincronización del plan: la configuración del que la cambió último y lo hecho entrada por entrada
   {
     const D = E.store.defaults, a = D(), b = D();

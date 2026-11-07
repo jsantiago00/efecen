@@ -2445,6 +2445,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       teoria: ["Teoría", "Leé los apuntes y tu bibliografía. Armá un resumen con las definiciones, los teoremas y las fórmulas."],
       practica: ["Práctica", "Ejercicios de la guía y de parciales viejos de esta unidad, con lápiz y papel."],
       app: ["Repaso en efecen", "Las lecciones de la unidad en la app y, si ya está, su jefe."],
+      repaso: ["Repaso", "Segunda vuelta: tu resumen de la unidad y dos o tres ejercicios típicos, sin mirar la resolución."],
       integrar: ["Integración", "Toda la materia: un mapa de los temas, las demostraciones que se toman y problemas que mezclan unidades."],
       simulacro: ["Simulacro", `${ex ? `«${ex.title}» de la app, o un examen viejo` : "Un examen viejo"}, con tiempo y sin apuntes. Después corregilo y anotá los errores.`],
       vispera: ["Víspera", "Repaso liviano: tu resumen y los errores de los simulacros. Dormí bien."]
@@ -2458,7 +2459,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       const unit = bi.c.units.find(x => x.id === b.uid), l = unit && unit.lessons.find(x => x.theory && x.theory.length);
       if (l) out.push(`<button class="notes-link" data-act="learn" data-id="lesson:${l.id}">${icon("graduation-cap")}apuntes</button>`);
     }
-    if (b.kind === "app" && bi.c) out.push(`<button class="notes-link" data-act="go" data-r="course" data-id="${bi.g.cid}">${icon("map")}abrir</button>`);
+    if ((b.kind === "app" || b.kind === "repaso") && bi.c) out.push(`<button class="notes-link" data-act="go" data-r="course" data-id="${bi.g.cid}">${icon("map")}abrir</button>`);
     if (b.kind === "simulacro" && bi.ex) out.push(`<button class="notes-link" data-act="exam" data-cid="${bi.g.cid}" data-id="${bi.ex.id}">${icon("file-text")}rendir</button>`);
     return out.join("");
   }
@@ -2473,8 +2474,8 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   }
   // lo hecho en un día, agrupado por clave (para hoy y los días pasados de la semana)
   const doneList = d => Object.entries(S.plan.log[d] || {}).filter(([k, e]) => e.m > 0 && planGoal(k.split("/")[0])).map(([k, e]) => {
-    const [gid, uid, kk] = k.split("/"), kind = uid === "integ" ? "integrar" : /^sim/.test(uid) ? "simulacro" : uid === "vispera" ? "vispera" : { teo: "teoria", pra: "practica", app: "app" }[kk];
-    return { key: k, gid, uid: kind && ["teoria", "practica", "app"].includes(kind) ? uid : null, kind, min: e.m };
+    const [gid, uid, kk] = k.split("/"), kind = uid === "integ" ? "integrar" : /^sim/.test(uid) ? "simulacro" : uid === "vispera" ? "vispera" : { teo: "teoria", pra: "practica", app: "app", rep: "repaso" }[kk];
+    return { key: k, gid, uid: kind && ["teoria", "practica", "app", "repaso"].includes(kind) ? uid : null, kind, min: e.m };
   }).filter(b => b.kind);
 
   function planHomeCard() {
@@ -2530,7 +2531,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
           <div class="muted small">${dayTxt(g.date)}${(tu => (tu ? ` (${esc(tu.label)})` : ""))(E.calendar.turnos.find(x => x.id === g.turno))} · ${n <= 0 ? "ya pasó" : n === 1 ? "mañana" : `faltan ${n} días`}${g.intensity && g.intensity !== 1 ? ` · ${E.plan.INTENSITY[g.intensity]}` : ""}</div></div>
           <button class="iconbtn" data-act="plan-edit" data-id="${g.id}" aria-label="Editar">${icon("square-pen")}</button></div>
         ${sm ? `<div class="bar" style="margin-top:6px"><i style="width:${sm.total ? Math.min(100, sm.done / sm.total * 100) : 0}%"></i></div>
-          <div class="muted small">${E.plan.fmt(sm.done)} hechas de ${E.plan.fmt(sm.total)}${sm.lastStudy ? ` · terminás los temas el ${dayTxt(sm.lastStudy)}` : ""}</div>` : ""}
+          <div class="muted small">${E.plan.fmt(sm.done)} hechas de ${E.plan.fmt(sm.total)}${sm.lastStudy ? ` · terminás los temas el ${dayTxt(sm.lastStudy)} y después, cerca de la fecha, repasás` : ""}</div>` : ""}
         ${(m => (m && m.date === g.date && g.date > t ? `<div class="pl-mesa small">${m.time ? `Mesa a las ${esc(m.time)} h. ` : ""}${m.insc ? (t > m.insc[1] ? "La inscripción ya cerró." : `Inscribite en SIU Guaraní ${t < m.insc[0] ? `del ${dayTxt(m.insc[0])} (desde las 10 h)` : "ya,"} hasta el ${dayTxt(m.insc[1])}.`) : ""}${m.note ? " " + esc(m.note) : ""}</div>` : ""))(g.turno ? E.mesaInfo(g.cid, g.turno) : null)}
         ${ws.map(x => `<p class="pl-warn small">${x.kind === "short" ? `No te alcanza el tiempo: faltan unas ${E.plan.fmt(x.min)}. Sumá horas, sacá días libres o bajá la intensidad.` : "No hay lugar para un simulacro antes de la fecha: sumá tiempo esos días."}</p>`).join("")}</div>`;
     };
