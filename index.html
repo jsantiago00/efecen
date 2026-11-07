@@ -628,7 +628,9 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 .pl-goal { border-left: 5px solid var(--pc); padding: 4px 0 4px 10px; margin: 10px 0; }
 .pl-warn { margin: 6px 0 0; color: var(--bad-d); font-weight: 700; }
 .pl-past summary { cursor: pointer; margin-top: 8px; }
-.pl-hours { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin-top: 10px; }
+.pl-hours { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 4px 12px; margin-top: 10px; }
+.pl-from { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
+.pl-from input { font: 700 .9rem "Nunito", sans-serif; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 10px; padding: 4px 6px; }
 .pl-hrow { display: flex; align-items: center; gap: 4px; }
 .pl-hrow span { width: 34px; font-weight: 800; color: var(--muted); }
 .pl-hrow b { min-width: 44px; text-align: center; }
@@ -2416,7 +2418,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   const DOW = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
   const dayTxt = d => { const [y, m, dd] = d.split("-").map(Number); return `${DOW[new Date(y, m - 1, dd).getDay()]} ${dd}/${m}`; };
   const KIND_TXT = { final: "Final", parcial: "Parcial" };
-  const unitLabel = (u, i) => (u.program && !/extra/i.test(u.program) ? u.program : "Unidad " + (i + 1));
+  const unitLabel = (u, i) => (u.program ? u.program : "Unidad " + (i + 1));
   // cuánto dominás una unidad (0..1), con las lecciones hechas y el acierto; null si no hay datos
   function unitMastery(cid, c, u) {
     const nDone = u.lessons.filter(l => lessonDone(cid, l)).length;
@@ -2528,7 +2530,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const goalRow = g => {
       const sm = sumOf(g.id), n = E.diffDays(t, g.date), c = course(g.cid), ws = pl.warnings.filter(x => x.gid === g.id);
       return `<div class="pl-goal pg${planIdx(g.id)}"><div class="row"><div class="grow"><span class="subj-code">${esc(c ? c.code : g.cid)}</span> <b>${KIND_TXT[g.kind]}${c ? " · " + esc(c.title) : ""}</b>
-          <div class="muted small">${dayTxt(g.date)}${(tu => (tu ? ` (${esc(tu.label)})` : ""))(E.calendar.turnos.find(x => x.id === g.turno))} · ${n <= 0 ? "ya pasó" : n === 1 ? "mañana" : `faltan ${n} días`}${g.intensity && g.intensity !== 1 ? ` · ${E.plan.INTENSITY[g.intensity]}` : ""}</div></div>
+          <div class="muted small">${dayTxt(g.date)}${(tu => (tu ? ` (${esc(tu.label)})` : ""))(E.calendar.turnos.find(x => x.id === g.turno))} · ${n <= 0 ? "ya pasó" : n === 1 ? "mañana" : `faltan ${n} días`}${g.intensity && g.intensity !== 1 ? ` · ${E.plan.INTENSITY[g.intensity]}` : ""}${g.pace === "even" ? " · ritmo parejo" : ""}</div></div>
           <button class="iconbtn" data-act="plan-edit" data-id="${g.id}" aria-label="Editar">${icon("square-pen")}</button></div>
         ${sm ? `<div class="bar" style="margin-top:6px"><i style="width:${sm.total ? Math.min(100, sm.done / sm.total * 100) : 0}%"></i></div>
           <div class="muted small">${E.plan.fmt(sm.done)} hechas de ${E.plan.fmt(sm.total)}${sm.lastStudy ? ` · terminás los temas el ${dayTxt(sm.lastStudy)} y después, cerca de la fecha, repasás` : ""}</div>` : ""}
@@ -2546,7 +2548,10 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       ${seg("plan-mode", [["hours", "Horas por día"], ["slots", "Franjas horarias"]], p.mode)}
       ${p.mode === "hours" ? `<div class="pl-hours">${E.plan.DAYS.map((dn, d) => `<div class="pl-hrow"><span>${dn}</span>
           <button class="iconbtn" data-act="plan-h" data-d="${d}" data-v="-0.5" aria-label="Menos">−</button><b>${String(p.hours[d] || 0).replace(".", ",")} h</b>
-          <button class="iconbtn" data-act="plan-h" data-d="${d}" data-v="0.5" aria-label="Más">+</button></div>`).join("")}</div>`
+          <button class="iconbtn" data-act="plan-h" data-d="${d}" data-v="0.5" aria-label="Más">+</button>
+          ${p.hours[d] ? `<label class="pl-from"><span class="muted small">desde</span><input type="time" step="900" data-plstart="${d}" value="${(p.start || [])[d] || ""}" aria-label="Hora de inicio del ${dn}"></label>` : ""}</div>`).join("")}</div>
+        <p class="muted small" style="margin:8px 0 0">Con hora de inicio, el plan te arma el horario de cada bloque y el calendario lo exporta con hora. Sin hora, el día va como una lista.
+          ${(p.start || []).some(Boolean) ? "" : `<button class="linkbtn small" data-act="plan-start-all">Arrancar todos los días a las 18:00</button>`}</p>`
         : `<div class="pl-slots">${E.plan.DAYS.map((dn, d) => { const sl = p.slots.map((s, i) => [s, i]).filter(([s]) => s.d === d); return sl.length ? `<div class="pl-srow"><span>${dn}</span><div class="pl-chips">${sl.map(([s, i]) => `<button class="pl-chip" data-act="plan-slot-del" data-i="${i}">${s.a}–${s.b} ✕</button>`).join("")}</div></div>` : ""; }).join("") || `<p class="muted small">Todavía no hay franjas.</p>`}
           <div class="pl-add"><select id="plSlotD" aria-label="Día">${E.plan.DAYS.map((dn, d) => `<option value="${d}">${dn}</option>`).join("")}</select>
             <input type="time" id="plSlotA" value="18:00" step="900" aria-label="Desde"><input type="time" id="plSlotB" value="20:00" step="900" aria-label="Hasta">
@@ -2582,6 +2587,8 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
         ${e.turno ? `<span class="muted small">${E.mesaDate(e.cid, e.turno) ? "Es la fecha de la mesa que publicó la facultad." : "Todavía no tengo el día de la mesa de esta materia: puse el primer día del llamado. Cambiala cuando lo sepas."}</span>` : ""}</label>
       ${e.kind === "parcial" && parciales.length ? `<label class="pl-f"><span>Simulacro con</span><select data-pl="exam"><option value="">Un examen viejo</option>${parciales.map(x => `<option value="${x.id}" ${e.exam === x.id ? "selected" : ""}>${esc(x.title)} de la app</option>`).join("")}</select></label>` : ""}
       <div class="pl-f"><span>Unidades que entran</span><div class="pl-units">${units.map((u, i) => `<label><input type="checkbox" data-pl="unit" value="${u.id}" ${sel.includes(u.id) ? "checked" : ""}> ${esc(unitLabel(u, i))}: ${esc(u.title)}</label>`).join("")}</div></div>
+      <div class="pl-f"><span>Ritmo</span><div class="seg">${[["full", "Con todo mi tiempo"], ["even", "Parejo hasta la fecha"]].map(([v, l]) => `<button class="${(e.pace || "full") === v ? "on" : ""}" data-act="plan-pace" data-v="${v}">${l}</button>`).join("")}</div>
+        <span class="muted small">${(e.pace || "full") === "even" ? "Los temas se reparten parejo hasta las semanas de repaso: menos tiempo por día y sin semanas vacías." : "Avanzás con los temas usando todo el tiempo que cargaste, desde hoy; el repaso queda cerca de la fecha."}</span></div>
       <div class="pl-f"><span>Intensidad</span><div class="seg">${[[0.7, "Liviana"], [1, "Normal"], [1.4, "A fondo"]].map(([v, l]) => `<button class="${(e.intensity || 1) === v ? "on" : ""}" data-act="plan-int" data-v="${v}">${l}</button>`).join("")}</div>
         <span class="muted small">El tiempo por unidad sale de cuántas lecciones tiene y de cómo te va en la app: lo que ya dominás pide menos.</span></div>
       <div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="plan-save">${icon("check")}Guardar</button><button class="btn sm ghost" data-act="plan-cancel">Cancelar</button>
@@ -2598,12 +2605,13 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "plan-cancel": ui.planEdit = null; renderKeep(); break;
       case "plan-kind": e.kind = el.dataset.v; renderKeep(); break;
       case "plan-int": e.intensity = +el.dataset.v; renderKeep(); break;
+      case "plan-pace": e.pace = el.dataset.v; renderKeep(); break;
       case "plan-save": {
         const units = $$("[data-pl=unit]").filter(x => x.checked).map(x => x.value), all = realUnits(course(e.cid)).map(u => u.id);
         if (!e.date || e.date <= today()) { toast("Elegí una fecha a partir de mañana"); break; }
         if (!units.length) { toast("Marcá al menos una unidad"); break; }
         const g = { id: e.id || "g" + Date.now().toString(36), cid: e.cid, kind: e.kind, date: e.date, from: e.from || today(),
-          units: units.length === all.length ? null : units, intensity: e.intensity || 1, exam: e.kind === "parcial" ? e.exam || null : null, turno: e.turno || null };
+          units: units.length === all.length ? null : units, intensity: e.intensity || 1, exam: e.kind === "parcial" ? e.exam || null : null, turno: e.turno || null, pace: e.pace === "even" ? "even" : "full" };
         const i = p.goals.findIndex(x => x.id === g.id);
         if (i >= 0) p.goals[i] = g; else p.goals.push(g);
         ui.planEdit = null; planChanged(); toast("Plan actualizado"); break;
@@ -2616,6 +2624,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "plan-off-add": { const d = $("#plOff").value; if (!d || d < today()) { toast("Elegí un día"); break; } if (!p.off.includes(d)) p.off = p.off.concat(d).sort(); planChanged(); break; }
       case "plan-off-fer": { const lastG = p.goals.reduce((m, g) => (g.date > m ? g.date : m), today()); p.off = [...new Set(p.off.concat(E.calendar.feriados.filter(f => f.date >= today() && f.date < lastG).map(f => f.date)))].sort(); planChanged(); toast("Feriados sumados como días sin estudio"); break; }
       case "plan-mode": p.mode = el.dataset.v; planChanged(); break;
+      case "plan-start-all": p.start = p.hours.map(h => (h ? "18:00" : null)); planChanged(); break;
       case "plan-h": { const d = +el.dataset.d; p.hours = p.hours.slice(); p.hours[d] = Math.max(0, Math.min(12, (p.hours[d] || 0) + +el.dataset.v)); planChanged(); break; }
       case "plan-slot-add": {
         const d = +$("#plSlotD").value, a = $("#plSlotA").value, b = $("#plSlotB").value;
@@ -2639,6 +2648,8 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     return true;
   }
   document.addEventListener("change", e => {
+    const ds = e.target.dataset && e.target.dataset.plstart;
+    if (ds != null) { const st = (S.plan.start || [null, null, null, null, null, null, null]).slice(); st[+ds] = e.target.value || null; S.plan.start = st; planChanged(); return; }
     const f = e.target.dataset && e.target.dataset.pl;
     if (!f || !ui.planEdit) return;
     if (f === "cid") { const pe = ui.planEdit; pe.cid = e.target.value; pe.units = null; pe.exam = null; if (pe.turno) pe.date = E.turnoDate(pe.cid, pe.turno, today()) || pe.date; renderKeep(); }

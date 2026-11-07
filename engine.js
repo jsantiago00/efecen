@@ -691,7 +691,9 @@
   const PL = E.plan = {
     DAYS: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
     INTENSITY: { 0.7: "Liviana", 1: "Normal", 1.4: "A fondo" },
-    defaults: () => ({ at: 0, mode: "hours", hours: [2, 2, 2, 2, 2, 3, 0], slots: [], off: [], goals: [], log: {} }),
+    // `start[d]`: en «horas por día», la hora a la que se arranca ese día ("18:00"); con hora, el plan arma el
+    // horario de cada bloque (y el calendario lo exporta con hora). Sin hora, el día va como una lista.
+    defaults: () => ({ at: 0, mode: "hours", hours: [2, 2, 2, 2, 2, 3, 0], start: [null, null, null, null, null, null, null], slots: [], off: [], goals: [], log: {} }),
     dow: date => { const [y, m, d] = date.split("-").map(Number); return (new Date(y, m - 1, d).getDay() + 6) % 7; },
     toMin: hm => { const [h, m] = String(hm).split(":").map(Number); return h * 60 + (m || 0); },
     fromMin: t => `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`,
@@ -743,6 +745,31 @@
       sims.forEach((d, i) => out.push({ key: `${g.id}/sim${i + 1}`, kind: "simulacro", min: sim, day: E.addDays(g.date, -d) }));
       if (n >= 2) out.push({ key: g.id + "/vispera", kind: "vispera", min: 60, day: E.addDays(g.date, -1) });
       return out;
+    },
+    // reparte `need` minutos parejo entre `days` (para el ritmo «parejo»), sin bloques de menos de media hora;
+    // con `first`, ese día (hoy) se llena antes que el resto
+    spread(days0, cap, need, first = null) {
+      if (first && days0.includes(first) && cap[first] > 0) {
+        const t = Math.min(cap[first], need), rest = PL.spread(days0.filter(d => d !== first), cap, need - t);
+        rest.alloc[first] = t;
+        return rest;
+      }
+      const days = days0.filter(d => cap[d] >= 30), A = days.reduce((t, d) => t + cap[d], 0), alloc = {};
+      if (need >= A) { for (const d of days) alloc[d] = cap[d]; return { alloc, short: need - A }; }
+      const f = need / A;
+      let acc = 0, given = 0;
+      for (const d of days) {
+        acc += f * cap[d];
+        let take = Math.min(cap[d], f15(acc), need - given);
+        if (take < 30 && need - given > take) take = 0;
+        if (take > 0) { alloc[d] = take; given += take; acc -= take; }
+      }
+      for (const d of days) { // lo que quedó por redondeos, lo antes posible
+        if (given >= need) break;
+        const t = Math.min(cap[d] - (alloc[d] || 0), need - given);
+        if (t > 0) { alloc[d] = (alloc[d] || 0) + t; given += t; }
+      }
+      return { alloc, short: 0 };
     },
     // llena `need` minutos usando todo el tiempo de cada día, desde el primero (o desde el último, con
     // `fromEnd`), sin pasarse de `cap` y sin bloques de menos de media hora (salvo lo último que quede)
@@ -799,8 +826,10 @@
           if (it.kind === "vispera") eveOf[g.id] = d;
         }
       }
-      // 2) el estudio de cada fecha, la más cercana primero: la primera vuelta usa todo el tiempo desde hoy; el
-      //    repaso y la integración van hacia atrás desde los días fijos, para llegar frescos a la fecha
+      // 2) el estudio de cada fecha, la más cercana primero: el repaso y la integración van hacia atrás desde
+      //    los días fijos, para llegar frescos a la fecha. La primera vuelta, con el ritmo «todo mi tiempo»
+      //    (`pace` "full", el de siempre), usa todo el tiempo desde hoy; con «parejo» ("even"), se reparte
+      //    parejo hasta donde empieza el repaso.
       for (const g of goals) {
         const inf = info(g), items = PL.work(g, inf), fx = PL.fixed(g, inf.exam);
         const total = items.reduce((t, it) => t + it.min, 0) + fx.reduce((t, it) => t + it.min, 0);
@@ -810,12 +839,10 @@
         const queue = items.map(it => Object.assign({}, it, { left: it.min - (done[it.key] || 0) })).filter(it => it.left > 0);
         const late = it => it.kind === "repaso" || it.kind === "integrar";
         let short = 0;
-        for (const [q, fromEnd] of [[queue.filter(it => !late(it)), false], [queue.filter(late), true]]) {
-          const fl = PL.fill(win, cap, q.reduce((t, it) => t + it.left, 0), fromEnd);
-          short += fl.short;
+        const pour = (q, alloc) => {
           let qi = 0;
           for (const d of win) {
-            let a = fl.alloc[d] || 0;
+            let a = alloc[d] || 0;
             while (a > 0 && qi < q.length) {
               const it = q[qi], take = Math.min(a, it.left);
               put(d, it, g, take);
@@ -823,15 +850,39 @@
               if (it.left <= 0) qi++;
             }
           }
+        };
+        const q1 = queue.filter(it => !late(it)), q2 = queue.filter(late), sum = q => q.reduce((t, it) => t + it.left, 0);
+        if (g.pace === "even") {
+          const f2 = PL.fill(win, cap, sum(q2), true);
+          pour(q2, f2.alloc);
+          const startLate = Object.keys(f2.alloc).sort()[0], w1 = startLate ? win.filter(d => d < startLate) : win;
+          const f1 = PL.spread(w1, cap, sum(q1), todayLeft != null ? today : null);
+          pour(q1, f1.alloc);
+          short = f1.short + f2.short;
+        } else {
+          const f1 = PL.fill(win, cap, sum(q1));
+          pour(q1, f1.alloc);
+          const f2 = PL.fill(win, cap, sum(q2), true);
+          pour(q2, f2.alloc);
+          short = f1.short + f2.short;
         }
         if (short > 0) warnings.push({ gid: g.id, kind: "short", min: short });
         // el último día de temas nuevos (la primera vuelta)
         const lastStudy = win.filter(d => days[d].some(b => b.gid === g.id && ["teoria", "practica", "app"].includes(b.kind))).pop() || null;
         summary.push({ id: g.id, total, done: Math.min(total, doneG), short, lastStudy });
       }
-      // 3) en franjas horarias, cada bloque con su hora (si cruza el fin de una franja, se parte)
-      if (p.mode === "slots") for (const d of Object.keys(days)) {
-        const sl = PL.slotsOn(p, d, d === today ? now : 0), out = [];
+      // 3) el horario: en franjas, cada bloque en su franja (si cruza el fin de una, se parte); en horas por día,
+      //    si el día tiene hora de inicio, uno detrás del otro desde esa hora (hoy, después de lo ya hecho)
+      for (const d of Object.keys(days)) {
+        let sl;
+        if (p.mode === "slots") sl = PL.slotsOn(p, d, d === today ? now : 0);
+        else {
+          const st = (p.start || [])[PL.dow(d)];
+          if (!st || p.off.includes(d)) continue;
+          const a = PL.toMin(st) + (d === today ? PL.doneOn(p, d) : 0);
+          sl = [{ a, b: Math.min(24 * 60, a + Math.round((p.hours[PL.dow(d)] || 0) * 60)) }];
+        }
+        const out = [];
         let si = 0, t = sl.length ? sl[0].a : 0;
         for (const b of days[d]) {
           let rem = b.min;
@@ -871,7 +922,7 @@
       const ev = (uid, start, end, sum, desc) => L.push("BEGIN:VEVENT", `UID:${uid}@efecen.com.ar`, `DTSTAMP:${stamp}`, start, end, `SUMMARY:${esc(sum)}`, ...(desc ? [`DESCRIPTION:${esc(desc)}`] : []), "END:VEVENT");
       for (const [d, bl] of Object.entries(plan.days)) {
         if (!bl.length) continue;
-        if (p.mode === "slots" && bl.every(b => b.at)) {
+        if (bl.every(b => b.at)) {
           bl.forEach((b, i) => {
             const t0 = PL.toMin(b.at), t1 = t0 + b.min, hm = t => PL.fromMin(t).replace(":", "") + "00";
             ev(`${D(d)}-${i}-${b.key.replace(/[^a-z0-9]/gi, "")}`, `DTSTART:${D(d)}T${hm(t0)}`, `DTEND:${D(d)}T${hm(t1)}`, label(b), "");

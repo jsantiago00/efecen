@@ -645,6 +645,7 @@ for (const cid of E.courseOrder) {
     Object.assign(P.defaults(), { goals: goals(), hours: [2, 2, 2, 2, 2, 3, 0], off: ["2026-11-11", "2026-12-08"] }),
     Object.assign(P.defaults(), { goals: goals(), hours: [6, 6, 6, 6, 6, 6, 4] }),
     Object.assign(P.defaults(), { goals: goals(), hours: [1, 0, 1.5, 0, 0.5, 0, 0] }),
+    Object.assign(P.defaults(), { goals: goals().map(g => Object.assign(g, { pace: "even" })), hours: [2, 2, 2, 2, 2, 3, 0], start: ["18:00", "18:00", null, "09:30", "18:00", "10:00", null] }),
     Object.assign(P.defaults(), { goals: goals(), mode: "slots", off: ["2026-11-14"],
       slots: [{ d: 0, a: "18:00", b: "20:00" }, { d: 0, a: "21:00", b: "22:30" }, { d: 2, a: "09:00", b: "12:10" }, { d: 5, a: "10:00", b: "13:00" }, { d: 6, a: "16:00", b: "17:00" }] })
   ];
@@ -664,6 +665,12 @@ for (const cid of E.courseOrder) {
         if (b.kind === "vispera") ok(d >= E.addDays(g.date, -4), wc, "víspera lejos de la fecha");
         sched[b.key] = (sched[b.key] || 0) + b.min;
       }
+      const st = p.mode === "hours" && p.start[P.dow(d)];
+      if (st && !p.off.includes(d)) {
+        let t0 = P.toMin(st);
+        for (const b of bl) { ok(b.at === P.fromMin(t0), wc, `${d}: horario mal armado (${b.at}, se esperaba ${P.fromMin(t0)})`); t0 += b.min; }
+        ok(t0 <= P.toMin(st) + p.hours[P.dow(d)] * 60, wc, `${d}: el horario se pasa de las horas del día`);
+      } else if (p.mode === "hours") ok(bl.every(b => !b.at), wc, `${d}: hora en un día sin hora de inicio`);
       if (p.mode === "slots") {
         const sl = P.slotsOn(p, d, d === today ? 600 : 0);
         let prev = -1;
@@ -722,6 +729,17 @@ for (const cid of E.courseOrder) {
     const first = Object.entries(pl.days).filter(([, bl]) => bl.some(b => ["teoria", "practica", "app"].includes(b.kind))).map(([d]) => d);
     const second = Object.entries(pl.days).filter(([, bl]) => bl.some(b => b.kind === "repaso" || b.kind === "integrar")).map(([d]) => d);
     ok(first.length && second.length && second[0] > first[first.length - 1] && second[0] >= "2027-01-15", w, "la segunda vuelta no quedó cerca de la fecha");
+    // con ritmo parejo, menos por día y la primera vuelta llega hasta cerca del repaso
+    const pe = JSON.parse(JSON.stringify(p)); pe.goals[0].pace = "even";
+    const ple = P.build(pe, today, info), usedE = Object.values(ple.days).map(bl => bl.reduce((t, b) => t + b.min, 0)).filter(Boolean);
+    const firstE = Object.entries(ple.days).filter(([, bl]) => bl.some(b => ["teoria", "practica", "app"].includes(b.kind))).map(([d]) => d);
+    ok(!ple.warnings.length && firstE[firstE.length - 1] >= "2027-01-01" && usedE.length > first.length, w, "ritmo parejo: la primera vuelta no se estira hasta la fecha");
+  }
+  // el .ics: con hora de inicio, eventos con hora; sin hora, de todo el día
+  {
+    const p = Object.assign(P.defaults(), { hours: [2, 2, 2, 2, 2, 3, 0], start: ["18:00", null, null, null, null, null, null], goals: [{ id: "g1", cid: "b", kind: "final", date: "2026-12-10", from: today, units: null, intensity: 1 }] });
+    const ics = P.ics(p, P.build(p, today, info), b => b.key, g => g.id, "20261107T120000Z");
+    ok(/DTSTART:20261109T180000/.test(ics) && /DTSTART;VALUE=DATE:20261110/.test(ics), w, ".ics: el lunes con hora y el martes de todo el día");
   }
   // sincronización del plan: la configuración del que la cambió último y lo hecho entrada por entrada
   {
