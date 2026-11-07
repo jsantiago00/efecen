@@ -639,6 +639,220 @@
     return Object.assign({ seed: r.int(1, 1e9) }, r.pick(pool));
   };
 
+  // ---------- Plan de estudio ----------
+  // Reparte el estudio de los finales (y parciales) que cargues entre hoy y cada fecha, según el tiempo que
+  // tengas cada día. Es para estudiar fuera de la app: teoría, guía de ejercicios y simulacros, más un repaso
+  // corto en efecen por unidad. Lo hecho se anota en `log`; cada día se vuelve a armar con lo que falta,
+  // así que atrasarse no deja tareas vencidas: se reacomodan solas.
+  //   p.mode: "hours" (horas por día de la semana, `hours[0..6]`, lunes primero) o "slots" (franjas fijas
+  //   `{ d, a: "18:00", b: "20:00" }`); p.off: días sin estudio; p.goals: { id, cid, kind: "final"|"parcial",
+  //   date, from (cuándo se cargó), units (null = todas), exam, intensity }; p.log: fecha -> clave -> { m, t }.
+  // `info(goal)` lo da la app: { units: [{ id, label, lessons, mastery (0..1 o null) }], exam: { minutes } | null }.
+  // todo se mide en cuartos de hora, así no quedan bloques de 5 minutos
+  const r15 = x => Math.max(15, Math.round(x / 15) * 15), f15 = x => Math.floor(x / 15) * 15;
+  const PL = E.plan = {
+    DAYS: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+    INTENSITY: { 0.7: "Liviana", 1: "Normal", 1.4: "A fondo" },
+    defaults: () => ({ at: 0, mode: "hours", hours: [2, 2, 2, 2, 2, 3, 0], slots: [], off: [], goals: [], log: {} }),
+    dow: date => { const [y, m, d] = date.split("-").map(Number); return (new Date(y, m - 1, d).getDay() + 6) % 7; },
+    toMin: hm => { const [h, m] = String(hm).split(":").map(Number); return h * 60 + (m || 0); },
+    fromMin: t => `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`,
+    // `from`: minutos desde la medianoche; las franjas (o la parte) anteriores no cuentan (sirve para hoy)
+    slotsOn(p, date, from = 0) {
+      if (p.off.includes(date)) return [];
+      const d = PL.dow(date);
+      return p.slots.filter(s => s.d === d).map(s => ({ a: Math.max(PL.toMin(s.a), from), b: PL.toMin(s.b) })).filter(s => s.b > s.a).sort((x, y) => x.a - y.a);
+    },
+    capacity(p, date, from = 0) {
+      if (p.off.includes(date)) return 0;
+      if (p.mode === "slots") return f15(PL.slotsOn(p, date, from).reduce((t, s) => t + s.b - s.a, 0));
+      return Math.max(0, f15((p.hours[PL.dow(date)] || 0) * 60));
+    },
+    weekMinutes: p => [0, 1, 2, 3, 4, 5, 6].reduce((t, d) => t + (p.mode === "slots"
+      ? p.slots.filter(s => s.d === d).reduce((u, s) => u + Math.max(0, PL.toMin(s.b) - PL.toMin(s.a)), 0)
+      : Math.round((p.hours[d] || 0) * 60)), 0),
+    doneByKey(p) {
+      const o = {};
+      for (const day of Object.values(p.log)) for (const [k, e] of Object.entries(day)) if (e.m > 0) o[k] = (o[k] || 0) + e.m;
+      return o;
+    },
+    doneOn: (p, date) => Object.values(p.log[date] || {}).reduce((t, e) => t + Math.max(0, e.m), 0),
+    // lo que hay que estudiar para una fecha, en orden: por unidad, teoría → práctica → repaso en la app;
+    // para un final, al final una integración de toda la materia
+    work(g, info) {
+      const k = g.intensity || 1, items = [];
+      const sel = info.units.filter(u => !g.units || g.units.includes(u.id));
+      for (const u of sel) {
+        // lo que ya dominás pide menos tiempo; lo flojo, más (sin datos: lo normal)
+        const f = k * (u.mastery == null ? 1 : 1.35 - 0.85 * u.mastery), L = Math.max(1, u.lessons), base = `${g.id}/${u.id}/`;
+        items.push({ key: base + "teo", kind: "teoria", uid: u.id, min: Math.max(20, r15(L * 30 * f)) },
+          { key: base + "pra", kind: "practica", uid: u.id, min: Math.max(30, r15(L * 40 * f)) },
+          { key: base + "app", kind: "app", uid: u.id, min: Math.max(15, r15(L * 8 * f)) });
+      }
+      if (g.kind === "final" && sel.length > 1) items.push({ key: g.id + "/integ", kind: "integrar", min: Math.max(60, r15(sel.length * 20 * k)) });
+      return items;
+    },
+    // días fijos antes de la fecha: simulacros (con su corrección) y la víspera, liviana. Dependen de cuánto
+    // faltaba cuando cargaste la fecha (`from`), así no cambian a medida que se acerca.
+    fixed(g, exam) {
+      const n = E.diffDays(g.from || g.date, g.date), sim = r15(((exam && exam.minutes) || 150) + 30), out = [];
+      const sims = n >= 21 ? [4, 2] : n >= 8 ? [3] : n >= 3 ? [2] : [];
+      sims.forEach((d, i) => out.push({ key: `${g.id}/sim${i + 1}`, kind: "simulacro", min: sim, day: E.addDays(g.date, -d) }));
+      if (n >= 2) out.push({ key: g.id + "/vispera", kind: "vispera", min: 60, day: E.addDays(g.date, -1) });
+      return out;
+    },
+    // reparte `need` minutos entre `days` sin pasarse de `cap`, parejo (sin bloques de menos de media hora)
+    // con `first`, ese día (hoy) se llena antes que el resto
+    spread(days0, cap, need, first = null) {
+      if (first && days0.includes(first) && cap[first] > 0) {
+        const t = Math.min(cap[first], need), rest = PL.spread(days0.filter(d => d !== first), cap, need - t);
+        rest.alloc[first] = t;
+        return rest;
+      }
+      const days = days0.filter(d => cap[d] >= 30), A = days.reduce((t, d) => t + cap[d], 0), alloc = {};
+      if (need >= A) { for (const d of days) if (cap[d] > 0) alloc[d] = cap[d]; return { alloc, short: need - A }; }
+      const f = need / A;
+      let acc = 0, given = 0;
+      for (const d of days) {
+        acc += f * cap[d];
+        let take = Math.min(cap[d], f15(acc), need - given);
+        if (take < 30 && cap[d] >= 30 && need - given > take) take = 0;
+        if (take > 0) { alloc[d] = take; given += take; acc -= take; }
+      }
+      // lo que quedó por redondeos, lo antes posible
+      for (const d of days) {
+        if (given >= need) break;
+        const t = Math.min(cap[d] - (alloc[d] || 0), need - given);
+        if (t > 0) { alloc[d] = (alloc[d] || 0) + t; given += t; }
+      }
+      return { alloc, short: 0 };
+    },
+    // arma el plan desde hoy: { days: { fecha: [bloques] }, goals: [resumen], warnings, last }. `now` (minutos
+    // desde la medianoche) hace que, con franjas, hoy solo cuente lo que queda del día.
+    // Hoy queda fijo en lo que se planificó al empezar el día: lo que tildás se descuenta y, si terminás
+    // antes, no aparece más para hoy (lo adelantado se descuenta de los días siguientes).
+    build(p, today, info, now = 0) {
+      if (!PL.doneOn(p, today)) return PL._build(p, today, info, now, null);
+      const q = Object.assign({}, p, { log: Object.assign({}, p.log) });
+      delete q.log[today];
+      const planned = (PL._build(q, today, info, 0, null).days[today] || []).reduce((t, b) => t + b.min, 0);
+      return PL._build(p, today, info, now, Math.max(0, planned - PL.doneOn(p, today)));
+    },
+    _build(p, today, info, now, todayLeft) {
+      const done = PL.doneByKey(p), days = {}, cap = {}, warnings = [], summary = [];
+      const goals = p.goals.filter(g => g.date > today && info(g)).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
+      const last = goals.length ? goals[goals.length - 1].date : today;
+      for (let d = today; d < last; d = E.addDays(d, 1)) { days[d] = []; cap[d] = d !== today ? PL.capacity(p, d) : todayLeft != null ? Math.min(todayLeft, PL.capacity(p, d, p.mode === "slots" ? now : 0)) : PL.capacity(p, d, p.mode === "slots" ? now : 0); cap[d] = Math.max(0, f15(cap[d])); }
+      const put = (d, it, g, min) => { days[d].push({ key: it.key, gid: g.id, kind: it.kind, uid: it.uid || null, min }); cap[d] -= min; };
+      // 1) los días fijos de cada fecha (si ese día no hay lugar, el anterior con lugar, hasta 3 días antes)
+      const fixedOf = {};
+      for (const g of goals) {
+        const inf = info(g);
+        fixedOf[g.id] = [];
+        for (const it of PL.fixed(g, inf.exam)) {
+          const left = it.min - (done[it.key] || 0);
+          if (left <= 0 || it.day < today) continue;
+          // el día previsto si entra entero; si no, hasta 3 días antes; si en ninguno entra, el de más lugar
+          let d = null, best = null;
+          for (let k = 0; k <= 3; k++) {
+            const c = E.addDays(it.day, -k);
+            if (c < today) break;
+            if (cap[c] >= left) { d = c; break; }
+            if (cap[c] >= 45 && (!best || cap[c] > cap[best])) best = c;
+          }
+          d = d || best;
+          if (!d) { warnings.push({ gid: g.id, kind: "nofixed", what: it.kind }); continue; }
+          put(d, it, g, Math.min(left, cap[d]));
+          fixedOf[g.id].push(d);
+        }
+      }
+      // 2) el estudio de cada fecha, la más cercana primero, parejo entre hoy y sus días fijos
+      for (const g of goals) {
+        const inf = info(g), items = PL.work(g, inf), fx = PL.fixed(g, inf.exam);
+        const total = items.reduce((t, it) => t + it.min, 0) + fx.reduce((t, it) => t + it.min, 0);
+        const doneG = Object.entries(done).filter(([k]) => k.startsWith(g.id + "/")).reduce((t, [, m]) => t + m, 0);
+        // todos los días hasta la fecha, menos la víspera (los simulacros ya ocupan su lugar)
+        const eve = E.addDays(g.date, -1), win = Object.keys(days).filter(d => d < g.date && (d !== eve || d === today)).sort();
+        const queue = items.map(it => Object.assign({}, it, { left: it.min - (done[it.key] || 0) })).filter(it => it.left > 0);
+        const need = queue.reduce((t, it) => t + it.left, 0);
+        const { alloc, short } = PL.spread(win, cap, need, todayLeft != null ? today : null);
+        let qi = 0;
+        for (const d of win) {
+          let a = alloc[d] || 0;
+          while (a > 0 && qi < queue.length) {
+            const it = queue[qi], take = Math.min(a, it.left);
+            put(d, it, g, take);
+            it.left -= take; a -= take;
+            if (it.left <= 0) qi++;
+          }
+        }
+        if (short > 0) warnings.push({ gid: g.id, kind: "short", min: short });
+        const lastStudy = win.filter(d => days[d].some(b => b.gid === g.id && b.kind !== "simulacro" && b.kind !== "vispera")).pop() || null;
+        summary.push({ id: g.id, total, done: Math.min(total, doneG), short, lastStudy });
+      }
+      // 3) en franjas horarias, cada bloque con su hora (si cruza el fin de una franja, se parte)
+      if (p.mode === "slots") for (const d of Object.keys(days)) {
+        const sl = PL.slotsOn(p, d, d === today ? now : 0), out = [];
+        let si = 0, t = sl.length ? sl[0].a : 0;
+        for (const b of days[d]) {
+          let rem = b.min;
+          while (rem > 0 && si < sl.length) {
+            if (t >= sl[si].b) { si++; if (si < sl.length) t = sl[si].a; continue; }
+            const take = Math.min(rem, sl[si].b - t);
+            out.push(Object.assign({}, b, { min: take, at: PL.fromMin(t) }));
+            t += take; rem -= take;
+          }
+          if (rem > 0) out.push(Object.assign({}, b, { min: rem }));
+        }
+        days[d] = out;
+      }
+      return { days, goals: summary, warnings, last };
+    },
+    // marcar (o desmarcar) un bloque como hecho hoy
+    mark(p, date, key, min, on, now = Date.now()) {
+      const day = p.log[date] = p.log[date] || {}, prev = (day[key] && day[key].m) || 0;
+      day[key] = { m: on ? prev + min : 0, t: now };
+    },
+    // combinar dos dispositivos: la configuración del que la cambió último; lo hecho, entrada por entrada
+    // (la escrita último gana, así desmarcar también se sincroniza)
+    merge(a, b) {
+      const cfg = (b.at || 0) > (a.at || 0) ? b : a, out = JSON.parse(JSON.stringify(cfg));
+      out.log = {};
+      for (const src of [a, b]) for (const [d, day] of Object.entries(src.log || {})) for (const [k, e] of Object.entries(day)) {
+        const o = (out.log[d] = out.log[d] || {})[k];
+        if (!o || e.t > o.t || (e.t === o.t && e.m > o.m)) out.log[d][k] = { m: e.m, t: e.t };
+      }
+      return out;
+    },
+    // archivo .ics para Google Calendar: con franjas, un evento por bloque; con horas por día, uno de todo el
+    // día con la lista. `label(b)` da el texto de cada bloque y `goalLabel(g)`, el de cada fecha.
+    ics(p, plan, label, goalLabel, stamp) {
+      const esc = s => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+      const D = d => d.replace(/-/g, ""), L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//efecen//plan//ES", "CALSCALE:GREGORIAN", "X-WR-CALNAME:efecen · plan de estudio"];
+      const ev = (uid, start, end, sum, desc) => L.push("BEGIN:VEVENT", `UID:${uid}@efecen.com.ar`, `DTSTAMP:${stamp}`, start, end, `SUMMARY:${esc(sum)}`, ...(desc ? [`DESCRIPTION:${esc(desc)}`] : []), "END:VEVENT");
+      for (const [d, bl] of Object.entries(plan.days)) {
+        if (!bl.length) continue;
+        if (p.mode === "slots" && bl.every(b => b.at)) {
+          bl.forEach((b, i) => {
+            const t0 = PL.toMin(b.at), t1 = t0 + b.min, hm = t => PL.fromMin(t).replace(":", "") + "00";
+            ev(`${D(d)}-${i}-${b.key.replace(/[^a-z0-9]/gi, "")}`, `DTSTART:${D(d)}T${hm(t0)}`, `DTEND:${D(d)}T${hm(t1)}`, label(b), "");
+          });
+        } else {
+          const tot = bl.reduce((t, b) => t + b.min, 0);
+          ev(`${D(d)}-dia`, `DTSTART;VALUE=DATE:${D(d)}`, `DTEND;VALUE=DATE:${D(E.addDays(d, 1))}`,
+            `Estudiar ${H_hours(tot)}`, bl.map(b => `• ${label(b)} (${H_hours(b.min)})`).join("\n"));
+        }
+      }
+      for (const g of p.goals) ev(`${D(g.date)}-${g.id}`, `DTSTART;VALUE=DATE:${D(g.date)}`, `DTEND;VALUE=DATE:${D(E.addDays(g.date, 1))}`, goalLabel(g), "");
+      L.push("END:VCALENDAR");
+      // las líneas de más de 75 caracteres se parten (RFC 5545)
+      return L.map(l => (l.length <= 72 ? l : l.match(/.{1,72}/gu).join("\r\n "))).join("\r\n") + "\r\n";
+    }
+  };
+  // "1 h 30 min", "45 min", "2 h"
+  const H_hours = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; };
+  PL.fmt = H_hours;
+
   // ---------- Estado persistente ----------
   E.store = {
     key: "efecen:v1",
@@ -650,12 +864,14 @@
       courses: {}, srs: {}, log: [], answered: 0, answeredOk: 0, read: {},
       exams: {}, // "m101/p1" -> { best, attempts: [{ d, t, score }] } (los más nuevos primero)
       career: null, careerAt: 0, // carrera elegida ("fis", "mat", "qui", "bio") y cuándo se eligió (ms)
-      daily: {} // ejercicio del día: "2026-10-15" -> { cid, tpl, ok }
+      daily: {}, // ejercicio del día: "2026-10-15" -> { cid, tpl, ok }
+      plan: E.plan.defaults() // plan de estudio (ver E.plan)
     }),
     migrate(s) {
       const d = E.store.defaults();
       for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k];
       s.settings = Object.assign(d.settings, s.settings);
+      s.plan = Object.assign(d.plan, s.plan);
       // materias renombradas al pasar a "la carrera" (calculo -> m101)
       for (const [o, n] of Object.entries(E.store.renamed)) {
         if (s.courses[o] && !s.courses[n]) s.courses[n] = s.courses[o];
@@ -729,6 +945,7 @@
         const x = out.daily[d];
         if (!x || (od.ok && !x.ok)) out.daily[d] = od;
       }
+      out.plan = E.plan.merge(a.plan, b.plan);
       const seen = new Set();
       out.log = a.log.concat(b.log).filter(l => { const k = JSON.stringify(l); return seen.has(k) ? false : seen.add(k); })
         .sort((x, y) => (y.d > x.d ? 1 : y.d < x.d ? -1 : 0)).slice(0, 60);

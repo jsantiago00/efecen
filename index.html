@@ -96,7 +96,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 
 /* bottom nav */
 .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--card); border-top: 2px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
-.nav-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.nav-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); }
 .nav button { background: none; border: 0; padding: 10px 2px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .75rem; font-weight: 800; color: var(--muted); }
 .nav button .ic { width: 26px; height: 26px; }
 .nav button.on { color: var(--primary); }
@@ -599,6 +599,60 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+/* ---------- plan de estudio ---------- */
+.plan-layout { display: flex; flex-direction: column; gap: 16px; }
+.pg0 { --pc: var(--primary); } .pg1 { --pc: var(--ok); } .pg2 { --pc: var(--fire); } .pg3 { --pc: #0EA5E9; } .pg4 { --pc: var(--bad); } .pg5 { --pc: var(--gold-d); }
+.pl-block { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin-top: 8px; border-radius: 12px; background: var(--bg); border-left: 5px solid var(--pc); }
+.pl-block.done { opacity: .7; }
+.pl-block.done .pl-title { text-decoration: line-through; }
+.pl-meta { font-size: .78rem; font-weight: 800; color: var(--muted); }
+.pl-title { font-weight: 800; }
+.pl-acts { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 0 -8px; }
+.pl-check { width: 30px; height: 30px; flex: none; border-radius: 9px; border: 2px solid var(--lock-d); background: var(--card); color: transparent; display: grid; place-items: center; padding: 0; margin-top: 2px; }
+.pl-check .ic { width: 18px; height: 18px; }
+.pl-check.on { background: var(--ok); border-color: var(--ok); color: #fff; }
+.pl-weekgrid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.pl-day { border: 2px solid var(--line); border-radius: 14px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pl-day.today { border-color: var(--primary); }
+.pl-day.past { opacity: .75; }
+.pl-day-h { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.pl-day .pl-block { padding: 6px 8px; margin-top: 4px; border-left-width: 4px; }
+.pl-day .pl-title { font-size: .85rem; line-height: 1.25; }
+.pl-exam { display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: .8rem; color: var(--on-primary); background: var(--pc); border-radius: 8px; padding: 3px 8px; margin-top: 4px; }
+.pl-exam .ic { width: 14px; height: 14px; }
+.pl-off { align-self: flex-start; background: none; border: 0; padding: 4px 0 0; font-size: .75rem; font-weight: 800; color: var(--muted); }
+.pl-off.on { color: var(--bad); }
+.pl-goal { border-left: 5px solid var(--pc); padding: 4px 0 4px 10px; margin: 10px 0; }
+.pl-warn { margin: 6px 0 0; color: var(--bad-d); font-weight: 700; }
+.pl-past summary { cursor: pointer; margin-top: 8px; }
+.pl-hours { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin-top: 10px; }
+.pl-hrow { display: flex; align-items: center; gap: 4px; }
+.pl-hrow span { width: 34px; font-weight: 800; color: var(--muted); }
+.pl-hrow b { min-width: 44px; text-align: center; }
+.pl-hrow .iconbtn { font-size: 1.3rem; font-weight: 900; padding: 2px 10px; color: var(--primary); }
+.pl-slots { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.pl-srow { display: flex; align-items: center; gap: 8px; }
+.pl-srow > span { width: 34px; font-weight: 800; color: var(--muted); flex: none; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-chip { border: 2px solid var(--line); background: var(--card); border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: .82rem; color: var(--ink); }
+.pl-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.pl-add input, .pl-add select, .pl-f select, .pl-f input { font: 700 .95rem "Nunito", sans-serif; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 10px; padding: 7px 8px; }
+.pl-edit { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.pl-f { display: flex; flex-direction: column; gap: 4px; }
+.pl-f > span:first-child { font-weight: 800; font-size: .85rem; }
+.pl-units { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; font-size: .9rem; }
+.pl-units label { display: flex; gap: 8px; align-items: flex-start; }
+.pl-units input { margin-top: 4px; accent-color: var(--primary); }
+@container screen (min-width: 860px) {
+  .plan-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start;
+    grid-template-areas: "today goals" "week week" "time offs"; }
+  .pl-today { grid-area: today; } .pl-week { grid-area: week; } .pl-goals { grid-area: goals; } .pl-time { grid-area: time; } .pl-offs { grid-area: offs; }
+  .plan-layout:not(:has(.pl-today)) { grid-template-areas: "goals time" "goals offs"; grid-template-rows: auto 1fr; }
+  .pl-weekgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .pl-day { padding: 6px 6px 8px; }
+  .pl-day-h { flex-direction: column; gap: 0; }
+}
+
 /* ---------- evaluaciones ---------- */
 .exams-card { display: flex; flex-direction: column; gap: 8px; }
 .exams-card > .row .ic { width: 26px; height: 26px; color: var(--primary); }
@@ -1569,7 +1623,7 @@ body.board-split .nav { padding-bottom: 0; }
 
   // ---------- navegación ----------
   function go(route, params = {}) {
-    const hash = { home: "#/", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
+    const hash = { home: "#/", plan: "#/plan", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
     if (location.hash !== hash) history.pushState(null, "", hash);
     ui.route = route; ui.params = params;
     render();
@@ -1580,6 +1634,7 @@ body.board-split .nav { padding-bottom: 0; }
     else if (h === "stats") ui.route = "stats";
     else if (h === "carrera") ui.route = "career";
     else if (h === "liga") ui.route = "league";
+    else if (h === "plan") ui.route = "plan";
     else if (h === "aprender") ui.route = "learn";
     else if (h === "ajustes") ui.route = "settings";
     else if (h === "creditos") ui.route = "credits";
@@ -1607,7 +1662,7 @@ body.board-split .nav { padding-bottom: 0; }
     const b = (r, ic, label, params) => `<button class="${active === r ? "on" : ""}" data-act="go" data-r="${r}" ${params ? `data-id="${params}"` : ""}>${icon(ic)}<span>${label}</span></button>`;
     return `<nav class="nav" aria-label="Principal"><div class="nav-inner">
       <div class="nav-logo">${mascot("idle")}<span>efecen</span></div>
-      ${b("home", "house", "Inicio")}${b("career", "map", "Carrera")}${b("learn", "graduation-cap", "Aprender")}
+      ${b("home", "house", "Inicio")}${b("career", "map", "Carrera")}${b("plan", "calendar", "Plan")}${b("learn", "graduation-cap", "Aprender")}
       ${b("stats", "chart-column", "Stats")}${b("settings", "settings", "Ajustes")}</div></nav>`;
   }
   function topbar() {
@@ -1637,7 +1692,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, summary: renderSummary, "exam-result": renderExamResult };
+    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, plan: renderPlan, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, summary: renderSummary, "exam-result": renderExamResult };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1692,7 +1747,8 @@ body.board-split .nav { padding-bottom: 0; }
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
       ${sg && sg.course !== cid ? subjectCard(sg, badge("Sugerida")) : ""}
       <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver toda la carrera</button></section>
-      </div><aside class="home-side">${firstTime ? "" : `${dailyCard()}
+      </div><aside class="home-side">${firstTime ? (S.plan.goals.some(g => g.date > today()) ? planHomeCard() : "") : `${planHomeCard()}
+      ${dailyCard()}
       <div id="leagueHome">${leagueHomeCard()}</div>
       <button class="btn ghost block" data-act="rush" data-cid="${cid}">${icon("timer")}Contrarreloj · ${esc(c.code || c.title)}${cState(cid).rush ? ` <span class="muted small">(récord ${cState(cid).rush})</span>` : ""}</button>`}</aside></div>
     </main>${nav("home")}`;
@@ -2350,6 +2406,232 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     document.body.appendChild(d);
   }
 
+  // ---------- PLAN DE ESTUDIO ----------
+  // Para estudiar fuera de la app: cargás las fechas de tus finales (o parciales) y el tiempo que tenés,
+  // y E.plan reparte teoría, práctica, simulacros y repaso hasta cada fecha. Se rearma solo cada día.
+  const DOW = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+  const dayTxt = d => { const [y, m, dd] = d.split("-").map(Number); return `${DOW[new Date(y, m - 1, dd).getDay()]} ${dd}/${m}`; };
+  const KIND_TXT = { final: "Final", parcial: "Parcial" };
+  const unitLabel = (u, i) => (u.program && !/extra/i.test(u.program) ? u.program : "Unidad " + (i + 1));
+  // cuánto dominás una unidad (0..1), con las lecciones hechas y el acierto; null si no hay datos
+  function unitMastery(cid, c, u) {
+    const nDone = u.lessons.filter(l => lessonDone(cid, l)).length;
+    let seen = 0, okk = 0;
+    for (const l of u.lessons) for (const k of l.concepts) if (c.conceptUnit[k] === u) { const cd = S.srs[ckey(cid, k)]; if (cd) { seen += cd.seen; okk += cd.ok; } }
+    if (!nDone && !seen) return null;
+    const done = nDone / Math.max(1, u.lessons.length);
+    return 0.5 * done + 0.5 * (seen ? okk / seen : done);
+  }
+  function planInfo(g) {
+    const c = course(g.cid);
+    if (!c) return null;
+    const ex = E.exams[g.cid] ? E.exams[g.cid].list : [];
+    const exam = g.kind === "final" ? ex.find(x => x.kind === "final") : g.exam ? ex.find(x => x.id === g.exam) : null;
+    return { units: realUnits(c).map((u, i) => ({ id: u.id, label: unitLabel(u, i), title: u.title, lessons: u.lessons.length, mastery: unitMastery(g.cid, c, u) })), exam: exam || null };
+  }
+  const planBuild = () => { const n = new Date(); return E.plan.build(S.plan, today(), planInfo, n.getHours() * 60 + n.getMinutes()); };
+  const planGoal = id => S.plan.goals.find(g => g.id === id);
+  const planIdx = id => Math.max(0, S.plan.goals.findIndex(g => g.id === id)) % 6;
+  const goalTxt = g => { const c = course(g.cid); return `${KIND_TXT[g.kind]} de ${c ? c.code || c.title : g.cid}`; };
+  function blockInfo(b) {
+    const g = planGoal(b.gid), c = g && course(g.cid), info = g && planInfo(g);
+    const u = info && b.uid ? info.units.find(x => x.id === b.uid) : null, code = c ? c.code || "" : "";
+    const ex = info && info.exam;
+    const T = {
+      teoria: ["Teoría", "Leé los apuntes y tu bibliografía. Armá un resumen con las definiciones, los teoremas y las fórmulas."],
+      practica: ["Práctica", "Ejercicios de la guía y de parciales viejos de esta unidad, con lápiz y papel."],
+      app: ["Repaso en efecen", "Las lecciones de la unidad en la app y, si ya está, su jefe."],
+      integrar: ["Integración", "Toda la materia: un mapa de los temas, las demostraciones que se toman y problemas que mezclan unidades."],
+      simulacro: ["Simulacro", `${ex ? `«${ex.title}» de la app, o un examen viejo` : "Un examen viejo"}, con tiempo y sin apuntes. Después corregilo y anotá los errores.`],
+      vispera: ["Víspera", "Repaso liviano: tu resumen y los errores de los simulacros. Dormí bien."]
+    }[b.kind];
+    const title = T[0] + (u ? ` · ${u.label}: ${u.title}` : "");
+    return { code, title, short: T[0] + (u ? " · " + u.label : ""), detail: T[1], g, c, u, ex };
+  }
+  function blockActions(b, bi) {
+    const out = [];
+    if (b.kind === "teoria" && bi.u && bi.c) {
+      const unit = bi.c.units.find(x => x.id === b.uid), l = unit && unit.lessons.find(x => x.theory && x.theory.length);
+      if (l) out.push(`<button class="notes-link" data-act="learn" data-id="lesson:${l.id}">${icon("graduation-cap")}apuntes</button>`);
+    }
+    if (b.kind === "app" && bi.c) out.push(`<button class="notes-link" data-act="go" data-r="course" data-id="${bi.g.cid}">${icon("map")}abrir</button>`);
+    if (b.kind === "simulacro" && bi.ex) out.push(`<button class="notes-link" data-act="exam" data-cid="${bi.g.cid}" data-id="${bi.ex.id}">${icon("file-text")}rendir</button>`);
+    return out.join("");
+  }
+  function planBlock(b, opts = {}) {
+    const bi = blockInfo(b);
+    if (!bi.g) return "";
+    const check = opts.check ? `<button class="pl-check ${opts.done ? "on" : ""}" data-act="${opts.done ? "plan-undo" : "plan-done"}" data-key="${esc(b.key)}" data-min="${b.min}" aria-label="${opts.done ? "Desmarcar" : "Marcar como hecho"}">${icon("check")}</button>` : "";
+    return `<div class="pl-block pg${planIdx(b.gid)} ${opts.done ? "done" : ""}">${check}<div class="grow">
+      <div class="pl-meta">${b.at ? `<b>${b.at}</b> · ` : ""}${esc(bi.code)} · ${E.plan.fmt(b.min)}</div>
+      <div class="pl-title">${esc(opts.compact ? bi.short : bi.title)}</div>
+      ${opts.compact ? "" : `<div class="muted small">${esc(bi.detail)}</div><div class="pl-acts">${blockActions(b, bi)}</div>`}</div></div>`;
+  }
+  // lo hecho en un día, agrupado por clave (para hoy y los días pasados de la semana)
+  const doneList = d => Object.entries(S.plan.log[d] || {}).filter(([k, e]) => e.m > 0 && planGoal(k.split("/")[0])).map(([k, e]) => {
+    const [gid, uid, kk] = k.split("/"), kind = uid === "integ" ? "integrar" : /^sim/.test(uid) ? "simulacro" : uid === "vispera" ? "vispera" : { teo: "teoria", pra: "practica", app: "app" }[kk];
+    return { key: k, gid, uid: kind && ["teoria", "practica", "app"].includes(kind) ? uid : null, kind, min: e.m };
+  }).filter(b => b.kind);
+
+  function planHomeCard() {
+    const t = today(), next = S.plan.goals.filter(g => g.date > t && course(g.cid)).sort((a, b) => (a.date < b.date ? -1 : 1))[0];
+    if (!next) return `<button class="course-card" data-act="go" data-r="plan"><span class="course-ico">${icon("calendar")}</span>
+      <span class="grow"><b>Plan de estudio</b><span class="muted small" style="display:block">Cargá tus finales y te armo un cronograma día por día.</span></span>${icon("chevron-right")}</button>`;
+    const pl = planBuild(), bl = pl.days[t] || [], tot = bl.reduce((s, b) => s + b.min, 0), dn = E.plan.doneOn(S.plan, t);
+    const n = E.diffDays(t, next.date);
+    const line = bl.length ? bl.slice(0, 3).map(b => { const bi = blockInfo(b); return `${bi.code} ${bi.short}`; }).join(" · ") + (bl.length > 3 ? " …" : "")
+      : dn ? "¡Lo de hoy ya está hecho!" : "Hoy no hay estudio planificado.";
+    return `<button class="course-card plan-home" data-act="go" data-r="plan"><span class="course-ico">${icon("calendar")}</span>
+      <span class="grow"><b>Plan de hoy${tot ? ` · ${E.plan.fmt(tot)}` : ""}</b><span class="muted small" style="display:block">${esc(line)}</span>
+      <span class="muted small" style="display:block">${esc(goalTxt(next))} ${n === 1 ? "mañana" : `en ${n} días`}</span></span>${icon("chevron-right")}</button>`;
+  }
+
+  function renderPlan() {
+    const p = S.plan, t = today(), pl = planBuild();
+    const future = p.goals.filter(g => g.date > t).sort((a, b) => (a.date < b.date ? -1 : 1)), past = p.goals.filter(g => g.date <= t);
+    const intro = !p.goals.length && !ui.planEdit ? `<section class="card diag-card">${mascot("think")}<div class="grow"><b>Tu cronograma para los finales</b>
+      <p class="muted small" style="margin:4px 0 10px">Cargá la fecha de cada final y cuánto tiempo tenés por semana. Te reparto los temas día por día: teoría, práctica, un repaso corto en la app y simulacros antes de la fecha. Si un día no llegás, lo que falta se reacomoda solo.</p>
+      <button class="btn sm" data-act="plan-new">${icon("plus")}Cargar un final</button></div></section>` : "";
+    // HOY
+    const bl = pl.days[t] || [], dn = doneList(t), tot = bl.reduce((s, b) => s + b.min, 0);
+    const todayCard = `<section class="card pl-today"><div class="row"><h2 class="section-title grow">Hoy · ${dayTxt(t)}</h2>
+        <span class="muted small">${tot ? E.plan.fmt(tot) + " por hacer" : ""}</span></div>
+      ${bl.map(b => planBlock(b, { check: true })).join("")}${dn.map(b => planBlock(b, { check: true, done: true })).join("")}
+      ${!bl.length && !dn.length ? `<p class="muted" style="margin:8px 0 0">${!future.length ? "Todavía no hay nada planificado." : p.off.includes(t) ? "Hoy es día libre." : "Hoy no hay estudio planificado. ¡Descansá!"}</p>` : ""}
+      ${future.length && !p.off.includes(t) && bl.length ? `<button class="linkbtn small" data-act="plan-off" data-d="${t}">Hoy no puedo: pasarlo a los próximos días</button>` : ""}</section>`;
+    // SEMANA
+    const w0 = E.addDays(t, 7 * (ui.planWeek || 0));
+    const week = [0, 1, 2, 3, 4, 5, 6].map(i => {
+      const d = E.addDays(w0, i), isPast = d < t, ex = p.goals.filter(g => g.date === d);
+      const blocks = isPast ? doneList(d).map(b => planBlock(b, { compact: true, done: true })).join("") : d === t ? "" : (pl.days[d] || []).map(b => planBlock(b, { compact: true })).join("");
+      const mins = isPast ? doneList(d).reduce((s, b) => s + b.min, 0) : (pl.days[d] || []).reduce((s, b) => s + b.min, 0);
+      const off = p.off.includes(d);
+      return `<div class="pl-day ${d === t ? "today" : ""} ${isPast ? "past" : ""}"><div class="pl-day-h"><b>${dayTxt(d)}</b><span class="muted small">${mins ? E.plan.fmt(mins) : off ? "libre" : ""}</span></div>
+        ${ex.map(g => `<div class="pl-exam pg${planIdx(g.id)}">${icon("flag")}${esc(goalTxt(g))}</div>`).join("")}
+        ${d === t ? `<div class="muted small">(arriba, en Hoy)</div>` : blocks}
+        ${!isPast && future.length ? `<button class="pl-off ${off ? "on" : ""}" data-act="plan-off" data-d="${d}">${off ? "día libre ✕" : "marcar libre"}</button>` : ""}</div>`;
+    }).join("");
+    const weekCard = future.length || ui.planWeek ? `<section class="card pl-week"><div class="row"><button class="iconbtn" data-act="plan-week" data-v="-1" aria-label="Semana anterior">${icon("chevron-left")}</button>
+        <h2 class="section-title grow" style="text-align:center">${ui.planWeek ? `Del ${dayTxt(w0)} al ${dayTxt(E.addDays(w0, 6))}` : "Próximos 7 días"}</h2>
+        <button class="iconbtn" data-act="plan-week" data-v="1" aria-label="Semana siguiente">${icon("chevron-right")}</button></div>
+      <div class="pl-weekgrid">${week}</div></section>` : "";
+    // FECHAS
+    const sumOf = id => pl.goals.find(x => x.id === id);
+    const goalRow = g => {
+      const sm = sumOf(g.id), n = E.diffDays(t, g.date), c = course(g.cid), ws = pl.warnings.filter(x => x.gid === g.id);
+      return `<div class="pl-goal pg${planIdx(g.id)}"><div class="row"><div class="grow"><span class="subj-code">${esc(c ? c.code : g.cid)}</span> <b>${KIND_TXT[g.kind]}${c ? " · " + esc(c.title) : ""}</b>
+          <div class="muted small">${dayTxt(g.date)} · ${n <= 0 ? "ya pasó" : n === 1 ? "mañana" : `faltan ${n} días`}${g.intensity && g.intensity !== 1 ? ` · ${E.plan.INTENSITY[g.intensity]}` : ""}</div></div>
+          <button class="iconbtn" data-act="plan-edit" data-id="${g.id}" aria-label="Editar">${icon("square-pen")}</button></div>
+        ${sm ? `<div class="bar" style="margin-top:6px"><i style="width:${sm.total ? Math.min(100, sm.done / sm.total * 100) : 0}%"></i></div>
+          <div class="muted small">${E.plan.fmt(sm.done)} hechas de ${E.plan.fmt(sm.total)}${sm.lastStudy ? ` · terminás los temas el ${dayTxt(sm.lastStudy)}` : ""}</div>` : ""}
+        ${ws.map(x => `<p class="pl-warn small">${x.kind === "short" ? `No te alcanza el tiempo: faltan unas ${E.plan.fmt(x.min)}. Sumá horas, sacá días libres o bajá la intensidad.` : "No hay lugar para un simulacro antes de la fecha: sumá tiempo esos días."}</p>`).join("")}</div>`;
+    };
+    const goalsCard = `<section class="card pl-goals"><h2 class="section-title">Tus fechas</h2>
+      ${ui.planEdit ? planEditor() : `${future.map(goalRow).join("") || `<p class="muted small" style="margin:6px 0">Sin fechas cargadas.</p>`}
+        <button class="btn sm ghost block" data-act="plan-new">${icon("plus")}Agregar un final o parcial</button>
+        ${past.length ? `<details class="pl-past"><summary class="muted small">Fechas pasadas (${past.length})</summary>${past.map(goalRow).join("")}</details>` : ""}`}</section>`;
+    // TIEMPO
+    const seg = (act, opts, val) => `<div class="seg">${opts.map(([v, l]) => `<button class="${v === val ? "on" : ""}" data-act="${act}" data-v="${v}">${l}</button>`).join("")}</div>`;
+    const timeCard = `<section class="card pl-time"><h2 class="section-title">Tu tiempo</h2>
+      <p class="muted small" style="margin:4px 0 8px">${E.plan.fmt(E.plan.weekMinutes(p))} por semana.</p>
+      ${seg("plan-mode", [["hours", "Horas por día"], ["slots", "Franjas horarias"]], p.mode)}
+      ${p.mode === "hours" ? `<div class="pl-hours">${E.plan.DAYS.map((dn, d) => `<div class="pl-hrow"><span>${dn}</span>
+          <button class="iconbtn" data-act="plan-h" data-d="${d}" data-v="-0.5" aria-label="Menos">−</button><b>${String(p.hours[d] || 0).replace(".", ",")} h</b>
+          <button class="iconbtn" data-act="plan-h" data-d="${d}" data-v="0.5" aria-label="Más">+</button></div>`).join("")}</div>`
+        : `<div class="pl-slots">${E.plan.DAYS.map((dn, d) => { const sl = p.slots.map((s, i) => [s, i]).filter(([s]) => s.d === d); return sl.length ? `<div class="pl-srow"><span>${dn}</span><div class="pl-chips">${sl.map(([s, i]) => `<button class="pl-chip" data-act="plan-slot-del" data-i="${i}">${s.a}–${s.b} ✕</button>`).join("")}</div></div>` : ""; }).join("") || `<p class="muted small">Todavía no hay franjas.</p>`}
+          <div class="pl-add"><select id="plSlotD" aria-label="Día">${E.plan.DAYS.map((dn, d) => `<option value="${d}">${dn}</option>`).join("")}</select>
+            <input type="time" id="plSlotA" value="18:00" step="900" aria-label="Desde"><input type="time" id="plSlotB" value="20:00" step="900" aria-label="Hasta">
+            <button class="btn sm" data-act="plan-slot-add">${icon("plus")}</button></div></div>`}
+    </section>`;
+    // DÍAS LIBRES
+    const offs = p.off.filter(d => d >= t).sort();
+    const offCard = `<section class="card pl-offs"><h2 class="section-title">Días sin estudio</h2>
+      <p class="muted small" style="margin:4px 0 8px">Feriados, viajes o días en que no podés. El plan los saltea.</p>
+      <div class="pl-chips">${offs.map(d => `<button class="pl-chip" data-act="plan-off" data-d="${d}">${dayTxt(d)} ✕</button>`).join("") || `<span class="muted small">Ninguno.</span>`}</div>
+      <div class="pl-add"><input type="date" id="plOff" min="${t}" aria-label="Día sin estudio"><button class="btn sm ghost" data-act="plan-off-add">${icon("plus")}Agregar</button></div></section>`;
+    app.innerHTML = `<main class="screen">
+      <div class="row"><h1 class="grow" style="font-size:1.4rem">Plan de estudio</h1>
+        ${future.length ? `<button class="btn sm ghost" data-act="plan-ics" title="Bajar el plan para Google Calendar">${icon("calendar")}Calendario</button>` : ""}</div>
+      ${intro}
+      <div class="plan-layout">${future.length ? todayCard + weekCard : ""}${goalsCard}${timeCard}${offCard}</div>
+      ${future.length ? `<p class="muted small" style="text-align:center;margin:0">El botón «Calendario» baja un archivo .ics: en Google Calendar, Configuración → Importar. Conviene importarlo en un calendario aparte («efecen»), así, si cambiás el plan, lo borrás y lo volvés a importar.</p>` : ""}
+    </main>${nav("plan")}`;
+  }
+  // formulario para cargar o editar una fecha (el borrador vive en ui.planEdit)
+  function planEditor() {
+    const e = ui.planEdit, subs = careerSubjects().filter(hasContent), c = course(e.cid);
+    const units = c ? realUnits(c) : [], parciales = (E.exams[e.cid] ? E.exams[e.cid].list : []).filter(x => x.kind === "parcial" && x.id !== "uba");
+    const sel = e.units || units.filter(u => !/extra/i.test(u.program || "")).map(u => u.id);
+    return `<div class="pl-edit">
+      <label class="pl-f"><span>Materia</span><select data-pl="cid">${subs.map(s => `<option value="${s.course}" ${s.course === e.cid ? "selected" : ""}>${esc(s.code)} · ${esc(s.title)}</option>`).join("")}</select></label>
+      <div class="pl-f"><span>Qué rendís</span><div class="seg">${[["final", "Final"], ["parcial", "Parcial"]].map(([v, l]) => `<button class="${e.kind === v ? "on" : ""}" data-act="plan-kind" data-v="${v}">${l}</button>`).join("")}</div></div>
+      <label class="pl-f"><span>Fecha</span><input type="date" data-pl="date" min="${E.addDays(today(), 1)}" value="${e.date || ""}"></label>
+      ${e.kind === "parcial" && parciales.length ? `<label class="pl-f"><span>Simulacro con</span><select data-pl="exam"><option value="">Un examen viejo</option>${parciales.map(x => `<option value="${x.id}" ${e.exam === x.id ? "selected" : ""}>${esc(x.title)} de la app</option>`).join("")}</select></label>` : ""}
+      <div class="pl-f"><span>Unidades que entran</span><div class="pl-units">${units.map((u, i) => `<label><input type="checkbox" data-pl="unit" value="${u.id}" ${sel.includes(u.id) ? "checked" : ""}> ${esc(unitLabel(u, i))}: ${esc(u.title)}</label>`).join("")}</div></div>
+      <div class="pl-f"><span>Intensidad</span><div class="seg">${[[0.7, "Liviana"], [1, "Normal"], [1.4, "A fondo"]].map(([v, l]) => `<button class="${(e.intensity || 1) === v ? "on" : ""}" data-act="plan-int" data-v="${v}">${l}</button>`).join("")}</div>
+        <span class="muted small">El tiempo por unidad sale de cuántas lecciones tiene y de cómo te va en la app: lo que ya dominás pide menos.</span></div>
+      <div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="plan-save">${icon("check")}Guardar</button><button class="btn sm ghost" data-act="plan-cancel">Cancelar</button>
+        ${e.id && planGoal(e.id) ? `<button class="btn sm bad" data-act="plan-del">${icon("trash-2")}Borrar</button>` : ""}</div></div>`;
+  }
+  // re-render sin volver arriba (para los botones de ajuste del plan)
+  function renderKeep() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+  function planChanged() { S.plan.at = Date.now(); save(); renderKeep(); }
+  function planAct(act, el) {
+    const p = S.plan, e = ui.planEdit;
+    switch (act) {
+      case "plan-new": ui.planEdit = { cid: activeCourse(), kind: "final", date: "", units: null, intensity: 1, exam: null }; renderKeep(); break;
+      case "plan-edit": { const g = planGoal(el.dataset.id); ui.planEdit = JSON.parse(JSON.stringify(g)); renderKeep(); break; }
+      case "plan-cancel": ui.planEdit = null; renderKeep(); break;
+      case "plan-kind": e.kind = el.dataset.v; renderKeep(); break;
+      case "plan-int": e.intensity = +el.dataset.v; renderKeep(); break;
+      case "plan-save": {
+        const units = $$("[data-pl=unit]").filter(x => x.checked).map(x => x.value), all = realUnits(course(e.cid)).map(u => u.id);
+        if (!e.date || e.date <= today()) { toast("Elegí una fecha a partir de mañana"); break; }
+        if (!units.length) { toast("Marcá al menos una unidad"); break; }
+        const g = { id: e.id || "g" + Date.now().toString(36), cid: e.cid, kind: e.kind, date: e.date, from: e.from || today(),
+          units: units.length === all.length ? null : units, intensity: e.intensity || 1, exam: e.kind === "parcial" ? e.exam || null : null };
+        const i = p.goals.findIndex(x => x.id === g.id);
+        if (i >= 0) p.goals[i] = g; else p.goals.push(g);
+        ui.planEdit = null; planChanged(); toast("Plan actualizado"); break;
+      }
+      case "plan-del": if (confirm("¿Borrar esta fecha del plan?")) { p.goals = p.goals.filter(g => g.id !== e.id); ui.planEdit = null; planChanged(); } break;
+      case "plan-done": E.plan.mark(p, today(), el.dataset.key, +el.dataset.min, true); save(); Snd.play("correct"); renderKeep(); break;
+      case "plan-undo": E.plan.mark(p, today(), el.dataset.key, 0, false); save(); renderKeep(); break;
+      case "plan-week": ui.planWeek = (ui.planWeek || 0) + +el.dataset.v; renderKeep(); break;
+      case "plan-off": { const d = el.dataset.d; p.off = p.off.includes(d) ? p.off.filter(x => x !== d) : p.off.concat(d).sort(); planChanged(); break; }
+      case "plan-off-add": { const d = $("#plOff").value; if (!d || d < today()) { toast("Elegí un día"); break; } if (!p.off.includes(d)) p.off = p.off.concat(d).sort(); planChanged(); break; }
+      case "plan-mode": p.mode = el.dataset.v; planChanged(); break;
+      case "plan-h": { const d = +el.dataset.d; p.hours = p.hours.slice(); p.hours[d] = Math.max(0, Math.min(12, (p.hours[d] || 0) + +el.dataset.v)); planChanged(); break; }
+      case "plan-slot-add": {
+        const d = +$("#plSlotD").value, a = $("#plSlotA").value, b = $("#plSlotB").value;
+        if (!a || !b || E.plan.toMin(b) - E.plan.toMin(a) < 15) { toast("La franja tiene que durar al menos 15 minutos"); break; }
+        if (p.slots.some(s => s.d === d && E.plan.toMin(a) < E.plan.toMin(s.b) && E.plan.toMin(s.a) < E.plan.toMin(b))) { toast("Se superpone con otra franja de ese día"); break; }
+        p.slots = p.slots.concat({ d, a, b }); planChanged(); break;
+      }
+      case "plan-slot-del": p.slots = p.slots.filter((_, i) => i !== +el.dataset.i); planChanged(); break;
+      case "plan-ics": {
+        const pl = planBuild(), stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+        const txt = E.plan.ics(p, pl, b => { const bi = blockInfo(b); return `${bi.code} · ${bi.title}`; }, g => `${goalTxt(g)}${course(g.cid) ? " · " + course(g.cid).title : ""}`, stamp);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([txt], { type: "text/calendar" }));
+        a.download = "efecen-plan.ics";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        toast("Plan descargado (.ics)"); break;
+      }
+      default: return false;
+    }
+    return true;
+  }
+  document.addEventListener("change", e => {
+    const f = e.target.dataset && e.target.dataset.pl;
+    if (!f || !ui.planEdit) return;
+    if (f === "cid") { ui.planEdit.cid = e.target.value; ui.planEdit.units = null; ui.planEdit.exam = null; renderKeep(); }
+    else if (f === "date") ui.planEdit.date = e.target.value;
+    else if (f === "exam") ui.planEdit.exam = e.target.value || null;
+    else if (f === "unit") ui.planEdit.units = $$("[data-pl=unit]").filter(x => x.checked).map(x => x.value);
+  });
+
   // ---------- LIGA DE LA SEMANA ----------
   // Todos suman con las mismas reglas: el XP de la semana (lunes a domingo) se publica en
   // leagues/{lunes}/players/{uid} (sync.js). Hace falta haber entrado con Google.
@@ -2930,6 +3212,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     if (!el || el.disabled) return;
     const act = el.dataset.act, s = ui.session;
     Snd.init();
+    if (act.startsWith("plan-")) { planAct(act, el); return; }
     switch (act) {
       case "go": go(el.dataset.r, { id: el.dataset.id }); break;
       case "learn": openLearn(el.dataset.id); break;

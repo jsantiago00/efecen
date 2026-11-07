@@ -631,6 +631,102 @@ for (const cid of E.courseOrder) {
   ok(E.store.migrate({ app: "efecen", version: 1, srs: {}, courses: {} }).career === null, w, "migrate: las cuentas viejas quedan sin carrera elegida");
 }
 
+// plan de estudio: el reparto respeta el tiempo de cada día, las fechas y los días libres, y no pierde trabajo
+{
+  const w = "plan", P = E.plan, today = "2026-11-07";
+  const info = g => ({ units: Array.from({ length: g.cid === "a" ? 12 : 8 }, (_, i) => ({ id: "u" + i, label: "U" + (i + 1), lessons: 2 + (i % 3), mastery: i % 4 === 0 ? null : (i % 4) / 4 })), exam: { minutes: g.cid === "a" ? 180 : 120 } });
+  const goals = () => [
+    { id: "g1", cid: "a", kind: "final", date: "2026-12-10", from: today, units: null, intensity: 1 },
+    { id: "g2", cid: "b", kind: "final", date: "2027-02-19", from: today, units: null, intensity: 1.4 },
+    { id: "g3", cid: "b", kind: "parcial", date: "2026-11-20", from: today, units: ["u0", "u1"], intensity: 0.7 },
+    { id: "g0", cid: "a", kind: "final", date: "2026-10-01", from: "2026-09-01", units: null, intensity: 1 } // ya pasó
+  ];
+  const configs = [
+    Object.assign(P.defaults(), { goals: goals(), hours: [2, 2, 2, 2, 2, 3, 0], off: ["2026-11-11", "2026-12-08"] }),
+    Object.assign(P.defaults(), { goals: goals(), hours: [6, 6, 6, 6, 6, 6, 4] }),
+    Object.assign(P.defaults(), { goals: goals(), hours: [1, 0, 1.5, 0, 0.5, 0, 0] }),
+    Object.assign(P.defaults(), { goals: goals(), mode: "slots", off: ["2026-11-14"],
+      slots: [{ d: 0, a: "18:00", b: "20:00" }, { d: 0, a: "21:00", b: "22:30" }, { d: 2, a: "09:00", b: "12:10" }, { d: 5, a: "10:00", b: "13:00" }, { d: 6, a: "16:00", b: "17:00" }] })
+  ];
+  configs.forEach((p, ci) => {
+    const wc = `${w}#${ci}`, pl = P.build(p, today, info, 600), work = {};
+    ok(JSON.stringify(pl) === JSON.stringify(P.build(p, today, info, 600)), wc, "no es determinista");
+    for (const g of p.goals) for (const it of P.work(g, info(g))) work[it.key] = it.min;
+    const sched = {};
+    for (const [d, bl] of Object.entries(pl.days)) {
+      const tot = bl.reduce((t, b) => t + b.min, 0), cap = d === today && p.mode === "slots" ? P.capacity(p, d, 600) : P.capacity(p, d);
+      ok(tot <= cap, wc, `${d}: ${tot} min planificados con ${cap} disponibles`);
+      ok(!p.off.includes(d) || !bl.length, wc, `${d}: hay estudio en un día libre`);
+      for (const b of bl) {
+        const g = p.goals.find(x => x.id === b.gid);
+        ok(b.min > 0 && b.min % 15 === 0, wc, `${d}: bloque de ${b.min} min`);
+        ok(g && d < g.date && g.date > today, wc, `${d}: bloque de ${b.gid} en o después de su fecha`);
+        if (b.kind === "vispera") ok(d >= E.addDays(g.date, -4), wc, "víspera lejos de la fecha");
+        sched[b.key] = (sched[b.key] || 0) + b.min;
+      }
+      if (p.mode === "slots") {
+        const sl = P.slotsOn(p, d, d === today ? 600 : 0);
+        let prev = -1;
+        for (const b of bl) {
+          const t0 = P.toMin(b.at);
+          ok(b.at && sl.some(s => t0 >= s.a && t0 + b.min <= s.b), wc, `${d}: bloque fuera de las franjas (${b.at}, ${b.min} min)`);
+          ok(t0 >= prev, wc, `${d}: bloques superpuestos`);
+          prev = t0 + b.min;
+        }
+      }
+    }
+    ok(!Object.keys(pl.days).some(d => d < today) && !pl.goals.some(x => x.id === "g0"), wc, "planificó una fecha que ya pasó");
+    // si no avisa que falta tiempo, todo el trabajo de esa fecha queda repartido, ni más ni menos
+    for (const s of pl.goals) {
+      const keys = Object.keys(work).filter(k => k.startsWith(s.id + "/"));
+      const got = keys.reduce((t, k) => t + (sched[k] || 0), 0), need = keys.reduce((t, k) => t + work[k], 0);
+      ok(keys.every(k => (sched[k] || 0) <= work[k]), wc, `${s.id}: se planificó de más`);
+      if (!s.short) ok(got === need, wc, `${s.id}: se repartieron ${got} de ${need} min sin avisar`);
+      else ok(got < need && pl.warnings.some(x => x.gid === s.id && x.kind === "short"), wc, `${s.id}: aviso de falta de tiempo inconsistente`);
+    }
+    // marcar lo de hoy como hecho: desaparece de hoy y no vuelve a aparecer más adelante
+    const q = JSON.parse(JSON.stringify(p)), hoy = pl.days[today] || [];
+    for (const b of hoy) P.mark(q, today, b.key, b.min, true, 1000);
+    const pl2 = P.build(q, today, info, 600), sched2 = {};
+    for (const bl of Object.values(pl2.days)) for (const b of bl) sched2[b.key] = (sched2[b.key] || 0) + b.min;
+    ok(!(pl2.days[today] || []).length, wc, "lo de hoy sigue apareciendo después de marcarlo");
+    // marcar solo el primero: hoy queda el resto, ni más ni menos
+    if (hoy.length > 1) {
+      const r = JSON.parse(JSON.stringify(p));
+      P.mark(r, today, hoy[0].key, hoy[0].min, true, 1000);
+      const left = (P.build(r, today, info, 600).days[today] || []).reduce((t, b) => t + b.min, 0);
+      ok(left === hoy.reduce((t, b) => t + b.min, 0) - hoy[0].min, wc, `hoy: después de marcar uno quedan ${left} min`);
+    }
+    for (const b of hoy) ok((sched2[b.key] || 0) + P.doneByKey(q)[b.key] <= (work[b.key] || b.min), wc, `${b.key}: se vuelve a planificar lo hecho`);
+    // el .ics: bloques bien cerrados y líneas cortas
+    const ics = P.ics(p, pl, b => "Estudiar " + b.key + ", con coma; y punto y coma", g => "Final " + g.id, "20261107T120000Z");
+    ok((ics.match(/BEGIN:VEVENT/g) || []).length === (ics.match(/END:VEVENT/g) || []).length && /^BEGIN:VCALENDAR\r\n[\s\S]*END:VCALENDAR\r\n$/.test(ics), wc, ".ics mal armado");
+    ok(ics.split("\r\n").every(l => l.length <= 75), wc, ".ics con líneas de más de 75 caracteres");
+    ok(!/[^\\];/.test(ics.split("\r\n").filter(l => l.startsWith("SUMMARY")).join("")), wc, ".ics: punto y coma sin escapar");
+  });
+  // una fecha con poco tiempo avisa; con tiempo de sobra, los simulacros caen antes de la fecha
+  {
+    const p = Object.assign(P.defaults(), { hours: [0.5, 0.5, 0.5, 0.5, 0.5, 0, 0], goals: [{ id: "g1", cid: "a", kind: "final", date: "2026-11-21", from: today, units: null, intensity: 1 }] });
+    ok(P.build(p, today, info).warnings.some(x => x.kind === "short"), w, "no avisa que no alcanza el tiempo");
+    const p2 = Object.assign(P.defaults(), { hours: [8, 8, 8, 8, 8, 8, 8], goals: [{ id: "g1", cid: "a", kind: "final", date: "2027-01-30", from: today, units: null, intensity: 1 }] });
+    const pl = P.build(p2, today, info), sims = Object.entries(pl.days).filter(([, bl]) => bl.some(b => b.kind === "simulacro")).map(([d]) => d);
+    ok(sims.length === 2 && sims.every(d => d < "2027-01-30" && d >= "2027-01-25"), w, "simulacros fuera de lugar: " + sims.join());
+    ok((pl.days["2027-01-29"] || []).every(b => b.kind === "vispera"), w, "la víspera tiene temas nuevos");
+  }
+  // sincronización del plan: la configuración del que la cambió último y lo hecho entrada por entrada
+  {
+    const D = E.store.defaults, a = D(), b = D();
+    a.lastActive = "2026-11-08"; b.lastActive = "2026-11-07";
+    a.plan = Object.assign(P.defaults(), { at: 100, hours: [1, 1, 1, 1, 1, 1, 1], log: { "2026-11-07": { "g1/u0/teo": { m: 60, t: 5 }, "g1/u0/pra": { m: 0, t: 9 } } } });
+    b.plan = Object.assign(P.defaults(), { at: 200, hours: [3, 3, 3, 3, 3, 3, 3], log: { "2026-11-07": { "g1/u0/teo": { m: 30, t: 4 }, "g1/u0/pra": { m: 45, t: 8 } }, "2026-11-06": { "g1/x": { m: 15, t: 1 } } } });
+    const m = E.store.merge(a, b), m2 = E.store.merge(b, a), canon = x => JSON.stringify(x, (k, v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([p], [q]) => (p < q ? -1 : 1))) : v));
+    ok(m.plan.hours[0] === 3 && m2.plan.hours[0] === 3, w, "merge: la configuración no es la cambiada último");
+    ok(m.plan.log["2026-11-07"]["g1/u0/teo"].m === 60 && m.plan.log["2026-11-07"]["g1/u0/pra"].m === 0 && m.plan.log["2026-11-06"]["g1/x"].m === 15, w, "merge: lo hecho no se combina entrada por entrada");
+    ok(canon(m.plan) === canon(m2.plan) && canon(E.store.merge(m, m)) === canon(m) && canon(E.store.merge(m, a)) === canon(m), w, "merge del plan: depende del orden o no es idempotente");
+    ok(E.store.migrate({ app: "efecen", version: 1, srs: {}, courses: {} }).plan.mode === "hours", w, "migrate: las cuentas viejas no reciben el plan vacío");
+  }
+}
+
 // liga semanal: semana de lunes a domingo, XP de la semana y nombre visible
 {
   const w = "liga";
