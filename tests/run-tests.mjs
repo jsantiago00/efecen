@@ -727,6 +727,32 @@ for (const cid of E.courseOrder) {
   }
 }
 
+// calendario académico: fechas válidas, turnos ordenados y cada mesa dentro de su llamado
+{
+  const w = "calendario", C = E.calendar, isDate = d => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && E.addDays(d, 0) === d;
+  ok(C.turnos.length > 0 && C.source, w, "no hay turnos o falta la fuente");
+  ok(new Set(C.turnos.map(t => t.id)).size === C.turnos.length, w, "ids de turno repetidos");
+  for (const t of C.turnos) {
+    if (t.days) ok(t.days.length && t.days.every(isDate) && t.days.every((d, i) => !i || d > t.days[i - 1]), w, `${t.id}: días inválidos o desordenados`);
+    else ok(isDate(t.from) && isDate(t.to) && t.from <= t.to, w, `${t.id}: rango inválido`);
+    ok(t.label, w, `${t.id}: sin nombre`);
+  }
+  for (const [cid, m] of Object.entries(C.mesas)) {
+    ok(E.courses[cid], w, `mesas: materia inexistente ${cid}`);
+    for (const tid of Object.keys(m)) {
+      const t = C.turnos.find(x => x.id === tid), mi = E.mesaInfo(cid, tid), d = mi.date;
+      ok(t && isDate(d) && (t.days ? t.days.includes(d) : d >= t.from && d <= t.to), w, `mesas: ${cid} ${tid} ${d} fuera de su llamado`);
+      if (mi.time) ok(/^\d{1,2}:\d{2}$/.test(mi.time), w, `mesas: ${cid} ${tid} hora inválida`);
+      if (mi.insc) ok(isDate(mi.insc[0]) && isDate(mi.insc[1]) && mi.insc[0] <= mi.insc[1] && mi.insc[1] < d, w, `mesas: ${cid} ${tid} inscripción inválida`);
+    }
+  }
+  ok(C.feriados.every(f => isDate(f.date) && f.name), w, "feriado inválido");
+  ok(C.receso.every(r => isDate(r.from) && isDate(r.to) && r.from <= r.to && r.name), w, "receso inválido");
+  const t = C.turnos.find(x => !x.days);
+  ok(E.turnoDate("m101", t.id, E.addDays(t.from, -10)) === t.from && E.turnoDate("m101", t.id, t.from) === E.addDays(t.from, 1) && E.turnoDate("m101", t.id, t.to) === null, w, "la fecha propuesta para un turno está mal");
+  ok(E.dayInfo("2026-12-25").feriado && E.dayInfo("2026-12-01").turno && !E.dayInfo("2026-12-10").turno, w, "dayInfo no reconoce feriados o mesas");
+}
+
 // liga semanal: semana de lunes a domingo, XP de la semana y nombre visible
 {
   const w = "liga";

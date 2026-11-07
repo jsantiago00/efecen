@@ -6,3 +6,6 @@ __pycache__/
 
 # Bibliografía de referencia local (17 GB, material con copyright): no se versiona
 Bibliografía - Cs. Físicas - FCEN - UBA/
+
+# PDF del calendario académico y de las mesas que pasa el usuario (los datos van en content/calendario.js)
+calendario academico/

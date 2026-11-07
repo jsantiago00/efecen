@@ -620,6 +620,9 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
 .pl-day .pl-title { font-size: .85rem; line-height: 1.25; }
 .pl-exam { display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: .8rem; color: var(--on-primary); background: var(--pc); border-radius: 8px; padding: 3px 8px; margin-top: 4px; }
 .pl-exam .ic { width: 14px; height: 14px; }
+.pl-mesa { margin: 6px 0 0; font-weight: 700; color: var(--primary); }
+.pl-mesa .ic { width: 14px; height: 14px; vertical-align: -2px; }
+.pl-cal { font-size: .72rem; font-weight: 800; color: var(--fire); }
 .pl-off { align-self: flex-start; background: none; border: 0; padding: 4px 0 0; font-size: .75rem; font-weight: 800; color: var(--muted); }
 .pl-off.on { color: var(--bad); }
 .pl-goal { border-left: 5px solid var(--pc); padding: 4px 0 4px 10px; margin: 10px 0; }
@@ -793,6 +796,7 @@ body.board-split .nav { padding-bottom: 0; }
 
 <!-- ================= CONTENIDO (datos separados de la lógica) ================= -->
 <script src="content/carrera.js"></script>
+<script src="content/calendario.js"></script>
 <script src="content/m101-calculo1.js"></script>
 <script src="content/m104-algebra-lineal.js"></script>
 <script src="content/f101-fisica1.js"></script>
@@ -2496,6 +2500,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const bl = pl.days[t] || [], dn = doneList(t), tot = bl.reduce((s, b) => s + b.min, 0);
     const todayCard = `<section class="card pl-today"><div class="row"><h2 class="section-title grow">Hoy · ${dayTxt(t)}</h2>
         <span class="muted small">${tot ? E.plan.fmt(tot) + " por hacer" : ""}</span></div>
+      ${E.inscOn(t).filter(x => p.goals.some(g => g.cid === x.cid && g.turno === x.tid && g.date === x.mesa.date && g.date > t)).map(x => `<p class="pl-mesa small">${icon("flag")} Inscribite al ${esc(goalTxt(p.goals.find(g => g.cid === x.cid && g.turno === x.tid)))} en SIU Guaraní: ${t === x.mesa.insc[1] ? "hoy es el último día" : `tenés hasta el ${dayTxt(x.mesa.insc[1])}`}.</p>`).join("")}
       ${bl.map(b => planBlock(b, { check: true })).join("")}${dn.map(b => planBlock(b, { check: true, done: true })).join("")}
       ${!bl.length && !dn.length ? `<p class="muted" style="margin:8px 0 0">${!future.length ? "Todavía no hay nada planificado." : p.off.includes(t) ? "Hoy es día libre." : "Hoy no hay estudio planificado. ¡Descansá!"}</p>` : ""}
       ${future.length && !p.off.includes(t) && bl.length ? `<button class="linkbtn small" data-act="plan-off" data-d="${t}">Hoy no puedo: pasarlo a los próximos días</button>` : ""}</section>`;
@@ -2507,6 +2512,8 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       const mins = isPast ? doneList(d).reduce((s, b) => s + b.min, 0) : (pl.days[d] || []).reduce((s, b) => s + b.min, 0);
       const off = p.off.includes(d);
       return `<div class="pl-day ${d === t ? "today" : ""} ${isPast ? "past" : ""}"><div class="pl-day-h"><b>${dayTxt(d)}</b><span class="muted small">${mins ? E.plan.fmt(mins) : off ? "libre" : ""}</span></div>
+        ${(inf => (inf.feriado ? `<div class="pl-cal">Feriado: ${esc(inf.feriado.name)}</div>` : "") + (inf.turno ? `<div class="pl-cal">Mesas de examen</div>` : ""))(E.dayInfo(d))}
+        ${E.inscOn(d).filter(x => p.goals.some(g => g.cid === x.cid && g.turno === x.tid && g.date === x.mesa.date && g.date > t)).map(x => `<div class="pl-cal">Inscripción: ${esc(course(x.cid).code)}${d === x.mesa.insc[1] ? " (último día)" : ""}</div>`).join("")}
         ${ex.map(g => `<div class="pl-exam pg${planIdx(g.id)}">${icon("flag")}${esc(goalTxt(g))}</div>`).join("")}
         ${d === t ? `<div class="muted small">(arriba, en Hoy)</div>` : blocks}
         ${!isPast && future.length ? `<button class="pl-off ${off ? "on" : ""}" data-act="plan-off" data-d="${d}">${off ? "día libre ✕" : "marcar libre"}</button>` : ""}</div>`;
@@ -2520,10 +2527,11 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const goalRow = g => {
       const sm = sumOf(g.id), n = E.diffDays(t, g.date), c = course(g.cid), ws = pl.warnings.filter(x => x.gid === g.id);
       return `<div class="pl-goal pg${planIdx(g.id)}"><div class="row"><div class="grow"><span class="subj-code">${esc(c ? c.code : g.cid)}</span> <b>${KIND_TXT[g.kind]}${c ? " · " + esc(c.title) : ""}</b>
-          <div class="muted small">${dayTxt(g.date)} · ${n <= 0 ? "ya pasó" : n === 1 ? "mañana" : `faltan ${n} días`}${g.intensity && g.intensity !== 1 ? ` · ${E.plan.INTENSITY[g.intensity]}` : ""}</div></div>
+          <div class="muted small">${dayTxt(g.date)}${(tu => (tu ? ` (${esc(tu.label)})` : ""))(E.calendar.turnos.find(x => x.id === g.turno))} · ${n <= 0 ? "ya pasó" : n === 1 ? "mañana" : `faltan ${n} días`}${g.intensity && g.intensity !== 1 ? ` · ${E.plan.INTENSITY[g.intensity]}` : ""}</div></div>
           <button class="iconbtn" data-act="plan-edit" data-id="${g.id}" aria-label="Editar">${icon("square-pen")}</button></div>
         ${sm ? `<div class="bar" style="margin-top:6px"><i style="width:${sm.total ? Math.min(100, sm.done / sm.total * 100) : 0}%"></i></div>
           <div class="muted small">${E.plan.fmt(sm.done)} hechas de ${E.plan.fmt(sm.total)}${sm.lastStudy ? ` · terminás los temas el ${dayTxt(sm.lastStudy)}` : ""}</div>` : ""}
+        ${(m => (m && m.date === g.date && g.date > t ? `<div class="pl-mesa small">${m.time ? `Mesa a las ${esc(m.time)} h. ` : ""}${m.insc ? (t > m.insc[1] ? "La inscripción ya cerró." : `Inscribite en SIU Guaraní ${t < m.insc[0] ? `del ${dayTxt(m.insc[0])} (desde las 10 h)` : "ya,"} hasta el ${dayTxt(m.insc[1])}.`) : ""}${m.note ? " " + esc(m.note) : ""}</div>` : ""))(g.turno ? E.mesaInfo(g.cid, g.turno) : null)}
         ${ws.map(x => `<p class="pl-warn small">${x.kind === "short" ? `No te alcanza el tiempo: faltan unas ${E.plan.fmt(x.min)}. Sumá horas, sacá días libres o bajá la intensidad.` : "No hay lugar para un simulacro antes de la fecha: sumá tiempo esos días."}</p>`).join("")}</div>`;
     };
     const goalsCard = `<section class="card pl-goals"><h2 class="section-title">Tus fechas</h2>
@@ -2544,11 +2552,13 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
             <button class="btn sm" data-act="plan-slot-add">${icon("plus")}</button></div></div>`}
     </section>`;
     // DÍAS LIBRES
-    const offs = p.off.filter(d => d >= t).sort();
+    const offs = p.off.filter(d => d >= t).sort(), lastG = future.length ? future[future.length - 1].date : t;
+    const ferNext = E.calendar.feriados.filter(f => f.date >= t && f.date < lastG && !p.off.includes(f.date));
     const offCard = `<section class="card pl-offs"><h2 class="section-title">Días sin estudio</h2>
       <p class="muted small" style="margin:4px 0 8px">Feriados, viajes o días en que no podés. El plan los saltea.</p>
       <div class="pl-chips">${offs.map(d => `<button class="pl-chip" data-act="plan-off" data-d="${d}">${dayTxt(d)} ✕</button>`).join("") || `<span class="muted small">Ninguno.</span>`}</div>
-      <div class="pl-add"><input type="date" id="plOff" min="${t}" aria-label="Día sin estudio"><button class="btn sm ghost" data-act="plan-off-add">${icon("plus")}Agregar</button></div></section>`;
+      <div class="pl-add"><input type="date" id="plOff" min="${t}" aria-label="Día sin estudio"><button class="btn sm ghost" data-act="plan-off-add">${icon("plus")}Agregar</button>
+        ${ferNext.length ? `<button class="btn sm ghost" data-act="plan-off-fer" title="${esc(ferNext.map(f => `${dayTxt(f.date)}: ${f.name}`).join(" · "))}">${icon("calendar")}Sumar los feriados (${ferNext.length})</button>` : ""}</div></section>`;
     app.innerHTML = `<main class="screen">
       <div class="row"><h1 class="grow" style="font-size:1.4rem">Plan de estudio</h1>
         ${future.length ? `<button class="btn sm ghost" data-act="plan-ics" title="Bajar el plan para Google Calendar">${icon("calendar")}Calendario</button>` : ""}</div>
@@ -2562,10 +2572,13 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const e = ui.planEdit, subs = careerSubjects().filter(hasContent), c = course(e.cid);
     const units = c ? realUnits(c) : [], parciales = (E.exams[e.cid] ? E.exams[e.cid].list : []).filter(x => x.kind === "parcial" && x.id !== "uba");
     const sel = e.units || units.filter(u => !/extra/i.test(u.program || "")).map(u => u.id);
+    const turnos = E.calendar.turnos.filter(x => E.turnoTo(x) > today());
     return `<div class="pl-edit">
       <label class="pl-f"><span>Materia</span><select data-pl="cid">${subs.map(s => `<option value="${s.course}" ${s.course === e.cid ? "selected" : ""}>${esc(s.code)} · ${esc(s.title)}</option>`).join("")}</select></label>
       <div class="pl-f"><span>Qué rendís</span><div class="seg">${[["final", "Final"], ["parcial", "Parcial"]].map(([v, l]) => `<button class="${e.kind === v ? "on" : ""}" data-act="plan-kind" data-v="${v}">${l}</button>`).join("")}</div></div>
-      <label class="pl-f"><span>Fecha</span><input type="date" data-pl="date" min="${E.addDays(today(), 1)}" value="${e.date || ""}"></label>
+      ${turnos.length ? `<label class="pl-f"><span>Turno</span><select data-pl="turno"><option value="">Otra fecha</option>${turnos.map(x => `<option value="${x.id}" ${e.turno === x.id ? "selected" : ""}>${esc(x.label)} · ${x.days ? x.days.map(fmtShort).join(", ") : `${fmtShort(x.from)} al ${fmtShort(x.to)}`}</option>`).join("")}</select></label>` : ""}
+      <label class="pl-f"><span>Fecha</span><input type="date" data-pl="date" min="${E.addDays(today(), 1)}" value="${e.date || ""}">
+        ${e.turno ? `<span class="muted small">${E.mesaDate(e.cid, e.turno) ? "Es la fecha de la mesa que publicó la facultad." : "Todavía no tengo el día de la mesa de esta materia: puse el primer día del llamado. Cambiala cuando lo sepas."}</span>` : ""}</label>
       ${e.kind === "parcial" && parciales.length ? `<label class="pl-f"><span>Simulacro con</span><select data-pl="exam"><option value="">Un examen viejo</option>${parciales.map(x => `<option value="${x.id}" ${e.exam === x.id ? "selected" : ""}>${esc(x.title)} de la app</option>`).join("")}</select></label>` : ""}
       <div class="pl-f"><span>Unidades que entran</span><div class="pl-units">${units.map((u, i) => `<label><input type="checkbox" data-pl="unit" value="${u.id}" ${sel.includes(u.id) ? "checked" : ""}> ${esc(unitLabel(u, i))}: ${esc(u.title)}</label>`).join("")}</div></div>
       <div class="pl-f"><span>Intensidad</span><div class="seg">${[[0.7, "Liviana"], [1, "Normal"], [1.4, "A fondo"]].map(([v, l]) => `<button class="${(e.intensity || 1) === v ? "on" : ""}" data-act="plan-int" data-v="${v}">${l}</button>`).join("")}</div>
@@ -2589,7 +2602,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
         if (!e.date || e.date <= today()) { toast("Elegí una fecha a partir de mañana"); break; }
         if (!units.length) { toast("Marcá al menos una unidad"); break; }
         const g = { id: e.id || "g" + Date.now().toString(36), cid: e.cid, kind: e.kind, date: e.date, from: e.from || today(),
-          units: units.length === all.length ? null : units, intensity: e.intensity || 1, exam: e.kind === "parcial" ? e.exam || null : null };
+          units: units.length === all.length ? null : units, intensity: e.intensity || 1, exam: e.kind === "parcial" ? e.exam || null : null, turno: e.turno || null };
         const i = p.goals.findIndex(x => x.id === g.id);
         if (i >= 0) p.goals[i] = g; else p.goals.push(g);
         ui.planEdit = null; planChanged(); toast("Plan actualizado"); break;
@@ -2600,6 +2613,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "plan-week": ui.planWeek = (ui.planWeek || 0) + +el.dataset.v; renderKeep(); break;
       case "plan-off": { const d = el.dataset.d; p.off = p.off.includes(d) ? p.off.filter(x => x !== d) : p.off.concat(d).sort(); planChanged(); break; }
       case "plan-off-add": { const d = $("#plOff").value; if (!d || d < today()) { toast("Elegí un día"); break; } if (!p.off.includes(d)) p.off = p.off.concat(d).sort(); planChanged(); break; }
+      case "plan-off-fer": { const lastG = p.goals.reduce((m, g) => (g.date > m ? g.date : m), today()); p.off = [...new Set(p.off.concat(E.calendar.feriados.filter(f => f.date >= today() && f.date < lastG).map(f => f.date)))].sort(); planChanged(); toast("Feriados sumados como días sin estudio"); break; }
       case "plan-mode": p.mode = el.dataset.v; planChanged(); break;
       case "plan-h": { const d = +el.dataset.d; p.hours = p.hours.slice(); p.hours[d] = Math.max(0, Math.min(12, (p.hours[d] || 0) + +el.dataset.v)); planChanged(); break; }
       case "plan-slot-add": {
@@ -2626,8 +2640,9 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   document.addEventListener("change", e => {
     const f = e.target.dataset && e.target.dataset.pl;
     if (!f || !ui.planEdit) return;
-    if (f === "cid") { ui.planEdit.cid = e.target.value; ui.planEdit.units = null; ui.planEdit.exam = null; renderKeep(); }
-    else if (f === "date") ui.planEdit.date = e.target.value;
+    if (f === "cid") { const pe = ui.planEdit; pe.cid = e.target.value; pe.units = null; pe.exam = null; if (pe.turno) pe.date = E.turnoDate(pe.cid, pe.turno, today()) || pe.date; renderKeep(); }
+    else if (f === "turno") { const pe = ui.planEdit; pe.turno = e.target.value || null; if (pe.turno) pe.date = E.turnoDate(pe.cid, pe.turno, today()) || pe.date; renderKeep(); }
+    else if (f === "date") { ui.planEdit.date = e.target.value; const t = E.calendar.turnos.find(x => x.id === ui.planEdit.turno); if (t && !(t.days ? t.days.includes(e.target.value) : e.target.value >= t.from && e.target.value <= t.to)) { ui.planEdit.turno = null; renderKeep(); } }
     else if (f === "exam") ui.planEdit.exam = e.target.value || null;
     else if (f === "unit") ui.planEdit.units = $$("[data-pl=unit]").filter(x => x.checked).map(x => x.value);
   });

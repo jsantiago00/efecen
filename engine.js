@@ -639,6 +639,44 @@
     return Object.assign({ seed: r.int(1, 1e9) }, r.pick(pool));
   };
 
+  // ---------- Calendario académico (content/calendario.js) ----------
+  // Turnos de examen (un rango `from`–`to` o días sueltos `days`), la fecha de mesa de cada materia en cada
+  // llamado (`mesas[cid][turno]`, cuando se conoce), feriados y recesos. Vale para todos los usuarios.
+  E.calendar = { source: "", turnos: [], mesas: {}, feriados: [], receso: [] };
+  E.turnoFrom = t => (t.days ? t.days[0] : t.from);
+  E.turnoTo = t => (t.days ? t.days[t.days.length - 1] : t.to);
+  E.registerCalendar = def => {
+    const C = E.calendar;
+    if (def.source) C.source = def.source;
+    for (const t of def.turnos || []) { const i = C.turnos.findIndex(x => x.id === t.id); if (i >= 0) C.turnos[i] = t; else C.turnos.push(t); }
+    C.turnos.sort((a, b) => (E.turnoFrom(a) < E.turnoFrom(b) ? -1 : 1));
+    for (const [cid, m] of Object.entries(def.mesas || {})) C.mesas[cid] = Object.assign(C.mesas[cid] || {}, m);
+    C.feriados = C.feriados.concat(def.feriados || []).sort((a, b) => (a.date < b.date ? -1 : 1));
+    C.receso = C.receso.concat(def.receso || []);
+  };
+  // la mesa de una materia en un llamado: { date, time, insc: [desde, hasta], note } (o una fecha suelta)
+  E.mesaInfo = (cid, tid) => { const m = (E.calendar.mesas[cid] || {})[tid]; return !m ? null : typeof m === "string" ? { date: m } : m; };
+  E.mesaDate = (cid, tid) => { const m = E.mesaInfo(cid, tid); return m ? m.date : null; };
+  // las mesas con inscripción abierta un día: [{ cid, tid, mesa }]
+  E.inscOn = d => Object.entries(E.calendar.mesas).flatMap(([cid, ms]) => Object.keys(ms).map(tid => ({ cid, tid, mesa: E.mesaInfo(cid, tid) })))
+    .filter(x => x.mesa.insc && d >= x.mesa.insc[0] && d <= x.mesa.insc[1]);
+  // la fecha que se propone al elegir un turno: la de la mesa de la materia o, si no se sabe, el primer día del
+  // llamado a partir de `after` (sin contar ese día)
+  E.turnoDate = (cid, tid, after) => {
+    const t = E.calendar.turnos.find(x => x.id === tid);
+    if (!t) return null;
+    const m = E.mesaDate(cid, tid);
+    if (m && m > after) return m;
+    if (t.days) return t.days.find(d => d > after) || null;
+    const d = t.from > after ? t.from : E.addDays(after, 1);
+    return d <= t.to ? d : null;
+  };
+  E.dayInfo = d => ({
+    feriado: E.calendar.feriados.find(f => f.date === d) || null,
+    turno: E.calendar.turnos.find(t => (t.days ? t.days.includes(d) : d >= t.from && d <= t.to)) || null,
+    receso: E.calendar.receso.find(r => d >= r.from && d <= r.to) || null
+  });
+
   // ---------- Plan de estudio ----------
   // Reparte el estudio de los finales (y parciales) que cargues entre hoy y cada fecha, según el tiempo que
   // tengas cada día. Es para estudiar fuera de la app: teoría, guía de ejercicios y simulacros, más un repaso
@@ -744,18 +782,20 @@
       const last = goals.length ? goals[goals.length - 1].date : today;
       for (let d = today; d < last; d = E.addDays(d, 1)) { days[d] = []; cap[d] = d !== today ? PL.capacity(p, d) : todayLeft != null ? Math.min(todayLeft, PL.capacity(p, d, p.mode === "slots" ? now : 0)) : PL.capacity(p, d, p.mode === "slots" ? now : 0); cap[d] = Math.max(0, f15(cap[d])); }
       const put = (d, it, g, min) => { days[d].push({ key: it.key, gid: g.id, kind: it.kind, uid: it.uid || null, min }); cap[d] -= min; };
-      // 1) los días fijos de cada fecha (si ese día no hay lugar, el anterior con lugar, hasta 3 días antes)
-      const fixedOf = {};
+      // 1) los días fijos de cada fecha, del último al primero: la víspera y, antes, los simulacros, cada uno en
+      // un día anterior al siguiente (si el previsto no tiene lugar, hasta 3 días antes)
+      const eveOf = {};
       for (const g of goals) {
         const inf = info(g);
-        fixedOf[g.id] = [];
-        for (const it of PL.fixed(g, inf.exam)) {
+        let limit = g.date;
+        for (const it of PL.fixed(g, inf.exam).reverse()) {
           const left = it.min - (done[it.key] || 0);
           if (left <= 0 || it.day < today) continue;
           // el día previsto si entra entero; si no, hasta 3 días antes; si en ninguno entra, el de más lugar
           let d = null, best = null;
+          const from = it.day < limit ? it.day : E.addDays(limit, -1);
           for (let k = 0; k <= 3; k++) {
-            const c = E.addDays(it.day, -k);
+            const c = E.addDays(from, -k);
             if (c < today) break;
             if (cap[c] >= left) { d = c; break; }
             if (cap[c] >= 45 && (!best || cap[c] > cap[best])) best = c;
@@ -763,7 +803,8 @@
           d = d || best;
           if (!d) { warnings.push({ gid: g.id, kind: "nofixed", what: it.kind }); continue; }
           put(d, it, g, Math.min(left, cap[d]));
-          fixedOf[g.id].push(d);
+          limit = d;
+          if (it.kind === "vispera") eveOf[g.id] = d;
         }
       }
       // 2) el estudio de cada fecha, la más cercana primero, parejo entre hoy y sus días fijos
@@ -771,8 +812,8 @@
         const inf = info(g), items = PL.work(g, inf), fx = PL.fixed(g, inf.exam);
         const total = items.reduce((t, it) => t + it.min, 0) + fx.reduce((t, it) => t + it.min, 0);
         const doneG = Object.entries(done).filter(([k]) => k.startsWith(g.id + "/")).reduce((t, [, m]) => t + m, 0);
-        // todos los días hasta la fecha, menos la víspera (los simulacros ya ocupan su lugar)
-        const eve = E.addDays(g.date, -1), win = Object.keys(days).filter(d => d < g.date && (d !== eve || d === today)).sort();
+        // todos los días hasta la víspera (los simulacros ya ocupan su lugar); sin víspera, hasta la fecha
+        const end = eveOf[g.id] && eveOf[g.id] > today ? eveOf[g.id] : g.date, win = Object.keys(days).filter(d => d < end).sort();
         const queue = items.map(it => Object.assign({}, it, { left: it.min - (done[it.key] || 0) })).filter(it => it.left > 0);
         const need = queue.reduce((t, it) => t + it.left, 0);
         const { alloc, short } = PL.spread(win, cap, need, todayLeft != null ? today : null);
@@ -843,7 +884,12 @@
             `Estudiar ${H_hours(tot)}`, bl.map(b => `• ${label(b)} (${H_hours(b.min)})`).join("\n"));
         }
       }
-      for (const g of p.goals) ev(`${D(g.date)}-${g.id}`, `DTSTART;VALUE=DATE:${D(g.date)}`, `DTEND;VALUE=DATE:${D(E.addDays(g.date, 1))}`, goalLabel(g), "");
+      for (const g of p.goals) {
+        const m = g.turno ? E.mesaInfo(g.cid, g.turno) : null;
+        ev(`${D(g.date)}-${g.id}`, `DTSTART;VALUE=DATE:${D(g.date)}`, `DTEND;VALUE=DATE:${D(E.addDays(g.date, 1))}`, goalLabel(g) + (m && m.date === g.date && m.time ? ` · ${m.time} h` : ""), (m && m.note) || "");
+        if (m && m.insc && m.date === g.date) ev(`${D(m.insc[0])}-${g.id}-insc`, `DTSTART;VALUE=DATE:${D(m.insc[0])}`, `DTEND;VALUE=DATE:${D(E.addDays(m.insc[1], 1))}`,
+          `Inscribirse: ${goalLabel(g)} (SIU Guaraní)`, `La inscripción abre el ${m.insc[0]} a las 10 h y cierra el ${m.insc[1]}.`);
+      }
       L.push("END:VCALENDAR");
       // las líneas de más de 75 caracteres se parten (RFC 5545)
       return L.map(l => (l.length <= 72 ? l : l.match(/.{1,72}/gu).join("\r\n "))).join("\r\n") + "\r\n";
