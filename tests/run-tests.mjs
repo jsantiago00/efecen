@@ -662,6 +662,46 @@ for (const cid of E.courseOrder) {
   }
 }
 
+// memotest: la fórmula de cada apunte se puede dibujar, y cada materia arma partidas sin fórmulas repetidas
+{
+  const w = "memotest";
+  for (const id of Object.keys(E.cards)) { const f = E.cardFormula(E.cards[id]); if (f) checkTexStr(`${w} ${id}`, f); }
+  for (const cid of E.courseOrder) {
+    const c = E.courses[cid], ids = c.cardOrder || Object.keys(c.theory.cards);
+    const a = E.memoPairs(ids, 7), b = E.memoPairs(ids, 7), d = E.memoPairs(ids, 8);
+    ok(a && a.length === 6, `${w} ${cid}`, "la materia no llega a 6 apuntes con fórmula");
+    if (!a) continue;
+    ok(JSON.stringify(a) === JSON.stringify(b), `${w} ${cid}`, "la misma semilla da partidas distintas");
+    ok(JSON.stringify(a) !== JSON.stringify(d), `${w} ${cid}`, "semillas distintas dan la misma partida");
+    ok(new Set(a.map(p => p.formula)).size === 6 && new Set(a.map(p => p.id)).size === 6, `${w} ${cid}`, "hay parejas repetidas");
+    ok(a.every(p => E.cards[p.id].course === cid && p.title === E.cards[p.id].title), `${w} ${cid}`, "una pareja no es de la materia");
+  }
+  ok(E.memoPairs([], 1) === null, w, "sin apuntes debe devolver null");
+  const D2 = () => E.store.defaults(), ma = D2(), mb = D2();
+  ma.courses.m101 = { lessons: {}, diag: null, memo: 9 }; mb.courses.m101 = { lessons: {}, diag: null, memo: 12 };
+  ok(E.store.merge(ma, mb).courses.m101.memo === 9 && E.store.merge(mb, ma).courses.m101.memo === 9 && E.store.merge(ma, D2()).courses.m101.memo === 9, w, "merge: el récord debe ser la menor cantidad de intentos");
+}
+
+// avisos: la inscripción, la víspera y el día de cada fecha del plan, dentro de la ventana pedida
+{
+  const w = "avisos", lab = g => "Final de " + g.cid;
+  const saved = E.calendar.mesas;
+  E.calendar.mesas = { m101: { tx: { date: "2026-11-27", time: "9:00", insc: ["2026-11-16", "2026-11-24"] } } };
+  const plan = { goals: [{ id: "g1", cid: "m101", kind: "final", date: "2026-11-27", turno: "tx" }, { id: "g2", cid: "f101", kind: "final", date: "2026-12-04" }, { id: "g0", cid: "m104", kind: "final", date: "2026-11-01" }] };
+  const r = E.reminders(plan, "2026-11-11", lab, 30), ids = r.map(a => a.id);
+  ok(ids.join() === ["2026-11-16/g1/insc-abre", "2026-11-23/g1/insc-falta1", "2026-11-24/g1/insc-cierra", "2026-11-26/g1/vispera", "2026-11-27/g1/dia", "2026-12-03/g2/vispera", "2026-12-04/g2/dia"].join(), w, "no salen los avisos esperados, en orden: " + ids.join());
+  ok(r.every(a => a.title && a.body && a.date >= "2026-11-11" && a.id.startsWith(a.date + "/")), w, "un aviso no tiene título, texto o fecha válida");
+  ok(r.find(a => a.id.endsWith("g1/dia")).body.includes("9:00") && !r.find(a => a.id.endsWith("g2/dia")).body.includes(" a las "), w, "la hora de la mesa va solo si se conoce");
+  ok(new Set(ids).size === ids.length, w, "hay avisos con el mismo id");
+  ok(E.reminders(plan, "2026-11-11", lab, 5).map(a => a.id).join() === "2026-11-16/g1/insc-abre", w, "la ventana de días no se respeta");
+  ok(E.reminders(plan, "2026-11-24", lab, 0).map(a => a.id).join() === "2026-11-24/g1/insc-cierra", w, "con 0 días deben salir solo los de hoy");
+  ok(E.reminders({ goals: [] }, "2026-11-11", lab).length === 0 && E.reminders(plan, "2026-12-05", lab).length === 0, w, "sin fechas futuras no hay avisos");
+  // si la fecha cargada no es la de la mesa (se cambió a mano), no se avisa la inscripción de esa mesa
+  const moved = { goals: [{ id: "g1", cid: "m101", kind: "final", date: "2026-11-30", turno: "tx" }] };
+  ok(!E.reminders(moved, "2026-11-11", lab).some(a => a.id.includes("insc")), w, "avisa la inscripción de una mesa que no es la de la fecha");
+  E.calendar.mesas = saved;
+}
+
 // plan de estudio: el reparto respeta el tiempo de cada día, las fechas y los días libres, y no pierde trabajo
 {
   const w = "plan", P = E.plan, today = "2026-11-07";

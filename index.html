@@ -810,6 +810,21 @@ body.board-split .nav { padding-bottom: 0; }
   .sheet-card { font-size: 9.5pt; padding: 4px 0; border-top: 1px solid #bbb; }
   .sheet-page a.term { color: inherit; text-decoration: none; border: 0; }
 }
+/* memotest */
+.memo-hud { flex-wrap: wrap; gap: 8px; }
+.memo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@container (min-width: 620px) { .memo-grid { grid-template-columns: repeat(4, 1fr); } }
+.memo-tile { aspect-ratio: 4 / 3; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 6px;
+  border-radius: 14px; border: 2px solid var(--primary-d); background: var(--primary); color: var(--on-primary); box-shadow: 0 3px 0 var(--primary-d); font: inherit; cursor: pointer; }
+.memo-tile .ic { width: 26px; height: 26px; opacity: .7; }
+.memo-tile.up { background: var(--card); color: var(--ink); border-color: var(--line); box-shadow: 0 2px 0 var(--line); cursor: default; opacity: 1; animation: popin .18s ease-out; }
+.memo-tile.found { background: var(--ok-soft); border-color: var(--ok); box-shadow: none; }
+.memo-tile.bad { background: var(--bad-soft); border-color: var(--bad); }
+.memo-n { font-weight: 800; font-size: .78rem; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+.memo-f { display: inline-block; white-space: nowrap; font-size: .95rem; transform-origin: center; }
+.memo-pair { display: block; margin-top: 4px; overflow-x: auto; overflow-y: hidden; }
+.aviso-card { border-color: var(--gold); display: flex; flex-direction: column; gap: 10px; }
+.aviso-card .ic { color: var(--gold-d); flex: none; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -876,7 +891,7 @@ body.board-split .nav { padding-bottom: 0; }
   const app = $("#app");
   let S = E.store.load();
   const ui = { route: "home", params: {}, session: null, summary: null, graphs: new Map(), viz: new Map() };
-  const save = () => { const okSave = E.store.save(S); if (E.sync) E.sync.changed(); return okSave; };
+  const save = () => { const okSave = E.store.save(S); if (E.sync) E.sync.changed(); avisosSync(); return okSave; };
   const today = () => E.today();
   const dayOf = ms => E.fmtDate(new Date(ms));
   // ganchos para la sincronización con la nube (sync.js): leer el estado, reemplazarlo tras combinar y refrescar
@@ -1599,9 +1614,88 @@ body.board-split .nav { padding-bottom: 0; }
     const c = course(cid), cs = cState(cid), units = realUnits(c);
     const won = units.filter(u => (cs.bosses || {})[u.id] && cs.bosses[u.id].won).length;
     return `<section class="card games-card"><div class="row" style="gap:10px">${icon("swords")}<div class="grow"><b>Juegos</b>
-      <p class="muted small" style="margin:2px 0 0">Al completar cada unidad aparece su jefe al final del camino (${won}/${units.length} vencidos). El contrarreloj te da 60 segundos de preguntas rápidas de lo que ya abriste.</p></div></div>
+      <p class="muted small" style="margin:2px 0 0">Al completar cada unidad aparece su jefe al final del camino (${won}/${units.length} vencidos). El contrarreloj te da 60 segundos de preguntas rápidas de lo que ya abriste, y en el memotest unís cada fórmula con su tema.</p></div></div>
       <button class="exam-row" data-act="rush" data-cid="${cid}"><span class="grow"><b>Contrarreloj</b><span class="muted small" style="display:block">60 s · 3 aciertos seguidos multiplican los puntos</span></span>
-        <span class="exam-best ${cs.rush ? "pass" : ""}">${cs.rush ? `récord ${cs.rush}` : "Sin jugar"}</span>${icon("chevron-right")}</button></section>`;
+        <span class="exam-best ${cs.rush ? "pass" : ""}">${cs.rush ? `récord ${cs.rush}` : "Sin jugar"}</span>${icon("chevron-right")}</button>
+      <button class="exam-row" data-act="memo" data-cid="${cid}"><span class="grow"><b>Memotest de fórmulas</b><span class="muted small" style="display:block">6 parejas · cada fórmula con el nombre de su tema</span></span>
+        <span class="exam-best ${cs.memo ? "pass" : ""}">${cs.memo ? `récord ${cs.memo}` : "Sin jugar"}</span>${icon("chevron-right")}</button></section>`;
+  }
+
+  // ---------- MEMOTEST DE FÓRMULAS ----------
+  // 6 parejas boca abajo: cada fórmula va con el nombre de su apunte (E.memoPairs). Salen de las lecciones
+  // que ya abriste; si todavía son pocas, de toda la materia. El récord es la menor cantidad de intentos.
+  const MEMO_XP = 15;
+  function memoIds(cid) {
+    const c = course(cid), order = c.cardOrder || Object.keys(c.theory.cards);
+    const open = new Set(c.lessonList.filter(l => lessonUnlocked(cid, l)).flatMap(l => l.theory || []));
+    const mine = order.filter(id => open.has(id));
+    return E.memoPairs(mine, 1) ? mine : order;
+  }
+  function startMemo(cid) {
+    const pairs = E.memoPairs(memoIds(cid), E.newSeed());
+    if (!pairs) { toast("Esta materia todavía no tiene fórmulas suficientes para el memotest"); return; }
+    const tiles = E.rng(E.newSeed()).shuffle(pairs.flatMap((p, i) => [{ p: i, kind: "t" }, { p: i, kind: "f" }]));
+    S.activeCourse = cid;
+    ui.memo = { cid, pairs, tiles, open: [], found: {}, moves: 0, t0: Date.now(), lock: false };
+    go("memo");
+  }
+  function memoTileHtml(m, i) {
+    const tl = m.tiles[i], p = m.pairs[tl.p], up = m.open.includes(i) || m.found[tl.p];
+    const face = tl.kind === "f" ? `<span class="memo-f">${K(p.formula, false)}</span>` : `<span class="memo-n">${esc(p.title)}</span>`;
+    return `<button class="memo-tile ${up ? "up" : ""} ${m.found[tl.p] ? "found" : ""} ${m.bad && m.open.includes(i) ? "bad" : ""}" data-act="memo-tap" data-i="${i}" ${up ? "disabled" : ""} aria-label="${up ? "" : "Ficha boca abajo"}">${up ? face : icon("circle-help")}</button>`;
+  }
+  function memoFit() {
+    // las fórmulas anchas se achican hasta entrar en su ficha
+    for (const f of $$(".memo-f")) {
+      f.style.transform = "";
+      const w = f.parentElement.clientWidth - 12, fw = f.scrollWidth;
+      if (fw > w) f.style.transform = `scale(${Math.max(0.42, w / fw)})`;
+    }
+  }
+  function renderMemo() {
+    const m = ui.memo;
+    if (!m) { ui.route = "home"; return render(); }
+    const c = course(m.cid), cs = cState(m.cid), n = m.pairs.length, got = Object.keys(m.found).length, done = got === n;
+    app.innerHTML = `<main class="screen">
+      <div class="row"><button class="iconbtn" data-act="go" data-r="course" data-id="${m.cid}" aria-label="Volver">${icon("arrow-left")}</button>
+        <h1 class="grow" style="font-size:1.4rem">Memotest · ${esc(c.code || c.title)}</h1></div>
+      <div class="row memo-hud"><span class="chip">${icon("check")}${got}/${n} parejas</span><span class="chip">${icon("rotate-ccw")}${m.moves} ${m.moves === 1 ? "intento" : "intentos"}</span>
+        ${cs.memo ? `<span class="chip xp">${icon("trophy")}récord ${cs.memo}</span>` : ""}</div>
+      ${done ? `<section class="hero">${mascot(m.record ? "party" : "happy")}<div class="bubble grow">${m.record ? `¡Nuevo récord: ${m.moves} intentos!` : `¡Listo en ${m.moves} intentos!`} <b>+${MEMO_XP} XP</b>. Tocá una pareja para repasar su apunte.</div></section>
+        <div class="learn-list">${m.pairs.map(p => `<button class="note-row" data-act="learn" data-id="${p.id}"><span class="grow"><b>${esc(p.title)}</b><span class="memo-pair">${K(p.formula, false)}</span></span>${icon("chevron-right")}</button>`).join("")}</div>
+        <button class="btn big block" data-act="memo" data-cid="${m.cid}">${icon("rotate-ccw")}Jugar de nuevo</button>`
+      : `<p class="muted small" style="margin:0">Encontrá cada fórmula con el nombre de su tema. Menos intentos, mejor.</p>
+        <div class="memo-grid">${m.tiles.map((_, i) => memoTileHtml(m, i)).join("")}</div>`}
+    </main>${nav("career")}`;
+    memoFit();
+  }
+  function memoTap(i) {
+    const m = ui.memo;
+    if (!m || m.lock || m.open.includes(i) || m.found[m.tiles[i].p]) return;
+    m.open.push(i);
+    Snd.play("tap");
+    if (m.open.length < 2) return renderMemo();
+    m.moves++;
+    const [a, b] = m.open.map(j => m.tiles[j]);
+    if (a.p === b.p) {
+      m.found[a.p] = true; m.open = [];
+      Snd.play("correct");
+      if (Object.keys(m.found).length === m.pairs.length) {
+        const cs = cState(m.cid);
+        m.record = !cs.memo || m.moves < cs.memo;
+        if (m.record) cs.memo = m.moves;
+        addXp(MEMO_XP);
+        S.log.unshift({ d: today(), kind: "memo", title: "Memotest", n: m.moves, ok: m.pairs.length, xp: MEMO_XP, c: m.cid });
+        S.log = S.log.slice(0, 60);
+        save();
+        Snd.play("complete");
+      }
+      return renderMemo();
+    }
+    // no coinciden: quedan a la vista un momento y se dan vuelta
+    m.bad = true; m.lock = true;
+    renderMemo();
+    setTimeout(() => { if (ui.memo !== m) return; m.open = []; m.bad = false; m.lock = false; if (ui.route === "memo") renderMemo(); }, 1100);
   }
 
   // ---------- EJERCICIO DEL DÍA ----------
@@ -1655,7 +1749,7 @@ body.board-split .nav { padding-bottom: 0; }
 
   // ---------- navegación ----------
   function go(route, params = {}) {
-    const hash = { home: "#/", plan: "#/plan", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos", misses: "#/errores" }[route] || "#/";
+    const hash = { home: "#/", plan: "#/plan", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos", misses: "#/errores", memo: "#/memotest" }[route] || "#/";
     if (location.hash !== hash) history.pushState(null, "", hash);
     ui.route = route; ui.params = params;
     render();
@@ -1671,6 +1765,7 @@ body.board-split .nav { padding-bottom: 0; }
     else if (h === "ajustes") ui.route = "settings";
     else if (h === "creditos") ui.route = "credits";
     else if (h === "errores") ui.route = "misses";
+    else if (h === "memotest" && ui.memo) ui.route = "memo";
     else ui.route = "home";
     if (ui.route === "course" && !E.courses[ui.params.id]) ui.route = "home";
   }
@@ -1725,7 +1820,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, plan: renderPlan, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, misses: renderMisses, summary: renderSummary, "exam-result": renderExamResult };
+    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, plan: renderPlan, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, misses: renderMisses, memo: renderMemo, summary: renderSummary, "exam-result": renderExamResult };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1780,7 +1875,7 @@ body.board-split .nav { padding-bottom: 0; }
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
       ${sg && sg.course !== cid ? subjectCard(sg, badge("Sugerida")) : ""}
       <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver toda la carrera</button></section>
-      </div><aside class="home-side">${firstTime ? (S.plan.goals.some(g => g.date > today()) ? planHomeCard() : "") : `${planHomeCard()}
+      </div><aside class="home-side">${avisosHomeCard()}${firstTime ? (S.plan.goals.some(g => g.date > today()) ? planHomeCard() : "") : `${planHomeCard()}
       ${dailyCard()}
       ${missesHomeCard()}
       <div id="leagueHome">${leagueHomeCard()}</div>
@@ -2445,6 +2540,60 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     </main>${nav("stats")}`;
   }
 
+  // ---------- AVISOS ----------
+  // Notificaciones del plan (qué toca hoy) y de las mesas (inscripción y examen). La app no tiene servidor: deja la
+  // lista de los próximos días en una caché, y el service worker la revisa cuando el navegador lo despierta
+  // (sincronización periódica: Chrome en Android o en la compu, con la app instalada). El ajuste es de cada dispositivo.
+  const AV_KEY = "efecen-avisos", AV_CACHE = "efecen-avisos", AV_TAG = "efecen-avisos";
+  const avisosOn = () => { try { return localStorage.getItem(AV_KEY) === "1" && "Notification" in window && Notification.permission === "granted"; } catch (e) { return false; } };
+  const avisosCan = () => "Notification" in window && "serviceWorker" in navigator && "caches" in window;
+  function avisosList() {
+    const t = today(), list = E.reminders(S.plan, t, goalTxt, 30);
+    // el estudio de cada día, según el plan como está hoy
+    if (S.plan.goals.some(g => g.date > t)) {
+      const pl = planBuild();
+      for (let i = 0; i < 14; i++) {
+        const d = E.addDays(t, i), bl = pl.days[d] || [];
+        if (!bl.length) continue;
+        const tot = bl.reduce((s, b) => s + b.min, 0);
+        list.push({ id: `${d}/plan`, date: d, title: `Plan de hoy · ${E.plan.fmt(tot)}`, body: bl.slice(0, 4).map(b => { const bi = blockInfo(b); return `${bi.code} ${bi.short}`; }).join(" · ") + (bl.length > 4 ? " …" : "") });
+      }
+    }
+    return list;
+  }
+  // deja la lista al alcance del service worker (y anota como vistos los de hoy, si la app está abierta)
+  let avisosTimer = null;
+  function avisosSync() {
+    if (!avisosCan()) return;
+    clearTimeout(avisosTimer);
+    avisosTimer = setTimeout(async () => {
+      try {
+        const cache = await caches.open(AV_CACHE);
+        const on = avisosOn();
+        await cache.put("avisos.json", new Response(JSON.stringify({ on, list: on ? avisosList() : [] }), { headers: { "Content-Type": "application/json" } }));
+        if (!on) return;
+        const reg = await navigator.serviceWorker.ready;
+        if (reg.periodicSync) { try { await reg.periodicSync.register(AV_TAG, { minInterval: 6 * 3600 * 1000 }); } catch (e) { /* el navegador no lo permite (app sin instalar) */ } }
+      } catch (e) { /* sin caché: no hay avisos */ }
+    }, 1500);
+  }
+  async function avisosToggle() {
+    if (avisosOn()) { try { localStorage.setItem(AV_KEY, "0"); } catch (e) { } avisosSync(); render(); return; }
+    if (!avisosCan()) { toast("Este navegador no permite avisos"); return; }
+    const perm = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    if (perm !== "granted") { toast("Los avisos están bloqueados: habilitalos en los permisos del sitio"); return; }
+    try { localStorage.setItem(AV_KEY, "1"); } catch (e) { }
+    avisosSync(); render();
+    // uno de prueba, para ver cómo llegan
+    try { const reg = await navigator.serviceWorker.ready; await reg.showNotification("Avisos activados", { body: "Te aviso qué toca estudiar y cuándo abre y cierra la inscripción a tus mesas.", icon: "assets/icons/icon-192.png", badge: "assets/icons/icon-192.png", tag: "efecen-prueba" }); } catch (e) { }
+  }
+  // en Inicio: lo de las mesas que vence hoy o mañana (se ve aunque los avisos estén apagados)
+  function avisosHomeCard() {
+    const t = today(), list = E.reminders(S.plan, t, goalTxt, 0).filter(a => a.id.includes("/insc-"));
+    if (!list.length) return "";
+    return `<section class="card aviso-card">${list.map(a => `<div class="row" style="gap:10px;align-items:flex-start">${icon("info")}<div class="grow"><b>${esc(a.title)}</b><span class="muted small" style="display:block">${esc(a.body)}</span></div></div>`).join("")}</section>`;
+  }
+
   // ---------- AJUSTES ----------
   function renderSettings() {
     const st = S.settings;
@@ -2454,6 +2603,8 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       <div class="masonry"><section class="card">
         <div class="set-row"><div><div class="lbl">Sonido</div><div class="desc">Efectos al responder</div></div>
           <button class="switch ${st.sound ? "on" : ""}" data-act="sound" role="switch" aria-checked="${st.sound}" aria-label="Sonido"></button></div>
+        ${avisosCan() ? `<div class="set-row"><div><div class="lbl">Avisos</div><div class="desc">Qué toca estudiar según tu plan, y cuándo abre y cierra la inscripción a tus mesas. Funcionan con la app instalada (Chrome) y llegan cuando el sistema lo permite: para un recordatorio a una hora exacta, exportá el plan a tu calendario.</div></div>
+          <button class="switch ${avisosOn() ? "on" : ""}" data-act="avisos" role="switch" aria-checked="${avisosOn()}" aria-label="Avisos"></button></div>` : ""}
         <div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tema</div>
           ${seg("theme", [["auto", "Auto"], ["light", "Claro"], ["dark", "Oscuro"]], st.theme)}</div>
       </section>
@@ -2806,7 +2957,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       <section class="card"><b>Cómo se suma</b><ul class="muted small" style="margin:6px 0 0;padding-left:1.1em">
         <li>Cada ejercicio bien: 10 XP (5 si es un reintento o del diagnóstico, 3 en el contrarreloj).</li>
         <li>Lección completada: +10 XP, y +5 más si salió perfecta.</li>
-        <li>Ejercicio del día: 30 XP. Jefe vencido: +30 XP la primera vez, +15 las siguientes.</li>
+        <li>Ejercicio del día: 30 XP. Jefe vencido: +30 XP la primera vez, +15 las siguientes. Memotest terminado: 15 XP.</li>
         <li>La meta diaria es de ${E.DAILY_GOAL} XP para todos. El lunes arranca una semana nueva.</li></ul></section>
     </main>${nav("stats")}`;
   }
@@ -3358,6 +3509,8 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "skipdiag": cState(el.dataset.cid).diag = "skipped"; save(); render(); break;
       case "practice": startPractice(el.dataset.cid, el.dataset.k); break;
       case "weak-practice": startWeak(el.dataset.cid); break;
+      case "memo": startMemo(el.dataset.cid); break;
+      case "memo-tap": memoTap(+el.dataset.i); break;
       case "miss-all": startMisses(); break;
       case "miss-one": startMisses(el.dataset.key); break;
       case "miss-drop": E.misses.solve(S, el.dataset.key, Date.now()); save(); render(); break;
@@ -3399,6 +3552,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "board-show": E.board.setPref("show", el.dataset.v); boardAvail = E.board.available(); if (!E.board.available()) E.board.close(); render(); break;
       case "board-finger": E.board.setPref("finger", !E.board.fingerDraws()); render(); break;
       case "board-shapes": E.board.setPref("shapes", E.board.prefs.shapes === false); render(); break;
+      case "avisos": avisosToggle(); break;
       case "sound": S.settings.sound = !S.settings.sound; save(); render(); if (S.settings.sound) Snd.play("correct"); break;
       case "export": exportData(); break;
       case "login": if (E.sync) E.sync.signIn(); break;
@@ -3485,6 +3639,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   if (location.hash === "#/sesion") history.replaceState(null, "", "#/");
   fromHash();
   render();
+  avisosSync();
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js").catch(() => {}));
   }

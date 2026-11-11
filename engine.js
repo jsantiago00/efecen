@@ -975,6 +975,61 @@
   const H_hours = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; };
   PL.fmt = H_hours;
 
+  // ---------- Memotest: la fórmula que representa a cada apunte ----------
+  // Sale de `card.formula` si la ficha la declara; si no, de la definición: la primera fórmula destacada ($$…$$)
+  // con un «=», o la primera en el texto que sea una igualdad de tamaño razonable. Si no hay ninguna, null.
+  E.cardFormula = card => {
+    if (card.formula) return card.formula;
+    const vis = m => m.replace(/\\(left|right|big|Big|,|;|!|quad|qquad|displaystyle|dfrac|tfrac|frac|text|vec|hat|bar|mathbb|mathrm|sqrt)/g, "").replace(/\\[a-zA-Z]+/g, "x").replace(/[{}^_\s]/g, "").length;
+    const good = m => /=|\\approx|\\iff|\\Rightarrow/.test(m) && !/\\begin|\\qquad|\\quad|\\text\{[^}]{12,}\}/.test(m) && vis(m) >= 7 && vis(m) <= 42
+      // una igualdad con algo de contenido: no «x = 0» ni «k = 2»
+      && !/^\s*[a-zA-Z\\]+(_\{?\w+\}?)?\s*=\s*-?[\d{},.]+\s*$/.test(m);
+    const clean = m => m.trim().replace(/[.,;:]$/, "");
+    const texts = (card.def || []).filter(b => typeof b === "string");
+    for (const t of texts) for (const m of t.matchAll(/\$\$([^$]+)\$\$/g)) if (good(m[1])) return clean(m[1]);
+    for (const t of texts) for (const m of t.replace(/\$\$[^$]+\$\$/g, " ").matchAll(/\$([^$]+)\$/g)) if (good(m[1])) return clean(m[1]);
+    return null;
+  };
+
+  // las parejas de una partida: n apuntes con fórmulas distintas entre sí (de una lista de ids, con una semilla).
+  // Una fórmula que comparten varios apuntes solo vale para el primero de la lista: en los otros sería ambigua.
+  E.memoPairs = (ids, seed, n = 6) => {
+    const seen = new Set(), cands = [];
+    for (const id of ids) {
+      const card = E.cards[id], f = card && E.cardFormula(card);
+      // sin constantes sueltas (e = 1,602×10⁻¹⁹) ni fórmulas demasiado anchas para una ficha del juego
+      if (!f || /\\times\s*10\^|\d\{,\}\d{3}/.test(f) || f.length > 60) continue;
+      const k = f.replace(/\s+|\\displaystyle|\\,|\\big|\\left|\\right/g, "");
+      if (seen.has(k)) continue;
+      seen.add(k); cands.push({ id, title: card.title, formula: f });
+    }
+    return cands.length < n ? null : E.rng(seed).sample(cands, n);
+  };
+
+  // ---------- Avisos ----------
+  // Lo que conviene avisar en los próximos `days` días, a partir de las fechas del plan y las mesas del calendario:
+  // la inscripción (cuando abre, el día antes de que cierre y el día que cierra), la víspera y el día del examen.
+  // Devuelve [{ id, date, title, body }], ordenado por fecha. `label(g)` da el texto de cada fecha («Final de F102A»).
+  E.reminders = (plan, today, label, days = 30) => {
+    const out = [], end = E.addDays(today, days);
+    const put = (id, date, title, body) => { if (date >= today && date <= end) out.push({ id: `${date}/${id}`, date, title, body }); };
+    for (const g of plan.goals || []) {
+      if (g.date < today) continue;
+      const L = label(g), m = g.turno ? E.mesaInfo(g.cid, g.turno) : null;
+      if (m && m.insc && m.date === g.date) {
+        put(`${g.id}/insc-abre`, m.insc[0], `Abre la inscripción: ${L}`, `Hoy a las 10 h abre la inscripción en SIU Guaraní. Cierra el ${E.dmTxt(m.insc[1])}.`);
+        if (E.diffDays(m.insc[0], m.insc[1]) >= 2) put(`${g.id}/insc-falta1`, E.addDays(m.insc[1], -1), `Mañana cierra la inscripción: ${L}`, "Si todavía no te anotaste en SIU Guaraní, hacelo hoy o mañana.");
+        put(`${g.id}/insc-cierra`, m.insc[1], `Hoy cierra la inscripción: ${L}`, "Último día para anotarte en SIU Guaraní.");
+      }
+      const hora = m && m.date === g.date && m.time ? ` a las ${m.time} h` : "";
+      put(`${g.id}/vispera`, E.addDays(g.date, -1), `Mañana: ${L}`, `Rendís mañana${hora}. Repasá liviano y dormí bien.`);
+      put(`${g.id}/dia`, g.date, `Hoy: ${L}`, `Rendís hoy${hora}. ¡Éxitos!`);
+    }
+    return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
+  };
+  // "2026-11-27" -> "27/11"
+  E.dmTxt = d => { const [, m, dd] = d.split("-"); return `${+dd}/${+m}`; };
+
   // ---------- Cuaderno de errores ----------
   // Los ejercicios que salieron mal, con su semilla, para rehacerlos tal cual. Cada entrada es
   // "cid/tpl/semilla" -> { t: última vez que cambió (ms), ok: 1 si ya se resolvió o se descartó }.
@@ -1086,6 +1141,8 @@
           }
         }
         if (st.rush || oc.rush) st.rush = max(st.rush, oc.rush);
+        // memotest: el récord es la menor cantidad de intentos
+        if (st.memo || oc.memo) st.memo = Math.min(st.memo || Infinity, oc.memo || Infinity);
         for (const [lid, ol] of Object.entries(oc.lessons || {})) {
           const l = st.lessons[lid] = st.lessons[lid] || {};
           l.done = !!(l.done || ol.done); l.plays = max(l.plays, ol.plays); l.best = max(l.best, ol.best);

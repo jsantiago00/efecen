@@ -1,6 +1,7 @@
 // Service worker de efecen: precachea todo para funcionar offline.
 // Al publicar cambios, subí CACHE para que los clientes descarguen la versión nueva.
-const CACHE = "efecen-v100";
+const CACHE = "efecen-v101";
+const AVISOS = "efecen-avisos"; // la lista de avisos que deja la app (no se borra al actualizar)
 const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "Fraktur-Bold", "Fraktur-Regular",
   "Main-Bold", "Main-BoldItalic", "Main-Italic", "Main-Regular", "Math-BoldItalic", "Math-Italic",
   "SansSerif-Bold", "SansSerif-Italic", "SansSerif-Regular", "Script-Regular", "Size1-Regular", "Size2-Regular",
@@ -25,7 +26,7 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== AVISOS).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -44,4 +45,40 @@ self.addEventListener("fetch", e => {
       return cached || fresh;
     })
   );
+});
+
+// ---------- avisos ----------
+// La app deja en la caché AVISOS la lista de los próximos días ({ on, list: [{ id, date, title, body }] }).
+// Cuando el navegador despierta al service worker (sincronización periódica), se muestran los de hoy que
+// todavía no se mostraron. No hay servidor: el momento lo decide el navegador.
+const pad2 = n => String(n).padStart(2, "0");
+const localDay = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+async function showAvisos() {
+  const cache = await caches.open(AVISOS);
+  const res = await cache.match("avisos.json");
+  if (!res) return;
+  const data = await res.json();
+  if (!data.on || self.Notification.permission !== "granted") return;
+  const now = new Date(), t = localDay(now);
+  // de noche no se avisa: queda para la próxima vez
+  if (now.getHours() < 8 || now.getHours() >= 22) return;
+  const seenRes = await cache.match("vistos.json");
+  let seen = seenRes ? await seenRes.json() : [];
+  const due = data.list.filter(a => a.date === t && !seen.includes(a.id));
+  for (const a of due) {
+    await self.registration.showNotification(a.title, { body: a.body, icon: "assets/icons/icon-192.png", badge: "assets/icons/icon-192.png", tag: a.id, data: { url: "./#/plan" } });
+    seen.push(a.id);
+  }
+  // solo hace falta recordar los de hoy
+  seen = seen.filter(id => id.startsWith(t));
+  await cache.put("vistos.json", new Response(JSON.stringify(seen), { headers: { "Content-Type": "application/json" } }));
+}
+self.addEventListener("periodicsync", e => { if (e.tag === AVISOS) e.waitUntil(showAvisos().catch(() => {})); });
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "./";
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => {
+    for (const c of cs) if ("focus" in c) { if ("navigate" in c) c.navigate(url).catch(() => {}); return c.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });
