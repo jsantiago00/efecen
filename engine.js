@@ -1027,6 +1027,14 @@
     }
     return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
   };
+  // a qué hora va cada aviso (ms, hora local): la inscripción abre a las 10; la víspera se avisa a las 19 y el día
+  // del examen a las 7; el resto (el plan del día y los recordatorios), a la hora elegida ("08:00")
+  E.reminderAt = (a, hhmm = "08:00") => {
+    const kind = a.id.slice(a.id.lastIndexOf("/") + 1);
+    const hm = kind === "insc-abre" ? "10:00" : kind === "vispera" ? "19:00" : kind === "dia" ? "07:00" : hhmm;
+    const [y, m, d] = a.date.split("-").map(Number), [h, mi] = hm.split(":").map(Number);
+    return new Date(y, m - 1, d, h, mi).getTime();
+  };
   // "2026-11-27" -> "27/11"
   E.dmTxt = d => { const [, m, dd] = d.split("-"); return `${+dd}/${+m}`; };
 

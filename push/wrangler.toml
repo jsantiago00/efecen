@@ -1,0 +1,24 @@
+# efecen-push: avisos puntuales para la app (ver worker.js y README.md).
+# Desplegar: npx wrangler deploy   ·   Registros en vivo: npx wrangler tail
+name = "efecen-push"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+# dominio propio (el DNS de efecen.com.ar está en Cloudflare)
+routes = [{ pattern = "push.efecen.com.ar", custom_domain = true }]
+
+[vars]
+# clave pública VAPID (la misma que usa la app en index.html). La privada es el secreto VAPID_PRIVATE_JWK.
+VAPID_PUBLIC = "BO5dySgrceL2OGVLfM93XUIFQ7O8nLeY6nNg0IP_V4YcSdYcD3v5MMcmiXMlPTuuozsVGN4XlGqZfFwWwiSvELw"
+VAPID_SUBJECT = "https://efecen.com.ar"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "efecen-push"
+database_id = "725f6c5a-396b-4b85-9812-e6752172439c"
+
+[observability]
+enabled = true

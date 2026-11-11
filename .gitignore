@@ -9,3 +9,6 @@ Bibliografía - Cs. Físicas - FCEN - UBA/
 
 # PDF del calendario académico y de las mesas que pasa el usuario (los datos van en content/calendario.js)
 calendario academico/
+
+# estado local de wrangler (Cloudflare)
+.wrangler/

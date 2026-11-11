@@ -1,6 +1,6 @@
 // Service worker de efecen: precachea todo para funcionar offline.
 // Al publicar cambios, subí CACHE para que los clientes descarguen la versión nueva.
-const CACHE = "efecen-v102";
+const CACHE = "efecen-v103";
 const AVISOS = "efecen-avisos"; // la lista de avisos que deja la app (no se borra al actualizar)
 const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "Fraktur-Bold", "Fraktur-Regular",
   "Main-Bold", "Main-BoldItalic", "Main-Italic", "Main-Regular", "Math-BoldItalic", "Math-Italic",
@@ -48,32 +48,45 @@ self.addEventListener("fetch", e => {
 });
 
 // ---------- avisos ----------
-// La app deja en la caché AVISOS la lista de los próximos días ({ on, list: [{ id, date, title, body }] }).
-// Cuando el navegador despierta al service worker (sincronización periódica), se muestran los de hoy que
-// todavía no se mostraron. No hay servidor: el momento lo decide el navegador.
-const pad2 = n => String(n).padStart(2, "0");
-const localDay = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-async function showAvisos() {
+// La app deja en la caché AVISOS la lista de los próximos días:
+//   { on, list: [{ id, date, at (ms), title, body }], push: { url, key } }
+// A la hora de cada aviso, el servicio efecen-push (push/worker.js) manda un push sin contenido; acá se arma la
+// notificación con esa lista, que nunca sale del dispositivo. Si no hay push, queda la sincronización periódica.
+const NOTIF = { icon: "assets/icons/icon-192.png", badge: "assets/icons/icon-192.png" };
+const jsonRes = data => new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } });
+const avisoAt = a => (typeof a.at === "number" ? a.at : new Date(a.date + "T08:00:00").getTime());
+async function showAvisos(fromPush) {
+  if (self.Notification.permission !== "granted") return 0;
   const cache = await caches.open(AVISOS);
-  const res = await cache.match("avisos.json");
-  if (!res) return;
-  const data = await res.json();
-  if (!data.on || self.Notification.permission !== "granted") return;
-  const now = new Date(), t = localDay(now);
-  // de noche no se avisa: queda para la próxima vez
-  if (now.getHours() < 8 || now.getHours() >= 22) return;
-  const seenRes = await cache.match("vistos.json");
-  let seen = seenRes ? await seenRes.json() : [];
-  const due = data.list.filter(a => a.date === t && !seen.includes(a.id));
+  const res = await cache.match("avisos.json"), data = res ? await res.json() : null;
+  const now = Date.now(), seenRes = await cache.match("vistos.json");
+  let seen = (seenRes ? await seenRes.json() : []).filter(s => s && typeof s === "object");
+  const ids = new Set(seen.map(s => s.id));
+  // los que ya vencieron (hasta 12 h atrás) y todavía no se mostraron
+  const due = data && data.on ? data.list.filter(a => avisoAt(a) <= now + 60000 && avisoAt(a) > now - 12 * 3600000 && !ids.has(a.id)) : [];
   for (const a of due) {
-    await self.registration.showNotification(a.title, { body: a.body, icon: "assets/icons/icon-192.png", badge: "assets/icons/icon-192.png", tag: a.id, data: { url: "./#/plan" } });
-    seen.push(a.id);
+    await self.registration.showNotification(a.title, { ...NOTIF, body: a.body, tag: a.id, data: { url: a.id.startsWith("prueba/") ? "./#/ajustes" : "./#/plan" } });
+    seen.push({ id: a.id, t: now });
   }
-  // solo hace falta recordar los de hoy
-  seen = seen.filter(id => id.startsWith(t));
-  await cache.put("vistos.json", new Response(JSON.stringify(seen), { headers: { "Content-Type": "application/json" } }));
+  // un push siempre tiene que mostrar algo (si no, el navegador puede retirar el permiso)
+  if (fromPush && !due.length) await self.registration.showNotification("efecen", { ...NOTIF, body: "Mirá qué toca hoy en tu plan de estudio.", tag: "efecen-general", data: { url: "./#/plan" } });
+  seen = seen.filter(s => now - s.t < 2 * 86400000);
+  await cache.put("vistos.json", jsonRes(seen));
+  return due.length;
 }
-self.addEventListener("periodicsync", e => { if (e.tag === AVISOS) e.waitUntil(showAvisos().catch(() => {})); });
+self.addEventListener("push", e => e.waitUntil(showAvisos(true).catch(() => {})));
+self.addEventListener("periodicsync", e => { if (e.tag === AVISOS) e.waitUntil(showAvisos(false).catch(() => {})); });
+// el navegador renovó la suscripción: se registra la nueva con las mismas horas
+self.addEventListener("pushsubscriptionchange", e => e.waitUntil((async () => {
+  const cache = await caches.open(AVISOS), res = await cache.match("avisos.json"), data = res ? await res.json() : null;
+  if (!data || !data.on || !data.push) return;
+  const post = (path, body) => fetch(data.push.url + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const key = Uint8Array.from(atob(data.push.key.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const sub = e.newSubscription || await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+  const nowS = Date.now() / 1000, times = [...new Set(data.list.map(a => Math.floor(avisoAt(a) / 60000) * 60).filter(t => t > nowS))];
+  if (e.oldSubscription) await post("/unsubscribe", { endpoint: e.oldSubscription.endpoint }).catch(() => {});
+  await post("/subscribe", { endpoint: sub.endpoint, times });
+})().catch(() => {})));
 self.addEventListener("notificationclick", e => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || "./";

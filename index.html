@@ -823,6 +823,7 @@ body.board-split .nav { padding-bottom: 0; }
 .memo-n { font-weight: 800; font-size: .78rem; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
 .memo-f { display: inline-block; white-space: nowrap; font-size: .95rem; transform-origin: center; }
 .memo-pair { display: block; margin-top: 4px; overflow-x: auto; overflow-y: hidden; }
+.set-select { font: inherit; font-weight: 800; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px; }
 .aviso-card { border-color: var(--gold); display: flex; flex-direction: column; gap: 10px; }
 .aviso-card .ic { color: var(--gold-d); flex: none; margin-top: 2px; }
 </style>
@@ -2547,14 +2548,22 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   }
 
   // ---------- AVISOS ----------
-  // Notificaciones del plan (qué toca hoy) y de las mesas (inscripción y examen). La app no tiene servidor: deja la
-  // lista de los próximos días en una caché, y el service worker la revisa cuando el navegador lo despierta
-  // (sincronización periódica: Chrome en Android o en la compu, con la app instalada). El ajuste es de cada dispositivo.
-  const AV_KEY = "efecen-avisos", AV_CACHE = "efecen-avisos", AV_TAG = "efecen-avisos";
-  const avisosOn = () => { try { return localStorage.getItem(AV_KEY) === "1" && "Notification" in window && Notification.permission === "granted"; } catch (e) { return false; } };
+  // Notificaciones del plan (qué toca hoy) y de las mesas (inscripción y examen), a la hora que corresponde aunque
+  // la app esté cerrada. La app deja en una caché la lista de los próximos días, con el texto y la hora de cada
+  // aviso, y le pasa al servicio efecen-push (push/worker.js, en Cloudflare) solo las horas: a cada una, el servicio
+  // manda un push sin contenido y el service worker arma la notificación con la lista guardada. Si el navegador no
+  // tiene push, queda la sincronización periódica (sin hora exacta). El ajuste es de cada dispositivo.
+  const AV_KEY = "efecen-avisos", AV_CACHE = "efecen-avisos", AV_TAG = "efecen-avisos", AV_HOUR_KEY = "efecen-avisos-hora", AV_REG_KEY = "efecen-avisos-reg";
+  const PUSH = { url: "https://push.efecen.com.ar", key: "BO5dySgrceL2OGVLfM93XUIFQ7O8nLeY6nNg0IP_V4YcSdYcD3v5MMcmiXMlPTuuozsVGN4XlGqZfFwWwiSvELw" };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } };
+  const avisosOn = () => lsGet(AV_KEY) === "1" && "Notification" in window && Notification.permission === "granted";
   const avisosCan = () => "Notification" in window && "serviceWorker" in navigator && "caches" in window;
+  const avisosPush = () => "PushManager" in window;
+  const avisosHour = () => { const h = lsGet(AV_HOUR_KEY); return /^\d\d:\d\d$/.test(h || "") ? h : "08:00"; };
+  let avisosTest = null; // el aviso de prueba, mientras viaja
   function avisosList() {
-    const t = today(), list = E.reminders(S.plan, t, goalTxt, 30);
+    const t = today(), list = E.reminders(S.plan, t, goalTxt, 30), hour = avisosHour(), now = Date.now();
     // el estudio de cada día, según el plan como está hoy
     if (S.plan.goals.some(g => g.date > t)) {
       const pl = planBuild();
@@ -2565,33 +2574,98 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
         list.push({ id: `${d}/plan`, date: d, title: `Plan de hoy · ${E.plan.fmt(tot)}`, body: bl.slice(0, 4).map(b => { const bi = blockInfo(b); return `${bi.code} ${bi.short}`; }).join(" · ") + (bl.length > 4 ? " …" : "") });
       }
     }
-    return list;
+    for (const a of list) a.at = E.reminderAt(a, hour);
+    if (avisosTest && now - avisosTest.at < 180000) list.push(avisosTest);
+    return list.filter(a => a.at > now - 12 * 3600000);
   }
-  // deja la lista al alcance del service worker (y anota como vistos los de hoy, si la app está abierta)
+  const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const pushPost = (path, body) => fetch(PUSH.url + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json());
+  // la suscripción de push de este dispositivo (se crea si hace falta; si era de otra clave, se renueva)
+  async function pushSub(reg, create) {
+    if (!reg.pushManager) return null;
+    let sub = await reg.pushManager.getSubscription();
+    const key = b64ToBytes(PUSH.key);
+    if (sub && sub.options && sub.options.applicationServerKey) {
+      const cur = new Uint8Array(sub.options.applicationServerKey);
+      if (cur.length !== key.length || cur.some((b, i) => b !== key[i])) { await sub.unsubscribe(); sub = null; }
+    }
+    if (!sub && create) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    return sub;
+  }
+  // deja la lista al alcance del service worker y registra las horas en el servicio de push
+  async function avisosSyncNow() {
+    if (!avisosCan()) return "no";
+    const cache = await caches.open(AV_CACHE), on = avisosOn(), list = on ? avisosList() : [];
+    await cache.put("avisos.json", new Response(JSON.stringify({ on, list, push: PUSH }), { headers: { "Content-Type": "application/json" } }));
+    if (!on) return "off";
+    const reg = await navigator.serviceWorker.ready;
+    if (reg.periodicSync) { try { await reg.periodicSync.register(AV_TAG, { minInterval: 6 * 3600 * 1000 }); } catch (e) { /* el navegador no lo permite (app sin instalar) */ } }
+    if (!avisosPush()) return "local";
+    try {
+      const sub = await pushSub(reg, true), nowS = Date.now() / 1000;
+      const times = [...new Set(list.map(a => Math.floor(a.at / 60000) * 60).filter(x => x > nowS))].sort((a, b) => a - b);
+      // solo se vuelve a registrar si cambió algo (o una vez por semana, para que la suscripción no venza)
+      const sig = sub.endpoint + "|" + times.join(), prev = (lsGet(AV_REG_KEY) || "").split("@");
+      if (prev[0] !== sig || Date.now() - (+prev[1] || 0) > 7 * 864e5) {
+        const r = await pushPost("/subscribe", { endpoint: sub.endpoint, times });
+        if (!r.ok) throw new Error(r.error || "registro");
+        lsSet(AV_REG_KEY, sig + "@" + Date.now());
+      }
+      lsSet(AV_KEY + "-modo", "push");
+      return "push";
+    } catch (e) { lsSet(AV_KEY + "-modo", "local"); return "local"; }
+  }
   let avisosTimer = null;
   function avisosSync() {
     if (!avisosCan()) return;
     clearTimeout(avisosTimer);
-    avisosTimer = setTimeout(async () => {
+    avisosTimer = setTimeout(() => { avisosSyncNow().catch(() => {}); }, 1500);
+  }
+  // un aviso de prueba que recorre el camino real: el servicio manda el push y el service worker lo muestra
+  async function avisosProbar(title = "Aviso de prueba", body = "Así te van a llegar los avisos de efecen.") {
+    avisosTest = { id: "prueba/" + Date.now(), date: today(), at: Date.now(), title, body };
+    const mode = await avisosSyncNow().catch(() => "local");
+    const reg = await navigator.serviceWorker.ready;
+    if (mode === "push") {
       try {
-        const cache = await caches.open(AV_CACHE);
-        const on = avisosOn();
-        await cache.put("avisos.json", new Response(JSON.stringify({ on, list: on ? avisosList() : [] }), { headers: { "Content-Type": "application/json" } }));
-        if (!on) return;
-        const reg = await navigator.serviceWorker.ready;
-        if (reg.periodicSync) { try { await reg.periodicSync.register(AV_TAG, { minInterval: 6 * 3600 * 1000 }); } catch (e) { /* el navegador no lo permite (app sin instalar) */ } }
-      } catch (e) { /* sin caché: no hay avisos */ }
-    }, 1500);
+        const sub = await pushSub(reg, false), r = await pushPost("/test", { endpoint: sub.endpoint });
+        if (r.ok) return "push";
+      } catch (e) { /* sigue con el aviso local */ }
+    }
+    try { await reg.showNotification(title, { body, icon: "assets/icons/icon-192.png", badge: "assets/icons/icon-192.png", tag: "efecen-prueba" }); } catch (e) { /* sin permiso */ }
+    return "local";
   }
   async function avisosToggle() {
-    if (avisosOn()) { try { localStorage.setItem(AV_KEY, "0"); } catch (e) { } avisosSync(); render(); return; }
+    if (avisosOn()) {
+      lsSet(AV_KEY, "0"); lsSet(AV_REG_KEY, "");
+      render();
+      try {
+        await avisosSyncNow();
+        const reg = await navigator.serviceWorker.ready, sub = await pushSub(reg, false);
+        if (sub) { await pushPost("/unsubscribe", { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+      } catch (e) { /* ya no hay suscripción */ }
+      return;
+    }
     if (!avisosCan()) { toast("Este navegador no permite avisos"); return; }
     const perm = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
     if (perm !== "granted") { toast("Los avisos están bloqueados: habilitalos en los permisos del sitio"); return; }
-    try { localStorage.setItem(AV_KEY, "1"); } catch (e) { }
-    avisosSync(); render();
-    // uno de prueba, para ver cómo llegan
-    try { const reg = await navigator.serviceWorker.ready; await reg.showNotification("Avisos activados", { body: "Te aviso qué toca estudiar y cuándo abre y cierra la inscripción a tus mesas.", icon: "assets/icons/icon-192.png", badge: "assets/icons/icon-192.png", tag: "efecen-prueba" }); } catch (e) { }
+    lsSet(AV_KEY, "1");
+    render();
+    const mode = await avisosProbar("Avisos activados", "Te aviso qué toca estudiar y cuándo abre y cierra la inscripción a tus mesas.");
+    if (ui.route === "settings") render();
+    if (mode !== "push") toast("Avisos activados, pero sin push en este navegador: pueden demorarse");
+  }
+  function avisosSetHtml() {
+    if (!avisosCan()) return `<div class="set-row"><div><div class="lbl">Avisos</div><div class="desc">Este navegador no permite notificaciones. En iPhone, primero agregá efecen a la pantalla de inicio (Compartir → «Agregar a inicio») y abrila desde ahí.</div></div></div>`;
+    const on = avisosOn(), push = lsGet(AV_KEY + "-modo") === "push", hour = avisosHour();
+    const hours = [];
+    for (let h = 6; h <= 22; h++) for (const m of ["00", "30"]) hours.push(`${String(h).padStart(2, "0")}:${m}`);
+    return `<div class="set-row"><div><div class="lbl">Avisos</div><div class="desc">Qué toca estudiar según tu plan, y cuándo abre y cierra la inscripción a tus mesas. Llegan aunque la app esté cerrada.${on ? (push ? " <b>Activos en este dispositivo.</b>" : " <b>Activos, pero este navegador no tiene push:</b> pueden demorarse.") : ""}</div></div>
+        <button class="switch ${on ? "on" : ""}" data-act="avisos" role="switch" aria-checked="${on}" aria-label="Avisos"></button></div>
+      ${on ? `<div class="set-row"><div><div class="lbl">Hora del aviso diario</div><div class="desc">El plan del día y los recordatorios de inscripción. La víspera de un examen se avisa a las 19 h y el día del examen, a las 7 h.</div></div>
+        <select class="set-select" id="avisosHora" aria-label="Hora del aviso diario">${hours.map(h => `<option ${h === hour ? "selected" : ""}>${h}</option>`).join("")}</select></div>
+      <div class="set-row"><div><div class="lbl">Probar</div><div class="desc">Manda un aviso de prueba a este dispositivo.</div></div>
+        <button class="btn sm ghost" data-act="avisos-test">${icon("play")}Probar</button></div>` : ""}`;
   }
   // en Inicio: lo de las mesas que vence hoy o mañana (se ve aunque los avisos estén apagados)
   function avisosHomeCard() {
@@ -2609,8 +2683,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       <div class="masonry"><section class="card">
         <div class="set-row"><div><div class="lbl">Sonido</div><div class="desc">Efectos al responder</div></div>
           <button class="switch ${st.sound ? "on" : ""}" data-act="sound" role="switch" aria-checked="${st.sound}" aria-label="Sonido"></button></div>
-        ${avisosCan() ? `<div class="set-row"><div><div class="lbl">Avisos</div><div class="desc">Qué toca estudiar según tu plan, y cuándo abre y cierra la inscripción a tus mesas. Funcionan con la app instalada (Chrome) y llegan cuando el sistema lo permite: para un recordatorio a una hora exacta, exportá el plan a tu calendario.</div></div>
-          <button class="switch ${avisosOn() ? "on" : ""}" data-act="avisos" role="switch" aria-checked="${avisosOn()}" aria-label="Avisos"></button></div>` : ""}
+        ${avisosSetHtml()}
         <div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tema</div>
           ${seg("theme", [["auto", "Auto"], ["light", "Claro"], ["dark", "Oscuro"]], st.theme)}</div>
       </section>
@@ -3559,6 +3632,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "board-finger": E.board.setPref("finger", !E.board.fingerDraws()); render(); break;
       case "board-shapes": E.board.setPref("shapes", E.board.prefs.shapes === false); render(); break;
       case "avisos": avisosToggle(); break;
+      case "avisos-test": avisosProbar().then(m => toast(m === "push" ? "Aviso de prueba enviado: llega en unos segundos" : "Aviso de prueba mostrado (sin push)")); break;
       case "sound": S.settings.sound = !S.settings.sound; save(); render(); if (S.settings.sound) Snd.play("correct"); break;
       case "export": exportData(); break;
       case "login": if (E.sync) E.sync.signIn(); break;
@@ -3605,7 +3679,10 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   // texto de cada apunte para el buscador (se arma una sola vez)
   const cardTextCache = {};
   const cardText = id => cardTextCache[id] || (cardTextCache[id] = norm(E.cards[id].title + " " + (E.cards[id].aliases || []).join(" ") + " " + E.cards[id].summary));
-  document.addEventListener("change", e => { if (e.target.id === "importFile" && e.target.files[0]) importData(e.target.files[0]); });
+  document.addEventListener("change", e => {
+    if (e.target.id === "importFile" && e.target.files[0]) importData(e.target.files[0]);
+    if (e.target.id === "avisosHora") { lsSet(AV_HOUR_KEY, e.target.value); avisosSync(); toast("Aviso diario a las " + e.target.value); }
+  });
   document.addEventListener("keydown", e => {
     if (ui.learn) {
       if (e.key === "Escape") history.back();

@@ -45,6 +45,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 | `tests/run-tests.mjs` | Suite: carga el motor y el contenido en un `vm` de Node y verifica todo. |
 | `PROGRESO.md` | Bitácora del proyecto. |
 | `firestore.rules`, `firebase.json`, `.firebaserc` | Reglas de Firestore (proyecto `efecen-46bfd`). |
+| `push/` | Servicio de avisos **efecen-push**: Worker de Cloudflare (`worker.js`), tablas de D1 (`schema.sql`), `wrangler.toml` y tests (`test.mjs`). Ver más abajo. |
 
 Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística, F102A Física General II A, F104 Física General III y Q101 Química General.
 
@@ -140,6 +141,14 @@ node tests/run-tests.mjs 20           # pasada rápida antes de commitear
   - salteá «Apuntes y Libros» y los duplicados «(1)».
 - **Qué anotar:** solo la estructura (temas, tipos de ejercicio y puntajes), en `docs/parciales/<materia>.md`. No copies enunciados ni nombres de estudiantes.
 - **Cómo armarlos:** en `content/<código>-examenes.js`, con plantillas existentes (`tpl` o `pick`) y ejercicios de desarrollo propios (`self`, con rúbrica). Cada examen suma 100 puntos (lo verifica un test). Si un ejercicio de desarrollo tiene cuentas, lleva `verify`, igual que las plantillas. Para que cada intento traiga ejercicios distintos, usá `any` en las partes o en los ítems: todas las alternativas de un ítem tienen que valer lo mismo. Las plantillas de nivel examen que no pertenecen a ninguna lección van en `templates`, con `verify`.
+
+## Avisos (notificaciones push)
+
+- **Servicio:** `efecen-push`, un Worker de Cloudflare con D1 y un cron por minuto, en `https://push.efecen.com.ar`. Detalle en [push/README.md](push/README.md).
+- **Reparto:** el texto de los avisos nunca sale del dispositivo. La app lo deja en la caché `efecen-avisos` y al servicio le manda solo la suscripción y las horas. El servicio manda un push sin contenido, y `service-worker.js` (`showAvisos`) arma la notificación.
+- **En la app:** `E.reminders` y `E.reminderAt` en `engine.js` (puros, con tests) y el bloque «AVISOS» de `index.html` (`avisosList`, `avisosSyncNow`, `avisosProbar`, `avisosSetHtml`). La dirección del servicio y la clave pública están en `PUSH`.
+- **Si cambia el Worker:** corré `node --no-warnings push/test.mjs` y publicá con `npx wrangler deploy` desde `push/`. No depende del push a GitHub.
+- **Si cambia la clave pública VAPID:** va igual en `push/wrangler.toml` y en `PUSH.key`. La privada es un secreto del Worker (`VAPID_PRIVATE_JWK`) y no se versiona.
 
 ## Firebase (sincronización)
 

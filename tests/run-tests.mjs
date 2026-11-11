@@ -699,6 +699,11 @@ for (const cid of E.courseOrder) {
   // si la fecha cargada no es la de la mesa (se cambió a mano), no se avisa la inscripción de esa mesa
   const moved = { goals: [{ id: "g1", cid: "m101", kind: "final", date: "2026-11-30", turno: "tx" }] };
   ok(!E.reminders(moved, "2026-11-11", lab).some(a => a.id.includes("insc")), w, "avisa la inscripción de una mesa que no es la de la fecha");
+  // la hora de cada aviso
+  const hm = a => { const d = new Date(E.reminderAt(a, "08:30")); return `${E.fmtDate(d)} ${d.getHours()}:${d.getMinutes()}`; };
+  const byKind = k => r.find(a => a.id.endsWith(k));
+  ok(hm(byKind("g1/insc-abre")) === "2026-11-16 10:0" && hm(byKind("g1/insc-falta1")) === "2026-11-23 8:30" && hm(byKind("g1/vispera")) === "2026-11-26 19:0" && hm(byKind("g1/dia")) === "2026-11-27 7:0", w, "reminderAt: horas incorrectas");
+  ok(hm({ id: "2026-11-20/plan", date: "2026-11-20" }) === "2026-11-20 8:30" && new Date(E.reminderAt({ id: "2026-11-20/plan", date: "2026-11-20" })).getHours() === 8, w, "reminderAt: el plan del día va a la hora elegida (8 por defecto)");
   E.calendar.mesas = saved;
 }
 
