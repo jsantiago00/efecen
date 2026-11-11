@@ -2576,6 +2576,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     }
     for (const a of list) a.at = E.reminderAt(a, hour);
     if (avisosTest && now - avisosTest.at < 180000) list.push(avisosTest);
+    else avisosTest = null;
     return list.filter(a => a.at > now - 12 * 3600000);
   }
   const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
@@ -2635,6 +2636,15 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     try { await reg.showNotification(title, { body, icon: "assets/icons/icon-192.png", badge: "assets/icons/icon-192.png", tag: "efecen-prueba" }); } catch (e) { /* sin permiso */ }
     return "local";
   }
+  // lo mismo, pero programado para dentro de un minuto: sirve para probar con la app cerrada (lo manda el cron)
+  async function avisosProbarLuego() {
+    const at = Math.ceil(Date.now() / 60000) * 60000 + 60000;
+    avisosTest = { id: "prueba/" + at, date: today(), at, title: "Aviso programado de prueba", body: "Llegó con la app cerrada: así van a llegar los avisos de tu plan." };
+    lsSet(AV_REG_KEY, "");
+    const mode = await avisosSyncNow().catch(() => "local");
+    const hm = new Date(at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    toast(mode === "push" ? `Listo: cerrá la app. El aviso llega a las ${hm}` : "Este navegador no tiene push: no se puede programar");
+  }
   async function avisosToggle() {
     if (avisosOn()) {
       lsSet(AV_KEY, "0"); lsSet(AV_REG_KEY, "");
@@ -2664,8 +2674,10 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
         <button class="switch ${on ? "on" : ""}" data-act="avisos" role="switch" aria-checked="${on}" aria-label="Avisos"></button></div>
       ${on ? `<div class="set-row"><div><div class="lbl">Hora del aviso diario</div><div class="desc">El plan del día y los recordatorios de inscripción. La víspera de un examen se avisa a las 19 h y el día del examen, a las 7 h.</div></div>
         <select class="set-select" id="avisosHora" aria-label="Hora del aviso diario">${hours.map(h => `<option ${h === hour ? "selected" : ""}>${h}</option>`).join("")}</select></div>
-      <div class="set-row"><div><div class="lbl">Probar</div><div class="desc">Manda un aviso de prueba a este dispositivo.</div></div>
-        <button class="btn sm ghost" data-act="avisos-test">${icon("play")}Probar</button></div>` : ""}`;
+      <div class="set-row"><div><div class="lbl">Probar</div><div class="desc">Manda un aviso de prueba a <b>este</b> dispositivo (cada uno se activa y se prueba por separado).</div></div>
+        <button class="btn sm ghost" data-act="avisos-test">${icon("play")}Probar</button></div>
+      ${push ? `<div class="set-row"><div><div class="lbl">Probar con la app cerrada</div><div class="desc">Programa un aviso para dentro de un minuto. Tocalo, cerrá la app y esperá.</div></div>
+        <button class="btn sm ghost" data-act="avisos-test-later">${icon("timer")}En 1 min</button></div>` : ""}` : ""}`;
   }
   // en Inicio: lo de las mesas que vence hoy o mañana (se ve aunque los avisos estén apagados)
   function avisosHomeCard() {
@@ -3632,6 +3644,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "board-finger": E.board.setPref("finger", !E.board.fingerDraws()); render(); break;
       case "board-shapes": E.board.setPref("shapes", E.board.prefs.shapes === false); render(); break;
       case "avisos": avisosToggle(); break;
+      case "avisos-test-later": avisosProbarLuego(); break;
       case "avisos-test": avisosProbar().then(m => toast(m === "push" ? "Aviso de prueba enviado: llega en unos segundos" : "Aviso de prueba mostrado (sin push)")); break;
       case "sound": S.settings.sound = !S.settings.sound; save(); render(); if (S.settings.sound) Snd.play("correct"); break;
       case "export": exportData(); break;
