@@ -96,7 +96,8 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 
 /* bottom nav */
 .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--card); border-top: 2px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
-.nav-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); }
+.nav-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.nav .nav-extra { display: none; }
 .nav button { background: none; border: 0; padding: 10px 2px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .75rem; font-weight: 800; color: var(--muted); }
 .nav button .ic { width: 26px; height: 26px; }
 .nav button.on { color: var(--primary); }
@@ -567,6 +568,7 @@ figcaption { text-align: center; font-size: .85rem; color: var(--muted); margin-
   .nav-inner { max-width: none; margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .nav-logo { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 1.6rem; letter-spacing: -.02em; color: var(--primary); padding: 0 8px 18px; }
   .nav-logo .schrodi { width: 40px; height: 40px; }
+  .nav .nav-extra { display: flex; }
   .nav button { flex-direction: row; justify-content: flex-start; gap: 14px; padding: 10px 14px; border-radius: 14px; border: 2px solid transparent;
     font-size: .92rem; letter-spacing: .04em; text-transform: uppercase; }
   .nav button .ic { width: 28px; height: 28px; }
@@ -846,6 +848,7 @@ body.board-split .nav { padding-bottom: 0; }
 .help-q { border-top: 2px solid var(--line); padding: 10px 0 2px; margin-top: 10px; }
 .help-q > summary { font-weight: 800; cursor: pointer; }
 .help-q > p { margin: 6px 0 6px; }
+@media (min-width: 960px) { .only-narrow { display: none !important; } }
 </style>
 </head>
 <body>
@@ -1814,12 +1817,15 @@ body.board-split .nav { padding-bottom: 0; }
     fromHash(); render();
   });
 
+  // Barra principal: Inicio, Materia (el camino de la materia activa), Apuntes, Plan y Progreso. La lista de
+  // materias se abre desde Materia, y Ajustes desde el engranaje (en pantallas anchas hay lugar y va en la barra).
   function nav(active) {
+    active = { career: "course", league: "stats", misses: "stats", memo: "course", help: "home" }[active] || active;
     const b = (r, ic, label, params) => `<button class="${active === r ? "on" : ""}" data-act="go" data-r="${r}" ${params ? `data-id="${params}"` : ""}>${icon(ic)}<span>${label}</span></button>`;
     return `<nav class="nav" aria-label="Principal"><div class="nav-inner">
       <div class="nav-logo">${mascot("idle")}<span>efecen</span></div>
-      ${b("home", "house", "Inicio")}${b("career", "map", "Carrera")}${b("plan", "calendar", "Plan")}${b("learn", "graduation-cap", "Aprender")}
-      ${b("stats", "chart-column", "Stats")}${b("settings", "settings", "Ajustes")}</div></nav>`;
+      ${b("home", "house", "Inicio")}${b("course", "map", "Materia", activeCourse())}${b("learn", "graduation-cap", "Apuntes")}${b("plan", "calendar", "Plan")}
+      ${b("stats", "chart-column", "Progreso")}<button class="nav-extra ${active === "settings" ? "on" : ""}" data-act="go" data-r="settings">${icon("settings")}<span>Ajustes</span></button></div></nav>`;
   }
   function topbar() {
     const st = shownStreak();
@@ -1830,6 +1836,7 @@ body.board-split .nav { padding-bottom: 0; }
         ${boardBtn()}
         <span class="chip fire ${st ? "" : "off"}" title="Racha de días">${icon("flame")}${st}</span>
         <span class="chip xp" title="XP total">${icon("star")}${S.xp}</span>
+        <button class="iconbtn only-narrow" data-act="go" data-r="settings" aria-label="Ajustes" title="Ajustes">${icon("settings")}</button>
       </div></header>`;
   }
 
@@ -1906,7 +1913,7 @@ body.board-split .nav { padding-bottom: 0; }
       ${S.career ? "" : careerChooser("¿Qué carrera seguís? Así te muestro solo tus materias. Lo podés cambiar cuando quieras en Ajustes.")}
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
       ${sg && sg.course !== cid ? subjectCard(sg, badge("Sugerida")) : ""}
-      <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver toda la carrera</button></section>
+      <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver todas las materias</button></section>
       </div><aside class="home-side">${avisosHomeCard()}${firstTime ? (S.plan.goals.some(g => g.date > today()) ? planHomeCard() : "") : `<h2 class="section-title">Para hoy</h2>${planHomeCard()}
       ${dailyCard()}
       <h2 class="section-title">Más práctica</h2>
@@ -1930,7 +1937,7 @@ body.board-split .nav { padding-bottom: 0; }
     const years = car ? car.years : [];
     const total = careerSubjects(), withContent = total.filter(hasContent);
     app.innerHTML = `<main class="screen">
-      <div><h1 style="font-size:1.4rem">La carrera</h1>
+      <div><div class="row"><button class="iconbtn" data-act="go" data-r="course" data-id="${cid}" aria-label="Volver a mi materia">${icon("arrow-left")}</button><h1 class="grow" style="font-size:1.4rem">Tus materias</h1></div>
         <p class="muted small" style="margin:4px 0 0">${esc(car ? car.title + " · " + car.plan : "")}</p></div>
       ${E.careerOrder.length > 1 ? careerChooser("") : ""}
       <section class="card diag-card">${mascot("think")}<div class="grow">
@@ -1977,18 +1984,19 @@ body.board-split .nav { padding-bottom: 0; }
         ${nodes}${bossNode}</section>`;
     }).join("");
     app.innerHTML = `<main class="screen">
-      <div class="map-head"><button class="iconbtn" data-act="go" data-r="career" aria-label="Volver a la carrera">${icon("chevron-left")}</button>
-        <div class="grow"><span class="subj-code">${esc(c.code || "")}</span><h1 style="font-size:1.3rem;margin-top:2px">${esc(c.title)}</h1><div class="bar" style="margin-top:6px"><i style="width:${courseProgress(cid) * 100}%"></i></div></div></div>
+      <div class="map-head">
+        <div class="grow"><span class="subj-code">${esc(c.code || "")}</span><h1 style="font-size:1.3rem;margin-top:2px">${esc(c.title)}</h1><div class="bar" style="margin-top:6px"><i style="width:${courseProgress(cid) * 100}%"></i></div></div>
+        <button class="btn sm ghost" data-act="go" data-r="career" aria-label="Cambiar de materia">${icon("map")}Materias</button></div>
       <div class="course-layout"><aside class="course-side">${showDiag ? `<section class="card diag-card">${mascot("think")}<div class="grow"><b>¿Ya viste estos temas?</b>
         <p class="muted small" style="margin:4px 0 10px">Hacé el test diagnóstico (3 ejercicios por unidad) y desbloqueá directo las unidades que dominás. Igual vuelven como repaso. También podés tomar el test de cualquier unidad suelta.</p>
         <div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="diag" data-cid="${cid}">Hacer el test</button>
         <button class="btn sm ghost" data-act="skipdiag" data-cid="${cid}">Empezar de cero</button></div></div></section>` : ""}
 ${examsCard(cid)}${gamesCard(cid)}</aside>
       <div class="course-map">${units || `<p class="muted">Esta materia todavía no tiene unidades.</p>`}</div></div>
-    </main>${nav("career")}`;
+    </main>${nav("course")}`;
   }
 
-  // selector de materia para Aprender y Stats
+  // selector de materia para Apuntes y Progreso
   function subjectPicker() {
     const subs = careerSubjects().filter(hasContent);
     if (subs.length < 2) return "";
@@ -2535,7 +2543,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const dueWeek = Object.entries(S.srs).filter(([k, cd]) => k.startsWith(cid + "/") && cd.due && cd.due > t && cd.due <= E.addDays(t, 7)).length;
     const tileS = (ic, color, v, l) => `<div class="stat-tile"><span style="color:${color}">${icon(ic)}</span><div><b>${v}</b><span>${l}</span></div></div>`;
     app.innerHTML = `<main class="screen">
-      <h1 style="font-size:1.4rem">Estadísticas</h1>
+      <div class="row"><h1 class="grow" style="font-size:1.4rem">Tu progreso</h1><button class="iconbtn only-narrow" data-act="go" data-r="settings" aria-label="Ajustes" title="Ajustes">${icon("settings")}</button></div>
       <button class="course-card" data-act="go" data-r="league"><span class="course-ico">${icon("trophy")}</span><span class="grow"><b>Liga de la semana</b><span class="muted small" style="display:block">${E.weekXp(S, today())} XP esta semana</span></span>${icon("chevron-right")}</button>
       ${missesHomeCard() || `<button class="course-card" data-act="go" data-r="misses"><span class="course-ico">${icon("rotate-ccw")}</span><span class="grow"><b>Cuaderno de errores</b><span class="muted small" style="display:block">Nada para rehacer</span></span>${icon("chevron-right")}</button>`}
       ${subjectPicker()}
@@ -2741,15 +2749,15 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       <div class="row"><button class="iconbtn" data-act="go" data-r="home" aria-label="Volver">${icon("arrow-left")}</button><h1 class="grow" style="font-size:1.4rem">Cómo se usa</h1></div>
       <section class="hero">${mascot("think")}<div class="bubble grow">Lo único que hay que hacer todos los días es la <b>Sesión del día</b>. Todo lo demás es para cuando lo necesites.</div></section>
       ${item("play", "1. Sesión del día", "El botón grande de Inicio. Mezcla los repasos que te tocan hoy con la lección que sigue, en unos 10 minutos. Si un ejercicio sale mal, vuelve al final con otros números.", "home", "Ir a Inicio")}
-      ${item("map", "2. Tu materia", "En Carrera elegís la materia y ves su camino: una lección tras otra, unidad por unidad. Si ya sabés un tema, el test de la unidad lo desbloquea. Arriba del camino están los parciales simulados y los juegos.", "course", "Ver mi materia", activeCourse())}
-      ${item("graduation-cap", "3. Apuntes", "En Aprender está la teoría de cada tema, con demostración y ejemplos, un buscador y el machete para imprimir. En cualquier ejercicio, tocá una palabra subrayada para abrir su explicación.", "learn", "Ir a Aprender")}
+      ${item("map", "2. Tu materia", "En Materia ves el camino: una lección tras otra, unidad por unidad. Si ya sabés un tema, el test de la unidad lo desbloquea. Arriba del camino están los parciales simulados y los juegos, y con el botón «Materias» cambiás de materia.", "course", "Ver mi materia", activeCourse())}
+      ${item("graduation-cap", "3. Apuntes", "En Apuntes está la teoría de cada tema, con demostración y ejemplos, un buscador y el machete para imprimir. En cualquier ejercicio, tocá una palabra subrayada para abrir su explicación.", "learn", "Ir a Apuntes")}
       ${item("calendar", "4. Plan para los exámenes", "Cargás la fecha de un final o parcial y cuánto tiempo tenés. La app reparte qué estudiar cada día y lo reacomoda sola si te atrasás. Con los avisos activados, te recuerda cada tanda de estudio y la inscripción a las mesas.", "plan", "Ir al Plan")}
-      ${item("chart-column", "5. Cómo venís", "En Stats ves qué temas tenés firmes y cuáles flojos, y el cuaderno de errores: los ejercicios que te salieron mal, para rehacerlos con los mismos números.", "stats", "Ir a Stats")}
+      ${item("chart-column", "5. Cómo venís", "En Progreso ves qué temas tenés firmes y cuáles flojos, y el cuaderno de errores: los ejercicios que te salieron mal, para rehacerlos con los mismos números.", "stats", "Ir a Progreso")}
       <section class="card"><b>Preguntas comunes</b>
         <details class="help-q"><summary>¿Qué son la racha y los XP?</summary><p class="muted small">Cada ejercicio bien suma XP. La meta es ${E.DAILY_GOAL} XP por día, y la racha cuenta los días seguidos en que practicaste. Sirven para sostener el hábito y para la liga de la semana.</p></details>
         <details class="help-q"><summary>¿Por qué vuelven temas que ya hice?</summary><p class="muted small">Es repaso espaciado: cada tema vuelve justo antes de que te lo olvides, cada vez más espaciado si lo acertás.</p></details>
         <details class="help-q"><summary>¿Cómo escribo una respuesta?</summary><p class="muted small">Podés usar fracciones (3/4), raíces (√ o raiz), π y notación científica. En las de expresión, escribí como en la calculadora: <code>3x^2 - 2sen(x)</code>. Abajo ves cómo lo entendió la app antes de comprobar.</p></details>
-        <details class="help-q"><summary>¿Se pierde mi progreso si cambio de celular?</summary><p class="muted small">No, si entrás con Google en Ajustes: el progreso se guarda en la nube y se combina entre el celu, la tablet y la compu.</p></details>
+        <details class="help-q"><summary>¿Se pierde mi progreso si cambio de celular?</summary><p class="muted small">No, si entrás con Google en Ajustes (el engranaje de Inicio): el progreso se guarda en la nube y se combina entre el celu, la tablet y la compu.</p></details>
         <details class="help-q"><summary>¿Funciona sin conexión?</summary><p class="muted small">Sí. Conviene instalarla (Ajustes → Instalar la app) para tenerla como una app más.</p></details>
       </section>
     </main>${nav("home")}`;
@@ -2760,7 +2768,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const st = S.settings;
     const seg = (act, opts, val) => `<div class="seg">${opts.map(([v, l]) => `<button class="${v === val ? "on" : ""}" data-act="${act}" data-v="${v}">${l}</button>`).join("")}</div>`;
     app.innerHTML = `<main class="screen">
-      <h1 style="font-size:1.4rem">Ajustes</h1>
+      <div class="row"><button class="iconbtn only-narrow" data-act="back" aria-label="Volver">${icon("arrow-left")}</button><h1 class="grow" style="font-size:1.4rem">Ajustes</h1></div>
       <div class="masonry"><section class="card">
         <div class="set-row"><div><div class="lbl">Sonido</div><div class="desc">Efectos al responder</div></div>
           <button class="switch ${st.sound ? "on" : ""}" data-act="sound" role="switch" aria-checked="${st.sound}" aria-label="Sonido"></button></div>
@@ -2769,7 +2777,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
           ${seg("theme", [["auto", "Auto"], ["light", "Claro"], ["dark", "Oscuro"]], st.theme)}</div>
       </section>
       <section class="card"><div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tu carrera</div>
-        <div class="desc" style="margin-bottom:8px">Inicio, La carrera y Aprender muestran solo sus materias.</div>
+        <div class="desc" style="margin-bottom:8px">La app muestra solo las materias de tu carrera.</div>
         <div class="seg tight">${E.careerOrder.map(id => `<button class="${S.career && curCareer().id === id ? "on" : ""}" data-act="career-pick" data-v="${id}">${esc(E.careers[id].short || E.careers[id].title)}</button>`).join("")}</div></div></section>
       ${accountCard()}
       ${installCard()}
@@ -3398,11 +3406,11 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   // ---------- APRENDER (índice de apuntes) ----------
   function renderLearnIndex() {
     const cid = activeCourse(), c = course(cid), th = c.theory;
-    if (!th) { app.innerHTML = `<main class="screen"><h1>Aprender</h1><p class="muted">Este curso todavía no tiene apuntes.</p></main>${nav("learn")}`; return; }
+    if (!th) { app.innerHTML = `<main class="screen"><h1>Apuntes</h1><p class="muted">Este curso todavía no tiene apuntes.</p></main>${nav("learn")}`; return; }
     const cur = currentLesson(cid);
     const ids = c.cardOrder || Object.keys(th.cards), read = ids.filter(id => S.read[id]).length;
     app.innerHTML = `<main class="screen">
-      <div class="row"><h1 class="grow" style="font-size:1.4rem">Aprender</h1>${boardBtn()}</div>
+      <div class="row"><h1 class="grow" style="font-size:1.4rem">Apuntes</h1>${boardBtn()}</div>
       ${subjectPicker()}
       <section class="hero">${mascot("think")}<div class="bubble grow">Tocá cualquier <span class="term">término subrayado</span> en un ejercicio o en los apuntes y te llevo a su explicación, con demostración y ejemplos.</div></section>
       ${cur && cur.theory.length ? `<button class="course-card" data-act="learn" data-id="lesson:${cur.id}"><span class="course-ico">${icon("graduation-cap")}</span>
@@ -3663,6 +3671,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     if (act.startsWith("plan-")) { planAct(act, el); return; }
     switch (act) {
       case "go": go(el.dataset.r, { id: el.dataset.id }); break;
+      case "back": if (history.length > 1) history.back(); else go("home"); break;
       case "learn": openLearn(el.dataset.id); break;
       case "unittest": startUnitTest(el.dataset.cid, el.dataset.id); break;
       case "boss": startBoss(el.dataset.cid, el.dataset.id); break;
