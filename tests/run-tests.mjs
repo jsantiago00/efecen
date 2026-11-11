@@ -634,6 +634,32 @@ for (const cid of E.courseOrder) {
   ok(cm.career === "bio" && cm2.career === "bio" && cm.careerAt === 200, w, "carrera: debe quedar la elegida más recientemente");
   ok(E.store.merge(D(), cb).career === "fis" && E.store.merge(cb, D()).career === "fis", w, "carrera: un dispositivo sin elegir no la borra");
   ok(E.store.migrate({ app: "efecen", version: 1, srs: {}, courses: {} }).career === null, w, "migrate: las cuentas viejas quedan sin carrera elegida");
+  // cuaderno de errores: gana lo que cambió último, lo resuelto no vuelve y hay un tope
+  {
+    const w2 = "misses", MS = E.misses, day = 864e5;
+    const sa = D(), sb = D();
+    MS.add(sa, "m101", "der-cadena-num", 11, 1000); MS.add(sa, "m101", "der-cadena-num", 12, 2000); MS.add(sa, "m101", "no-existe", 5, 2500);
+    MS.add(sb, "m101", "der-cadena-num", 11, 1000); MS.solve(sb, "m101/der-cadena-num/11", 3000); MS.add(sb, "m101", "der-cadena-num", 13, 1500);
+    const mm = E.store.merge(sa, sb), mm2 = E.store.merge(sb, sa);
+    ok(canon(mm.misses) === canon(mm2.misses) && canon(E.store.merge(mm, mm).misses) === canon(mm.misses) && canon(E.store.merge(mm, sa).misses) === canon(mm.misses), w2, "merge: depende del orden o no es idempotente");
+    ok(mm.misses["m101/der-cadena-num/11"].ok === 1 && !mm.misses["m101/der-cadena-num/12"].ok && mm.misses["m101/der-cadena-num/13"], w2, "merge: una resuelta volvió a quedar pendiente o se perdió una");
+    const tplOk = !!E.courses.m101.templates["der-cadena-num"];
+    ok(tplOk, w2, "la plantilla de prueba ya no existe: cambiá el test");
+    ok(MS.list(mm).map(x => x.seed).join() === "12,13", w2, "list: deben salir las pendientes de plantillas que existen, de la más nueva a la más vieja");
+    const p = MS.parse("m101/der-cadena-num/12");
+    ok(p.cid === "m101" && p.tpl === "der-cadena-num" && p.seed === 12, w2, "parse no recupera la materia, la plantilla y la semilla");
+    // volver a fallar una resuelta la reabre
+    MS.add(sb, "m101", "der-cadena-num", 11, 4000);
+    ok(E.store.merge(sa, sb).misses["m101/der-cadena-num/11"].ok === 0, w2, "una que se volvió a fallar después debe quedar pendiente");
+    const sc = D();
+    for (let i = 0; i < MS.MAX + 30; i++) MS.add(sc, "m101", "der-cadena-num", i, 5000 + i);
+    ok(Object.keys(sc.misses).length === MS.MAX && sc.misses[`m101/der-cadena-num/${MS.MAX + 29}`] && !sc.misses["m101/der-cadena-num/0"], w2, "tope: deben quedar las más nuevas");
+    const sd = D();
+    MS.add(sd, "m101", "der-cadena-num", 1, 0); MS.solve(sd, "m101/der-cadena-num/1", 10); MS.add(sd, "m101", "der-cadena-num", 2, 20);
+    MS.prune(sd, (MS.KEEP_DAYS + 1) * day);
+    ok(!sd.misses["m101/der-cadena-num/1"] && sd.misses["m101/der-cadena-num/2"], w2, "prune: se van las marcas viejas de las resueltas, no las pendientes");
+    ok(E.store.migrate({ app: "efecen", version: 1, srs: {}, courses: {} }).misses, w2, "migrate: las cuentas viejas quedan sin cuaderno");
+  }
 }
 
 // plan de estudio: el reparto respeta el tiempo de cada día, las fechas y los días libres, y no pierde trabajo

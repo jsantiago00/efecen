@@ -975,6 +975,41 @@
   const H_hours = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; };
   PL.fmt = H_hours;
 
+  // ---------- Cuaderno de errores ----------
+  // Los ejercicios que salieron mal, con su semilla, para rehacerlos tal cual. Cada entrada es
+  // "cid/tpl/semilla" -> { t: última vez que cambió (ms), ok: 1 si ya se resolvió o se descartó }.
+  // Las resueltas quedan un tiempo como marca, para que al combinar dispositivos no vuelvan a aparecer.
+  const MS = E.misses = {
+    MAX: 80, KEEP_DAYS: 30,
+    key: (cid, tpl, seed) => `${cid}/${tpl}/${seed}`,
+    parse(key) { const p = key.split("/"); return { cid: p[0], tpl: p.slice(1, -1).join("/"), seed: +p[p.length - 1] }; },
+    add(s, cid, tpl, seed, now) { s.misses[MS.key(cid, tpl, seed)] = { t: now, ok: 0 }; MS.prune(s, now); },
+    solve(s, key, now) { if (s.misses[key]) s.misses[key] = { t: now, ok: 1 }; },
+    // las pendientes, de la más nueva a la más vieja (solo las de plantillas que siguen existiendo)
+    list(s) {
+      return Object.entries(s.misses).filter(([, m]) => !m.ok).map(([key, m]) => Object.assign(MS.parse(key), { key, t: m.t }))
+        .filter(m => E.courses[m.cid] && E.courses[m.cid].templates[m.tpl])
+        .sort((a, b) => b.t - a.t || (a.key < b.key ? -1 : 1));
+    },
+    // se van las marcas viejas de las resueltas y, si aun así sobran, las más viejas
+    prune(s, now) {
+      const es = Object.entries(s.misses).filter(([, m]) => !m.ok || now - m.t < MS.KEEP_DAYS * 864e5)
+        .sort(([ka, a], [kb, b]) => b.t - a.t || (ka < kb ? -1 : 1)).slice(0, MS.MAX);
+      s.misses = Object.fromEntries(es);
+    },
+    // por entrada gana la que cambió último (a igualdad, la resuelta)
+    merge(a, b) {
+      const out = Object.assign({}, a);
+      for (const [k, m] of Object.entries(b || {})) {
+        const o = out[k];
+        if (!o || m.t > o.t || (m.t === o.t && m.ok && !o.ok)) out[k] = m;
+      }
+      const s = { misses: out }, last = Math.max(0, ...Object.values(out).map(m => m.t));
+      MS.prune(s, last);
+      return s.misses;
+    }
+  };
+
   // ---------- Estado persistente ----------
   E.store = {
     key: "efecen:v1",
@@ -987,6 +1022,7 @@
       exams: {}, // "m101/p1" -> { best, attempts: [{ d, t, score }] } (los más nuevos primero)
       career: null, careerAt: 0, // carrera elegida ("fis", "mat", "qui", "bio") y cuándo se eligió (ms)
       daily: {}, // ejercicio del día: "2026-10-15" -> { cid, tpl, ok }
+      misses: {}, // cuaderno de errores (ver E.misses)
       plan: E.plan.defaults() // plan de estudio (ver E.plan)
     }),
     migrate(s) {
@@ -1068,6 +1104,7 @@
         if (!x || (od.ok && !x.ok)) out.daily[d] = od;
       }
       out.plan = E.plan.merge(a.plan, b.plan);
+      out.misses = E.misses.merge(a.misses, b.misses);
       const seen = new Set();
       out.log = a.log.concat(b.log).filter(l => { const k = JSON.stringify(l); return seen.has(k) ? false : seen.add(k); })
         .sort((x, y) => (y.d > x.d ? 1 : y.d < x.d ? -1 : 0)).slice(0, 60);

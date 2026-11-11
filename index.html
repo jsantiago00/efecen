@@ -785,6 +785,31 @@ body.board-split .nav { padding-bottom: 0; }
 .board-hint { position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: .85rem; pointer-events: none; }
 .board-btn { color: var(--primary); }
 .board-btn.on { background: var(--primary-soft); }
+/* cuaderno de errores */
+.miss-row { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-top: 2px solid var(--line); }
+.miss-row:first-of-type { margin-top: 8px; }
+.miss-main { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 4px 0; color: inherit; font: inherit; cursor: pointer; }
+.miss-q { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* machete */
+.sheet-body { padding: 0 14px 14px; }
+.sheet-card { break-inside: avoid; padding: 8px 0; border-top: 2px solid var(--line); font-size: .93rem; }
+.sheet-card .para { margin-top: 4px; }
+.sheet-t { background: none; border: 0; padding: 0; font: inherit; font-weight: 900; color: var(--primary); text-align: left; cursor: pointer; }
+.sheet-page .katex-display { margin: .4em 0; overflow-x: auto; overflow-y: hidden; }
+@media (min-width: 800px) { .sheet-body { columns: 2; column-gap: 28px; } }
+@media print {
+  html:root:not(#_) { --bg: #fff; --card: #fff; --ink: #111; --muted: #444; --line: #bbb; --primary: #2d2382; --primary-soft: #eee; }
+  body.learn-open > *:not(#learn) { display: none !important; }
+  body.learn-open .learn { position: static; overflow: visible; animation: none; }
+  .learn-head, .no-print, .learn .mascot { display: none !important; }
+  .learn-inner { max-width: none; padding: 0; }
+  .sheet-u { border: 0; }
+  .sheet-u > summary { padding: 8px 0 2px; font-size: 1.05rem; }
+  .sheet-u > summary .ic { display: none; }
+  .sheet-body { columns: 2; column-gap: 24px; padding: 0; }
+  .sheet-card { font-size: 9.5pt; padding: 4px 0; border-top: 1px solid #bbb; }
+  .sheet-page a.term { color: inherit; text-decoration: none; border: 0; }
+}
 </style>
 </head>
 <body>
@@ -853,6 +878,7 @@ body.board-split .nav { padding-bottom: 0; }
   const ui = { route: "home", params: {}, session: null, summary: null, graphs: new Map(), viz: new Map() };
   const save = () => { const okSave = E.store.save(S); if (E.sync) E.sync.changed(); return okSave; };
   const today = () => E.today();
+  const dayOf = ms => E.fmtDate(new Date(ms));
   // ganchos para la sincronización con la nube (sync.js): leer el estado, reemplazarlo tras combinar y refrescar
   E.syncHooks = {
     get: () => S,
@@ -1629,7 +1655,7 @@ body.board-split .nav { padding-bottom: 0; }
 
   // ---------- navegación ----------
   function go(route, params = {}) {
-    const hash = { home: "#/", plan: "#/plan", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos" }[route] || "#/";
+    const hash = { home: "#/", plan: "#/plan", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos", misses: "#/errores" }[route] || "#/";
     if (location.hash !== hash) history.pushState(null, "", hash);
     ui.route = route; ui.params = params;
     render();
@@ -1644,6 +1670,7 @@ body.board-split .nav { padding-bottom: 0; }
     else if (h === "aprender") ui.route = "learn";
     else if (h === "ajustes") ui.route = "settings";
     else if (h === "creditos") ui.route = "credits";
+    else if (h === "errores") ui.route = "misses";
     else ui.route = "home";
     if (ui.route === "course" && !E.courses[ui.params.id]) ui.route = "home";
   }
@@ -1698,7 +1725,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, plan: renderPlan, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, summary: renderSummary, "exam-result": renderExamResult };
+    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, plan: renderPlan, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, misses: renderMisses, summary: renderSummary, "exam-result": renderExamResult };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1755,6 +1782,7 @@ body.board-split .nav { padding-bottom: 0; }
       <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver toda la carrera</button></section>
       </div><aside class="home-side">${firstTime ? (S.plan.goals.some(g => g.date > today()) ? planHomeCard() : "") : `${planHomeCard()}
       ${dailyCard()}
+      ${missesHomeCard()}
       <div id="leagueHome">${leagueHomeCard()}</div>
       <button class="btn ghost block" data-act="rush" data-cid="${cid}">${icon("timer")}Contrarreloj · ${esc(c.code || c.title)}${cState(cid).rush ? ` <span class="muted small">(récord ${cState(cid).rush})</span>` : ""}</button>`}</aside></div>
     </main>${nav("home")}`;
@@ -1863,6 +1891,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const prog = s.kind === "boss" ? 1 - s.boss.hp / s.boss.max : s.kind === "rush" ? rushLeft() / RUSH_MS : s.i / s.items.length;
     const tag = item.src === "review" ? `<span class="ses-tag review">${icon("rotate-ccw")}Repaso · ${esc(c.concepts[item.focus || c.templates[item.tpl].concepts[0]].name)}</span>`
       : item.src === "diag" ? `<span class="ses-tag">${icon("target")}Diagnóstico · Unidad ${item.unit + 1}</span>`
+      : item.src === "miss" ? `<span class="ses-tag review">${icon("rotate-ccw")}Cuaderno de errores${item.retry ? " · con números nuevos" : ""}</span>`
       : item.src === "challenge" ? `<span class="ses-tag review">${icon("calendar")}Ejercicio del día · un solo intento</span>`
       : `<span class="ses-tag">${icon("sparkles")}${TYPE_LABEL[inst.type]}</span>`;
     app.innerHTML = `<div class="session">
@@ -2074,6 +2103,9 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       gain = ok ? (item.src === "diag" ? 5 : s.kind === "rush" ? 3 : s.challenge ? DAILY_XP : 10) : 0;
     } else if (ok) gain = 5;
     s.xp += gain;
+    // cuaderno de errores: lo que sale mal al primer intento queda guardado con su semilla; si venía del cuaderno y sale bien, se va
+    if (first && item.miss) { ok ? E.misses.solve(S, item.miss, Date.now()) : E.misses.add(S, icid, item.tpl, item.seed, Date.now()); save(); }
+    else if (first && !ok && item.src !== "diag" && s.kind !== "rush") { E.misses.add(S, icid, item.tpl, item.seed, Date.now()); save(); }
     if (s.kind === "rush") return rushAnswered(ok);
     const bossMsg = s.kind === "boss" ? bossAnswered(ok) : "";
     // si falló, vuelve al final de la cola con valores nuevos (salvo en el diagnóstico y los juegos)
@@ -2264,9 +2296,65 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
         <div class="tile"><div class="lab">Tiempo</div><div class="val">${mm}:${String(ss).padStart(2, "0")}</div></div>
       </div>
       <div class="row" style="flex-wrap:wrap;justify-content:center">${extra.join("")}</div>
-      <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="go" data-r="${s.kind === "lesson" || s.kind === "diag" || s.boss ? "course" : "home"}" data-id="${s.cid}">Continuar</button>
+      <div class="ses-foot"><div class="ses-foot-inner"><button class="btn block" data-act="go" data-r="${s.back || (s.kind === "lesson" || s.kind === "diag" || s.boss ? "course" : "home")}" data-id="${s.cid}">Continuar</button>
         ${s.boss || s.rush ? `<button class="btn ghost block" data-act="${s.boss ? "boss" : "rush"}" data-cid="${s.cid}" data-id="${s.boss ? s.boss.unit : ""}">${icon("rotate-ccw")}Otra vez</button>` : ""}</div></div>
     </main>`;
+  }
+
+  // ---------- CUADERNO DE ERRORES ----------
+  // los ejercicios que salieron mal quedan guardados con su semilla (E.misses) para rehacerlos tal cual
+  const missList = () => E.misses.list(S);
+  function missesHomeCard() {
+    const n = missList().length;
+    if (!n) return "";
+    return `<button class="course-card" data-act="go" data-r="misses"><span class="course-ico">${icon("rotate-ccw")}</span>
+      <span class="grow"><b>Cuaderno de errores</b><span class="muted small" style="display:block">${n} ${n === 1 ? "ejercicio" : "ejercicios"} para rehacer</span></span>${icon("chevron-right")}</button>`;
+  }
+  function startMisses(key) {
+    const list = missList(), pick = key ? list.filter(m => m.key === key) : list.slice(0, 8).reverse();
+    if (!pick.length) return;
+    startSession({ kind: "practice", cid: pick[0].cid, title: "Cuaderno de errores", back: "misses",
+      items: pick.map(m => ({ cid: m.cid, tpl: m.tpl, seed: m.seed, src: "miss", miss: m.key })) });
+  }
+  function renderMisses() {
+    const list = missList(), t = today();
+    const when = ms => { const d = E.diffDays(dayOf(ms), t); return d <= 0 ? "hoy" : d === 1 ? "ayer" : `hace ${d} días`; };
+    const rows = list.slice(0, 25).map(m => {
+      const c = course(m.cid), tp = c.templates[m.tpl];
+      let prompt = "";
+      try { prompt = noLinks(tex(E.instantiate(c, m.tpl, m.seed).prompt)); } catch (e) { prompt = ""; }
+      return `<div class="miss-row"><button class="miss-main" data-act="miss-one" data-key="${esc(m.key)}">
+          <span class="muted small" style="display:block;font-weight:800">${esc(c.code)} · ${esc((c.concepts[tp.concepts[0]] || {}).name || "")} · ${when(m.t)}</span>
+          <span class="miss-q">${prompt}</span></button>
+        <button class="iconbtn" data-act="miss-drop" data-key="${esc(m.key)}" aria-label="Sacar del cuaderno" title="Ya lo entendí: sacarlo">${icon("x")}</button></div>`;
+    }).join("");
+    app.innerHTML = `<main class="screen">
+      <div class="row"><button class="iconbtn" data-act="go" data-r="stats" aria-label="Volver">${icon("arrow-left")}</button><h1 class="grow" style="font-size:1.4rem">Cuaderno de errores</h1></div>
+      <section class="hero">${mascot(list.length ? "think" : "happy")}<div class="bubble grow">${list.length
+        ? "Acá quedan los ejercicios que te salieron mal, con los mismos números. Rehacelos: cuando te salen bien, se van del cuaderno."
+        : "No hay nada para rehacer. Cuando un ejercicio te salga mal, lo guardo acá con los mismos números."}</div></section>
+      ${list.length ? `<button class="btn big block" data-act="miss-all">${icon("play")}Rehacer ${list.length > 8 ? "los 8 más recientes" : list.length === 1 ? "el ejercicio" : `los ${list.length}`}</button>
+      <section class="card"><h2 class="section-title">Pendientes · ${list.length}</h2>${rows}
+        ${list.length > 25 ? `<p class="muted small" style="margin:8px 0 0">Y ${list.length - 25} más: van apareciendo a medida que resolvés estos.</p>` : ""}</section>` : ""}
+    </main>${nav("stats")}`;
+  }
+
+  // ---------- MACHETE: lo esencial de cada apunte de la materia, en una hoja para repasar o imprimir ----------
+  function sheetHtml(cid) {
+    const c = course(cid), th = c.theory, ids = c.cardOrder || Object.keys(th.cards);
+    const units = realUnits(c).map(u => ({ u, ids: ids.filter(id => th.cards[id].group === u.id) })).filter(x => x.ids.length);
+    const body = card => (card.def && card.def.length ? card.def : [card.summary]).filter(b => typeof b === "string").map(b => `<div class="para">${tex(b)}</div>`).join("");
+    return `<div class="learn-inner sheet-page">${learnHead("Machete · " + c.code)}
+      <div class="learn-hero">${mascot("wow")}<div class="grow"><h1>Machete de ${esc(c.title)}</h1>
+        <p class="muted no-print">Lo esencial de cada tema, unidad por unidad. Tocá un título para abrir el apunte completo, con la demostración y los ejemplos.</p></div></div>
+      <div class="row no-print"><button class="btn sm" data-act="sheet-print">${icon("file-text")}Imprimir o guardar como PDF</button></div>
+      ${units.map(x => `<details class="lsec sheet-u" open><summary>${icon("book-open")}<span class="grow">${esc((x.u.program ? x.u.program + " · " : "") + x.u.title)}</span>${icon("chevron-right", "chev")}</summary>
+        <div class="sheet-body">${x.ids.map(id => `<div class="sheet-card"><button class="sheet-t" data-act="learn" data-id="${id}">${esc(th.cards[id].title)}</button>${body(th.cards[id])}</div>`).join("")}</div></details>`).join("")}
+    </div>`;
+  }
+  function printSheet() {
+    for (const d of $$("#learn details")) d.open = true;
+    window.print();
   }
 
   // ---------- ESTADÍSTICAS ----------
@@ -2321,6 +2409,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     app.innerHTML = `<main class="screen">
       <h1 style="font-size:1.4rem">Estadísticas</h1>
       <button class="course-card" data-act="go" data-r="league"><span class="course-ico">${icon("trophy")}</span><span class="grow"><b>Liga de la semana</b><span class="muted small" style="display:block">${E.weekXp(S, today())} XP esta semana</span></span>${icon("chevron-right")}</button>
+      ${missesHomeCard() || `<button class="course-card" data-act="go" data-r="misses"><span class="course-ico">${icon("rotate-ccw")}</span><span class="grow"><b>Cuaderno de errores</b><span class="muted small" style="display:block">Nada para rehacer</span></span>${icon("chevron-right")}</button>`}
       ${subjectPicker()}
       <section class="stat-tiles">
         ${tileS("flame", "var(--fire)", shownStreak(), `racha (mejor: ${S.bestStreak})`)}
@@ -2794,7 +2883,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     return `<div class="theory-chips"><span class="muted small">${icon("graduation-cap")} ${label}</span>${ids.map(id => `<button class="chip-link" data-act="learn" data-id="${id}">${esc(cardOf(id).title)}</button>`).join("")}</div>`;
   }
   function openLearn(id) {
-    if (!id || (!id.startsWith("lesson:") && !cardOf(id))) return;
+    if (!id || (!id.startsWith("lesson:") && !id.startsWith("sheet:") && !cardOf(id))) return;
     if (!ui.learn) ui.learn = { stack: [] };
     if (ui.learn.stack[ui.learn.stack.length - 1] === id) return;
     ui.learn.stack.push(id);
@@ -2823,14 +2912,16 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       document.body.appendChild(el);
     }
     const id = ui.learn.stack[ui.learn.stack.length - 1];
-    el.innerHTML = id.startsWith("lesson:") ? lessonNotesHtml(id.slice(7)) : cardHtml(cardOf(id));
+    const isSheet = id.startsWith("sheet:");
+    el.innerHTML = isSheet ? sheetHtml(id.slice(6)) : id.startsWith("lesson:") ? lessonNotesHtml(id.slice(7)) : cardHtml(cardOf(id));
     // cada ficha tiene su hoja en la pizarra, con el título y el resumen como "enunciado"
-    if (!id.startsWith("lesson:")) { const card = cardOf(id); boardContext({ key: "learn:" + id, label: card.title, prompt: `<b>${esc(card.title)}</b>: ${tex(card.summary)}` }); }
+    if (isSheet) boardContext(null);
+    else if (!id.startsWith("lesson:")) { const card = cardOf(id); boardContext({ key: "learn:" + id, label: card.title, prompt: `<b>${esc(card.title)}</b>: ${tex(card.summary)}` }); }
     document.body.classList.add("learn-open");
     el.scrollTop = 0;
     drawGraphs(el);
     fitEqs(el);
-    if (!S.read[id]) { S.read[id] = true; save(); }
+    if (!isSheet && !S.read[id]) { S.read[id] = true; save(); }
   }
   function learnHead(crumb) {
     const deep = ui.learn.stack.length > 1;
@@ -2990,10 +3081,14 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       <section class="hero">${mascot("think")}<div class="bubble grow">Tocá cualquier <span class="term">término subrayado</span> en un ejercicio o en los apuntes y te llevo a su explicación, con demostración y ejemplos.</div></section>
       ${cur && cur.theory.length ? `<button class="course-card" data-act="learn" data-id="lesson:${cur.id}"><span class="course-ico">${icon("graduation-cap")}</span>
         <span class="grow"><span class="muted small" style="display:block">Apuntes de tu lección actual</span><b>${esc(cur.title)}</b></span>${icon("chevron-right")}</button>` : ""}
-      <label class="search">${icon("search")}<input id="learnSearch" type="search" placeholder="Buscar un tema o término…" autocomplete="off" aria-label="Buscar en los apuntes"></label>
+      <button class="course-card" data-act="learn" data-id="sheet:${cid}"><span class="course-ico">${icon("file-text")}</span>
+        <span class="grow"><span class="muted small" style="display:block">Todo en una hoja, para repasar o imprimir</span><b>Machete de ${esc(c.code || c.title)}</b></span>${icon("chevron-right")}</button>
+      <label class="search">${icon("search")}<input id="learnSearch" type="search" placeholder="Buscar un tema, en todas las materias…" autocomplete="off" aria-label="Buscar en los apuntes"></label>
       <p class="muted small" style="margin:-6px 0 0">${read} de ${ids.length} apuntes leídos · ${esc(c.title)}</p>
       ${realUnits(c).map(u => ({ id: u.id, title: (u.program ? u.program + " · " : "") + u.title })).concat([{ id: null, title: "Otros" }]).filter(g => ids.some(id => (th.cards[id].group || null) === g.id || (g.id === null && !c.units.some(u => u.id === th.cards[id].group)))).map(g => `<section class="learn-group"><h2 class="section-title">${esc(g.title)}</h2>
         <div class="learn-list">${ids.filter(id => g.id === null ? !c.units.some(u => u.id === th.cards[id].group) : th.cards[id].group === g.id).map(id => noteRow(id)).join("")}</div></section>`).join("")}
+      <section id="learnOther" hidden></section>
+      <p class="muted" id="learnNone" hidden>No encontré apuntes con eso.</p>
     </main>${nav("learn")}`;
   }
 
@@ -3263,6 +3358,10 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "skipdiag": cState(el.dataset.cid).diag = "skipped"; save(); render(); break;
       case "practice": startPractice(el.dataset.cid, el.dataset.k); break;
       case "weak-practice": startWeak(el.dataset.cid); break;
+      case "miss-all": startMisses(); break;
+      case "miss-one": startMisses(el.dataset.key); break;
+      case "miss-drop": E.misses.solve(S, el.dataset.key, Date.now()); save(); render(); break;
+      case "sheet-print": printSheet(); break;
       case "begin": renderExercise(); break;
       case "quit":
         if (confirm("¿Salir de la sesión? Se pierde el progreso de esta sesión.")) { if (s && s.rush) { clearTimeout(s.rush.adv); clearInterval(rushTimer); } ui.session = null; history.replaceState(null, "", "#/"); fromHash(); render(); }
@@ -3333,7 +3432,19 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const q = norm(e.target.value.trim());
     for (const row of $$("[data-q]")) row.hidden = !!q && !row.dataset.q.includes(q);
     for (const g of $$(".learn-group")) g.hidden = !$$("[data-q]", g).some(r => !r.hidden);
+    // con dos letras o más, también busca en los apuntes de las otras materias
+    const other = $("#learnOther"), cid = activeCourse();
+    const hits = q.length < 2 ? [] : Object.keys(E.cards).filter(id => E.cards[id].course !== cid && cardText(id).includes(q));
+    // primero los que coinciden en el título
+    hits.sort((a, b) => norm(E.cards[b].title).includes(q) - norm(E.cards[a].title).includes(q));
+    other.hidden = !hits.length;
+    other.innerHTML = hits.length ? `<h2 class="section-title">En otras materias</h2><div class="learn-list">${hits.slice(0, 12).map(id => { const oc = course(E.cards[id].course); return noteRow(id, null, `${oc.code} · ${oc.title}`); }).join("")}</div>
+      ${hits.length > 12 ? `<p class="muted small" style="margin:8px 0 0">Y ${hits.length - 12} más: afiná la búsqueda.</p>` : ""}` : "";
+    $("#learnNone").hidden = !q || hits.length > 0 || $$(".learn-group").some(g => !g.hidden);
   });
+  // texto de cada apunte para el buscador (se arma una sola vez)
+  const cardTextCache = {};
+  const cardText = id => cardTextCache[id] || (cardTextCache[id] = norm(E.cards[id].title + " " + (E.cards[id].aliases || []).join(" ") + " " + E.cards[id].summary));
   document.addEventListener("change", e => { if (e.target.id === "importFile" && e.target.files[0]) importData(e.target.files[0]); });
   document.addEventListener("keydown", e => {
     if (ui.learn) {

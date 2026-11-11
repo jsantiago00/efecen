@@ -359,6 +359,12 @@ Pedido del usuario: aplicar las mejoras que surgieron de una revisión de la app
 - **Trampas en plantillas viejas (primera tanda):** derivada de raíz y logaritmo sin la derivada de lo de adentro (M101), varianza dividiendo por $n$ (M105), tiempo de vuelo hasta la altura máxima y altura sin la inicial (F101), plano inclinado sin rozamiento o con el rozamiento sumado (F101), Coulomb con $1/r$ (F102A), resistencias todas en serie (F102A), capacitores combinados como resistencias (F102A) y despeje de la ecuación de lentes con suma (F102B).
 - **Pendiente de esta parte:** más trampas en las plantillas más usadas de cada materia, y más paso a paso en F102A, F102B y M104.
 
+## Repaso para los finales (11/11, pedido del usuario)
+
+- **Cuaderno de errores** (`#/errores`, desde Inicio y Estadísticas). Lo que sale mal al primer intento queda guardado con su semilla (`S.misses["cid/tpl/semilla"] = { t, ok }`, motor en `E.misses`), salvo en el diagnóstico, el contrarreloj y las evaluaciones. Se rehace tal cual, de a uno o los 8 más recientes; si sale bien se va del cuaderno, y también se puede sacar a mano. Tope de 80 entradas. Las resueltas quedan 30 días como marca, para que al combinar dispositivos no reaparezcan: en el merge gana la entrada que cambió último. Tiene tests.
+- **Machete** (en Aprender, «Machete de la materia»). Una hoja con la definición de cada apunte, unidad por unidad, en el orden del recorrido. Cada título abre el apunte completo. «Imprimir o guardar como PDF» usa la impresión del navegador, con estilos propios (dos columnas, colores claros aunque la app esté en oscuro). Se abre en el visor de apuntes con el id `sheet:<materia>`.
+- **Buscador global.** El buscador de Aprender, con dos letras o más, también muestra los apuntes de las otras materias («En otras materias», hasta 12, primero los que coinciden en el título).
+
 ## Decisiones tomadas
 
 - **Corrección de respuestas chicas (27/10).** `E.checkNumeric` aceptaba también la respuesta redondeada a dos decimales. Con las respuestas de química del orden de $10^{-5}$ eso aceptaba un «0», así que ese redondeo ahora vale solo si la respuesta es de 0,1 o más. Tiene un test.
