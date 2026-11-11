@@ -925,6 +925,17 @@
       }
       return { days, goals: summary, warnings, last };
     },
+    // las tandas de un día con horario: los bloques seguidos (uno termina cuando empieza el otro) van juntos.
+    // Devuelve [{ at (minutos desde la medianoche), min, blocks }], en orden; los bloques sin hora no entran.
+    tandas(blocks) {
+      const out = [];
+      for (const b of blocks.filter(x => x.at).sort((x, y) => PL.toMin(x.at) - PL.toMin(y.at))) {
+        const a = PL.toMin(b.at), last = out[out.length - 1];
+        if (last && last.at + last.min === a) { last.min += b.min; last.blocks.push(b); }
+        else out.push({ at: a, min: b.min, blocks: [b] });
+      }
+      return out;
+    },
     // marcar (o desmarcar) un bloque como hecho hoy
     mark(p, date, key, min, on, now = Date.now()) {
       const day = p.log[date] = p.log[date] || {}, prev = (day[key] && day[key].m) || 0;

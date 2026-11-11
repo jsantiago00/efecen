@@ -826,6 +826,26 @@ body.board-split .nav { padding-bottom: 0; }
 .set-select { font: inherit; font-weight: 800; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px; }
 .aviso-card { border-color: var(--gold); display: flex; flex-direction: column; gap: 10px; }
 .aviso-card .ic { color: var(--gold-d); flex: none; margin-top: 2px; }
+/* secciones plegables */
+.fold > summary { list-style: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary .chev { color: var(--muted); transition: transform .2s; flex: none; }
+.fold[open] > summary .chev { transform: rotate(90deg); }
+.fold > summary > .ic:first-child { width: 26px; height: 26px; color: var(--primary); flex: none; }
+.fold.games-card > summary > .ic:first-child { color: var(--fire); }
+.fold.games-card, .fold.exams-card { display: block; }
+.fold-body { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.fold-plain > summary.course-card { width: 100%; }
+.fold-plain .fold-body { gap: 12px; margin-top: 12px; }
+.fold .section-title { margin: 0; }
+.pl-avisos { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); }
+.pl-avisos .ic { width: 18px; height: 18px; color: var(--primary); flex: none; }
+.help-item { display: flex; gap: 12px; align-items: flex-start; }
+.help-item .linkbtn { display: inline-flex; align-items: center; gap: 2px; }
+.help-item .linkbtn .ic { width: 16px; height: 16px; }
+.help-q { border-top: 2px solid var(--line); padding: 10px 0 2px; margin-top: 10px; }
+.help-q > summary { font-weight: 800; cursor: pointer; }
+.help-q > p { margin: 6px 0 6px; }
 </style>
 </head>
 <body>
@@ -1620,12 +1640,12 @@ body.board-split .nav { padding-bottom: 0; }
   function gamesCard(cid) {
     const c = course(cid), cs = cState(cid), units = realUnits(c);
     const won = units.filter(u => (cs.bosses || {})[u.id] && cs.bosses[u.id].won).length;
-    return `<section class="card games-card"><div class="row" style="gap:10px">${icon("swords")}<div class="grow"><b>Juegos</b>
-      <p class="muted small" style="margin:2px 0 0">Al completar cada unidad aparece su jefe al final del camino (${won}/${units.length} vencidos). El contrarreloj te da 60 segundos de preguntas rápidas de lo que ya abriste, y en el memotest unís cada fórmula con su tema.</p></div></div>
+    return `<details class="card fold games-card" data-fold="games" ${foldOpen("games", wide())}><summary>${icon("swords")}<span class="grow"><b>Juegos</b>
+      <span class="muted small" style="display:block">Contrarreloj, memotest y un jefe al final de cada unidad (${won}/${units.length} vencidos)</span></span>${icon("chevron-right", "chev")}</summary><div class="fold-body">
       <button class="exam-row" data-act="rush" data-cid="${cid}"><span class="grow"><b>Contrarreloj</b><span class="muted small" style="display:block">60 s · 3 aciertos seguidos multiplican los puntos</span></span>
         <span class="exam-best ${cs.rush ? "pass" : ""}">${cs.rush ? `récord ${cs.rush}` : "Sin jugar"}</span>${icon("chevron-right")}</button>
       <button class="exam-row" data-act="memo" data-cid="${cid}"><span class="grow"><b>Memotest de fórmulas</b><span class="muted small" style="display:block">6 parejas · cada fórmula con el nombre de su tema</span></span>
-        <span class="exam-best ${cs.memo ? "pass" : ""}">${cs.memo ? `récord ${cs.memo}` : "Sin jugar"}</span>${icon("chevron-right")}</button></section>`;
+        <span class="exam-best ${cs.memo ? "pass" : ""}">${cs.memo ? `récord ${cs.memo}` : "Sin jugar"}</span>${icon("chevron-right")}</button></div></details>`;
   }
 
   // ---------- MEMOTEST DE FÓRMULAS ----------
@@ -1756,7 +1776,7 @@ body.board-split .nav { padding-bottom: 0; }
 
   // ---------- navegación ----------
   function go(route, params = {}) {
-    const hash = { home: "#/", plan: "#/plan", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos", misses: "#/errores", memo: "#/memotest" }[route] || "#/";
+    const hash = { home: "#/", plan: "#/plan", league: "#/liga", career: "#/carrera", course: "#/curso/" + params.id, learn: "#/aprender", stats: "#/stats", settings: "#/ajustes", credits: "#/creditos", misses: "#/errores", memo: "#/memotest", help: "#/ayuda" }[route] || "#/";
     if (location.hash !== hash) history.pushState(null, "", hash);
     ui.route = route; ui.params = params;
     render();
@@ -1772,6 +1792,7 @@ body.board-split .nav { padding-bottom: 0; }
     else if (h === "ajustes") ui.route = "settings";
     else if (h === "creditos") ui.route = "credits";
     else if (h === "errores") ui.route = "misses";
+    else if (h === "ayuda") ui.route = "help";
     else if (h === "memotest" && ui.memo) ui.route = "memo";
     else ui.route = "home";
     if (ui.route === "course" && !E.courses[ui.params.id]) ui.route = "home";
@@ -1805,6 +1826,7 @@ body.board-split .nav { padding-bottom: 0; }
     return `<header class="topbar">
       <div class="logo">${mascot("idle")}efecen</div>
       <div class="chips">
+        <button class="iconbtn" data-act="go" data-r="help" aria-label="Cómo se usa" title="Cómo se usa">${icon("circle-help")}</button>
         ${boardBtn()}
         <span class="chip fire ${st ? "" : "off"}" title="Racha de días">${icon("flame")}${st}</span>
         <span class="chip xp" title="XP total">${icon("star")}${S.xp}</span>
@@ -1827,7 +1849,7 @@ body.board-split .nav { padding-bottom: 0; }
     if (ui.route !== "session") boardContext(null);
     document.documentElement.toggleAttribute("data-theme", S.settings.theme !== "auto");
     if (S.settings.theme !== "auto") document.documentElement.dataset.theme = S.settings.theme;
-    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, plan: renderPlan, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, misses: renderMisses, memo: renderMemo, summary: renderSummary, "exam-result": renderExamResult };
+    const screens = { home: renderHome, career: renderCareer, course: renderCourse, learn: renderLearnIndex, plan: renderPlan, stats: renderStats, settings: renderSettings, credits: renderCredits, league: renderLeague, misses: renderMisses, memo: renderMemo, help: renderHelp, summary: renderSummary, "exam-result": renderExamResult };
     if (ui.route === "session" && ui.session) return;
     (screens[ui.route] || renderHome)();
     window.scrollTo(0, 0);
@@ -1852,6 +1874,9 @@ body.board-split .nav { padding-bottom: 0; }
         <span class="muted small">${Math.round(p * 100)}% · ${c.units.filter(u => u.lessons.length).length} unidades · ${c.lessonList.length} lecciones</span>`
         : `<span class="muted small" style="display:block">Próximamente</span>`}</span>${ok ? icon("chevron-right") : ""}</button>`;
   }
+  // secciones plegables que recuerdan si están abiertas mientras dure la visita (ui.folds)
+  const wide = () => matchMedia("(min-width: 960px)").matches;
+  const foldOpen = (key, def = false) => (((ui.folds = ui.folds || {})[key] ?? def) ? "open" : "");
   const badge = (txt, cls = "") => `<span class="subj-badge ${cls}">${txt}</span>`;
   function renderHome() {
     const cid = activeCourse(), c = course(cid);
@@ -1877,13 +1902,14 @@ body.board-split .nav { padding-bottom: 0; }
       <section class="card goal">${ring(xt, goal)}<div class="grow"><b>Meta diaria</b><div class="muted small">${xt} / ${goal} XP hoy</div></div></section>
       <button class="btn big block" data-act="daily">${icon("play")}${firstTime ? "Empezar" : "Sesión del día"}</button>
       ${parts.length && !firstTime ? `<div class="daily-sub muted small">${esc(parts.join(" · "))}</div>` : ""}
-      <section class="home-career"><h2 class="section-title">Tu carrera</h2>
+      <section class="home-career"><h2 class="section-title">Tus materias</h2>
       ${S.career ? "" : careerChooser("¿Qué carrera seguís? Así te muestro solo tus materias. Lo podés cambiar cuando quieras en Ajustes.")}
       ${cur ? subjectCard(cur, badge("Cursando", "on")) : ""}
       ${sg && sg.course !== cid ? subjectCard(sg, badge("Sugerida")) : ""}
       <button class="btn ghost block" data-act="go" data-r="career">${icon("map")}Ver toda la carrera</button></section>
-      </div><aside class="home-side">${avisosHomeCard()}${firstTime ? (S.plan.goals.some(g => g.date > today()) ? planHomeCard() : "") : `${planHomeCard()}
+      </div><aside class="home-side">${avisosHomeCard()}${firstTime ? (S.plan.goals.some(g => g.date > today()) ? planHomeCard() : "") : `<h2 class="section-title">Para hoy</h2>${planHomeCard()}
       ${dailyCard()}
+      <h2 class="section-title">Más práctica</h2>
       ${missesHomeCard()}
       <div id="leagueHome">${leagueHomeCard()}</div>
       <button class="btn ghost block" data-act="rush" data-cid="${cid}">${icon("timer")}Contrarreloj · ${esc(c.code || c.title)}${cState(cid).rush ? ` <span class="muted small">(récord ${cState(cid).rush})</span>` : ""}</button>`}</aside></div>
@@ -2553,7 +2579,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   // aviso, y le pasa al servicio efecen-push (push/worker.js, en Cloudflare) solo las horas: a cada una, el servicio
   // manda un push sin contenido y el service worker arma la notificación con la lista guardada. Si el navegador no
   // tiene push, queda la sincronización periódica (sin hora exacta). El ajuste es de cada dispositivo.
-  const AV_KEY = "efecen-avisos", AV_CACHE = "efecen-avisos", AV_TAG = "efecen-avisos", AV_HOUR_KEY = "efecen-avisos-hora", AV_REG_KEY = "efecen-avisos-reg";
+  const AV_KEY = "efecen-avisos", AV_CACHE = "efecen-avisos", AV_TAG = "efecen-avisos", AV_HOUR_KEY = "efecen-avisos-hora", AV_REG_KEY = "efecen-avisos-reg", AV_LEAD_KEY = "efecen-avisos-antes";
   const PUSH = { url: "https://push.efecen.com.ar", key: "BO5dySgrceL2OGVLfM93XUIFQ7O8nLeY6nNg0IP_V4YcSdYcD3v5MMcmiXMlPTuuozsVGN4XlGqZfFwWwiSvELw" };
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } };
@@ -2561,23 +2587,41 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   const avisosCan = () => "Notification" in window && "serviceWorker" in navigator && "caches" in window;
   const avisosPush = () => "PushManager" in window;
   const avisosHour = () => { const h = lsGet(AV_HOUR_KEY); return /^\d\d:\d\d$/.test(h || "") ? h : "08:00"; };
+  // con cuántos minutos de anticipación se avisa cada tanda de estudio (0, 5, 10 o 15)
+  const avisosLead = () => { const v = +(lsGet(AV_LEAD_KEY) ?? 5); return [0, 5, 10, 15].includes(v) ? v : 5; };
   let avisosTest = null; // el aviso de prueba, mientras viaja
   function avisosList() {
-    const t = today(), list = E.reminders(S.plan, t, goalTxt, 30), hour = avisosHour(), now = Date.now();
+    const t = today(), list = E.reminders(S.plan, t, goalTxt, 30), hour = avisosHour(), lead = avisosLead(), now = Date.now();
     // el estudio de cada día, según el plan como está hoy
     if (S.plan.goals.some(g => g.date > t)) {
       const pl = planBuild();
       for (let i = 0; i < 14; i++) {
         const d = E.addDays(t, i), bl = pl.days[d] || [];
         if (!bl.length) continue;
-        const tot = bl.reduce((s, b) => s + b.min, 0);
-        list.push({ id: `${d}/plan`, date: d, title: `Plan de hoy · ${E.plan.fmt(tot)}`, body: bl.slice(0, 4).map(b => { const bi = blockInfo(b); return `${bi.code} ${bi.short}`; }).join(" · ") + (bl.length > 4 ? " …" : "") });
+        const line = b => { const bi = blockInfo(b); return `${bi.code} ${bi.short}`; };
+        const tandas = E.plan.tandas(bl);
+        if (tandas.length) {
+          // día con horario: un aviso por tanda de estudio, un rato antes de que empiece
+          const [y, m, dd] = d.split("-").map(Number);
+          for (const td of tandas) {
+            const hm = E.plan.fromMin(td.at);
+            list.push({ id: `${d}/tanda-${td.at}`, date: d, at: new Date(y, m - 1, dd, 0, td.at - lead).getTime(),
+              title: `${lead ? `En ${lead} min` : "Ahora"} · ${hm} · ${E.plan.fmt(td.min)} de estudio`,
+              body: td.blocks.slice(0, 4).map(b => `${b.at} ${line(b)}`).join("\n") + (td.blocks.length > 4 ? "\n…" : "") });
+          }
+        } else {
+          // día sin horario: un solo aviso, a la hora elegida
+          const tot = bl.reduce((s, b) => s + b.min, 0);
+          list.push({ id: `${d}/plan`, date: d, title: `Plan de hoy · ${E.plan.fmt(tot)}`, body: bl.slice(0, 4).map(line).join(" · ") + (bl.length > 4 ? " …" : "") });
+        }
       }
     }
-    for (const a of list) a.at = E.reminderAt(a, hour);
+    for (const a of list) if (a.at == null) a.at = E.reminderAt(a, hour);
     if (avisosTest && now - avisosTest.at < 180000) list.push(avisosTest);
     else avisosTest = null;
-    return list.filter(a => a.at > now - 12 * 3600000);
+    // con push, lo que ya pasó no se manda tarde (salvo la prueba); sin push se muestra cuando el navegador despierte
+    const back = lsGet(AV_KEY + "-modo") === "push" ? 2 * 60000 : 12 * 3600000;
+    return list.filter(a => a.at > now - (a === avisosTest ? 180000 : back));
   }
   const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
   const pushPost = (path, body) => fetch(PUSH.url + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json());
@@ -2672,8 +2716,10 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     for (let h = 6; h <= 22; h++) for (const m of ["00", "30"]) hours.push(`${String(h).padStart(2, "0")}:${m}`);
     return `<div class="set-row"><div><div class="lbl">Avisos</div><div class="desc">Qué toca estudiar según tu plan, y cuándo abre y cierra la inscripción a tus mesas. Llegan aunque la app esté cerrada.${on ? (push ? " <b>Activos en este dispositivo.</b>" : " <b>Activos, pero este navegador no tiene push:</b> pueden demorarse.") : ""}</div></div>
         <button class="switch ${on ? "on" : ""}" data-act="avisos" role="switch" aria-checked="${on}" aria-label="Avisos"></button></div>
-      ${on ? `<div class="set-row"><div><div class="lbl">Hora del aviso diario</div><div class="desc">El plan del día y los recordatorios de inscripción. La víspera de un examen se avisa a las 19 h y el día del examen, a las 7 h.</div></div>
-        <select class="set-select" id="avisosHora" aria-label="Hora del aviso diario">${hours.map(h => `<option ${h === hour ? "selected" : ""}>${h}</option>`).join("")}</select></div>
+      ${on ? `<div class="set-row"><div><div class="lbl">Antes de cada tanda de estudio</div><div class="desc">Si tu plan tiene horario (franjas o una hora de inicio), te aviso cuando empieza cada tanda. Si cambia el plan, cambian los avisos.</div></div>
+        <select class="set-select" id="avisosAntes" aria-label="Anticipación del aviso">${[[0, "A la hora"], [5, "5 min antes"], [10, "10 min antes"], [15, "15 min antes"]].map(([v, l]) => `<option value="${v}" ${v === avisosLead() ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      <div class="set-row"><div><div class="lbl">Aviso de la mañana</div><div class="desc">Para los días sin horario y para los recordatorios de inscripción. La víspera de un examen se avisa a las 19 h y el día del examen, a las 7 h.</div></div>
+        <select class="set-select" id="avisosHora" aria-label="Hora del aviso de la mañana">${hours.map(h => `<option ${h === hour ? "selected" : ""}>${h}</option>`).join("")}</select></div>
       <div class="set-row"><div><div class="lbl">Probar</div><div class="desc">Manda un aviso de prueba a <b>este</b> dispositivo (cada uno se activa y se prueba por separado).</div></div>
         <button class="btn sm ghost" data-act="avisos-test">${icon("play")}Probar</button></div>
       ${push ? `<div class="set-row"><div><div class="lbl">Probar con la app cerrada</div><div class="desc">Programa un aviso para dentro de un minuto. Tocalo, cerrá la app y esperá.</div></div>
@@ -2684,6 +2730,29 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     const t = today(), list = E.reminders(S.plan, t, goalTxt, 0).filter(a => a.id.includes("/insc-"));
     if (!list.length) return "";
     return `<section class="card aviso-card">${list.map(a => `<div class="row" style="gap:10px;align-items:flex-start">${icon("info")}<div class="grow"><b>${esc(a.title)}</b><span class="muted small" style="display:block">${esc(a.body)}</span></div></div>`).join("")}</section>`;
+  }
+
+  // ---------- AYUDA: cómo se usa la app, en una pantalla ----------
+  function renderHelp() {
+    const item = (ic, title, text, r, label, id) => `<section class="card help-item"><span class="course-ico">${icon(ic)}</span><div class="grow"><b>${title}</b>
+      <p class="muted small" style="margin:4px 0 0">${text}</p>
+      ${r ? `<button class="linkbtn small" data-act="go" data-r="${r}" ${id ? `data-id="${id}"` : ""}>${label} ${icon("chevron-right")}</button>` : ""}</div></section>`;
+    app.innerHTML = `<main class="screen">
+      <div class="row"><button class="iconbtn" data-act="go" data-r="home" aria-label="Volver">${icon("arrow-left")}</button><h1 class="grow" style="font-size:1.4rem">Cómo se usa</h1></div>
+      <section class="hero">${mascot("think")}<div class="bubble grow">Lo único que hay que hacer todos los días es la <b>Sesión del día</b>. Todo lo demás es para cuando lo necesites.</div></section>
+      ${item("play", "1. Sesión del día", "El botón grande de Inicio. Mezcla los repasos que te tocan hoy con la lección que sigue, en unos 10 minutos. Si un ejercicio sale mal, vuelve al final con otros números.", "home", "Ir a Inicio")}
+      ${item("map", "2. Tu materia", "En Carrera elegís la materia y ves su camino: una lección tras otra, unidad por unidad. Si ya sabés un tema, el test de la unidad lo desbloquea. Arriba del camino están los parciales simulados y los juegos.", "course", "Ver mi materia", activeCourse())}
+      ${item("graduation-cap", "3. Apuntes", "En Aprender está la teoría de cada tema, con demostración y ejemplos, un buscador y el machete para imprimir. En cualquier ejercicio, tocá una palabra subrayada para abrir su explicación.", "learn", "Ir a Aprender")}
+      ${item("calendar", "4. Plan para los exámenes", "Cargás la fecha de un final o parcial y cuánto tiempo tenés. La app reparte qué estudiar cada día y lo reacomoda sola si te atrasás. Con los avisos activados, te recuerda cada tanda de estudio y la inscripción a las mesas.", "plan", "Ir al Plan")}
+      ${item("chart-column", "5. Cómo venís", "En Stats ves qué temas tenés firmes y cuáles flojos, y el cuaderno de errores: los ejercicios que te salieron mal, para rehacerlos con los mismos números.", "stats", "Ir a Stats")}
+      <section class="card"><b>Preguntas comunes</b>
+        <details class="help-q"><summary>¿Qué son la racha y los XP?</summary><p class="muted small">Cada ejercicio bien suma XP. La meta es ${E.DAILY_GOAL} XP por día, y la racha cuenta los días seguidos en que practicaste. Sirven para sostener el hábito y para la liga de la semana.</p></details>
+        <details class="help-q"><summary>¿Por qué vuelven temas que ya hice?</summary><p class="muted small">Es repaso espaciado: cada tema vuelve justo antes de que te lo olvides, cada vez más espaciado si lo acertás.</p></details>
+        <details class="help-q"><summary>¿Cómo escribo una respuesta?</summary><p class="muted small">Podés usar fracciones (3/4), raíces (√ o raiz), π y notación científica. En las de expresión, escribí como en la calculadora: <code>3x^2 - 2sen(x)</code>. Abajo ves cómo lo entendió la app antes de comprobar.</p></details>
+        <details class="help-q"><summary>¿Se pierde mi progreso si cambio de celular?</summary><p class="muted small">No, si entrás con Google en Ajustes: el progreso se guarda en la nube y se combina entre el celu, la tablet y la compu.</p></details>
+        <details class="help-q"><summary>¿Funciona sin conexión?</summary><p class="muted small">Sí. Conviene instalarla (Ajustes → Instalar la app) para tenerla como una app más.</p></details>
+      </section>
+    </main>${nav("home")}`;
   }
 
   // ---------- AJUSTES ----------
@@ -2702,21 +2771,24 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       <section class="card"><div class="set-row" style="flex-direction:column;align-items:stretch"><div class="lbl">Tu carrera</div>
         <div class="desc" style="margin-bottom:8px">Inicio, La carrera y Aprender muestran solo sus materias.</div>
         <div class="seg tight">${E.careerOrder.map(id => `<button class="${S.career && curCareer().id === id ? "on" : ""}" data-act="career-pick" data-v="${id}">${esc(E.careers[id].short || E.careers[id].title)}</button>`).join("")}</div></div></section>
-      ${installCard()}
       ${accountCard()}
-      ${boardCard()}
+      ${installCard()}
+      <button class="course-card" data-act="go" data-r="help"><span class="course-ico">${icon("circle-help")}</span><span class="grow"><b>Cómo se usa</b><span class="muted small" style="display:block">La app en una pantalla, y preguntas comunes</span></span>${icon("chevron-right")}</button>
+      </div>
+      <details class="fold fold-plain" data-fold="set-more" ${foldOpen("set-more")}><summary class="course-card"><span class="course-ico">${icon("ellipsis")}</span><span class="grow"><b>Más opciones</b><span class="muted small" style="display:block">Pizarra, copia de seguridad, tests diagnósticos y reinicio</span></span>${icon("chevron-right", "chev")}</summary>
+      <div class="fold-body">${boardCard()}
       <section class="card">
-        <div class="set-row"><div><div class="lbl">Backup</div><div class="desc">${E.sync && E.sync.user ? "Además de la nube, podés guardar una copia en un archivo." : "Tu progreso vive en este navegador. Exportalo para no perderlo."}</div></div></div>
+        <div class="set-row"><div><div class="lbl">Copia de seguridad</div><div class="desc">${E.sync && E.sync.user ? "Además de la nube, podés guardar una copia en un archivo." : "Tu progreso vive en este navegador. Exportalo para no perderlo."}</div></div></div>
         <div class="row" style="flex-wrap:wrap"><button class="btn sm ghost" data-act="export">${icon("download")}Exportar</button>
           <button class="btn sm ghost" data-act="import">${icon("upload")}Importar</button>
           <input type="file" id="importFile" accept="application/json,.json" hidden></div>
       </section>
-      <section class="card">
-        ${careerCourses().map(id => `<div class="set-row"><div><div class="lbl">${esc(course(id).title)}</div><div class="desc">Volver a hacer el test diagnóstico</div></div>
+      <section class="card"><div class="lbl">Tests diagnósticos</div><div class="desc">Para volver a medir desde dónde arrancás en una materia. Lo que ya tengas desbloqueado se mantiene.</div>
+        ${careerCourses().map(id => `<div class="set-row"><div><div class="lbl">${esc(course(id).title)}</div></div>
           <button class="btn sm ghost" data-act="diag" data-cid="${id}">Rehacer</button></div>`).join("")}
         <div class="set-row"><div><div class="lbl">Reiniciar progreso</div><div class="desc">Borra XP, racha y repasos. No se puede deshacer.</div></div>
           <button class="btn sm bad" data-act="reset">Borrar</button></div>
-      </section></div>
+      </section></div></details>
       <button class="course-card" data-act="go" data-r="credits"><span class="course-ico">${icon("info")}</span><span class="grow"><b>Créditos</b><span class="muted small" style="display:block">Assets, fuentes y licencias</span></span>${icon("chevron-right")}</button>
       <p class="muted small" style="text-align:center">efecen v${E.version} · hecho para volver a la FCEN</p>
     </main>${nav("settings")}`;
@@ -2874,8 +2946,8 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
         ${past.length ? `<details class="pl-past"><summary class="muted small">Fechas pasadas (${past.length})</summary>${past.map(goalRow).join("")}</details>` : ""}`}</section>`;
     // TIEMPO
     const seg = (act, opts, val) => `<div class="seg">${opts.map(([v, l]) => `<button class="${v === val ? "on" : ""}" data-act="${act}" data-v="${v}">${l}</button>`).join("")}</div>`;
-    const timeCard = `<section class="card pl-time"><h2 class="section-title">Tu tiempo</h2>
-      <p class="muted small" style="margin:4px 0 8px">${E.plan.fmt(E.plan.weekMinutes(p))} por semana.</p>
+    const timeCard = `<details class="card fold pl-time" data-fold="pl-time" ${foldOpen("pl-time", !future.length || wide())}><summary><span class="grow"><b class="section-title">Tu tiempo</b>
+      <span class="muted small" style="display:block">${E.plan.fmt(E.plan.weekMinutes(p))} por semana · tocá para cambiarlo</span></span>${icon("chevron-right", "chev")}</summary><div class="fold-body">
       ${seg("plan-mode", [["hours", "Horas por día"], ["slots", "Franjas horarias"]], p.mode)}
       ${p.mode === "hours" ? `<div class="pl-hours">${E.plan.DAYS.map((dn, d) => `<div class="pl-hrow"><span>${dn}</span>
           <button class="iconbtn" data-act="plan-h" data-d="${d}" data-v="-0.5" aria-label="Menos">−</button><b>${String(p.hours[d] || 0).replace(".", ",")} h</b>
@@ -2887,22 +2959,34 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
           <div class="pl-add"><select id="plSlotD" aria-label="Día">${E.plan.DAYS.map((dn, d) => `<option value="${d}">${dn}</option>`).join("")}</select>
             <input type="time" id="plSlotA" value="18:00" step="900" aria-label="Desde"><input type="time" id="plSlotB" value="20:00" step="900" aria-label="Hasta">
             <button class="btn sm" data-act="plan-slot-add">${icon("plus")}</button></div></div>`}
-    </section>`;
+    </div></details>`;
     // DÍAS LIBRES
     const offs = p.off.filter(d => d >= t).sort(), lastG = future.length ? future[future.length - 1].date : t;
     const ferNext = E.calendar.feriados.filter(f => f.date >= t && f.date < lastG && !p.off.includes(f.date));
-    const offCard = `<section class="card pl-offs"><h2 class="section-title">Días sin estudio</h2>
-      <p class="muted small" style="margin:4px 0 8px">Feriados, viajes o días en que no podés. El plan los saltea.</p>
+    const offCard = `<details class="card fold pl-offs" data-fold="pl-offs" ${foldOpen("pl-offs", wide())}><summary><span class="grow"><b class="section-title">Días sin estudio</b>
+      <span class="muted small" style="display:block">${offs.length ? `${offs.length} ${offs.length === 1 ? "día cargado" : "días cargados"}` : "Feriados, viajes o días en que no podés"}</span></span>${icon("chevron-right", "chev")}</summary><div class="fold-body">
+      <p class="muted small" style="margin:0">El plan saltea estos días y reparte lo que falta en los demás.</p>
       <div class="pl-chips">${offs.map(d => `<button class="pl-chip" data-act="plan-off" data-d="${d}">${dayTxt(d)} ✕</button>`).join("") || `<span class="muted small">Ninguno.</span>`}</div>
       <div class="pl-add"><input type="date" id="plOff" min="${t}" aria-label="Día sin estudio"><button class="btn sm ghost" data-act="plan-off-add">${icon("plus")}Agregar</button>
-        ${ferNext.length ? `<button class="btn sm ghost" data-act="plan-off-fer" title="${esc(ferNext.map(f => `${dayTxt(f.date)}: ${f.name}`).join(" · "))}">${icon("calendar")}Sumar los feriados (${ferNext.length})</button>` : ""}</div></section>`;
+        ${ferNext.length ? `<button class="btn sm ghost" data-act="plan-off-fer" title="${esc(ferNext.map(f => `${dayTxt(f.date)}: ${f.name}`).join(" · "))}">${icon("calendar")}Sumar los feriados (${ferNext.length})</button>` : ""}</div></div></details>`;
     app.innerHTML = `<main class="screen">
-      <div class="row"><h1 class="grow" style="font-size:1.4rem">Plan de estudio</h1>
-        ${future.length ? `<button class="btn sm ghost" data-act="plan-ics" title="Bajar el plan para Google Calendar">${icon("calendar")}Calendario</button>` : ""}</div>
+      <div class="row"><h1 class="grow" style="font-size:1.4rem">Plan de estudio</h1></div>
       ${intro}
+      ${future.length ? planAvisosRow() : ""}
       <div class="plan-layout">${future.length ? todayCard + weekCard : ""}${goalsCard}${timeCard}${offCard}</div>
-      ${future.length ? `<p class="muted small" style="text-align:center;margin:0">El botón «Calendario» baja un archivo .ics: en Google Calendar, Configuración → Importar. Conviene importarlo en un calendario aparte («efecen»), así, si cambiás el plan, lo borrás y lo volvés a importar.</p>` : ""}
+      ${future.length ? `<details class="card fold" data-fold="pl-ics" ${foldOpen("pl-ics")}><summary><span class="grow"><b>Llevarlo a otro calendario</b><span class="muted small" style="display:block">Para verlo junto con tus otros compromisos</span></span>${icon("chevron-right", "chev")}</summary>
+        <div class="fold-body"><p class="muted small" style="margin:0">Baja un archivo .ics con el plan como está hoy. En Google Calendar: Configuración → Importar. Conviene importarlo en un calendario aparte («efecen»): si después cambia el plan, lo borrás y lo volvés a importar. Los avisos de la app, en cambio, se actualizan solos.</p>
+        <button class="btn sm ghost" data-act="plan-ics">${icon("download")}Bajar el archivo</button></div></details>` : ""}
     </main>${nav("plan")}`;
+  }
+  // los avisos, a la vista en el plan: activarlos si están apagados, o cómo están configurados
+  function planAvisosRow() {
+    if (!avisosCan()) return "";
+    if (!avisosOn()) return `<button class="course-card" data-act="avisos"><span class="course-ico">${icon("clock")}</span><span class="grow"><b>Activar avisos</b>
+      <span class="muted small" style="display:block">Te recuerdo cada tanda de estudio y la inscripción a las mesas, aunque la app esté cerrada</span></span>${icon("chevron-right")}</button>`;
+    const lead = avisosLead(), timed = S.plan.mode === "slots" ? S.plan.slots.length > 0 : (S.plan.start || []).some(Boolean);
+    return `<p class="pl-avisos small">${icon("clock")}<span class="grow">Avisos activados: ${timed ? (lead ? `${lead} min antes de cada tanda` : "al empezar cada tanda") : `un aviso por día a las ${avisosHour()}. Poné una hora de inicio en «Tu tiempo» y te aviso cada tanda`}.</span>
+      <button class="linkbtn small" data-act="go" data-r="settings">Cambiar</button></p>`;
   }
   // formulario para cargar o editar una fecha (el borrador vive en ui.planEdit)
   function planEditor() {
@@ -3064,7 +3148,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     return `<section class="card">
       <div class="set-row"><div><div class="lbl">Instalar la app</div><div class="desc">${installEvt ? "Queda como una app más, con su ícono, y funciona sin conexión." : "Si tu navegador no ofrece instalarla, abrí el menú (⋮) y elegí «Instalar app» o «Agregar a la pantalla principal»."}</div></div>
         ${installEvt ? `<button class="btn sm" data-act="install">${icon("download")}Instalar</button>` : ""}</div>
-      ${installEvt ? "" : `<p class="muted small" style="margin:6px 0 0">Si te dice que ya está instalada pero no la ves: en Android, sacar el ícono de la pantalla de inicio no la desinstala. Buscala en el cajón de apps o en Ajustes → Aplicaciones → efecen, desinstalala y volvé a probar.</p>`}</section>`;
+      ${installEvt ? "" : `<details class="help-q"><summary>¿Dice que ya está instalada y no la ves?</summary><p class="muted small">En Android, sacar el ícono de la pantalla de inicio no la desinstala. Buscala en el cajón de apps o en Ajustes → Aplicaciones → efecen, desinstalala y volvé a probar.</p></details>`}</section>`;
   }
   // pizarra: ajustes de este dispositivo (no se sincronizan, porque cada uno tiene o no lápiz)
   function boardCard() {
@@ -3367,14 +3451,14 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   function examsCard(cid) {
     const ex = E.exams[cid];
     if (!ex || !ex.list.length) return "";
-    return `<section class="card exams-card"><div class="row" style="gap:10px">${icon("file-text")}<div class="grow"><b>Evaluaciones</b>
-      <p class="muted small" style="margin:2px 0 0">Parciales y finales simulados, con la estructura de los de la cátedra y números nuevos en cada intento.</p></div></div>
+    return `<details class="card fold exams-card" data-fold="exams" ${foldOpen("exams", wide())}><summary>${icon("file-text")}<span class="grow"><b>Evaluaciones</b>
+      <span class="muted small" style="display:block">${ex.list.length} ${ex.list.length === 1 ? "simulacro" : "simulacros"} de parcial y final, con números nuevos en cada intento</span></span>${icon("chevron-right", "chev")}</summary><div class="fold-body">
       ${ex.list.map(x => {
         const st = examState(cid, x.id), n = st.attempts.length;
         return `<button class="exam-row" data-act="exam" data-cid="${cid}" data-id="${x.id}"><span class="grow"><b>${esc(x.title)}</b>
           <span class="muted small" style="display:block">${esc(x.topics)} · ${x.minutes} min</span></span>
           <span class="exam-best ${n ? (st.best >= x.pass ? "pass" : "fail") : ""}">${n ? `${H.num(st.best, 1).replace(".", ",")}/100` : "Sin rendir"}</span>${icon("chevron-right")}</button>`;
-      }).join("")}</section>`;
+      }).join("")}</div></details>`;
   }
   function startExam(cid, examId) {
     const c = course(cid), b = E.buildExam(cid, examId, E.newSeed());
@@ -3692,9 +3776,11 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   // texto de cada apunte para el buscador (se arma una sola vez)
   const cardTextCache = {};
   const cardText = id => cardTextCache[id] || (cardTextCache[id] = norm(E.cards[id].title + " " + (E.cards[id].aliases || []).join(" ") + " " + E.cards[id].summary));
+  document.addEventListener("toggle", e => { const k = e.target.dataset && e.target.dataset.fold; if (k) (ui.folds = ui.folds || {})[k] = e.target.open; }, true);
   document.addEventListener("change", e => {
     if (e.target.id === "importFile" && e.target.files[0]) importData(e.target.files[0]);
-    if (e.target.id === "avisosHora") { lsSet(AV_HOUR_KEY, e.target.value); avisosSync(); toast("Aviso diario a las " + e.target.value); }
+    if (e.target.id === "avisosHora") { lsSet(AV_HOUR_KEY, e.target.value); avisosSync(); toast("Aviso de la mañana a las " + e.target.value); }
+    if (e.target.id === "avisosAntes") { lsSet(AV_LEAD_KEY, e.target.value); avisosSync(); toast(+e.target.value ? `Te aviso ${e.target.value} min antes de cada tanda` : "Te aviso a la hora de cada tanda"); }
   });
   document.addEventListener("keydown", e => {
     if (ui.learn) {

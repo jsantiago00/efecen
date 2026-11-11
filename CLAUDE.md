@@ -147,6 +147,7 @@ node tests/run-tests.mjs 20           # pasada rápida antes de commitear
 - **Servicio:** `efecen-push`, un Worker de Cloudflare con D1 y un cron por minuto, en `https://push.efecen.com.ar`. Detalle en [push/README.md](push/README.md).
 - **Reparto:** el texto de los avisos nunca sale del dispositivo. La app lo deja en la caché `efecen-avisos` y al servicio le manda solo la suscripción y las horas. El servicio manda un push sin contenido, y `service-worker.js` (`showAvisos`) arma la notificación.
 - **En la app:** `E.reminders` y `E.reminderAt` en `engine.js` (puros, con tests) y el bloque «AVISOS» de `index.html` (`avisosList`, `avisosSyncNow`, `avisosProbar`, `avisosSetHtml`). La dirección del servicio y la clave pública están en `PUSH`.
+- **Pantalla «Cómo se usa»** (`renderHelp`, `#/ayuda`): explica la app en pocos pasos. Cuando agregues una función que el usuario tenga que descubrir, sumala ahí. Para no recargar las pantallas, lo secundario va en secciones plegables (`<details class="fold" data-fold="…" ${foldOpen("…")}>`).
 - **Si cambia el Worker:** corré `node --no-warnings push/test.mjs` y publicá con `npx wrangler deploy` desde `push/`. No depende del push a GitHub.
 - **Si cambia la clave pública VAPID:** va igual en `push/wrangler.toml` y en `PUSH.key`. La privada es un secreto del Worker (`VAPID_PRIVATE_JWK`) y no se versiona.
 

@@ -699,6 +699,10 @@ for (const cid of E.courseOrder) {
   // si la fecha cargada no es la de la mesa (se cambió a mano), no se avisa la inscripción de esa mesa
   const moved = { goals: [{ id: "g1", cid: "m101", kind: "final", date: "2026-11-30", turno: "tx" }] };
   ok(!E.reminders(moved, "2026-11-11", lab).some(a => a.id.includes("insc")), w, "avisa la inscripción de una mesa que no es la de la fecha");
+  // tandas: los bloques seguidos se juntan, un hueco abre otra, y los que no tienen hora no entran
+  const td = E.plan.tandas([{ at: "19:00", min: 30, k: "b" }, { at: "18:00", min: 60, k: "a" }, { min: 20, k: "x" }, { at: "21:00", min: 45, k: "c" }]);
+  ok(td.length === 2 && td[0].at === 18 * 60 && td[0].min === 90 && td[0].blocks.map(b => b.k).join("") === "ab" && td[1].at === 21 * 60 && td[1].min === 45, w, "tandas: no agrupa los bloques seguidos: " + JSON.stringify(td.map(x => [x.at, x.min])));
+  ok(E.plan.tandas([]).length === 0 && E.plan.tandas([{ min: 30 }]).length === 0, w, "tandas: sin bloques con hora no hay tandas");
   // la hora de cada aviso
   const hm = a => { const d = new Date(E.reminderAt(a, "08:30")); return `${E.fmtDate(d)} ${d.getHours()}:${d.getMinutes()}`; };
   const byKind = k => r.find(a => a.id.endsWith(k));
