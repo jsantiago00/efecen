@@ -84,7 +84,12 @@ ok(!E.checkNumeric(0, 1.8e-5) && !E.checkNumeric(0.01, 0.0144) && E.checkNumeric
   ok(N1(7, "7,5", "", { traps: [{ value: 7.5, msg: "TRAMPA" }] }) === "TRAMPA", w, "trampa propia de la plantilla");
   const X1 = (raw, extra = {}) => E.diagnose(Object.assign({ type: "expr", answer: "2x cos(x^2)", vars: ["x"] }, extra), raw) || "";
   ok(/signo/.test(X1("-2x cos(x^2)")) && /2 de menos/.test(X1("x cos(x^2)")) && /3/.test(X1("6x cos(x^2)")) && /constante/.test(X1("2x cos(x^2) + 1")), w, "pistas en expresiones");
-  ok(X1("cos(x^2)") === "" && X1("2x sen(x^2)", { traps: [{ expr: "2x sin(x^2)", msg: "T" }] }) === "T", w, "trampas en expresiones");
+  const X2 = (raw, extra = {}) => E.diagnose(Object.assign({ type: "expr", answer: "-12x^2 + 4x - sin(x)", vars: ["x"] }, extra), raw) || "";
+  ok(/signo cambiado/.test(X2("12x^2+4x-senx")) && /signo cambiado/.test(X2("-12x^2+4x+sen x")) && /falta uno/.test(X2("-12x^2-senx"))
+    && /al doble/.test(X2("-24x^2+4x-sinx")) && X2("-12x^2+4x-cos x") === "", w, "pistas por término (issue #1)");
+  ok(/signo cambiado/.test(X2("x^3+cos(x)+5", { answer: "x^3 - cos(x)", constant: true })), w, "pistas por término en primitivas");
+  ok(E.checkExpr("-12x^2+4x-senx", { answer: "-12x^2 + 4x - sin(x)", vars: ["x"] }), w, "senx se lee como sin x");
+  ok(X1("cos(x^2)") === "" &&X1("2x sen(x^2)", { traps: [{ expr: "2x sin(x^2)", msg: "T" }] }) === "T", w, "trampas en expresiones");
   ok(E.diagnose({ type: "mc", options: ["a", "b"], correct: 0, traps: [{ option: "b", msg: "M" }] }, 1) === "M", w, "trampa en opción múltiple");
 }
 

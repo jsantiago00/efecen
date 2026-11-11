@@ -314,7 +314,7 @@
     const dom = inst.domain || vars.map(() => [-2, 2]), r = E.rng(9973), out = [];
     for (let i = 0; i < 200 && out.length < 12; i++) {
       const p = dom.map(([lo, hi]) => lo + (hi - lo) * r.next()), b = g(...p);
-      if (Number.isFinite(b)) out.push([f(...p), b]);
+      if (Number.isFinite(b)) out.push([f(...p), b, p]);
     }
     return out.length >= 6 && out.every(([a]) => Number.isFinite(a)) ? out : null;
   }
@@ -366,6 +366,33 @@
     }
     if (!inst.constant && allSame(sm.map(([a, b]) => a - b), 1e-3, Math.max(1, scale)))
       return "Te difiere solo en una constante: revisá los términos que no dependen de la variable.";
+    return termHint(sm, inst, scale);
+  }
+  // si la respuesta es una suma, ¿falla un solo término? (con el signo cambiado, de menos o al doble)
+  function termsOf(a, s = 1, out = []) {
+    if (a[0] === "+" || a[0] === "-") { termsOf(a[1], s, out); termsOf(a[2], a[0] === "-" ? -s : s, out); }
+    else if (a[0] === "neg") termsOf(a[1], -s, out);
+    else out.push([s, a]);
+    return out;
+  }
+  function termHint(sm, inst, scale) {
+    const vars = (inst.vars || ["x"]).map(v => v.toLowerCase()), tree = E.parseExpr(inst.answer, vars);
+    const terms = tree ? termsOf(tree) : [];
+    if (terms.length < 2) return null;
+    const msg = {
+      2: "Casi: todos los términos están bien salvo uno, que te quedó con el signo cambiado. Revisalos de a uno (un menos adelante, la derivada del coseno…).",
+      1: "Casi: está todo bien, pero te falta uno de los términos. Revisá que no se te haya perdido ninguno.",
+      "-1": "Casi: todos los términos están bien salvo uno, que te quedó al doble. Revisá las constantes de cada uno."
+    };
+    for (const [s, t] of terms) {
+      const tv = sm.map(([, , p]) => { const env = {}; vars.forEach((v, i) => { env[v] = p[i]; }); return s * E.evalExpr(t, env); });
+      if (!tv.every(Number.isFinite) || Math.max(...tv.map(Math.abs)) < 1e-3 * scale) continue;
+      for (const k of [2, 1, -1]) {
+        const res = sm.map(([a, b], j) => a - (b - k * tv[j]));
+        const hit = inst.constant ? allSame(res, 1e-3, Math.max(1, scale)) : res.every(x => Math.abs(x) <= 1e-3 * Math.max(1, scale));
+        if (hit) return msg[k];
+      }
+    }
     return null;
   }
   E.diagnose = function (inst, raw) {
