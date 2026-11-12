@@ -1261,7 +1261,7 @@
   const zmin = z0 => (z0[0] === 0 && z0[1] === 0 ? "z" : z0[1] === 0 ? `z ${z0[0] < 0 ? "+" : "-"} ${Math.abs(z0[0])}` : z0[0] === 0 ? `z ${z0[1] < 0 ? "+" : "-"} ${Math.abs(z0[1]) === 1 ? "" : Math.abs(z0[1])}i` : `z - (${Z.tex(z0)})`);
 
   T["c3-radio-num"] = {
-    type: "numeric", concepts: ["c3-taylor"], difficulty: 2, testN: 30,
+    type: "numeric", concepts: ["c3-taylor"], difficulty: 2, testN: 25,
     generate(r) {
       const form = r.int(0, 2), a = r.int(1, 4), b = r.nz(-4, 4), p = r.int(-2, 2), q = r.int(1, 3), z0 = [r.int(-3, 3), r.int(-3, 3)];
       const F = [
@@ -1474,6 +1474,291 @@
           intro: R`$f(z) = \sum \frac{f^{(n)}(z_0)}{n!}(z - z_0)^n$ hasta el punto singular más cercano.` },
         { id: "c3-laurent", title: "Series de Laurent", templates: ["c3-laurent-coef-num", "c3-laurent-region-mc"], theory: ["c3-laurent"],
           intro: R`En un anillo, $f(z) = \sum_{n=-\infty}^{\infty} c_n(z - z_0)^n$. Cada anillo tiene su desarrollo.` }
+      ]
+    }],
+    cards
+  });
+})();
+
+/* =====================================================================
+ *  UNIDAD 6 · SINGULARIDADES AISLADAS, CEROS, POLOS Y RESIDUOS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Z = E.c3, dn = Z.dn, pif = Z.pif;
+  const T = {};
+  const far = (v, ans) => Math.abs(v - ans) > 0.03 * Math.max(1, Math.abs(ans));
+  const fact = n => { let p = 1; for (let i = 2; i <= n; i++) p *= i; return p; };
+  const one = [1, 0], I2 = [0, 2 * Math.PI];
+  // residuo numérico: (1/2πi) ∮ f sobre una circunferencia chica alrededor del punto
+  const resNum = (f, z0, rho = 0.3, N = 2000) => Z.div(Z.circ(f, z0, rho, N), I2);
+  // máximo de |f| sobre |z − z0| = rad, y exponente con el que crece (o decrece) |f| al acercarse a z0
+  const Mx = (f, z0, rad) => Math.max(...Array.from({ length: 64 }, (_, k) => Z.abs(f(Z.add(z0, Z.polar(rad, 0.05 + k * Math.PI / 32))))));
+  const slope = (f, z0, r1, r2) => Math.log(Mx(f, z0, r2) / Mx(f, z0, r1)) / Math.log(r1 / r2);
+  const zm = (a, v = "z") => (a === 0 ? v : `${v} ${a < 0 ? "+" : "-"} ${Math.abs(a)}`);
+  const inv = z => Z.div(one, z);
+
+  const NAMES = { 0: "Singularidad evitable", 1: "Polo simple", 2: "Polo de orden 2", 3: "Polo de orden 3", 99: "Singularidad esencial" };
+  T["c3-clasificar-mc"] = {
+    type: "mc", concepts: ["c3-singularidades"], difficulty: 2,
+    generate(r) {
+      const m = r.int(1, 4), a = r.nz(-3, 3), c = r.int(-3, 3);
+      const pool = [
+        () => ({ tex: `\\dfrac{\\sin z}{${m === 1 ? "z" : `z^{${m}}`}}`, z0: [0, 0], zt: "0", f: z => Z.div(Z.sin(z), Z.ipow(z, m)), kind: m - 1, why: `$\\sin z = z - \\frac{z^3}{6} + \\dots$ tiene un cero simple en $0$. Al dividir por $z^{${m}}$: $f(z) = \\dfrac{1}{z^{${m - 1}}} - \\dfrac{1}{6z^{${m - 3}}} + \\dots$` }),
+        () => ({ tex: `\\dfrac{1 - \\cos z}{${m === 1 ? "z" : `z^{${m}}`}}`, z0: [0, 0], zt: "0", f: z => Z.div(Z.sub(one, Z.cos(z)), Z.ipow(z, m)), kind: Math.max(0, m - 2), why: `$1 - \\cos z = \\frac{z^2}{2} - \\frac{z^4}{24} + \\dots$ tiene un cero doble en $0$. Al dividir por $z^{${m}}$, la potencia más baja que queda es $z^{${2 - m}}$.` }),
+        () => ({ tex: `\\dfrac{e^{z} - 1}{${m === 1 ? "z" : `z^{${m}}`}}`, z0: [0, 0], zt: "0", f: z => Z.div(Z.sub(Z.exp(z), one), Z.ipow(z, m)), kind: m - 1, why: `$e^z - 1 = z + \\frac{z^2}{2} + \\dots$ tiene un cero simple en $0$. Al dividir por $z^{${m}}$, la potencia más baja que queda es $z^{${1 - m}}$.` }),
+        () => { const [tex, f] = r.pick([[`e^{1/z}`, z => Z.exp(inv(z))], [`\\sin\\dfrac{1}{z}`, z => Z.sin(inv(z))], [`z^{2}e^{1/z}`, z => Z.mul(Z.mul(z, z), Z.exp(inv(z)))], [`\\cos\\dfrac{1}{z}`, z => Z.cos(inv(z))], [`e^{-1/z^{2}}`, z => Z.exp(Z.sc(-1, inv(Z.mul(z, z))))]]); return { tex, z0: [0, 0], zt: "0", f, kind: 99, why: `Sustituyendo $w = \\frac1z$ (o $\\frac{1}{z^2}$) en la serie de Maclaurin, quedan **infinitas** potencias negativas de $z$.` }; },
+        () => { const mm = r.int(1, 3), cc = c === -a ? c + 1 : c; return { tex: `\\dfrac{${zm(-cc)}}{${mm === 1 ? zm(a) : `(${zm(a)})^{${mm}}`}}`, z0: [a, 0], zt: String(a), f: z => Z.div(Z.add(z, [cc, 0]), Z.ipow(Z.sub(z, [a, 0]), mm)), kind: mm, why: `El numerador no se anula en $z = ${a}$ (vale $${a + cc}$) y el denominador tiene ahí un cero de orden $${mm}$.` }; },
+        () => ({ tex: `\\dfrac{z^{2} - ${a * a}}{${zm(a)}}`, z0: [a, 0], zt: String(a), f: z => Z.div(Z.sub(Z.mul(z, z), [a * a, 0]), Z.sub(z, [a, 0])), kind: 0, why: `Factorizando, $z^2 - ${a * a} = (${zm(a)})(${zm(-a)})$: fuera de $z = ${a}$ la función es $${zm(-a)}$, que tiene límite.` }),
+        () => r.pick([{ tex: `\\dfrac{1}{z\\sin z}`, f: z => inv(Z.mul(z, Z.sin(z))), kind: 2, why: `$z\\sin z = z^2 - \\frac{z^4}{6} + \\dots$ tiene un cero doble en $0$, así que $\\frac{1}{z\\sin z}$ tiene un polo doble.` },
+          { tex: `\\dfrac{z}{\\sin z}`, f: z => Z.div(z, Z.sin(z)), kind: 0, why: `Numerador y denominador tienen un cero simple en $0$: se compensan, y $\\lim_{z\\to0}\\frac{z}{\\sin z} = 1$.` },
+          { tex: `\\dfrac{1}{e^{z} - 1}`, f: z => inv(Z.sub(Z.exp(z), one)), kind: 1, why: `$e^z - 1 = z + \\frac{z^2}{2} + \\dots$ tiene un cero simple en $0$, así que su recíproca tiene un polo simple.` },
+          { tex: `\\dfrac{1}{\\sin^{2}z}`, f: z => inv(Z.ipow(Z.sin(z), 2)), kind: 2, why: `$\\sin^2z$ tiene un cero doble en $0$, así que su recíproca tiene un polo doble.` }].map(o => ({ ...o, z0: [0, 0], zt: "0" }))),
+        () => ({ tex: `\\dfrac{\\sin z}{(z - \\pi)^{2}}`, z0: [Math.PI, 0], zt: "\\pi", f: z => Z.div(Z.sin(z), Z.ipow(Z.sub(z, [Math.PI, 0]), 2)), kind: 1, why: `$\\sin z$ tiene un cero **simple** en $\\pi$, que cancela uno de los dos factores del denominador: queda un polo simple.` })
+      ];
+      const S = r.pick(pool)(), ok = NAMES[S.kind];
+      return {
+        prompt: `¿Qué tipo de singularidad tiene $f(z) = ${S.tex}$ en $z_0 = ${S.zt}$?`,
+        ...H.mc(r, ok, r.shuffle(Object.values(NAMES).filter(n => n !== ok)).slice(0, 3), { text: true }),
+        solution: [S.why, `La [[c3-singularidades|clasificación]] sale de la parte principal del desarrollo de Laurent: sin potencias negativas, evitable; con un número finito, polo (el orden es la potencia más negativa); con infinitas, esencial.`,
+          `Respuesta: ${ok.toLowerCase()}.`],
+        // verificación: se mide con qué potencia de 1/r crece el máximo de |f| sobre circunferencias cada vez más chicas
+        verify: { kind: "truth", target: true, fn: () => { const s = slope(S.f, S.z0, 0.05, 0.025); return (s > 6 ? 99 : s < 0.4 ? 0 : Math.round(s)) === S.kind; } }
+      };
+    }
+  };
+
+  T["c3-ceros-num"] = {
+    type: "numeric", concepts: ["c3-ceros-polos"], difficulty: 2,
+    generate(r) {
+      const a = r.nz(-3, 3), b0 = r.int(1, 4), b = 2 * a + b0 === 0 ? b0 + 1 : b0, n = r.int(1, 4), PI = [Math.PI, 0];
+      const pool = [
+        { tex: `z^{${n}}\\sin z`, z0: [0, 0], zt: "0", f: z => Z.mul(Z.ipow(z, n), Z.sin(z)), m: n + 1, why: `$\\sin z$ tiene un cero simple en $0$ y $z^{${n}}$, uno de orden $${n}$: los órdenes se suman.` },
+        { tex: `z - \\sin z`, z0: [0, 0], zt: "0", f: z => Z.sub(z, Z.sin(z)), m: 3, why: `$z - \\sin z = z - \\left(z - \\frac{z^3}{6} + \\dots\\right) = \\frac{z^3}{6} - \\dots$` },
+        { tex: `1 - \\cos z`, z0: [0, 0], zt: "0", f: z => Z.sub(one, Z.cos(z)), m: 2, why: `$1 - \\cos z = \\frac{z^2}{2} - \\frac{z^4}{24} + \\dots$` },
+        { tex: `\\left(e^{z} - 1\\right)^{${n}}`, z0: [0, 0], zt: "0", f: z => Z.ipow(Z.sub(Z.exp(z), one), n), m: n, why: `$e^z - 1 = z + \\dots$ tiene un cero simple, y al elevar a la $${n}$ el orden se multiplica por $${n}$.` },
+        { tex: `\\sin^{${n + 1}}z`, z0: PI, zt: "\\pi", f: z => Z.ipow(Z.sin(z), n + 1), m: n + 1, why: `$\\sin z$ tiene un cero simple en $\\pi$ (su derivada ahí es $\\cos\\pi = -1 \\ne 0$), y la potencia multiplica el orden.` },
+        { tex: `e^{z} - 1 - z`, z0: [0, 0], zt: "0", f: z => Z.sub(Z.sub(Z.exp(z), one), z), m: 2, why: `$e^z - 1 - z = \\frac{z^2}{2} + \\frac{z^3}{6} + \\dots$` },
+        { tex: `(${zm(a)})^{${n}}(${zm(-b - a)})`, z0: [a, 0], zt: String(a), f: z => Z.mul(Z.ipow(Z.sub(z, [a, 0]), n), Z.add(z, [-(-b - a), 0])), m: n, why: `El segundo factor no se anula en $z = ${a}$: el orden lo da el exponente del primero.` },
+        { tex: `\\cos z - 1 + \\dfrac{z^{2}}{2}`, z0: [0, 0], zt: "0", f: z => Z.add(Z.sub(Z.cos(z), one), Z.sc(0.5, Z.mul(z, z))), m: 4, why: `$\\cos z = 1 - \\frac{z^2}{2} + \\frac{z^4}{24} - \\dots$: se cancelan los dos primeros términos y queda $\\frac{z^4}{24} - \\dots$` },
+        { tex: `\\sin z - z\\cos z`, z0: [0, 0], zt: "0", f: z => Z.sub(Z.sin(z), Z.mul(z, Z.cos(z))), m: 3, why: `$\\sin z - z\\cos z = \\left(z - \\frac{z^3}{6}\\right) - \\left(z - \\frac{z^3}{2}\\right) + \\dots = \\frac{z^3}{3} + \\dots$` }
+      ];
+      const S = r.pick(pool), ask = r.bool(0.35);
+      return {
+        prompt: ask ? `¿De qué orden es el polo de $\\dfrac{1}{f(z)}$ en $z_0 = ${S.zt}$, si $f(z) = ${S.tex}$?` : `¿De qué orden es el cero de $f(z) = ${S.tex}$ en $z_0 = ${S.zt}$?`,
+        answer: S.m,
+        solution: [`El orden de un [[c3-ceros-polos|cero]] es la primera potencia de $(z - z_0)$ que aparece en la serie de Taylor (o la primera derivada que no se anula en $z_0$).`, S.why,
+          ask ? `$f$ tiene un cero de orden $${S.m}$, así que $\\frac1f$ tiene un polo de orden $${S.m}$.` : `El cero es de orden $${S.m}$.`],
+        // verificación: se mide con qué potencia de r decrece el máximo de |f| sobre circunferencias chicas
+        verify: { kind: "value", tol: 0.03, fn: () => -slope(S.f, S.z0, 0.01, 0.005) }
+      };
+    }
+  };
+
+  const SING = [
+    { t: R`si $z_0$ es un polo de $f$, entonces $|f(z)| \to \infty$ cuando $z \to z_0$`, v: true, why: R`Cerca de un polo de orden $m$, $f(z) = \frac{g(z)}{(z - z_0)^m}$ con $g(z_0) \ne 0$: el módulo crece como $\frac{1}{|z - z_0|^m}$ por todas las direcciones.`,
+      test: () => { const f = z => Z.div(Z.exp(z), Z.ipow(Z.sub(z, [1, 2]), 2)); return [1e-2, 1e-3, 1e-4].every(rr => Array.from({ length: 32 }, (_, k) => Z.abs(f(Z.add([1, 2], Z.polar(rr, k * 0.2))))).every(v => v > 0.1 / (rr * rr))); } },
+    { t: R`si $z_0$ es una singularidad esencial de $f$, entonces $|f(z)| \to \infty$ cuando $z \to z_0$`, v: false, why: R`Eso caracteriza a los polos. Cerca de una singularidad esencial $f$ no tiene límite, ni finito ni infinito: $e^{1/z}$ tiende a $\infty$ por la derecha y a $0$ por la izquierda (y, por Casorati-Weierstrass, se acerca a cualquier valor).`,
+      test: () => [1e-1, 1e-2].every(rr => Array.from({ length: 32 }, (_, k) => Z.abs(Z.exp(inv(Z.polar(rr, k * 0.2))))).every(v => v > 100)) },
+    { t: R`si $f$ es analítica y acotada en un entorno reducido de $z_0$, la singularidad en $z_0$ es evitable`, v: true, why: R`Es el teorema de Riemann: con $|f| \le M$, los coeficientes de las potencias negativas cumplen $|c_{-n}| \le M\rho^n$ para todo $\rho$ chico, así que valen $0$.`,
+      test: () => [z => Z.div(Z.sin(z), z), z => Z.div(Z.sub(Z.exp(z), one), z)].every(f => [-1, -2, -3].every(n => Z.abs(Z.div(Z.circ(z => Z.mul(f(z), Z.ipow(z, -n - 1)), [0, 0], 0.5), I2)) < 1e-9)) },
+    { t: R`el residuo de una función en una singularidad evitable es $0$`, v: true, why: R`El desarrollo de Laurent no tiene potencias negativas, y el residuo es el coeficiente de $(z - z_0)^{-1}$.`,
+      test: () => [z => Z.div(Z.sin(z), z), z => Z.div(Z.sub(one, Z.cos(z)), Z.mul(z, z))].every(f => Z.abs(resNum(f, [0, 0])) < 1e-9) },
+    { t: R`si el residuo de $f$ en una singularidad aislada $z_0$ es $0$, la singularidad es evitable`, v: false, why: R`$\frac{1}{z^2}$ tiene un polo doble en $0$ con residuo $0$: el residuo es solo el coeficiente de $\frac1z$, y puede haber otras potencias negativas.`,
+      test: () => { const f = z => inv(Z.mul(z, z)); return !(Z.abs(resNum(f, [0, 0])) < 1e-9 && Mx(f, [0, 0], 1e-3) > 1e5); } },
+    { t: R`$z = 0$ es una singularidad aislada de $f(z) = \dfrac{1}{\sin(1/z)}$`, v: false, why: R`$f$ tiene polos en $z = \frac{1}{n\pi}$, que se acumulan en $0$: todo entorno de $0$ contiene otras singularidades.`,
+      test: () => ![1e-1, 1e-2, 1e-3].every(rr => { let n = Math.ceil(1 / (Math.PI * rr)) + 1; return Math.abs(Math.sin(n * Math.PI)) < 1e-9 && 1 / (n * Math.PI) < rr; }) },
+    { t: R`$\operatorname{Log} z$ tiene una singularidad aislada en $z = 0$`, v: false, why: R`$\operatorname{Log} z$ no es analítica en ningún punto del semieje real negativo: todo entorno de $0$ contiene puntos del corte. $0$ es un punto de ramificación, no una singularidad aislada.`,
+      test: () => ![1e-1, 1e-2, 1e-3].every(rr => Math.abs(Z.log([-rr, 1e-9])[1] - Z.log([-rr, -1e-9])[1]) > 1) },
+    { t: R`si $f$ tiene un cero de orden $m$ en $z_0$, entonces $\frac1f$ tiene un polo de orden $m$ en $z_0$`, v: true, why: R`$f(z) = (z - z_0)^mg(z)$ con $g(z_0) \ne 0$, así que $\frac{1}{f(z)} = \frac{1/g(z)}{(z - z_0)^m}$, y $\frac1g$ es analítica y no nula en $z_0$.`,
+      test: () => [[z => Z.sub(z, Z.sin(z)), 3], [z => Z.sub(one, Z.cos(z)), 2]].every(([f, m]) => Math.abs(slope(z => inv(f(z)), [0, 0], 0.02, 0.01) - m) < 0.05) },
+    { t: R`en un polo simple $z_0$, el residuo es $\displaystyle\lim_{z\to z_0}(z - z_0)f(z)$`, v: true, why: R`Con $f(z) = \frac{c_{-1}}{z - z_0} + c_0 + c_1(z - z_0) + \dots$, al multiplicar por $(z - z_0)$ y tomar límite solo sobrevive $c_{-1}$.`,
+      test: () => { const f = z => Z.div(Z.exp(z), Z.mul(Z.sub(z, [1, 0]), Z.add(z, [2, 0]))), h = [1e-6, 1e-6]; return Z.abs(Z.sub(Z.mul(h, f(Z.add([1, 0], h))), resNum(f, [1, 0]))) < 1e-5; } }
+  ];
+  T["c3-singularidades-vf"] = {
+    type: "tf", concepts: ["c3-singularidades", "c3-residuo"], difficulty: 2,
+    generate(r) {
+      const S = r.pick(SING);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${S.t}.`,
+        answer: S.v,
+        explanation: `${S.v ? "Verdadero" : "Falso"}. ${S.why}`,
+        solution: [`Ver [[c3-singularidades|singularidades aisladas]] y [[c3-residuo|residuos]].`],
+        // verificación: un experimento numérico por afirmación (crecimiento de |f|, coeficientes de Laurent, residuos por integración)
+        verify: { kind: "truth", fn: S.test }
+      };
+    }
+  };
+
+  T["c3-residuo-num"] = {
+    type: "numeric", concepts: ["c3-residuo"], difficulty: 2,
+    generate(r) {
+      const form = r.pick(["A", "A", "B", "C", "D", "E"]), [a, b] = r.distinct(2, -3, 3, { nonzero: true }), c = r.int(-4, 4), k = r.pick([1, 2, -1]), s = r.sign(), ap = Math.abs(a), n = r.pick([0, 1, -1, 2]);
+      let tex, z0, zt, f, num, den = 1, val = null, how;
+      if (form === "A") {
+        tex = `\\dfrac{${zm(-c)}}{(${zm(a)})(${zm(b)})}`; z0 = [a, 0]; zt = String(a); f = z => Z.div(Z.add(z, [c, 0]), Z.mul(Z.sub(z, [a, 0]), Z.sub(z, [b, 0]))); num = a + c; den = a - b;
+        how = `$(${zm(a)})f(z) = \\dfrac{${zm(-c)}}{${zm(b)}}$, que en $z = ${a}$ vale $\\dfrac{${a + c}}{${a - b}}$.`;
+      } else if (form === "B") {
+        tex = `\\dfrac{e^{${H.kx(k, "z")}}}{z^{2} - ${ap * ap}}`; z0 = [s * ap, 0]; zt = String(s * ap); f = z => Z.div(Z.exp(Z.sc(k, z)), Z.sub(Z.mul(z, z), [ap * ap, 0])); val = Math.exp(k * s * ap) / (2 * s * ap);
+        how = `Con $p(z) = e^{${H.kx(k, "z")}}$ y $q(z) = z^2 - ${ap * ap}$, $q'(z) = 2z$: $\\dfrac{p(z_0)}{q'(z_0)} = \\dfrac{e^{${k * s * ap}}}{${2 * s * ap}}$.`;
+      } else if (form === "C") {
+        tex = `\\dfrac{z ${c < 0 ? "-" : "+"} ${Math.abs(c) === 1 ? "" : Math.abs(c)}i}{z^{2} + ${ap * ap}}`; z0 = [0, ap]; zt = `${ap === 1 ? "" : ap}i`; f = z => Z.div(Z.add(z, [0, c]), Z.add(Z.mul(z, z), [ap * ap, 0])); num = ap + c; den = 2 * ap;
+        if (c === 0) return null;
+        how = `Con $p(z) = z ${c < 0 ? "-" : "+"} ${Math.abs(c) === 1 ? "" : Math.abs(c)}i$ y $q'(z) = 2z$: $\\dfrac{p(z_0)}{q'(z_0)} = \\dfrac{${ap + c}i}{${2 * ap}i}$.`;
+      } else if (form === "D") {
+        const withE = r.bool(); tex = withE ? `\\dfrac{e^{z}}{\\sin z}` : `\\dfrac{${c === 0 ? 1 : c}}{\\sin z}`; z0 = [n * Math.PI, 0]; zt = pif(n); const top = withE ? Math.exp(n * Math.PI) : (c === 0 ? 1 : c);
+        f = z => Z.div(withE ? Z.exp(z) : [c === 0 ? 1 : c, 0], Z.sin(z)); val = top / Math.cos(n * Math.PI);
+        how = `$q(z) = \\sin z$ tiene un cero simple en $${zt}$ y $q'(z) = \\cos z$: $\\dfrac{p(z_0)}{q'(z_0)} = \\dfrac{${withE ? `e^{${zt}}` : top}}{\\cos ${n === 0 ? "0" : zt}} = \\dfrac{${withE ? `e^{${zt}}` : top}}{${n % 2 ? -1 : 1}}$.`;
+      } else {
+        if (c === 0) return null;
+        tex = `\\dfrac{z^{2} ${c < 0 ? "-" : "+"} ${Math.abs(c)}}{z\\,(${zm(a)})}`; z0 = [0, 0]; zt = "0"; f = z => Z.div(Z.add(Z.mul(z, z), [c, 0]), Z.mul(z, Z.sub(z, [a, 0]))); num = c; den = -a;
+        how = `$z\\,f(z) = \\dfrac{z^2 ${c < 0 ? "-" : "+"} ${Math.abs(c)}}{${zm(a)}}$, que en $z = 0$ vale $\\dfrac{${c}}{${-a}}$.`;
+      }
+      const ans = val === null ? num / den : val;
+      return {
+        prompt: `Calculá el residuo de $f(z) = ${tex}$ en $z_0 = ${zt}$.`,
+        answer: ans, ...(val === null ? { answerTex: H.frac(num, den) } : {}),
+        solution: [`En un polo simple, $\\operatorname{Res} = \\lim_{z\\to z_0}(z - z_0)f(z)$; si $f = \\frac pq$ con $q(z_0) = 0$ y $q'(z_0) \\ne 0$, es $\\frac{p(z_0)}{q'(z_0)}$ ([[c3-residuo|residuos]]).`, how,
+          `$\\operatorname{Res}_{z = ${zt}} f = ${val === null ? H.frac(num, den) : dn(val, 4)}$${val === null && num === 0 ? " (en realidad la singularidad es evitable: el numerador también se anula)" : ""}.`],
+        // verificación: (1/2πi) ∮ f dz sobre una circunferencia chica alrededor del punto, calculada numéricamente
+        verify: { kind: "value", tol: 1e-7, fn: () => resNum(f, z0)[0] }
+      };
+    }
+  };
+
+  T["c3-residuo-orden-num"] = {
+    type: "numeric", concepts: ["c3-residuo"], difficulty: 3,
+    generate(r) {
+      const form = r.pick(["A", "A", "B", "C", "D", "E"]), a = r.nz(-2, 2), k = r.pick([1, 2, -1, 3]), m = r.pick([2, 3]);
+      let tex, z0 = [a, 0], zt = String(a), f, val, num = null, den = 1, how, mm = m, trap = null;
+      if (form === "A") {
+        tex = `\\dfrac{e^{${H.kx(k, "z")}}}{(${zm(a)})^{${m}}}`; f = z => Z.div(Z.exp(Z.sc(k, z)), Z.ipow(Z.sub(z, [a, 0]), m)); val = k ** (m - 1) * Math.exp(k * a) / fact(m - 1);
+        how = `$g(z) = (${zm(a)})^{${m}}f(z) = e^{${H.kx(k, "z")}}$, y $g^{(${m - 1})}(z) = ${H.cf(k ** (m - 1))}e^{${H.kx(k, "z")}}$. Entonces $\\operatorname{Res} = \\dfrac{${k ** (m - 1)}\\,e^{${k * a}}}{${m - 1}!}$.`;
+        if (m === 3) trap = k * k * Math.exp(k * a);
+      } else if (form === "B") {
+        tex = `\\dfrac{1}{z^{${m}}(${zm(a)})}`; z0 = [0, 0]; zt = "0"; f = z => inv(Z.mul(Z.ipow(z, m), Z.sub(z, [a, 0]))); num = -1; den = a ** m;
+        how = `$g(z) = z^{${m}}f(z) = \\dfrac{1}{${zm(a)}}$, con $g'(z) = -\\dfrac{1}{(${zm(a)})^2}$${m === 3 ? ` y $g''(z) = \\dfrac{2}{(${zm(a)})^3}$` : ""}. En $z = 0$: $\\dfrac{g^{(${m - 1})}(0)}{${m - 1}!} = ${H.frac(-1, a ** m)}$.`;
+      } else if (form === "C") {
+        const C = r.pick([{ t: `\\dfrac{\\cos z}{z^{3}}`, f: z => Z.div(Z.cos(z), Z.ipow(z, 3)), n: -1, d: 2, m: 3, h: `$\\cos z = 1 - \\frac{z^2}{2} + \\dots$, así que $f(z) = \\frac{1}{z^3} - \\frac{1}{2z} + \\dots$` },
+          { t: `\\dfrac{\\sin z}{z^{4}}`, f: z => Z.div(Z.sin(z), Z.ipow(z, 4)), n: -1, d: 6, m: 3, h: `$\\sin z = z - \\frac{z^3}{6} + \\dots$, así que $f(z) = \\frac{1}{z^3} - \\frac{1}{6z} + \\dots$ (el polo es de orden 3, no 4).` },
+          { t: `\\dfrac{e^{${H.kx(k, "z")}} - 1}{z^{3}}`, f: z => Z.div(Z.sub(Z.exp(Z.sc(k, z)), one), Z.ipow(z, 3)), n: k * k, d: 2, m: 2, h: `$e^{${H.kx(k, "z")}} - 1 = ${H.kx(k, "z")} + \\frac{${k * k}z^2}{2} + \\dots$, así que el coeficiente de $\\frac1z$ es $\\frac{${k * k}}{2}$.` }]);
+        tex = C.t; f = C.f; z0 = [0, 0]; zt = "0"; num = C.n; den = C.d; mm = C.m; how = `Acá conviene el desarrollo de Laurent: ${C.h}`;
+      } else if (form === "D") {
+        tex = `\\dfrac{z\\,e^{z}}{(${zm(a)})^{2}}`; f = z => Z.div(Z.mul(z, Z.exp(z)), Z.ipow(Z.sub(z, [a, 0]), 2)); val = (1 + a) * Math.exp(a); mm = 2;
+        how = `$g(z) = z\\,e^z$ y $g'(z) = (1 + z)e^z$: $\\operatorname{Res} = g'(${a}) = ${1 + a === 0 ? "0" : `${H.cf(1 + a)}e^{${a}}`}$.`;
+      } else {
+        tex = `\\dfrac{1}{z\\,(${zm(a)})^{2}}`; f = z => inv(Z.mul(z, Z.ipow(Z.sub(z, [a, 0]), 2))); num = -1; den = a * a; mm = 2;
+        how = `$g(z) = (${zm(a)})^2f(z) = \\dfrac1z$ y $g'(z) = -\\dfrac{1}{z^2}$: $\\operatorname{Res} = g'(${a}) = ${H.frac(-1, a * a)}$.`;
+      }
+      const ans = num === null ? val : num / den;
+      return {
+        prompt: `Calculá el residuo de $f(z) = ${tex}$ en $z_0 = ${zt}$.`,
+        answer: Math.abs(ans) < 1e-12 ? 0 : ans, ...(num === null ? {} : { answerTex: H.frac(num, den) }),
+        traps: trap !== null && far(trap, ans) ? [{ value: trap, msg: "Falta dividir por $(m - 1)!$: en un polo de orden 3 es $\\frac{g''(z_0)}{2!}$." }] : [],
+        solution: [`En un polo de orden $m$: $\\operatorname{Res} = \\dfrac{g^{(m-1)}(z_0)}{(m - 1)!}$, con $g(z) = (z - z_0)^mf(z)$ ([[c3-residuo|residuos]]). Acá el polo es de orden $${mm}$.`, how,
+          `$\\operatorname{Res}_{z = ${zt}} f = ${num === null ? dn(val, 4) : H.frac(num, den)}$.`],
+        verify: { kind: "value", tol: 1e-7, fn: () => resNum(f, z0, 0.4)[0] }
+      };
+    }
+  };
+
+  T["c3-teorema-residuos-num"] = {
+    type: "numeric", concepts: ["c3-residuo"], difficulty: 3,
+    generate(r) {
+      const form = r.pick(["A", "A", "B", "C"]), Rr = r.pick([2, 3]), p = r.int(-3, 3), q = r.nz(-5, 5), k = r.pick([1, 2, -1, 3]), m = r.int(0, 3);
+      let tex, f, num, den, steps, RR = Rr;
+      if (form === "A") {
+        const [a, b] = r.distinct(2, -5, 5, { nonzero: true, exclude: [Rr, -Rr] }), inA = Math.abs(a) < Rr, inB = Math.abs(b) < Rr;
+        const top = H.poly([[p, "z"], [q, ""]]); tex = `\\dfrac{${top}}{(${zm(a)})(${zm(b)})}`; f = z => Z.div(Z.add(Z.sc(p, z), [q, 0]), Z.mul(Z.sub(z, [a, 0]), Z.sub(z, [b, 0])));
+        num = (inA ? p * a + q : 0) - (inB ? p * b + q : 0); den = a - b;
+        steps = [`Polos simples en $z = ${a}$ (${inA ? "adentro" : "afuera"}) y $z = ${b}$ (${inB ? "adentro" : "afuera"}) de $|z| = ${Rr}$.`,
+          `$\\operatorname{Res}_{z=${a}} = \\dfrac{${p * a + q}}{${a - b}}$ y $\\operatorname{Res}_{z=${b}} = \\dfrac{${p * b + q}}{${b - a}}$. ${inA && inB ? "Se suman los dos." : inA || inB ? "Solo cuenta el de adentro." : "Ninguno queda adentro: la integral vale $0$ (Cauchy-Goursat)."}`];
+      } else if (form === "B") {
+        RR = 1; tex = `${m === 0 ? "" : m === 1 ? "z\\," : `z^{${m}}`}e^{${k === 1 ? "1" : k}/z}`; f = z => Z.mul(Z.ipow(z, m), Z.exp(Z.sc(k, inv(z)))); num = k ** (m + 1); den = fact(m + 1);
+        steps = [`La única singularidad es $z = 0$, **esencial**: no hay fórmula de polos, hay que mirar el desarrollo de Laurent.`,
+          `$e^{${k === 1 ? "1" : k}/z} = \\sum \\dfrac{${k === 1 ? "1" : `${H.par(k)}^n`}}{n!\\,z^n}$. Al multiplicar por $z^{${m}}$, el término con $\\frac1z$ es el de $n = ${m + 1}$: el residuo es $\\dfrac{${k ** (m + 1)}}{${m + 1}!}$.`];
+      } else {
+        const a = r.pick([1, -1, 4, -4, 5]), inside = Math.abs(a) < Rr; tex = `\\dfrac{1}{z\\,(${zm(a)})^{2}}`; f = z => inv(Z.mul(z, Z.ipow(Z.sub(z, [a, 0]), 2)));
+        num = inside ? 0 : 1; den = a * a;
+        steps = [`Polo simple en $0$, con residuo $\\dfrac{1}{(0 ${a < 0 ? "+" : "-"} ${Math.abs(a)})^2} = ${H.frac(1, a * a)}$, y polo doble en $z = ${a}$, con residuo $\\left.\\dfrac{d}{dz}\\dfrac1z\\right|_{z=${a}} = ${H.frac(-1, a * a)}$.`,
+          inside ? `Los dos quedan dentro de $|z| = ${Rr}$ y se cancelan.` : `Solo $z = 0$ queda dentro de $|z| = ${Rr}$.`];
+      }
+      const K = num / den;
+      return {
+        prompt: `Calculá $\\displaystyle\\oint_{|z| = ${RR}} ${tex}\\,dz$ (sentido positivo). El resultado es $2\\pi i\\,K$, con $K$ real: ¿cuánto vale $K$?`,
+        answer: K === 0 ? 0 : K, answerTex: H.frac(num, den),
+        solution: [`[[c3-residuo|Teorema de los residuos]]: $\\oint_C f\\,dz = 2\\pi i\\sum\\operatorname{Res}$, sumando sobre los puntos singulares que quedan **dentro** de $C$.`, ...steps, `$K = ${H.frac(num, den)}$.`],
+        // verificación: la integral sobre la circunferencia, calculada numéricamente y dividida por 2πi
+        verify: { kind: "value", tol: 1e-6, fn: () => Z.div(Z.circ(f, [0, 0], RR, 6000), I2)[0] }
+      };
+    }
+  };
+
+  const cards = {
+    "c3-singularidades": {
+      title: "Singularidades aisladas: evitables, polos y esenciales", aliases: ["singularidad aislada", "singularidad evitable", "singularidad esencial", "polo de orden m", "parte principal", "teorema de Casorati-Weierstrass"], concepts: ["c3-singularidades"],
+      summary: "z₀ es singularidad aislada si f es analítica en 0 < |z − z₀| < ε. Según la parte principal del Laurent: evitable (ninguna potencia negativa; f tiene límite), polo de orden m (hasta (z − z₀)⁻ᵐ; |f| → ∞) o esencial (infinitas; no hay límite).",
+      def: [R`Un [[c3-analitica|punto singular]] $z_0$ es una **singularidad aislada** de $f$ si $f$ es analítica en algún entorno reducido $0 < |z - z_0| < \varepsilon$. Ahí vale un [[c3-laurent|desarrollo de Laurent]], y su **parte principal** $\sum_{n\ge1}\frac{c_{-n}}{(z - z_0)^n}$ clasifica la singularidad:`,
+        R`**Evitable:** la parte principal es nula. Equivale a que exista $\lim_{z\to z_0}f(z)$ (finito), o a que $f$ esté acotada cerca de $z_0$ (teorema de Riemann). Definiendo $f(z_0)$ como ese límite, $f$ queda analítica.`,
+        R`**Polo de orden $m$:** la parte principal termina en $\frac{c_{-m}}{(z - z_0)^m}$, con $c_{-m} \ne 0$. Equivale a $f(z) = \frac{g(z)}{(z - z_0)^m}$ con $g$ analítica y $g(z_0) \ne 0$, y a que $|f(z)| \to \infty$ cuando $z \to z_0$. Con $m = 1$ es un **polo simple**.`,
+        R`**Esencial:** la parte principal tiene infinitos términos. $f$ no tiene límite, ni finito ni infinito: en todo entorno de $z_0$, $f$ se acerca tanto como se quiera a cualquier complejo (**teorema de Casorati-Weierstrass**).`],
+      idea: [R`Las tres clases son tres comportamientos: la función se porta bien (evitable), se va a infinito de manera ordenada (polo) o hace cualquier cosa (esencial).`,
+        R`No toda singularidad es aislada: $\operatorname{Log} z$ en $0$ no lo es (todo el corte es singular), ni $\frac{1}{\sin(1/z)}$ en $0$ (los polos $\frac{1}{n\pi}$ se acumulan). Para esas no hay desarrollo de Laurent ni residuo.`,
+        R`En la práctica, para un cociente $\frac pq$ se comparan los órdenes de los ceros: si $p$ tiene un cero de orden $k$ y $q$ uno de orden $m$ en $z_0$, hay un polo de orden $m - k$ si $m > k$, y una singularidad evitable si $m \le k$.`],
+      demo: [R`**Paso 1 (evitable ⇒ límite).** Sin parte principal, $f(z) = c_0 + c_1(z - z_0) + \dots$ en el entorno reducido. Una serie de potencias es continua en su círculo, así que $f(z) \to c_0$.`,
+        R`**Paso 2 (acotada ⇒ evitable: Riemann).** Si $|f| \le M$ en $0 < |z - z_0| < \varepsilon$, por la fórmula de los coeficientes y la cota ML sobre $|z - z_0| = \rho$: $|c_{-n}| = \left|\frac{1}{2\pi i}\oint f(z)(z - z_0)^{n-1}dz\right| \le \frac{1}{2\pi}M\rho^{n-1}\,2\pi\rho = M\rho^n$. Vale para todo $\rho$ chico, así que $c_{-n} = 0$ para $n \ge 1$.`,
+        R`**Paso 3 (polo ⇔ $g/(z - z_0)^m$).** Si la parte principal termina en $n = m$, sacando factor común $(z - z_0)^{-m}$ queda $f(z) = \frac{g(z)}{(z - z_0)^m}$ con $g(z) = c_{-m} + c_{-m+1}(z - z_0) + \dots$, una serie de potencias (analítica) con $g(z_0) = c_{-m} \ne 0$. El camino inverso es desarrollar $g$ en serie de Taylor y dividir.`,
+        R`**Paso 4 (polo ⇒ infinito).** Como $g$ es continua y $g(z_0) \ne 0$, cerca de $z_0$ vale $|g(z)| > \frac{|g(z_0)|}{2}$, y entonces $|f(z)| > \frac{|g(z_0)|}{2|z - z_0|^m} \to \infty$. $\blacksquare$`],
+      examples: [{ q: R`Clasificá la singularidad de $\dfrac{\sin z}{z^3}$ en $0$.`, steps: [R`$\dfrac{\sin z}{z^3} = \dfrac{1}{z^2} - \dfrac16 + \dfrac{z^2}{120} - \dots$: polo de orden 2 (no 3).`] },
+        { q: R`¿Y la de $e^{1/z}$?`, steps: [R`$e^{1/z} = 1 + \dfrac1z + \dfrac{1}{2z^2} + \dots$: infinitas potencias negativas, esencial. Por la derecha tiende a $\infty$ y por la izquierda a $0$.`] }],
+      tips: [R`El orden del polo **no** es siempre el exponente del denominador: si el numerador se anula en $z_0$, baja.`],
+      see: ["c3-analitica", "c3-laurent", "c3-ceros-polos", "c3-residuo"]
+    },
+    "c3-ceros-polos": {
+      title: "Ceros de una función analítica y su relación con los polos", aliases: ["cero de orden m", "orden de un cero", "cero simple", "ceros aislados", "principio de identidad"], concepts: ["c3-ceros-polos"],
+      summary: "f tiene un cero de orden m en z₀ si f(z) = (z − z₀)ᵐ g(z) con g(z₀) ≠ 0; equivale a f(z₀) = … = f⁽ᵐ⁻¹⁾(z₀) = 0 y f⁽ᵐ⁾(z₀) ≠ 0. Los ceros de una analítica no nula son aislados. Un cero de orden m de f es un polo de orden m de 1/f.",
+      def: [R`$f$, analítica en $z_0$, tiene un **cero de orden $m$** ahí si $$f(z_0) = f'(z_0) = \dots = f^{(m-1)}(z_0) = 0,\qquad f^{(m)}(z_0) \ne 0.$$ Equivale a $f(z) = (z - z_0)^mg(z)$ con $g$ analítica y $g(z_0) \ne 0$: la serie de Taylor empieza en la potencia $m$.`,
+        R`**Los ceros son aislados.** Si $f$ es analítica en un dominio y no es idénticamente nula, cada cero tiene un entorno sin otros ceros. Consecuencia (**principio de identidad**): dos funciones analíticas en un dominio que coinciden sobre un segmento, o sobre una sucesión de puntos que se acumula dentro del dominio, coinciden en todo el dominio.`,
+        R`**Ceros y polos.** Si $p$ y $q$ son analíticas en $z_0$, $p$ tiene un cero de orden $k \ge 0$ y $q$ uno de orden $m \ge 1$, entonces $\frac pq$ tiene en $z_0$ un polo de orden $m - k$ si $m > k$, y una singularidad evitable si $m \le k$. En particular, $\frac1q$ tiene un polo de orden $m$.`],
+      idea: [R`Un cero de orden $m$ es un punto donde la función se anula «como $(z - z_0)^m$». Los órdenes se comportan como exponentes: se suman al multiplicar y se restan al dividir.`,
+        R`El principio de identidad es otra muestra de la rigidez de las funciones analíticas. Por eso las identidades trigonométricas siguen valiendo en los complejos: las dos caras de la identidad son funciones enteras que coinciden sobre el eje real.`],
+      demo: [R`**Paso 1 (factorizar).** Por el [[c3-taylor|teorema de Taylor]], $f(z) = \sum_{n\ge m} a_n(z - z_0)^n$ con $a_m = \frac{f^{(m)}(z_0)}{m!} \ne 0$ (los anteriores se anulan). Sacando factor común: $f(z) = (z - z_0)^mg(z)$, con $g(z) = a_m + a_{m+1}(z - z_0) + \dots$ analítica y $g(z_0) = a_m \ne 0$.`,
+        R`**Paso 2 (los ceros son aislados).** $g$ es continua y $g(z_0) \ne 0$, así que $g(z) \ne 0$ en algún entorno de $z_0$. Ahí, $f(z) = (z - z_0)^mg(z)$ solo se anula en $z = z_0$. (Si todas las derivadas se anularan en $z_0$, la serie de Taylor sería nula y $f = 0$ en un disco; se muestra que entonces $f = 0$ en todo el dominio.)`,
+        R`**Paso 3 (cociente).** Con $p = (z - z_0)^kP$ y $q = (z - z_0)^mQ$, donde $P(z_0) \ne 0 \ne Q(z_0)$: $\frac pq = \frac{P/Q}{(z - z_0)^{m - k}}$, y $\frac PQ$ es analítica y no nula en $z_0$. Si $m > k$, es la forma de un [[c3-singularidades|polo de orden m − k]]; si no, la función tiene límite. $\blacksquare$`],
+      examples: [{ q: R`Orden del cero de $z - \sin z$ en $0$.`, steps: [R`$z - \sin z = \dfrac{z^3}{6} - \dfrac{z^5}{120} + \dots$: orden 3.`] },
+        { q: R`Polos de $\dfrac{1}{\sin z}$.`, steps: [R`$\sin z$ se anula en $n\pi$, con derivada $\cos n\pi = \pm1 \ne 0$: ceros simples. Entonces $\frac{1}{\sin z}$ tiene polos simples en $z = n\pi$.`] }],
+      see: ["c3-taylor", "c3-singularidades", "c3-residuo"]
+    },
+    "c3-residuo": {
+      title: "Residuos y teorema de los residuos", aliases: ["teorema de los residuos", "residuo de una función", "residuo en un polo", "cálculo de residuos"], concepts: ["c3-residuo"],
+      summary: "El residuo de f en una singularidad aislada z₀ es el coeficiente c₋₁ de su Laurent. Teorema: ∮_C f dz = 2πi Σ Res, sobre las singularidades dentro de C. Polo simple: lím (z − z₀)f(z) = p(z₀)/q'(z₀). Polo de orden m: g⁽ᵐ⁻¹⁾(z₀)/(m − 1)!.",
+      def: [R`Si $z_0$ es una [[c3-singularidades|singularidad aislada]] de $f$, su **residuo** es el coeficiente de $\frac{1}{z - z_0}$ en el desarrollo de Laurent válido en $0 < |z - z_0| < \varepsilon$: $$\operatorname*{Res}_{z = z_0} f = c_{-1} = \frac{1}{2\pi i}\oint_{|z - z_0| = \rho} f(z)\,dz.$$`,
+        R`**Teorema de los residuos.** Si $f$ es analítica dentro y sobre un contorno cerrado simple positivo $C$, salvo en un número finito de puntos singulares $z_1, \dots, z_n$ interiores a $C$, $$\oint_C f(z)\,dz = 2\pi i\sum_{k=1}^n \operatorname*{Res}_{z = z_k} f.$$`,
+        R`**Cómo calcularlos.** Polo simple: $\operatorname{Res} = \lim_{z\to z_0}(z - z_0)f(z)$. Si $f = \frac pq$ con $p(z_0) \ne 0$, $q(z_0) = 0$ y $q'(z_0) \ne 0$: $$\operatorname*{Res}_{z = z_0}\frac pq = \frac{p(z_0)}{q'(z_0)}.$$ Polo de orden $m$, con $g(z) = (z - z_0)^mf(z)$: $$\operatorname*{Res}_{z = z_0} f = \frac{g^{(m-1)}(z_0)}{(m - 1)!}.$$ Singularidad esencial (o cuando las derivadas son pesadas): se busca el coeficiente de $\frac{1}{z - z_0}$ directamente en el desarrollo de Laurent. Evitable: $0$.`],
+      idea: [R`De todo el desarrollo de Laurent, lo único que sobrevive al integrar alrededor del punto es el término $\frac{c_{-1}}{z - z_0}$: las demás potencias tienen primitiva y su integral sobre una curva cerrada es cero. Lo que queda, el «residuo», es $2\pi i\,c_{-1}$.`,
+        R`El teorema convierte integrales en cuentas algebraicas: en lugar de parametrizar y buscar primitivas, se ubican las singularidades de adentro y se suman sus residuos. La [[c3-cauchy-formula|fórmula integral de Cauchy]] es el caso particular de un solo polo.`,
+        R`Esta palabra no tiene nada que ver con los residuos de la estadística (las diferencias entre los datos y un ajuste).`],
+      demo: [R`**Paso 1 (un solo punto).** En $0 < |z - z_0| < \varepsilon$, $f(z) = \sum_{n=-\infty}^\infty c_n(z - z_0)^n$. La fórmula de los coeficientes de [[c3-laurent|Laurent]] con $n = -1$ es $c_{-1} = \frac{1}{2\pi i}\oint f(z)\,dz$: por eso las dos definiciones coinciden.`,
+        R`**Paso 2 (teorema).** Se rodea cada $z_k$ con una circunferencia chica $C_k$, de modo que no se toquen y queden dentro de $C$. $f$ es analítica entre $C$ y las $C_k$, así que por [[c3-cauchy-goursat|Cauchy-Goursat para dominios con agujeros]], $\oint_C f\,dz = \sum_k\oint_{C_k} f\,dz = \sum_k 2\pi i\operatorname{Res}_{z_k}f$.`,
+        R`**Paso 3 (polo de orden $m$).** $g(z) = (z - z_0)^mf(z) = c_{-m} + c_{-m+1}(z - z_0) + \dots + c_{-1}(z - z_0)^{m-1} + \dots$ es una serie de Taylor. Su coeficiente de $(z - z_0)^{m-1}$ es, por un lado, $c_{-1}$, y por otro, $\frac{g^{(m-1)}(z_0)}{(m-1)!}$.`,
+        R`**Paso 4 (la fórmula $p/q'$).** Si $q$ tiene un cero simple, $q(z) = (z - z_0)Q(z)$ con $Q(z_0) = q'(z_0)$ (derivando el producto y evaluando en $z_0$). Entonces $(z - z_0)\frac pq = \frac pQ \to \frac{p(z_0)}{q'(z_0)}$. $\blacksquare$`],
+      examples: [{ q: R`$\displaystyle\oint_{|z| = 2}\frac{5z - 2}{z(z - 1)}\,dz$.`, steps: [R`Polos simples en $0$ y $1$, los dos adentro. $\operatorname{Res}_0 = \frac{-2}{-1} = 2$ y $\operatorname{Res}_1 = \frac{3}{1} = 3$.`, R`La integral vale $2\pi i\,(2 + 3) = 10\pi i$.`] },
+        { q: R`$\displaystyle\oint_{|z| = 1} z^2e^{1/z}\,dz$.`, steps: [R`$z^2e^{1/z} = z^2 + z + \frac12 + \frac{1}{6z} + \dots$: el residuo en $0$ es $\frac16$.`, R`La integral vale $\frac{\pi i}{3}$.`] }],
+      tips: [R`Solo cuentan las singularidades **de adentro**. Dibujá el contorno y marcalas antes de calcular nada.`, R`Si usás la fórmula de un polo de orden mayor que el real, igual da bien (con más cuentas). Con un orden menor, da mal.`],
+      see: ["c3-singularidades", "c3-laurent", "c3-cauchy-goursat", "c3-cauchy-formula", "c3-ceros-polos"]
+    }
+  };
+
+  E.extendCourse("m103", {
+    concepts: { "c3-singularidades": { name: "Singularidades aisladas" }, "c3-ceros-polos": { name: "Ceros y polos" }, "c3-residuo": { name: "Residuos" } },
+    templates: T,
+    units: [{
+      id: "c3-residuos-u", order: 6, program: "Unidad 6", title: "Singularidades y residuos", icon: "target",
+      diagnostic: ["c3-clasificar-mc", "c3-residuo-num", "c3-teorema-residuos-num"],
+      lessons: [
+        { id: "c3-singularidades", title: "Singularidades, ceros y polos", templates: ["c3-clasificar-mc", "c3-ceros-num", "c3-singularidades-vf"], theory: ["c3-singularidades", "c3-ceros-polos"],
+          intro: R`Evitable, polo o esencial, según cuántas potencias negativas tenga el desarrollo de Laurent.` },
+        { id: "c3-residuos", title: "Residuos y teorema de los residuos", templates: ["c3-residuo-num", "c3-residuo-orden-num", "c3-teorema-residuos-num"], theory: ["c3-residuo"],
+          intro: R`$\oint_C f\,dz = 2\pi i\sum\operatorname{Res}$. En un polo simple, $\operatorname{Res}\frac pq = \frac{p(z_0)}{q'(z_0)}$.` }
       ]
     }],
     cards
