@@ -482,3 +482,206 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 3 · ESPACIO DUAL: FUNCIONALES, BASE DUAL, ANULADOR, TRASPUESTA Y BIDUAL
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, A = E.a2;
+  const T = {};
+  const VN = ["x", "y", "z"];
+  const simpson = (f, a, b, n = 200) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+  const ORD = ["primer", "segundo", "tercer"];
+
+  T["a2-base-dual-num"] = {
+    type: "numeric", concepts: ["a2-dual"], difficulty: 2,
+    generate(r) {
+      const n = r.pick([2, 3, 3]), P = A.unimod(r, n, n + 1), Q = A.inv(P).map(row => row.map(x => Math.round(x))), base = A.T(P), i = r.int(0, n - 1), ask = r.pick(["coef", "val"]);
+      const j = r.int(0, n - 1), v = Array.from({ length: n }, () => r.int(-3, 3)), val = Q[i].reduce((s, c, k) => s + c * v[k], 0);
+      const phiT = H.poly(Q[i].map((c, k) => [c, VN[k]]));
+      return {
+        prompt: `Sea $B = \\{${base.map(A.v).join(",\\ ")}\\}$ una base de $\\mathbb R^{${n}}$ y $B^* = \\{\\varphi_1, ${n === 3 ? "\\varphi_2, \\varphi_3" : "\\varphi_2"}\\}$ su base dual. ${ask === "coef" ? `Si $\\varphi_${i + 1}(${VN.slice(0, n).join(", ")}) = ${VN.slice(0, n).map((x, k) => `c_${k + 1}${x}`).join(" + ")}$, ¿cuánto vale $c_${j + 1}$?` : `¿Cuánto vale $\\varphi_${i + 1}${A.v(v)}$?`}`,
+        answer: ask === "coef" ? Q[i][j] : val,
+        solution: [`La [[a2-dual|base dual]] está definida por $\\varphi_i(v_j) = \\delta_{ij}$: $\\varphi_i$ le asigna a cada vector su $i$-ésima coordenada en la base $B$.`,
+          `Si $P$ es la matriz que tiene a los vectores de $B$ como columnas, las filas de $P^{-1}$ son los coeficientes de los funcionales: $P^{-1} = ${A.pm(Q)}$.`,
+          `$\\varphi_${i + 1}(${VN.slice(0, n).join(", ")}) = ${phiT}$${ask === "val" ? `, y $\\varphi_${i + 1}${A.v(v)} = ${val}$` : `: $c_${j + 1} = ${Q[i][j]}$`}.`],
+        // verificación: el funcional hallado vale 1 en su vector de la base y 0 en los demás (y, si se pide un valor, se recalcula con las coordenadas de v)
+        verify: ask === "coef" ? { kind: "zero", fn: () => base.map((b, k) => Q[i].reduce((s, c, q) => s + c * b[q], 0) - (k === i ? 1 : 0)) } : { kind: "value", fn: () => A.solve(P, v)[i] }
+      };
+    }
+  };
+
+  T["a2-dual-funcionales-num"] = {
+    type: "numeric", concepts: ["a2-dual"], difficulty: 3,
+    generate(r) {
+      const [a, b] = r.distinct(2, 1, 4), kind = r.pick(["int", "int", "eval", "mix"]);
+      // dos funcionales sobre R₁[t] (polinomios α + βt), dados como operadores sobre funciones
+      const F = {
+        int: { t: [`\\varphi_1(p) = \\displaystyle\\int_0^{${a}} p(t)\\,dt`, `\\varphi_2(p) = \\displaystyle\\int_0^{${b}} p(t)\\,dt`], f: [p => simpson(p, 0, a), p => simpson(p, 0, b)], M: [[a, a * a / 2], [b, b * b / 2]] },
+        eval: { t: [`\\varphi_1(p) = p(${a})`, `\\varphi_2(p) = p(${b})`], f: [p => p(a), p => p(b)], M: [[1, a], [1, b]] },
+        mix: { t: [`\\varphi_1(p) = p(${a})`, `\\varphi_2(p) = \\displaystyle\\int_0^{${b}} p(t)\\,dt`], f: [p => p(a), p => simpson(p, 0, b)], M: [[1, a], [b, b * b / 2]] }
+      }[kind];
+      const det = F.M[0][0] * F.M[1][1] - F.M[0][1] * F.M[1][0];
+      if (Math.abs(det) < 1e-9) return null;
+      // v_k = α + βt con φ_i(v_k) = δ_ik: las columnas de M⁻¹
+      const Mi = [[F.M[1][1] / det, -F.M[0][1] / det], [-F.M[1][0] / det, F.M[0][0] / det]], k = r.int(0, 1), which = r.int(0, 1), ans = Mi[which][k];
+      const fr = x => { for (let q = 1; q <= 48; q++) if (Math.abs(x * q - Math.round(x * q)) < 1e-9) return H.frac(Math.round(x * q), q); return A.dn(x, 4); };
+      return {
+        prompt: `En $V = \\mathbb R_1[t] = \\{\\alpha + \\beta t\\}$ se consideran los funcionales $${F.t[0]}$ y $${F.t[1]}$, que forman una base de $V^*$. Sea $\\{v_1, v_2\\}$ la base de $V$ de la que son base dual. Si $v_${k + 1} = \\alpha + \\beta t$, ¿cuánto vale $${which ? "\\beta" : "\\alpha"}$?`,
+        answer: ans, answerTex: fr(ans),
+        solution: [`Se busca $v_${k + 1} = \\alpha + \\beta t$ con $\\varphi_${k + 1}(v_${k + 1}) = 1$ y $\\varphi_${2 - k}(v_${k + 1}) = 0$ ([[a2-dual|base dual]]).`,
+          `Aplicando los funcionales a $\\alpha + \\beta t$: $\\varphi_1 = ${fr(F.M[0][0])}\\,\\alpha + ${fr(F.M[0][1])}\\,\\beta$ y $\\varphi_2 = ${fr(F.M[1][0])}\\,\\alpha + ${fr(F.M[1][1])}\\,\\beta$. El determinante de ese sistema es $${fr(det)} \\ne 0$: por eso los funcionales son independientes.`,
+          `Resolviendo: $v_${k + 1} = ${fr(Mi[0][k])} ${Mi[1][k] < 0 ? "-" : "+"} ${fr(Math.abs(Mi[1][k]))}\\,t$.`],
+        // verificación: los funcionales (integrales por Simpson o evaluaciones) aplicados al polinomio hallado dan 1 y 0
+        verify: { kind: "zero", tol: 1e-8, fn: () => { const p = t => Mi[0][k] + Mi[1][k] * t; return [F.f[k](p) - 1, F.f[1 - k](p)]; } }
+      };
+    }
+  };
+
+  T["a2-anulador-num"] = {
+    type: "numeric", concepts: ["a2-anulador"], difficulty: 2,
+    generate(r) {
+      const n = r.pick([3, 4, 4, 5]), k = r.int(1, 3), gens = Array.from({ length: k }, () => Array.from({ length: n }, () => r.int(-2, 3)));
+      if (k >= 2 && r.bool(0.4)) gens.push(gens[0].map((x, i) => x + gens[1][i]));
+      const d = A.rank(gens);
+      if (d === 0 || d >= n) return null;
+      return {
+        prompt: `En $\\mathbb R^{${n}}$, sea $S = \\langle ${gens.map(A.v).join(",\\ ")}\\rangle$. ¿Cuál es la dimensión de su anulador $S^\\circ \\subseteq (\\mathbb R^{${n}})^*$?`,
+        answer: n - d,
+        traps: [{ value: d, msg: "Esa es la dimensión de $S$. La del anulador es lo que falta para llegar a la del espacio." }].filter(t => t.value !== n - d),
+        solution: [`El [[a2-anulador|anulador]] de $S$ son los funcionales que se anulan en todo $S$, y $\\dim S^\\circ = \\dim V - \\dim S$.`,
+          `Escalonando los generadores, $\\dim S = ${d}$${gens.length > d ? " (hay un generador que es combinación de los otros)" : ""}. Entonces $\\dim S^\\circ = ${n} - ${d} = ${n - d}$.`,
+          `Dicho de otro modo: hacen falta $${n - d}$ ecuaciones lineales independientes para describir a $S$.`],
+        // verificación: un funcional (c₁, …, cₙ) está en el anulador si se anula en cada generador: es el núcleo de la matriz de generadores
+        verify: { kind: "nullity", A: gens }
+      };
+    }
+  };
+
+  T["a2-traza-num"] = {
+    type: "numeric", concepts: ["a2-dual"], difficulty: 3,
+    generate(r) {
+      const c = [[r.int(-5, 5), r.nz(-5, 5)], [r.nz(-5, 5), r.int(-5, 5)]], i = r.int(0, 1), j = r.int(0, 1);
+      if (c[0][1] === c[1][0]) return null;
+      // tr(aX) = Σ a_ij x_ji: el coeficiente de x_ij es a_ji
+      const a = A.T(c), terms = [[c[0][0], "x_{11}"], [c[0][1], "x_{12}"], [c[1][0], "x_{21}"], [c[1][1], "x_{22}"]];
+      return {
+        prompt: `Todo funcional lineal sobre $\\mathbb R^{2\\times2}$ es de la forma $f_a(X) = \\operatorname{tr}(aX)$ para una única matriz $a$. Si $f(X) = ${H.poly(terms)}$, ¿cuánto vale la entrada $a_{${i + 1}${j + 1}}$ de esa matriz?`,
+        answer: a[i][j],
+        traps: [{ value: c[i][j], msg: "Ojo con el orden de los índices: en $\\operatorname{tr}(aX) = \\sum a_{ij}x_{ji}$, la entrada $a_{ij}$ acompaña a $x_{ji}$, no a $x_{ij}$." }].filter(t => t.value !== a[i][j]),
+        solution: [`$\\operatorname{tr}(aX) = \\sum_i (aX)_{ii} = \\sum_{i,j} a_{ij}\\,x_{ji}$: el coeficiente de $x_{ji}$ es $a_{ij}$ ([[a2-dual|funcionales lineales]]).`,
+          `Leyendo los coeficientes de $f$ y trasponiendo: $a = ${A.pm(a)}$.`, `$a_{${i + 1}${j + 1}} = ${a[i][j]}$ (el coeficiente de $x_{${j + 1}${i + 1}}$).`],
+        // verificación: tr(a·E_pq) calculada con el producto de matrices tiene que dar el coeficiente de x_pq
+        verify: { kind: "zero", fn: () => { const out = []; for (let p = 0; p < 2; p++) for (let q = 0; q < 2; q++) { const Epq = [[0, 0], [0, 0]]; Epq[p][q] = 1; const M = A.mul(a, Epq); out.push(M[0][0] + M[1][1] - c[p][q]); } return out; } }
+      };
+    }
+  };
+
+  const rnd = (r, m, n) => Array.from({ length: m }, () => Array.from({ length: n }, () => r.int(-3, 3)));
+  const DUAL = [
+    { t: R`si $\dim V = n$ es finita, $\dim V^* = n$`, v: true, why: R`La base dual de una base de $V$ tiene $n$ elementos y es una base de $V^*$.`,
+      test: r => [2, 3, 4].every(n => { const P = A.unimod(r, n, n + 1); return A.rank(A.inv(P)) === n; }) },
+    { t: R`el núcleo de un funcional lineal no nulo sobre un espacio de dimensión $n$ tiene dimensión $n - 1$`, v: true, why: R`Un funcional no nulo es sobreyectivo (su imagen es un subespacio no nulo de $F$, que tiene dimensión 1). Por el teorema de la dimensión, el núcleo tiene dimensión $n - 1$: es un hiperplano.`,
+      test: r => [3, 4, 5].every(n => { const f = [Array.from({ length: n }, (_, i) => (i === 0 ? r.nz(-3, 3) : r.int(-3, 3)))]; return A.kernel(f).length === n - 1; }) },
+    { t: R`$n$ funcionales cualesquiera, distintos y no nulos, sobre un espacio de dimensión $n$ forman una base de $V^*$`, v: false, why: R`Tienen que ser linealmente independientes. En $\mathbb R^2$, $\varphi_1(x, y) = x$ y $\varphi_2(x, y) = 2x$ son distintos y no nulos, pero uno es múltiplo del otro.`,
+      test: () => A.rank([[1, 0], [2, 0]]) === 2 },
+    { t: R`una transformación lineal y su traspuesta tienen el mismo rango`, v: true, why: R`$\operatorname{Im}(T^t) = (\operatorname{Nu} T)^\circ$, cuya dimensión es $\dim V - \dim\operatorname{Nu}T = \operatorname{rg}T$. En matrices: el rango por filas es igual al rango por columnas.`,
+      test: r => [[2, 4], [3, 3], [4, 2], [3, 5]].every(([m, n]) => { const M = rnd(r, m, n); M[m - 1] = M[0].map(x => 2 * x); return A.rank(M) === A.rank(A.T(M)); }) },
+    { t: R`si $S \subseteq T$ son subespacios de $V$, entonces $S^\circ \subseteq T^\circ$`, v: false, why: R`Es al revés: $T^\circ \subseteq S^\circ$. Anularse en un conjunto más grande es más difícil, así que hay menos funcionales que lo logran.`,
+      test: () => { const S = [[1, 0, 0]], Tt = [[1, 0, 0], [0, 1, 0]], aS = A.kernel(S), aT = A.kernel(Tt); return aS.every(f => A.rank([...aT, f]) === aT.length); } },
+    { t: R`en dimensión finita, $\dim S + \dim S^\circ = \dim V$`, v: true, why: R`Extendiendo una base de $S$ a una de $V$, los funcionales de la base dual que corresponden a los vectores agregados forman una base de $S^\circ$.`,
+      test: r => [3, 4, 5].every(n => { const G = rnd(r, 2, n); return A.rank(G) + A.kernel(G).length === n; }) },
+    { t: R`la base dual de la base canónica de $\mathbb R^n$ está formada por las funciones coordenadas $\varphi_i(x_1, \dots, x_n) = x_i$`, v: true, why: R`$\varphi_i(e_j)$ es la coordenada $i$ de $e_j$: vale $1$ si $i = j$ y $0$ si no.`,
+      test: () => [2, 3, 4].every(n => A.inv(A.eye(n)).every((row, i) => row.every((x, j) => Math.abs(x - (i === j ? 1 : 0)) < 1e-12))) },
+    { t: R`si $\varphi$ y $\psi$ son funcionales sobre $V$ con el mismo núcleo, entonces $\psi = \lambda\varphi$ para algún escalar $\lambda$`, v: true, why: R`Si son no nulos, se elige $v_0$ fuera del núcleo y $\lambda = \frac{\psi(v_0)}{\varphi(v_0)}$: $\psi - \lambda\varphi$ se anula en el núcleo y en $v_0$, que juntos generan $V$. (Si uno es nulo, el núcleo es todo $V$ y el otro también es nulo.)`,
+      test: r => [3, 4].every(n => { const f = Array.from({ length: n }, () => r.nz(-3, 3)), K = A.kernel([f]); return A.kernel(K).length === 1; }) },
+    { t: R`la identificación de $V$ con su bidual $V^{**}$, $v \mapsto L_v$ con $L_v(\varphi) = \varphi(v)$, necesita que se elija una base de $V$`, v: false, why: R`Esa aplicación se define sin mencionar ninguna base: es un isomorfismo **canónico**. En cambio, para identificar $V$ con $V^*$ sí hay que elegir una base (o un producto interno).`,
+      test: () => false }
+  ];
+  T["a2-dual-vf"] = {
+    type: "tf", concepts: ["a2-dual", "a2-anulador", "a2-traspuesta"], difficulty: 2,
+    generate(r) {
+      const S = r.pick(DUAL);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${S.t}.`,
+        answer: S.v,
+        explanation: `${S.v ? "Verdadero" : "Falso"}. ${S.why}`,
+        solution: [`Ver [[a2-dual|espacio dual]], [[a2-anulador|anulador]] y [[a2-traspuesta|traspuesta y bidual]].`],
+        // verificación: cada afirmación se pone a prueba con matrices concretas (rangos y núcleos por eliminación)
+        verify: { kind: "truth", fn: () => S.test(E.rng(77)) }
+      };
+    }
+  };
+
+  const cards = {
+    "a2-dual": {
+      title: "Espacio dual, funcionales lineales y base dual", aliases: ["espacio dual", "funcional lineal", "funcionales lineales", "base dual", "forma lineal", "covector"], concepts: ["a2-dual"],
+      summary: "Un funcional lineal es una transformación lineal φ: V → F. Forman el espacio dual V*, con dim V* = dim V. La base dual de {v₁, …, vₙ} es {φ₁, …, φₙ} con φᵢ(vⱼ) = δᵢⱼ: φᵢ da la i-ésima coordenada.",
+      def: [R`Un **funcional lineal** sobre $V$ es una [[a2-tl|transformación lineal]] $\varphi: V \to F$. El conjunto de todos, $V^* = L(V, F)$, es el **espacio dual** de $V$.`,
+        R`**Ejemplos.** En $F^n$: $\varphi(x) = c_1x_1 + \dots + c_nx_n$ (y son todos). En polinomios: evaluar en un punto, $p \mapsto p(a)$, o integrar, $p \mapsto \int_a^b p$. En matrices: la traza, y más en general $X \mapsto \operatorname{tr}(aX)$.`,
+        R`**Base dual.** Si $B = \{v_1, \dots, v_n\}$ es una base de $V$, existen funcionales únicos $\varphi_1, \dots, \varphi_n$ con $$\varphi_i(v_j) = \delta_{ij} = \begin{cases} 1 & i = j \\ 0 & i \ne j\end{cases}$$ y $B^* = \{\varphi_1, \dots, \varphi_n\}$ es una base de $V^*$. En particular $\dim V^* = \dim V$. Además, para todo $v \in V$ y $\varphi \in V^*$: $$v = \sum_i \varphi_i(v)\,v_i,\qquad \varphi = \sum_i \varphi(v_i)\,\varphi_i.$$`],
+      idea: [R`Un funcional es una «medición» lineal: le asigna un número a cada vector. $\varphi_i$ es la medición «¿cuál es tu $i$-ésima coordenada en la base $B$?».`,
+        R`En $\mathbb R^n$ con columnas, un funcional es una **fila**: $\varphi(x) = (c_1\ \cdots\ c_n)\,x$. Si los vectores de $B$ son las columnas de $P$, los funcionales de la base dual son las filas de $P^{-1}$, porque $P^{-1}P = I$ dice justamente $\varphi_i(v_j) = \delta_{ij}$.`,
+        R`Cada $\varphi_i$ depende de **toda** la base, no solo de $v_i$: si se cambia otro vector de la base, $\varphi_i$ cambia.`,
+        R`El problema inverso (dados los funcionales, hallar la base de la que son duales) es un sistema: se pide $\varphi_i(v_j) = \delta_{ij}$ para un $v_j$ genérico.`],
+      demo: [R`**Paso 1 (existen).** Una transformación lineal queda determinada por sus valores en una base, y esos valores se eligen libremente ([[a2-tl|existencia y unicidad]]). Se define $\varphi_i$ por $\varphi_i(v_j) = \delta_{ij}$.`,
+        R`**Paso 2 (son independientes).** Si $\sum_i c_i\varphi_i = 0$ (el funcional nulo), evaluando en $v_j$: $0 = \sum_i c_i\delta_{ij} = c_j$. Todos los coeficientes son cero.`,
+        R`**Paso 3 (generan).** Dado $\varphi \in V^*$, sea $\psi = \sum_i \varphi(v_i)\,\varphi_i$. Entonces $\psi(v_j) = \varphi(v_j)$ para todo $j$: $\psi$ y $\varphi$ coinciden en una base, así que son iguales.`,
+        R`**Paso 4 (la fórmula para $v$).** Si $v = \sum_j c_jv_j$, aplicando $\varphi_i$: $\varphi_i(v) = \sum_j c_j\delta_{ij} = c_i$. $\blacksquare$`],
+      examples: [{ q: R`Base dual de $B = \{(1, 1), (1, 2)\}$ en $\mathbb R^2$.`, steps: [R`$P = \begin{pmatrix} 1 & 1 \\ 1 & 2\end{pmatrix}$, $P^{-1} = \begin{pmatrix} 2 & -1 \\ -1 & 1\end{pmatrix}$.`, R`$\varphi_1(x, y) = 2x - y$ y $\varphi_2(x, y) = -x + y$. Control: $\varphi_1(1, 1) = 1$, $\varphi_1(1, 2) = 0$.`] },
+        { q: R`En $\mathbb R_1[t]$, $\varphi_1(p) = \int_0^1 p$ y $\varphi_2(p) = \int_0^2 p$. Hallá $\{v_1, v_2\}$ con base dual $\{\varphi_1, \varphi_2\}$.`, steps: [R`Para $p = \alpha + \beta t$: $\varphi_1 = \alpha + \frac\beta2$ y $\varphi_2 = 2\alpha + 2\beta$.`, R`$v_1$: $\alpha + \frac\beta2 = 1$, $2\alpha + 2\beta = 0$ da $v_1 = 2 - 2t$. $v_2$: $\alpha + \frac\beta2 = 0$, $2\alpha + 2\beta = 1$ da $v_2 = -\frac12 + t$.`] }],
+      tips: [R`Para probar que $n$ funcionales son base de $V^*$ (con $\dim V = n$) alcanza con ver que son independientes: por ejemplo, que la matriz de sus valores en una base tenga determinante no nulo.`],
+      see: ["a2-tl", "a2-coordenadas", "a2-anulador", "a2-traspuesta"]
+    },
+    "a2-anulador": {
+      title: "Anulador de un subespacio", aliases: ["anulador", "anulador de un subespacio", "hiperplano", "subespacio aniquilador"], concepts: ["a2-anulador"],
+      summary: "S° = {φ ∈ V* : φ(s) = 0 para todo s ∈ S}. Es un subespacio de V*, con dim S° = dim V − dim S. Describe a S por ecuaciones: S es la intersección de los núcleos de los funcionales de S°.",
+      def: [R`El **anulador** de un subconjunto $S \subseteq V$ es $$S^\circ = \{\varphi \in V^* : \varphi(s) = 0 \text{ para todo } s \in S\}.$$ Es un subespacio de $V^*$. Si $S$ es un subespacio y $\dim V$ es finita, $$\dim S + \dim S^\circ = \dim V.$$`,
+        R`**Propiedades.** Si $S \subseteq T$, entonces $T^\circ \subseteq S^\circ$. $(S + T)^\circ = S^\circ \cap T^\circ$ y $(S \cap T)^\circ = S^\circ + T^\circ$. Identificando $V$ con su bidual, $(S^\circ)^\circ = S$.`,
+        R`Un **hiperplano** es un subespacio de dimensión $n - 1$: es el núcleo de un funcional no nulo. Todo subespacio de dimensión $k$ es intersección de $n - k$ hiperplanos.`],
+      idea: [R`Un subespacio se puede dar de dos maneras: por **generadores** (una base de $S$) o por **ecuaciones** (una base de $S^\circ$). El anulador es el puente entre las dos descripciones.`,
+        R`Cuantos más vectores tiene $S$, más difícil es anularse en todos: el anulador se achica. Por eso las inclusiones se dan vuelta.`,
+        R`En $\mathbb R^n$ con el producto escalar, el anulador de $S$ se identifica con el complemento ortogonal $S^\perp$. Pero el anulador no necesita ningún producto interno: existe sobre cualquier cuerpo.`],
+      demo: [R`**Paso 1 (base adaptada).** Sea $\{v_1, \dots, v_k\}$ una base de $S$, extendida a una base $\{v_1, \dots, v_n\}$ de $V$, y $\{\varphi_1, \dots, \varphi_n\}$ su [[a2-dual|base dual]].`,
+        R`**Paso 2 (los últimos están en el anulador).** Para $i > k$ y $j \le k$: $\varphi_i(v_j) = 0$. Como $\varphi_i$ se anula en una base de $S$, se anula en todo $S$.`,
+        R`**Paso 3 (generan el anulador).** Si $\varphi \in S^\circ$, por la fórmula de la base dual $\varphi = \sum_{i=1}^n \varphi(v_i)\varphi_i$, y $\varphi(v_i) = 0$ para $i \le k$. Queda $\varphi = \sum_{i>k}\varphi(v_i)\varphi_i$.`,
+        R`**Paso 4 (contar).** $\{\varphi_{k+1}, \dots, \varphi_n\}$ es independiente (es parte de una base) y genera $S^\circ$: $\dim S^\circ = n - k$. $\blacksquare$`],
+      examples: [{ q: R`Anulador de $S = \langle(1, 0, -1, 1), (2, 3, -1, 2)\rangle$ en $\mathbb R^4$.`, steps: [R`$\varphi = (c_1, c_2, c_3, c_4)$ está en $S^\circ$ si $c_1 - c_3 + c_4 = 0$ y $2c_1 + 3c_2 - c_3 + 2c_4 = 0$.`, R`Es un sistema de rango 2 con 4 incógnitas: $\dim S^\circ = 2$. Cada solución da una ecuación de $S$.`] }],
+      see: ["a2-dual", "a2-suma", "a2-traspuesta"]
+    },
+    "a2-traspuesta": {
+      title: "Traspuesta de una transformación y bidual", aliases: ["traspuesta de una transformación lineal", "transformación traspuesta", "bidual", "doble dual", "isomorfismo canónico"], concepts: ["a2-traspuesta"],
+      summary: "Tᵗ: W* → V*, Tᵗ(ψ) = ψ ∘ T. En bases duales, su matriz es la traspuesta de la de T. Nu(Tᵗ) = (Im T)° e Im(Tᵗ) = (Nu T)°, así que rg Tᵗ = rg T. V es canónicamente isomorfo a su bidual V**.",
+      def: [R`Si $T: V \to W$ es lineal, su **traspuesta** es $T^t: W^* \to V^*$, $$T^t(\psi) = \psi\circ T.$$ Es lineal, y si $B$, $B'$ son bases de $V$ y $W$, la matriz de $T^t$ en las bases duales es la traspuesta de la de $T$: $[T^t]_{B'^*B^*} = \left([T]_{BB'}\right)^t$.`,
+        R`**Núcleo e imagen.** $\operatorname{Nu}(T^t) = (\operatorname{Im}T)^\circ$ y, en dimensión finita, $\operatorname{Im}(T^t) = (\operatorname{Nu}T)^\circ$. En consecuencia $\operatorname{rg}(T^t) = \operatorname{rg}(T)$: el rango por filas de una matriz es igual a su rango por columnas.`,
+        R`**Bidual.** $V^{**} = (V^*)^*$. Cada $v \in V$ define $L_v \in V^{**}$ por $L_v(\varphi) = \varphi(v)$. Si $\dim V$ es finita, $v \mapsto L_v$ es un **isomorfismo** de $V$ en $V^{**}$, que no depende de ninguna elección (es **canónico**).`],
+      idea: [R`Si $T$ lleva vectores de $V$ a $W$, la traspuesta lleva mediciones en sentido contrario: para medir $v$ con una medición $\psi$ de $W$, primero se lo manda a $W$ con $T$ y después se mide.`,
+        R`$V$ y $V^*$ tienen la misma dimensión, así que son isomorfos; pero cualquier isomorfismo concreto depende de una base. Con $V$ y $V^{**}$ es distinto: «evaluar en $v$» es una regla que no elige nada. Por eso se puede pensar a los vectores como funcionales sobre los funcionales.`,
+        R`Ejemplo: en $V = F^{n\times n}$, sea $T(A) = AB - BA$ y $f = \operatorname{tr}$. Entonces $T^t(f)(A) = \operatorname{tr}(AB - BA) = 0$: $T^tf$ es el funcional nulo.`],
+      demo: [R`**Paso 1 ($\operatorname{Nu}T^t = (\operatorname{Im}T)^\circ$).** $\psi \in \operatorname{Nu}(T^t)$ significa $\psi\circ T = 0$, es decir, $\psi(T(v)) = 0$ para todo $v$: $\psi$ se anula en $\operatorname{Im}(T)$.`,
+        R`**Paso 2 (rangos).** Con $\dim W = m$: $\operatorname{rg}(T^t) = \dim W^* - \dim\operatorname{Nu}(T^t) = m - \dim(\operatorname{Im}T)^\circ = m - (m - \operatorname{rg}T) = \operatorname{rg}T$, usando el teorema de la dimensión y la dimensión del [[a2-anulador|anulador]].`,
+        R`**Paso 3 (la matriz).** Sea $A = [T]_{BB'}$, así que $T(v_j) = \sum_i A_{ij}w_i$. La coordenada $j$ de $T^t(\psi_i)$ en $B^*$ es su valor en $v_j$: $T^t(\psi_i)(v_j) = \psi_i(T(v_j)) = A_{ij}$. O sea, la columna $i$ de $[T^t]$ es la fila $i$ de $A$.`,
+        R`**Paso 4 (bidual: inyectiva).** $v \mapsto L_v$ es lineal. Si $L_v = 0$, entonces $\varphi(v) = 0$ para todo funcional. Pero si $v \ne 0$ se lo extiende a una base y el primer funcional de la base dual vale $1$ en $v$. Luego $v = 0$.`,
+        R`**Paso 5 (bidual: isomorfismo).** $\dim V^{**} = \dim V^* = \dim V$, y una transformación lineal inyectiva entre espacios de la misma dimensión finita es un isomorfismo. $\blacksquare$`],
+      examples: [{ q: R`Sea $T: \mathbb R^2 \to \mathbb R^2$, $T(x, y) = (x + 2y, 3y)$ y $\psi(u, v) = u - v$. Calculá $T^t\psi$.`, steps: [R`$T^t\psi(x, y) = \psi(x + 2y, 3y) = x + 2y - 3y = x - y$.`, R`Con matrices: $(1\ \ {-1})\begin{pmatrix} 1 & 2 \\ 0 & 3\end{pmatrix} = (1\ \ {-1})$.`] }],
+      tips: [R`En dimensión infinita, $V \to V^{**}$ sigue siendo inyectiva pero ya no es sobreyectiva.`],
+      see: ["a2-dual", "a2-anulador", "a2-matriz-tl"]
+    }
+  };
+
+  E.extendCourse("m203", {
+    concepts: { "a2-dual": { name: "Espacio dual y base dual" }, "a2-anulador": { name: "Anulador" }, "a2-traspuesta": { name: "Traspuesta y bidual" } },
+    templates: T,
+    units: [{
+      id: "a2-dual-u", order: 3, program: "Unidad 3", title: "Espacio dual", icon: "rotate-ccw",
+      diagnostic: ["a2-base-dual-num", "a2-anulador-num", "a2-dual-vf"],
+      lessons: [
+        { id: "a2-dual", title: "Funcionales y base dual", templates: ["a2-base-dual-num", "a2-dual-funcionales-num", "a2-traza-num"], theory: ["a2-dual"],
+          intro: R`$\varphi_i(v_j) = \delta_{ij}$: el funcional $\varphi_i$ da la $i$-ésima coordenada. Son las filas de $P^{-1}$.` },
+        { id: "a2-anulador", title: "Anulador, traspuesta y bidual", templates: ["a2-anulador-num", "a2-dual-vf"], theory: ["a2-anulador", "a2-traspuesta"],
+          intro: R`$\dim S + \dim S^\circ = \dim V$, y $T^t(\psi) = \psi\circ T$ tiene el mismo rango que $T$.` }
+      ]
+    }],
+    cards
+  });
+})();
