@@ -940,3 +940,308 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 4 · INTEGRACIÓN COMPLEJA: CONTORNOS, CAUCHY-GOURSAT Y FÓRMULA INTEGRAL DE CAUCHY
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Z = E.c3, dn = Z.dn, pif = Z.pif;
+  const T = {};
+  const far = (v, ans) => Math.abs(v - ans) > 0.03 * Math.max(1, Math.abs(ans));
+  const clean = z => z.map(x => (Math.abs(x) < 1e-12 ? 0 : x));
+
+  T["c3-linea-multi"] = {
+    type: "multi", concepts: ["c3-contornos"], difficulty: 2,
+    generate(r) {
+      const fk = r.pick(["conj", "re", "im"]), pk = r.pick(["seg", "seg", "arc"]);
+      const F = { conj: { tex: "\\bar z", f: Z.conj }, re: { tex: "\\operatorname{Re} z", f: z => [z[0], 0] }, im: { tex: "\\operatorname{Im} z", f: z => [z[1], 0] } }[fk];
+      let res, g, t1, desc, steps;
+      if (pk === "seg") {
+        const z1 = [r.int(-2, 2), r.int(-2, 2)], d = [r.nz(-3, 3), r.nz(-3, 3)], z2 = Z.add(z1, d);
+        const m = fk === "conj" ? Z.add(Z.conj(z1), Z.sc(0.5, Z.conj(d))) : fk === "re" ? [z1[0] + d[0] / 2, 0] : [z1[1] + d[1] / 2, 0];
+        res = Z.mul(d, m); g = t => Z.add(z1, Z.sc(t, d)); t1 = 1;
+        desc = `el segmento que va de $${Z.tex(z1)}$ a $${Z.tex(z2)}$`;
+        steps = [`Parametrización: $z(t) = ${Z.tex(z1)} + t\\,(${Z.tex(d)})$, con $0 \\le t \\le 1$ y $z'(t) = ${Z.tex(d)}$.`,
+          `Sobre el segmento, $${F.tex}$ es una función lineal de $t$, así que su integral entre $0$ y $1$ es su valor en $t = \\frac12$: $${Z.tex(m)}$.`,
+          `$\\displaystyle\\int_C ${F.tex}\\,dz = (${Z.tex(m)})(${Z.tex(d)}) = ${Z.tex(res)}$.`];
+      } else {
+        const Rr = r.int(1, 3), [ap, aq, end] = r.pick([[1, 2, `${Rr === 1 ? "" : Rr}i`], [1, 1, `-${Rr}`], [2, 1, null]]), al = ap * Math.PI / aq, R2 = Rr * Rr, RT = Rr === 1 ? "" : String(Rr);
+        const s2 = Math.sin(al) ** 2 / 2, c2 = al / 2 + Math.sin(2 * al) / 4, q2 = al / 2 - Math.sin(2 * al) / 4;
+        res = clean(fk === "conj" ? [0, R2 * al] : fk === "re" ? [-R2 * s2, R2 * c2] : [-R2 * q2, R2 * s2]); g = t => Z.polar(Rr, t); t1 = al;
+        desc = end ? `el arco de la circunferencia $|z| = ${Rr}$ que va de $${Rr}$ a $${end}$ en sentido antihorario` : `la circunferencia $|z| = ${Rr}$ recorrida una vez en sentido antihorario`;
+        const integrand = fk === "conj" ? `${RT}e^{-it}\\cdot ${RT}i\\,e^{it} = ${R2 === 1 ? "" : R2}i` : fk === "re" ? `${RT}\\cos t\\cdot ${RT}i(\\cos t + i\\sin t) = ${R2 === 1 ? "" : R2}\\left(-\\sin t\\cos t + i\\cos^2t\\right)` : `${RT}\\sin t\\cdot ${RT}i(\\cos t + i\\sin t) = ${R2 === 1 ? "" : R2}\\left(-\\sin^2t + i\\sin t\\cos t\\right)`;
+        steps = [`Parametrización: $z(t) = ${RT}e^{it}$, con $0 \\le t \\le ${pif(ap, aq)}$ y $z'(t) = ${RT}i\\,e^{it}$.`,
+          `El integrando es $f(z(t))\\,z'(t) = ${integrand}$.`,
+          `Integrando entre $0$ y $${pif(ap, aq)}$ ${fk === "conj" ? "" : "(con $\\cos^2t = \\frac{1 + \\cos 2t}{2}$, $\\sin^2t = \\frac{1 - \\cos 2t}{2}$) "}queda $\\displaystyle\\int_C ${F.tex}\\,dz \\approx ${Z.tex(res, 4)}$.`];
+      }
+      // verificación: la integral de contorno calculada numéricamente (Simpson sobre la parametrización, con z' numérica)
+      const numI = () => Z.path(F.f, g, 0, t1, 2000);
+      return {
+        prompt: `Calculá $\\displaystyle\\int_C ${F.tex}\\,dz$, donde $C$ es ${desc}.`,
+        parts: [
+          { q: "¿Cuánto vale la parte real de la integral?", type: "numeric", answer: res[0], verify: { kind: "value", tol: 1e-6, fn: () => numI()[0] } },
+          { q: "¿Y la parte imaginaria?", type: "numeric", answer: res[1], verify: { kind: "value", tol: 1e-6, fn: () => numI()[1] } }
+        ],
+        solution: [`$${F.tex}$ no es analítica, así que no hay primitiva: se calcula con la definición, $\\int_C f\\,dz = \\int_a^b f(z(t))\\,z'(t)\\,dt$ ([[c3-contornos|integral de contorno]]).`, ...steps]
+      };
+    }
+  };
+
+  T["c3-cota-ml-num"] = {
+    type: "numeric", concepts: ["c3-contornos"], difficulty: 2,
+    generate(r) {
+      const form = r.int(0, 2), a = r.int(1, 5), b = r.int(1, 4), Rr = r.int(2, 5);
+      const [aname, frac, Lt] = r.pick([["la semicircunferencia superior", 1, "\\pi"], ["el cuarto de circunferencia del primer cuadrante", 0.5, "\\frac{\\pi}{2}"], ["la circunferencia completa", 2, "2\\pi"]]);
+      const pw = form === 2 ? 3 : 2;
+      if (Rr ** pw - a < 1) return null;
+      const numT = form === 0 ? "1" : form === 1 ? `z + ${b}` : `z^2 + ${b}`, denT = form === 2 ? `z^3 - ${a}` : `z^2 + ${a}`;
+      const numM = form === 0 ? 1 : form === 1 ? Rr + b : Rr * Rr + b, denM = Rr ** pw - a, L = frac * Math.PI * Rr, ans = numM / denM * L;
+      const num = z => (form === 0 ? [1, 0] : form === 1 ? Z.add(z, [b, 0]) : Z.add(Z.mul(z, z), [b, 0])), den = z => (form === 2 ? Z.sub(Z.ipow(z, 3), [a, 0]) : Z.add(Z.mul(z, z), [a, 0]));
+      return {
+        prompt: `Sea $C$ ${aname} de $|z| = ${Rr}$ (con centro en el origen). Acotando el numerador y el denominador con la desigualdad triangular, ¿qué cota $ML$ se obtiene para $\\left|\\displaystyle\\int_C \\frac{${numT}}{${denT}}\\,dz\\right|$?`,
+        answer: ans,
+        traps: [{ value: numM / (Rr ** pw + a) * L, msg: "Para acotar una fracción por arriba, el denominador tiene que ser lo más **chico** posible: $|z^n \\pm a| \\ge |z|^n - a$." },
+          { value: numM / denM, msg: "Eso es solo $M$, la cota del integrando. Falta multiplicar por la longitud $L$ del contorno." }].filter(t => far(t.value, ans)),
+        solution: [`[[c3-contornos|Cota ML]]: si $|f(z)| \\le M$ sobre $C$ y $C$ mide $L$, entonces $\\left|\\int_C f\\,dz\\right| \\le ML$.`,
+          `Sobre $C$, $|z| = ${Rr}$. Numerador: ${form === 0 ? "vale $1$" : `$|${numT}| \\le ${form === 1 ? Rr : Rr * Rr} + ${b} = ${numM}$`}. Denominador: $|${denT}| \\ge ${Rr}^${pw} - ${a} = ${denM}$.`,
+          `$M = ${H.frac(numM, denM)}$ y $L = ${Lt}\\cdot ${Rr}$${frac === 2 ? "" : ` (${frac === 1 ? "media" : "un cuarto de"} circunferencia)`}: $ML \\approx ${dn(ans, 4)}$.`],
+        // verificación: el máximo del numerador y el mínimo del denominador se buscan numéricamente sobre el arco
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          let nM = 0, dM = Infinity;
+          for (let k = 0; k <= 20000; k++) { const z = Z.polar(Rr, frac * Math.PI * k / 20000); nM = Math.max(nM, Z.abs(num(z))); dM = Math.min(dM, Z.abs(den(z))); }
+          return nM / dM * L;
+        } }
+      };
+    }
+  };
+
+  T["c3-primitiva-multi"] = {
+    type: "multi", concepts: ["c3-primitivas"], difficulty: 1,
+    generate(r) {
+      const a = r.int(-3, 3), b = r.nz(-4, 4), form = r.pick(["cub", "cuar"]);
+      const z1 = [r.int(-2, 2), r.int(-2, 2)], d = [r.nz(-2, 2), r.nz(-2, 2)], z2 = Z.add(z1, d);
+      const fT = form === "cub" ? H.poly([[3, "z^{2}"], [2 * a, "z"], [b, ""]]) : H.poly([[4, "z^{3}"], [b, ""]]);
+      const FT = form === "cub" ? H.poly([[1, "z^{3}"], [a, "z^{2}"], [b, "z"]]) : H.poly([[1, "z^{4}"], [b, "z"]]);
+      const f = z => (form === "cub" ? Z.add(Z.add(Z.sc(3, Z.mul(z, z)), Z.sc(2 * a, z)), [b, 0]) : Z.add(Z.sc(4, Z.ipow(z, 3)), [b, 0]));
+      const P = z => (form === "cub" ? Z.add(Z.add(Z.ipow(z, 3), Z.sc(a, Z.mul(z, z))), Z.sc(b, z)) : Z.add(Z.ipow(z, 4), Z.sc(b, z)));
+      const res = Z.sub(P(z2), P(z1));
+      // verificación: la integral numérica sobre un camino curvo cualquiera entre los dos puntos (no el segmento)
+      const numI = () => Z.path(f, t => Z.add(Z.add(z1, Z.sc(t, d)), Z.mul([0, 0.7 * t * (1 - t)], d)), 0, 1, 2000);
+      return {
+        prompt: `Calculá $\\displaystyle\\int_C \\left(${fT}\\right)dz$, donde $C$ es cualquier contorno que va de $${Z.tex(z1)}$ a $${Z.tex(z2)}$.`,
+        parts: [
+          { q: "¿Cuánto vale la parte real de la integral?", type: "numeric", answer: res[0], verify: { kind: "value", tol: 1e-6, fn: () => numI()[0] } },
+          { q: "¿Y la parte imaginaria?", type: "numeric", answer: res[1], verify: { kind: "value", tol: 1e-6, fn: () => numI()[1] } }
+        ],
+        solution: [`El integrando es un polinomio: es entero y tiene [[c3-primitivas|primitiva]] $F(z) = ${FT}$. Por eso la integral no depende del camino: vale $F(z_2) - F(z_1)$.`,
+          `$F(${Z.tex(z2)}) = ${Z.tex(P(z2))}$ y $F(${Z.tex(z1)}) = ${Z.tex(P(z1))}$.`,
+          `$\\displaystyle\\int_C f\\,dz = ${Z.tex(res)}$.`]
+      };
+    }
+  };
+
+  T["c3-cauchy-goursat-vf"] = {
+    type: "tf", concepts: ["c3-cauchy-goursat"], difficulty: 2,
+    generate(r) {
+      const Rr = r.int(1, 3), kind = r.pick(["inv", "inv", "expq", "inv2", "conj", "ent", "log", "log"]);
+      let a = r.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5].filter(x => Math.abs(x) !== Rr));
+      let tex, f, val, why;
+      const sgn = a < 0 ? "+" : "-", A = Math.abs(a);
+      if (kind === "inv") { tex = `\\dfrac{1}{z ${sgn} ${A}}`; f = z => Z.div([1, 0], Z.sub(z, [a, 0])); val = A > Rr; why = val ? `El único punto singular, $z = ${a}$, queda fuera del contorno: adentro el integrando es analítico y vale Cauchy-Goursat.` : `El punto singular $z = ${a}$ queda adentro. Por la fórmula integral de Cauchy (con $f = 1$), la integral vale $2\\pi i$.`; }
+      else if (kind === "expq") { tex = `\\dfrac{e^z}{z ${sgn} ${A === 1 ? "" : A}i}`; f = z => Z.div(Z.exp(z), Z.sub(z, [0, a])); val = A > Rr; why = val ? `El punto singular $z = ${Z.tex([0, a])}$ está fuera del contorno ($|z| = ${A} > ${Rr}$): el integrando es analítico adentro.` : `El punto singular $z = ${Z.tex([0, a])}$ está adentro, y la integral vale $2\\pi i\\,e^{${Z.tex([0, a])}} \\ne 0$.`; }
+      else if (kind === "inv2") { if (A > Rr) a = 0; tex = a === 0 ? `\\dfrac{1}{z^2}` : `\\dfrac{1}{(z ${sgn} ${A})^2}`; f = z => Z.div([1, 0], Z.ipow(Z.sub(z, [a, 0]), 2)); val = true; why = `El integrando no es analítico adentro, así que Cauchy-Goursat no se aplica. Pero tiene **primitiva**, $-\\dfrac{1}{${a === 0 ? "z" : `z ${sgn} ${A}`}}$, en un dominio que contiene al contorno, y la integral de una función con primitiva sobre una curva cerrada es $0$.`; }
+      else if (kind === "conj") { tex = `\\bar z`; f = Z.conj; val = false; why = `$\\bar z$ no es analítica. Parametrizando, $\\oint \\bar z\\,dz = \\int_0^{2\\pi} ${Rr === 1 ? "" : Rr}e^{-it}\\,${Rr === 1 ? "" : Rr}i\\,e^{it}\\,dt = ${pif(2 * Rr * Rr)}\\,i$.`; }
+      else if (kind === "ent") { tex = r.pick([`z^2e^{z}`, `z\\cos z`]); f = tex.includes("cos") ? z => Z.mul(z, Z.cos(z)) : z => Z.mul(Z.mul(z, z), Z.exp(z)); val = true; why = `El integrando es entero (producto de funciones enteras): por Cauchy-Goursat la integral sobre cualquier contorno cerrado es $0$.`; }
+      else { a = A; tex = `\\operatorname{Log}(z + ${a})`; f = z => Z.log(Z.add(z, [a, 0])); val = a > Rr; why = val ? `El corte de $\\operatorname{Log}(z + ${a})$ es la semirrecta real $x \\le -${a}$, que no toca al disco $|z| \\le ${Rr}$: el integrando es analítico dentro y sobre el contorno.` : `El corte de $\\operatorname{Log}(z + ${a})$ es la semirrecta real $x \\le -${a}$, que **atraviesa** el contorno: el integrando ni siquiera es continuo sobre él, y la integral no da $0$.`; }
+      return {
+        prompt: `<b>Verdadero o falso:</b> $\\displaystyle\\oint_{|z| = ${Rr}} ${tex}\\,dz = 0$ (contorno recorrido en sentido positivo).`,
+        answer: val,
+        explanation: `${why} Ver [[c3-cauchy-goursat|teorema de Cauchy-Goursat]].`,
+        solution: [`Lo primero es ubicar los puntos donde el integrando no es analítico y ver si quedan dentro del contorno.`],
+        // verificación: la integral sobre la circunferencia, calculada numéricamente
+        verify: { kind: "truth", fn: () => Z.abs(Z.circ(f, [0, 0], Rr, 6000)) < 1e-6 }
+      };
+    }
+  };
+
+  T["c3-cauchy-formula-num"] = {
+    type: "numeric", concepts: ["c3-cauchy-formula"], difficulty: 2,
+    generate(r) {
+      const Rr = r.pick([1, 3]), a = r.pick(Rr === 1 ? [0, 0, 2, -2] : [0, 1, -1, 2, -2]), n = r.int(0, 2), kind = r.pick(["exp", "pol", "cos", "sin"]), k = r.pick([1, 2, -1]), b = r.nz(-3, 3);
+      const D = {
+        exp: { tex: `e^{${H.kx(k, "z")}}`, f: z => Z.exp(Z.sc(k, z)), d: [Math.exp(k * a), k * Math.exp(k * a), k * k * Math.exp(k * a)], dT: [`e^{${H.kx(k, "z")}}`, `${H.cf(k)}e^{${H.kx(k, "z")}}`, `${H.cf(k * k)}e^{${H.kx(k, "z")}}`] },
+        pol: { tex: `z^4 ${b < 0 ? "-" : "+"} ${H.kx(Math.abs(b), "z^2")}`, f: z => Z.add(Z.ipow(z, 4), Z.sc(b, Z.mul(z, z))), d: [a ** 4 + b * a * a, 4 * a ** 3 + 2 * b * a, 12 * a * a + 2 * b], dT: [`z^4 ${b < 0 ? "-" : "+"} ${H.kx(Math.abs(b), "z^2")}`, H.poly([[4, "z^{3}"], [2 * b, "z"]]), H.poly([[12, "z^{2}"], [2 * b, ""]])] },
+        cos: { tex: `\\cos z`, f: Z.cos, d: [Math.cos(a), -Math.sin(a), -Math.cos(a)], dT: [`\\cos z`, `-\\sin z`, `-\\cos z`] },
+        sin: { tex: `\\sin z`, f: Z.sin, d: [Math.sin(a), Math.cos(a), -Math.sin(a)], dT: [`\\sin z`, `\\cos z`, `-\\sin z`] }
+      }[kind];
+      const inside = Math.abs(a) < Rr, fact = [1, 1, 2][n], K = inside ? D.d[n] / fact : 0;
+      const zm = a === 0 ? "z" : `z ${a < 0 ? "+" : "-"} ${Math.abs(a)}`, denT = n === 0 ? zm : a === 0 ? `z^{${n + 1}}` : `(${zm})^{${n + 1}}`;
+      return {
+        prompt: `Calculá $\\displaystyle\\oint_{|z| = ${Rr}} \\frac{${D.tex}}{${denT}}\\,dz$ (sentido positivo). El resultado es $2\\pi i\\,K$, con $K$ real: ¿cuánto vale $K$?`,
+        answer: Math.abs(K) < 1e-12 ? 0 : K,
+        traps: [...(inside && n === 2 ? [{ value: D.d[2], msg: "Falta dividir por $n!$: la fórmula para las derivadas es $\\oint \\frac{f(z)}{(z - a)^{n+1}}dz = \\frac{2\\pi i}{n!}f^{(n)}(a)$." }] : []),
+          ...(!inside ? [{ value: D.d[n] / fact, msg: `Fijate dónde está $z = ${a}$: queda **fuera** de la circunferencia $|z| = ${Rr}$.` }] : [])].filter(t => far(t.value, K)),
+        solution: inside ? [`El punto $z = ${a}$ está dentro del contorno y $f(z) = ${D.tex}$ es entera. [[c3-cauchy-formula|Fórmula integral de Cauchy]]${n ? " para las derivadas" : ""}: $\\displaystyle\\oint \\frac{f(z)}{(z - a)^{n+1}}\\,dz = \\frac{2\\pi i}{n!}\\,f^{(n)}(a)$, con $n = ${n}$.`,
+          `${n === 0 ? `$f(${a})` : n === 1 ? `$f'(z) = ${D.dT[1]}$, y $f'(${a})` : `$f''(z) = ${D.dT[2]}$, y $f''(${a})`} = ${dn(D.d[n], 4)}$.`,
+          `$K = \\dfrac{f^{(${n})}(${a})}{${n}!} = ${dn(K, 4)}$.`]
+          : [`El punto $z = ${a}$ está **fuera** de la circunferencia $|z| = ${Rr}$. Dentro y sobre el contorno el integrando es analítico.`, `Por [[c3-cauchy-goursat|Cauchy-Goursat]], la integral vale $0$: $K = 0$.`],
+        // verificación: la integral sobre la circunferencia calculada numéricamente, dividida por 2πi
+        verify: { kind: "value", tol: 1e-6, fn: () => Z.div(Z.circ(z => Z.div(D.f(z), Z.ipow(Z.sub(z, [a, 0]), n + 1)), [0, 0], Rr, 6000), [0, 2 * Math.PI])[0] }
+      };
+    }
+  };
+
+  const FS = [Z.exp, Z.sin, Z.cos, z => Z.mul(z, z), z => Z.add(Z.ipow(z, 3), [1, 2])];
+  const ring = (rad, n = 720) => Array.from({ length: n }, (_, k) => Z.polar(rad, 2 * Math.PI * k / n));
+  const THMS = [
+    { t: R`toda función entera y acotada es constante`, v: true, why: R`Es el teorema de Liouville: por la desigualdad de Cauchy, $|f'(z_0)| \le \frac MR$ para todo $R$, así que $f' = 0$.`,
+      test: () => FS.every(f => Math.max(...ring(40).map(z => Z.abs(f(z)))) > 1e3) },
+    { t: R`$\sin z$ es una función entera y acotada`, v: false, why: R`Es entera, pero no acotada: $|\sin(iy)| = |\sinh y| \to \infty$. Si fuera acotada, por Liouville sería constante.`,
+      test: () => Math.max(...ring(40).map(z => Z.abs(Z.sin(z)))) <= 1 },
+    { t: R`si $f$ es analítica y no constante en el disco $|z| \le 1$, el máximo de $|f|$ se alcanza sobre la circunferencia $|z| = 1$`, v: true, why: R`Es el principio del módulo máximo: $|f|$ no puede tener un máximo en un punto interior, salvo que $f$ sea constante.`,
+      test: () => FS.every(f => { const mb = Math.max(...ring(1).map(z => Z.abs(f(z)))); for (let x = -0.95; x < 1; x += 0.05) for (let y = -0.95; y < 1; y += 0.05) if (x * x + y * y < 0.95 && Z.abs(f([x, y])) > mb + 1e-9) return false; return true; }) },
+    { t: R`el máximo de $|e^z|$ en el disco $|z| \le 2$ se alcanza en el centro, $z = 0$`, v: false, why: R`$|e^z| = e^x$, que es máximo donde $x$ es máximo: en $z = 2$, sobre el borde, como exige el principio del módulo máximo.`,
+      test: () => ring(2).every(z => Z.abs(Z.exp(z)) <= 1 + 1e-9) },
+    { t: R`todo polinomio de grado $n \ge 1$ con coeficientes complejos tiene al menos una raíz compleja`, v: true, why: R`Es el teorema fundamental del álgebra. Si $P$ no tuviera raíces, $\frac1P$ sería entera y acotada, y por Liouville, constante.`,
+      test: () => [[[1, 0], [0, 2], [3, -1], [1, 1]], [[2, 1], [0, 0], [0, 0], [0, 0], [-1, 4]], [[1, 0], [-3, 0], [3, 0], [-1, 0.5]]].every(c => Z.roots(c).every(z => { let p = c[0]; for (let j = 1; j < c.length; j++) p = Z.add(Z.mul(p, z), c[j]); return Z.abs(p) < 1e-6; })) },
+    { t: R`si $f$ es analítica dentro y sobre un contorno cerrado simple $C$, entonces $\oint_C f(z)\,dz = 0$`, v: true, why: R`Es el teorema de Cauchy-Goursat.`,
+      test: () => FS.every(f => Z.abs(Z.circ(f, [0.3, -0.2], 1.5)) < 1e-8) },
+    { t: R`si $\oint_C f(z)\,dz = 0$ para una circunferencia $C$, entonces $f$ es analítica en todo el interior de $C$`, v: false, why: R`Contraejemplo: $f(z) = \frac{1}{z^2}$ sobre $|z| = 1$. La integral da $0$ (tiene primitiva $-\frac1z$), pero $f$ no es analítica en $z = 0$. La recíproca de Cauchy-Goursat (Morera) pide que la integral se anule sobre **todos** los contornos cerrados del dominio.`,
+      test: () => { const f = z => Z.div([1, 0], Z.mul(z, z)); return !(Z.abs(Z.circ(f, [0, 0], 1)) < 1e-9 && Z.abs(f([1e-4, 0])) > 1e6); } },
+    { t: R`el valor de una función analítica en el centro de un círculo es el promedio de sus valores sobre la circunferencia`, v: true, why: R`Es la propiedad del valor medio de Gauss: sale de la fórmula integral de Cauchy con $z = z_0 + Re^{it}$.`,
+      test: () => FS.every(f => { const z0 = [0.4, 0.7], vs = ring(1.3).map(e => f(Z.add(z0, e))); return Z.abs(Z.sub(Z.sc(1 / vs.length, vs.reduce(Z.add)), f(z0))) < 1e-9; }) },
+    { t: R`$\oint_{|z| = 1} \bar z\,dz = 0$, porque la curva es cerrada`, v: false, why: R`Que la curva sea cerrada no alcanza: hace falta que el integrando sea analítico (o que tenga primitiva). Acá $\oint \bar z\,dz = 2\pi i$.`,
+      test: () => Z.abs(Z.circ(Z.conj, [0, 0], 1)) < 1e-9 },
+    { t: R`la integral $\int \frac{dz}{z}$ de $-i$ a $i$ vale lo mismo por la mitad derecha que por la mitad izquierda de la circunferencia $|z| = 1$`, v: false, why: R`Entre los dos caminos queda encerrado el punto singular $z = 0$. Por la derecha da $\pi i$ y por la izquierda, $-\pi i$: difieren en $2\pi i$.`,
+      test: () => { const inv = z => Z.div([1, 0], z), a = Z.path(inv, t => Z.polar(1, -Math.PI / 2 + t), 0, Math.PI), b = Z.path(inv, t => Z.polar(1, -Math.PI / 2 - t), 0, Math.PI); return Z.abs(Z.sub(a, b)) < 1e-6; } },
+    { t: R`si $f$ es analítica en un dominio, su derivada $f'$ también es analítica ahí`, v: true, why: R`Por la fórmula integral de Cauchy para las derivadas, una función analítica tiene derivadas de todos los órdenes, y todas son analíticas. No pasa nada parecido en variable real.`,
+      test: () => FS.every(f => { const fp = z => Z.dz(f, z, [1e-4, 0]), z0 = [0.3, 0.5]; return Z.abs(Z.sub(Z.dz(fp, z0, [1e-3, 0]), Z.dz(fp, z0, [0, 1e-3]))) < 1e-4; }) },
+    { t: R`los valores de una función analítica dentro de un contorno cerrado simple quedan determinados por sus valores sobre el contorno`, v: true, why: R`Es lo que dice la fórmula integral de Cauchy: $f(z_0) = \frac{1}{2\pi i}\oint_C \frac{f(z)}{z - z_0}\,dz$.`,
+      test: () => FS.every(f => { const z0 = [0.5, -0.4]; return Z.abs(Z.sub(Z.div(Z.circ(z => Z.div(f(z), Z.sub(z, z0)), [0, 0], 2), [0, 2 * Math.PI]), f(z0))) < 1e-8; }) }
+  ];
+  T["c3-teoremas-vf"] = {
+    type: "tf", concepts: ["c3-liouville", "c3-cauchy-formula"], difficulty: 2,
+    generate(r) {
+      const S = r.pick(THMS);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${S.t}.`,
+        answer: S.v,
+        explanation: `${S.v ? "Verdadero" : "Falso"}. ${S.why}`,
+        solution: [`Repasá las consecuencias de la [[c3-cauchy-formula|fórmula integral de Cauchy]]: [[c3-liouville|Liouville, el teorema fundamental del álgebra y el módulo máximo]].`],
+        // verificación: cada afirmación se pone a prueba con un experimento numérico (integrales, máximos sobre grillas, raíces)
+        verify: { kind: "truth", fn: S.test }
+      };
+    }
+  };
+
+  const cards = {
+    "c3-contornos": {
+      title: "Integrales de contorno y cota ML", aliases: ["integral de contorno", "contorno", "cota ML", "desigualdad ML", "integral compleja"], concepts: ["c3-contornos"],
+      summary: "∫_C f dz = ∫ f(z(t)) z'(t) dt sobre una parametrización del contorno. Cambia de signo al invertir el sentido y, si |f| ≤ M sobre C y C mide L, |∫_C f dz| ≤ ML.",
+      def: [R`Un **contorno** $C$ es una curva $z(t)$, $a \le t \le b$, formada por un número finito de tramos suaves unidos por sus extremos. Es **cerrado simple** si termina donde empieza y no se corta a sí mismo; su sentido **positivo** es el antihorario.`,
+        R`La **integral de contorno** de $f$ (continua sobre $C$) es $$\int_C f(z)\,dz = \int_a^b f(z(t))\,z'(t)\,dt.$$ No depende de la parametrización, pero sí del sentido: $\int_{-C} f\,dz = -\int_C f\,dz$. Es lineal y aditiva sobre contornos encadenados.`,
+        R`La **longitud** del contorno es $L = \int_a^b |z'(t)|\,dt$. **Cota ML:** si $|f(z)| \le M$ para todo $z$ de $C$, $$\left|\int_C f(z)\,dz\right| \le ML.$$`],
+      idea: [R`Es la [[c2-linea|integral de línea]] de Cálculo II con otro traje: escribiendo $f = u + iv$ y $dz = dx + i\,dy$, queda $\int_C (u\,dx - v\,dy) + i\int_C (v\,dx + u\,dy)$.`,
+        R`En general el resultado **depende del camino**. La gran excepción son las funciones analíticas, y de eso trata el resto de la unidad.`,
+        R`La cota ML se usa todo el tiempo para mostrar que una integral sobre un arco grande (o chico) tiende a cero. Para acotar una fracción: numerador lo más grande posible, $|z + a| \le |z| + |a|$, y denominador lo más chico, $|z + a| \ge \big||z| - |a|\big|$.`,
+        R`Dos integrales para saber de memoria, sobre la circunferencia $|z - z_0| = R$ en sentido positivo: $\oint \frac{dz}{z - z_0} = 2\pi i$ y $\oint (z - z_0)^n\,dz = 0$ para todo entero $n \ne -1$.`],
+      demo: [R`**Paso 1 (el caso real).** Para una función compleja $w(t)$ de variable real vale $\left|\int_a^b w(t)\,dt\right| \le \int_a^b |w(t)|\,dt$. En efecto, si la integral es $r_0e^{i\theta_0}$, entonces $r_0 = \int_a^b e^{-i\theta_0}w\,dt$, que es real, así que $r_0 = \int_a^b \operatorname{Re}(e^{-i\theta_0}w)\,dt \le \int_a^b |e^{-i\theta_0}w|\,dt = \int_a^b |w|\,dt$.`,
+        R`**Paso 2 (aplicarlo al contorno).** Con $w(t) = f(z(t))\,z'(t)$: $\left|\int_C f\,dz\right| \le \int_a^b |f(z(t))|\,|z'(t)|\,dt$.`,
+        R`**Paso 3 (acotar).** Como $|f(z(t))| \le M$, la última integral no supera $M\int_a^b |z'(t)|\,dt = ML$. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\oint_{|z| = 1} \frac{dz}{z}$.`, steps: [R`$z = e^{it}$, $0 \le t \le 2\pi$, $dz = ie^{it}\,dt$.`, R`$\int_0^{2\pi} e^{-it}\,ie^{it}\,dt = \int_0^{2\pi} i\,dt = 2\pi i$.`] },
+        { q: R`Mostrá que $\left|\int_{C_R}\frac{dz}{z^2 + 1}\right| \to 0$ sobre la semicircunferencia superior de radio $R \to \infty$.`, steps: [R`$|z^2 + 1| \ge R^2 - 1$, así que $M = \frac{1}{R^2 - 1}$; $L = \pi R$.`, R`$ML = \frac{\pi R}{R^2 - 1} \to 0$.`] }],
+      tips: [R`No te olvides de $z'(t)$: integrar $f(z(t))$ a secas es el error más común.`],
+      see: ["c2-linea", "c3-primitivas", "c3-cauchy-goursat"]
+    },
+    "c3-primitivas": {
+      title: "Primitivas e independencia del camino", aliases: ["primitiva compleja", "antiderivada compleja", "independencia del camino en el plano complejo"], concepts: ["c3-primitivas"],
+      summary: "En un dominio D son equivalentes: f tiene primitiva F en D; las integrales de f no dependen del camino; la integral de f sobre todo contorno cerrado de D es 0. En ese caso ∫ f dz = F(z₂) − F(z₁).",
+      def: [R`Sea $f$ continua en un dominio $D$. Son **equivalentes**: (a) $f$ tiene una **primitiva** $F$ en $D$ (analítica, con $F' = f$); (b) la integral de $f$ entre dos puntos de $D$ es la misma por todos los contornos contenidos en $D$; (c) la integral de $f$ sobre todo contorno cerrado contenido en $D$ vale $0$.`,
+        R`Cuando se cumplen, $$\int_{z_1}^{z_2} f(z)\,dz = F(z_2) - F(z_1).$$`],
+      idea: [R`Es el teorema fundamental del cálculo ([[tfc|regla de Barrow]]) y la teoría de [[c2-campos|campos conservativos]], todo junto.`,
+        R`El dominio importa. $\frac1z$ tiene primitiva $\operatorname{Log} z$ en el plano cortado, pero **no** en el plano pinchado: por eso $\oint_{|z|=1}\frac{dz}{z} = 2\pi i \ne 0$. En cambio $\frac{1}{z^2}$ sí tiene primitiva en el plano pinchado, $-\frac1z$, y su integral sobre cualquier curva cerrada que no pase por $0$ es $0$.`],
+      demo: [R`**Paso 1 ((a) ⇒ (b)).** Si $F' = f$, por la regla de la cadena $\frac{d}{dt}F(z(t)) = f(z(t))\,z'(t)$. Entonces $\int_C f\,dz = \int_a^b \frac{d}{dt}F(z(t))\,dt = F(z(b)) - F(z(a))$, que solo depende de los extremos.`,
+        R`**Paso 2 ((b) ⇔ (c)).** Dos caminos $C_1$ y $C_2$ de $z_1$ a $z_2$ forman el contorno cerrado $C_1 - C_2$, y $\int_{C_1} - \int_{C_2} = \oint_{C_1 - C_2}$. Una cosa vale cero exactamente cuando la otra también.`,
+        R`**Paso 3 ((b) ⇒ (a): construir $F$).** Se fija $z_0 \in D$ y se define $F(z) = \int_{z_0}^z f(s)\,ds$, que por (b) no depende del camino. Para $\Delta z$ chico, $F(z + \Delta z) - F(z) = \int_z^{z + \Delta z} f(s)\,ds$ sobre el segmento.`,
+        R`**Paso 4 (derivar).** Como $\int_z^{z+\Delta z} ds = \Delta z$: $\frac{F(z + \Delta z) - F(z)}{\Delta z} - f(z) = \frac{1}{\Delta z}\int_z^{z+\Delta z}[f(s) - f(z)]\,ds$. Por la [[c3-contornos|cota ML]], su módulo no supera $\max|f(s) - f(z)|$ sobre el segmento, que tiende a $0$ porque $f$ es continua. Luego $F' = f$. $\blacksquare$`],
+      examples: [{ q: R`$\int_0^{1+i} z^2\,dz$.`, steps: [R`$z^2$ es entera, con primitiva $\frac{z^3}{3}$: $\frac{(1 + i)^3}{3} = \frac{-2 + 2i}{3}$, por cualquier camino.`] }],
+      see: ["tfc", "c2-campos", "c3-contornos", "c3-cauchy-goursat", "c3-logaritmo"]
+    },
+    "c3-cauchy-goursat": {
+      title: "Teorema de Cauchy-Goursat y deformación de contornos", aliases: ["teorema de Cauchy-Goursat", "Cauchy-Goursat", "deformación de contornos", "dominio simplemente conexo", "dominio múltiplemente conexo"], concepts: ["c3-cauchy-goursat"],
+      summary: "Si f es analítica dentro y sobre un contorno cerrado simple C, ∮_C f dz = 0. Consecuencia: un contorno se puede deformar sin cambiar la integral, mientras no cruce puntos donde f no es analítica.",
+      def: [R`**Teorema de Cauchy-Goursat.** Si $f$ es analítica en todos los puntos interiores a un contorno cerrado simple $C$ y sobre $C$, $$\oint_C f(z)\,dz = 0.$$`,
+        R`Un dominio es **simplemente conexo** si todo contorno cerrado simple en él encierra solo puntos del dominio (no tiene agujeros). En un dominio así, toda función analítica tiene [[c3-primitivas|primitiva]].`,
+        R`**Dominios con agujeros.** Si $C$ es un contorno cerrado simple positivo, $C_1, \dots, C_n$ son contornos cerrados simples positivos interiores a $C$, sin puntos comunes, y $f$ es analítica en la región entre ellos y sobre todos, entonces $$\oint_C f\,dz = \sum_{k=1}^n \oint_{C_k} f\,dz.$$ En particular (**deformación de contornos**), $\oint_{C} f = \oint_{C_1} f$ si $f$ es analítica entre $C$ y $C_1$.`],
+      idea: [R`Es el teorema central de la materia. Dice que para funciones analíticas, lo único que importa de un contorno cerrado es **qué puntos singulares encierra**.`,
+        R`Deformar contornos permite cambiar una curva complicada por circunferencias chiquitas alrededor de cada punto singular. De ahí salen la fórmula integral de Cauchy y el teorema de los residuos.`,
+        R`Cauchy lo probó suponiendo $f'$ continua (con el teorema de Green); Goursat mostró que esa hipótesis sobra. Parece un detalle técnico, pero es lo que permite después demostrar que $f'$ es continua sin haberlo supuesto.`],
+      demo: [R`**Paso 1 (separar en partes real e imaginaria).** Con $f = u + iv$: $\oint_C f\,dz = \oint_C (u\,dx - v\,dy) + i\oint_C (v\,dx + u\,dy)$.`,
+        R`**Paso 2 (teorema de Green).** Suponiendo $f'$ continua, las parciales de $u$ y $v$ son continuas y vale el [[c2-green|teorema de Green]] en la región $R$ que encierra $C$: $\oint_C (u\,dx - v\,dy) = \iint_R (-v_x - u_y)\,dA$ y $\oint_C (v\,dx + u\,dy) = \iint_R (u_x - v_y)\,dA$.`,
+        R`**Paso 3 (Cauchy-Riemann).** Por las [[c3-derivada|ecuaciones de Cauchy-Riemann]], $u_y = -v_x$ y $u_x = v_y$: los dos integrandos son cero en todo $R$, y la integral vale $0$. (La prueba de Goursat, sin suponer $f'$ continua, subdivide la región en cuadrados cada vez más chicos.)`,
+        R`**Paso 4 (contornos interiores).** Se une $C$ con cada $C_k$ mediante un corte. El contorno que recorre $C$, baja por un corte, da la vuelta a $C_k$ **al revés** y vuelve por el mismo corte encierra una región sin agujeros donde $f$ es analítica: su integral es $0$. Las integrales sobre los cortes se cancelan (se recorren en los dos sentidos), y queda $\oint_C f - \sum\oint_{C_k} f = 0$. $\blacksquare$`],
+      examples: [{ q: R`$\oint_{|z| = 2}\frac{e^z}{z^2 + 9}\,dz$.`, steps: [R`Los puntos singulares son $\pm3i$, fuera de $|z| = 2$. El integrando es analítico dentro y sobre el contorno: la integral vale $0$.`] },
+        { q: R`$\oint_C \frac{dz}{z - 1}$ sobre el cuadrado de vértices $\pm3 \pm 3i$.`, steps: [R`Se deforma el cuadrado a una circunferencia chica centrada en $1$: la integral vale $2\pi i$.`] }],
+      tips: [R`Antes de escribir «$= 0$», revisá que no haya puntos singulares **dentro** del contorno, y que el contorno no cruce ningún corte de rama.`],
+      see: ["c2-green", "c3-derivada", "c3-primitivas", "c3-cauchy-formula"]
+    },
+    "c3-cauchy-formula": {
+      title: "Fórmula integral de Cauchy", aliases: ["fórmula integral de Cauchy", "fórmula de Cauchy", "fórmula de Cauchy para las derivadas", "teorema de Morera"], concepts: ["c3-cauchy-formula"],
+      summary: "Si f es analítica dentro y sobre C y z₀ está adentro: f(z₀) = (1/2πi) ∮ f(z)/(z − z₀) dz, y f⁽ⁿ⁾(z₀) = (n!/2πi) ∮ f(z)/(z − z₀)ⁿ⁺¹ dz. Una función analítica tiene derivadas de todos los órdenes.",
+      def: [R`Sea $f$ analítica dentro y sobre un contorno cerrado simple $C$, recorrido en sentido positivo, y $z_0$ un punto interior a $C$. Entonces $$f(z_0) = \frac{1}{2\pi i}\oint_C \frac{f(z)}{z - z_0}\,dz.$$`,
+        R`**Para las derivadas.** $f$ tiene derivadas de todos los órdenes en $z_0$, y $$f^{(n)}(z_0) = \frac{n!}{2\pi i}\oint_C \frac{f(z)}{(z - z_0)^{n+1}}\,dz.$$ En consecuencia, la derivada de una función analítica es analítica.`,
+        R`**Para calcular integrales** se usa al revés: $\displaystyle\oint_C \frac{f(z)}{(z - z_0)^{n+1}}\,dz = \frac{2\pi i}{n!}\,f^{(n)}(z_0)$.`,
+        R`**Teorema de Morera** (recíproco de Cauchy-Goursat): si $f$ es continua en un dominio $D$ y $\oint_C f\,dz = 0$ para todo contorno cerrado en $D$, entonces $f$ es analítica en $D$.`],
+      idea: [R`Los valores de una función analítica sobre un contorno determinan **todos** sus valores adentro. Nada parecido pasa en variable real: conocer una función derivable en los extremos de un intervalo no dice nada del medio.`,
+        R`Es la versión compleja de la propiedad del promedio de las [[c3-armonicas|funciones armónicas]]: con $C$ una circunferencia centrada en $z_0$, la fórmula dice que $f(z_0)$ es el promedio de $f$ sobre $C$.`,
+        R`Para usarla: escribí el integrando como $\frac{f(z)}{(z - z_0)^{n+1}}$, con $f$ **analítica dentro del contorno**. Todo lo que no sea el factor singular va a $f$.`],
+      demo: [R`**Paso 1 (achicar el contorno).** $\frac{f(z)}{z - z_0}$ es analítica dentro de $C$ salvo en $z_0$. Por [[c3-cauchy-goursat|deformación de contornos]], la integral sobre $C$ es igual a la integral sobre una circunferencia $C_\rho$: $|z - z_0| = \rho$, tan chica como se quiera.`,
+        R`**Paso 2 (separar).** $\oint_{C_\rho}\frac{f(z)}{z - z_0}\,dz = f(z_0)\oint_{C_\rho}\frac{dz}{z - z_0} + \oint_{C_\rho}\frac{f(z) - f(z_0)}{z - z_0}\,dz$. La primera integral vale $2\pi i$ ([[c3-contornos|integral de contorno]]).`,
+        R`**Paso 3 (el resto tiende a cero).** Como $f$ es continua en $z_0$, dado $\varepsilon$ existe $\rho$ con $|f(z) - f(z_0)| < \varepsilon$ sobre $C_\rho$. Por la cota ML, el módulo de la segunda integral es menor que $\frac{\varepsilon}{\rho}\cdot2\pi\rho = 2\pi\varepsilon$.`,
+        R`**Paso 4 (conclusión).** La segunda integral no depende de $\rho$ (es la diferencia de dos cosas que no dependen) y es menor que cualquier $2\pi\varepsilon$: vale $0$. Queda $\oint_C \frac{f(z)}{z - z_0}\,dz = 2\pi i\,f(z_0)$.`,
+        R`**Paso 5 (derivadas).** Se escribe $\frac{f(z_0 + h) - f(z_0)}{h}$ con la fórmula: da $\frac{1}{2\pi i}\oint_C \frac{f(z)}{(z - z_0 - h)(z - z_0)}\,dz$. Con la cota ML se muestra que cuando $h \to 0$ tiende a $\frac{1}{2\pi i}\oint_C \frac{f(z)}{(z - z_0)^2}\,dz$: se puede derivar bajo el signo integral. Repitiendo el argumento sale la fórmula para $f^{(n)}$. $\blacksquare$`],
+      examples: [{ q: R`$\oint_{|z| = 2}\frac{e^z}{z - 1}\,dz$.`, steps: [R`$f(z) = e^z$ es entera y $z_0 = 1$ está adentro: $2\pi i\,e$.`] },
+        { q: R`$\oint_{|z| = 1}\frac{\cos z}{z^3}\,dz$.`, steps: [R`$n = 2$, $z_0 = 0$: $\frac{2\pi i}{2!}\,f''(0)$ con $f'' = -\cos z$.`, R`Resultado: $-\pi i$.`] },
+        { q: R`$\oint_{|z| = 2}\frac{dz}{(z - 1)(z + 3)}$.`, steps: [R`Adentro solo está $z = 1$. Con $f(z) = \frac{1}{z + 3}$ (analítica adentro): $2\pi i\,f(1) = \frac{\pi i}{2}$.`] }],
+      tips: [R`En la fórmula para las derivadas, la potencia del denominador es $n + 1$, no $n$, y aparece $n!$.`, R`Si $z_0$ está **fuera** del contorno, no hay fórmula que aplicar: por Cauchy-Goursat la integral vale $0$.`],
+      see: ["c3-cauchy-goursat", "c3-contornos", "c3-liouville", "c3-armonicas"]
+    },
+    "c3-liouville": {
+      title: "Liouville, teorema fundamental del álgebra y módulo máximo", aliases: ["teorema de Liouville", "desigualdad de Cauchy", "teorema fundamental del álgebra", "principio del módulo máximo", "módulo máximo", "valor medio de Gauss"], concepts: ["c3-liouville"],
+      summary: "Desigualdad de Cauchy: |f⁽ⁿ⁾(z₀)| ≤ n! M_R/Rⁿ. Liouville: entera y acotada ⇒ constante. De ahí, todo polinomio no constante tiene una raíz. Módulo máximo: |f| no tiene máximos interiores, salvo que f sea constante.",
+      def: [R`**Desigualdad de Cauchy.** Si $f$ es analítica dentro y sobre la circunferencia $|z - z_0| = R$ y $|f| \le M_R$ sobre ella, $$\left|f^{(n)}(z_0)\right| \le \frac{n!\,M_R}{R^n}.$$`,
+        R`**Teorema de Liouville.** Si $f$ es entera y acotada en todo el plano, $f$ es constante.`,
+        R`**Teorema fundamental del álgebra.** Todo polinomio de grado $n \ge 1$ con coeficientes complejos tiene al menos una raíz compleja (y entonces exactamente $n$, contadas con su multiplicidad).`,
+        R`**Principio del módulo máximo.** Si $f$ es analítica y no constante en un dominio $D$, $|f|$ no tiene máximo en $D$. Si además $f$ es continua en una región cerrada y acotada, el máximo de $|f|$ se alcanza **en la frontera**, nunca en el interior.`],
+      idea: [R`Una función entera no puede «quedarse quieta»: si no es constante, en algún lugar del plano crece sin límite. Por eso $\sin z$ y $\cos z$, que son acotadas sobre el eje real, tienen que explotar en otra dirección.`,
+        R`El teorema fundamental del álgebra, un enunciado puramente algebraico, sale en tres renglones del análisis complejo. Es el motivo por el que los números complejos «alcanzan» y no hace falta seguir ampliando.`,
+        R`El módulo máximo es la propiedad del promedio: si $f(z_0)$ es el promedio de sus valores alrededor, $|f(z_0)|$ no puede superar a todos ellos.`],
+      demo: [R`**Paso 1 (desigualdad de Cauchy).** Por la [[c3-cauchy-formula|fórmula para las derivadas]], $f^{(n)}(z_0) = \frac{n!}{2\pi i}\oint\frac{f(z)}{(z - z_0)^{n+1}}\,dz$. Sobre la circunferencia, el integrando tiene módulo $\le \frac{M_R}{R^{n+1}}$, y la longitud es $2\pi R$. Por la cota ML: $|f^{(n)}(z_0)| \le \frac{n!}{2\pi}\cdot\frac{M_R}{R^{n+1}}\cdot2\pi R = \frac{n!\,M_R}{R^n}$.`,
+        R`**Paso 2 (Liouville).** Si $|f| \le M$ en todo el plano, la desigualdad con $n = 1$ vale para **todo** $R$: $|f'(z_0)| \le \frac MR$. Haciendo $R \to \infty$, $f'(z_0) = 0$ en todo punto, y una función con derivada nula en un dominio es constante ([[c3-analitica|funciones analíticas]]).`,
+        R`**Paso 3 (teorema fundamental del álgebra).** Supongamos que $P$, de grado $n \ge 1$, no tiene raíces. Entonces $\frac1P$ es entera. Además $|P(z)| \to \infty$ cuando $|z| \to \infty$ (domina el término $a_nz^n$), así que $\frac1P$ es acotada fuera de un disco grande; y dentro del disco, por ser continua. Por Liouville, $\frac1P$ sería constante, y $P$ también: absurdo.`,
+        R`**Paso 4 (módulo máximo, idea).** Por la fórmula de Cauchy sobre $z = z_0 + \rho e^{it}$: $f(z_0) = \frac{1}{2\pi}\int_0^{2\pi} f(z_0 + \rho e^{it})\,dt$, así que $|f(z_0)| \le \frac{1}{2\pi}\int_0^{2\pi}|f(z_0 + \rho e^{it})|\,dt$. Si $|f(z_0)|$ fuera máximo, el promedio de valores $\le |f(z_0)|$ solo puede igualarlo si todos son iguales: $|f|$ es constante cerca de $z_0$, y una analítica de módulo constante es constante. $\blacksquare$`],
+      examples: [{ q: R`$f$ es entera y $|f(z)| \le 5$ para todo $z$, con $f(0) = 2i$. ¿Cuánto vale $f(7)$?`, steps: [R`Por Liouville, $f$ es constante: $f(7) = 2i$.`] },
+        { q: R`Máximo de $|z^2 + 1|$ en $|z| \le 1$.`, steps: [R`Se alcanza en el borde: con $z = e^{it}$, $|e^{2it} + 1| = 2|\cos t|$, cuyo máximo es $2$ (en $z = \pm1$).`] }],
+      tips: [R`Liouville pide acotada en **todo** el plano. Acotada sobre el eje real no alcanza.`],
+      see: ["c3-cauchy-formula", "c3-analitica", "c3-trig"]
+    }
+  };
+
+  E.extendCourse("m103", {
+    concepts: { "c3-contornos": { name: "Integrales de contorno" }, "c3-primitivas": { name: "Primitivas" }, "c3-cauchy-goursat": { name: "Cauchy-Goursat" }, "c3-cauchy-formula": { name: "Fórmula integral de Cauchy" }, "c3-liouville": { name: "Liouville y módulo máximo" } },
+    templates: T,
+    units: [{
+      id: "c3-integracion-u", order: 4, program: "Unidad 4", title: "Integración compleja", icon: "sigma",
+      diagnostic: ["c3-linea-multi", "c3-cauchy-goursat-vf", "c3-cauchy-formula-num"],
+      lessons: [
+        { id: "c3-contornos", title: "Integrales de contorno", templates: ["c3-linea-multi", "c3-cota-ml-num"], theory: ["c3-contornos"],
+          intro: R`$\int_C f\,dz = \int_a^b f(z(t))\,z'(t)\,dt$, y $\left|\int_C f\,dz\right| \le ML$.` },
+        { id: "c3-cauchy-goursat", title: "Primitivas y Cauchy-Goursat", templates: ["c3-primitiva-multi", "c3-cauchy-goursat-vf"], theory: ["c3-primitivas", "c3-cauchy-goursat"],
+          intro: R`Si $f$ es analítica dentro y sobre $C$, $\oint_C f\,dz = 0$. Con primitiva, la integral es $F(z_2) - F(z_1)$.` },
+        { id: "c3-cauchy-formula", title: "Fórmula integral de Cauchy", templates: ["c3-cauchy-formula-num", "c3-teoremas-vf"], theory: ["c3-cauchy-formula", "c3-liouville"],
+          intro: R`$\oint_C \frac{f(z)}{(z - z_0)^{n+1}}\,dz = \frac{2\pi i}{n!}f^{(n)}(z_0)$ si $z_0$ está dentro de $C$.` }
+      ]
+    }],
+    cards
+  });
+})();
