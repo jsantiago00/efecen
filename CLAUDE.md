@@ -23,7 +23,7 @@
 La pausa de materias nuevas terminó el 18/10/2026. Seguí el orden de pendientes de PROGRESO.md:
 
 1. **Ciclo básico de Química y Biología** (pedido del usuario, 26/10): para que la app sirva también a quien cursa esas orientaciones. Q101 Química General está completa (27/10); las que siguen, si el usuario las pide, están en PROGRESO.md.
-2. **3.º año** de Física: F104 Física General III (completa, 26/10), después M103, M203, F203, M209 y F205.
+2. **3.º año** de Física: F104 Física General III (completa, 26/10) y M103 Cálculo III (completa, 12/11); después M203, M209, F203 y F205.
 
 Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, sus unidades «Extra UBA» y un «Examen Extra UBA».
 
@@ -34,7 +34,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 | `index.html` | La UI (`<script id="app-script">`) y el CSS. |
 | `engine.js` | El motor: RNG, helpers `H`, parser de números y expresiones, repaso espaciado, registro de materias, exámenes y estado (`E.store`). Lo cargan `index.html` y los tests. |
 | `content/carrera.js` | Las carreras, una por orientación (`fis`, `mat`, `qui`, `bio`): años → semestres → materias, con `code`, `title`, `course` (si ya tiene contenido) y `via` (si se repasa con otra materia). Los pasos se numeran solos. Cada cuenta elige la suya (`S.career`). |
-| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`, `f104-fisica3.js`, `q101-quimica-general.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
+| `content/<código>-<nombre>.js` | **Un archivo por materia**: `m101-calculo1.js`, `m104-algebra-lineal.js`, `f101-fisica1.js`, `f102b-fisica2b.js`, `m102-calculo2.js`, `m106-geometria-analitica.js`, `m105-probabilidad.js`, `f102a-fisica2a.js`, `f104-fisica3.js`, `m103-calculo3.js`, `q101-quimica-general.js`. Se cargan con `<script src>` en `index.html`, en el orden de la carrera. |
 | Plan de estudio | `E.plan` en `engine.js` (el reparto, puro y testeado) y `renderPlan`/`planAct` en `index.html`. Se guarda en `S.plan` (ver PROGRESO.md). |
 | `content/calendario.js` | Calendario académico de la FCEN: turnos de examen, feriados, recesos y las mesas de cada materia (`mesas[cid][turno] = { date, time, insc, note }`). **Cuando el usuario pase un cronograma de mesas, cargalo acá**: queda para todos. Los PDF van en `calendario academico/`, que no se versiona. |
 | `sync.js` | Módulo ES: login con Google y sincronización con Firestore (ver más abajo). |
@@ -47,7 +47,7 @@ Las ocho materias de 1.º y 2.º año están completas, con sus evaluaciones, su
 | `firestore.rules`, `firebase.json`, `.firebaserc` | Reglas de Firestore (proyecto `efecen-46bfd`). |
 | `push/` | Servicio de avisos **efecen-push**: Worker de Cloudflare (`worker.js`), tablas de D1 (`schema.sql`), `wrangler.toml` y tests (`test.mjs`). Ver más abajo. |
 
-Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística, F102A Física General II A, F104 Física General III y Q101 Química General.
+Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101 Física General I, F102B Física General II B, M102 Cálculo II, M106 Geometría Analítica, M105 Probabilidad y Estadística, F102A Física General II A, F104 Física General III, M103 Cálculo III y Q101 Química General.
 
 ## Cómo se arma una materia
 
@@ -71,7 +71,7 @@ Materias completas: M101 Cálculo I, M104 Introducción al Álgebra Lineal, F101
 })();
 ```
 
-- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106), `pe-` (M105; su primer bloque define la biblioteca estadística `E.pye`), `f2a-` (F102A; su primer bloque define `E.f2a`, con constantes, Simpson, RK4 y el campo de cargas puntuales), `f3-` (F104; su primer bloque define `E.f3`, con constantes de física moderna, Simpson, bisección, sección áurea y boosts), `qg-` (Q101; su primer bloque define `E.qg`, con masas atómicas, lector de fórmulas, balanceo por el núcleo de la matriz y configuraciones electrónicas). Para M101 no hay prefijo: sus ids vienen del MVP.
+- **Prefijos de ids por materia:** `c2-` (M102), `al-` (M104), `f1-` (F101), `f2b-` (F102B), `ga-` (M106), `pe-` (M105; su primer bloque define la biblioteca estadística `E.pye`), `f2a-` (F102A; su primer bloque define `E.f2a`, con constantes, Simpson, RK4 y el campo de cargas puntuales), `f3-` (F104; su primer bloque define `E.f3`, con constantes de física moderna, Simpson, bisección, sección áurea y boosts), `c3-` (M103, que es variable compleja; su primer bloque define `E.c3`, con aritmética de complejos como pares `[re, im]`, integrales de contorno numéricas, raíces por Durand-Kerner y formato de $a + bi$; las respuestas complejas se piden en un `multi`, parte real y parte imaginaria), `qg-` (Q101; su primer bloque define `E.qg`, con masas atómicas, lector de fórmulas, balanceo por el núcleo de la matriz y configuraciones electrónicas). Para M101 no hay prefijo: sus ids vienen del MVP.
 - **Requisitos por unidad** (los chequean los tests):
   - al menos 4 plantillas de al menos 2 tipos;
   - teoría con hipervínculos;
