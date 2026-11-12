@@ -39,7 +39,7 @@
   const C102 = { code: "C102", title: "Ciencias de la Tierra" };
   const C104 = { code: "C104", title: "Epistemología de la Ciencia" };
   const M103 = { code: "M103", title: "Cálculo III", course: "m103" };
-  const M203 = { code: "M203", title: "Álgebra Lineal" };
+  const M203 = { code: "M203", title: "Álgebra Lineal", course: "m203" };
   // cada carrera necesita sus propios objetos (career() les pone el paso)
   const s = o => Object.assign({}, o);
 
