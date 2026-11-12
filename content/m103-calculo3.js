@@ -78,6 +78,13 @@
     if (re === 0) return (im < 0 ? "-" : "") + it;
     return `${Z.dn(re, d)} ${im < 0 ? "-" : "+"} ${it}`;
   };
+  // (a + bi)/den en TeX, con cada parte como fracción reducida
+  Z.cfrac = (num, den = 1) => {
+    const re = H.frac(num[0], den), ia = H.frac(Math.abs(num[1]), Math.abs(den)), neg = num[1] * den < 0, it = (ia === "1" ? "" : ia + (ia.includes("frac") ? "\\," : "")) + "i";
+    if (num[1] === 0) return re;
+    if (num[0] === 0) return (neg ? "-" : "") + it;
+    return `${re} ${neg ? "-" : "+"} ${it}`;
+  };
   // p·π/q en TeX
   Z.pif = (p, q = 1) => {
     if (p === 0) return "0";
@@ -112,8 +119,8 @@
   const T = {};
   const far = (v, ans) => Math.abs(v - ans) > 0.03 * Math.max(1, Math.abs(ans));
 
-  T["c3-algebra-multi"] = {
-    type: "multi", concepts: ["c3-algebra"], difficulty: 1,
+  T["c3-algebra-cx"] = {
+    type: "complex", concepts: ["c3-algebra"], difficulty: 1,
     generate(r) {
       const z = [r.nz(-5, 5), r.nz(-5, 5)], w = [r.nz(-4, 4), r.nz(-4, 4)], op = r.pick(["mul", "div"]);
       const n2 = w[0] * w[0] + w[1] * w[1], num = Z.mul(z, op === "mul" ? w : Z.conj(w));
@@ -123,13 +130,11 @@
       const pol = () => Z.polar(op === "mul" ? Z.abs(z) * Z.abs(w) : Z.abs(z) / Z.abs(w), Z.arg(z) + (op === "mul" ? 1 : -1) * Z.arg(w));
       const bad = op === "mul" ? z[0] * w[0] + z[1] * w[1] : num[0];
       return {
-        prompt: `Sean $z = ${Z.tex(z)}$ y $w = ${Z.tex(w)}$. Calculá $${op === "mul" ? "z\\,w" : "\\dfrac{z}{w}"}$ y escribilo como $a + bi$.`,
-        parts: [
-          { q: "¿Cuánto vale la parte real $a$?", type: "numeric", answer: res[0], answerTex: tx(0),
-            traps: [{ value: bad, msg: op === "mul" ? "Ojo con $i^2 = -1$: el producto de las partes imaginarias entra **restando** en la parte real." : "Falta dividir por $|w|^2 = w\\,\\bar w$, que es lo que queda en el denominador." }].filter(t => far(t.value, res[0])),
-            verify: { kind: "value", fn: () => pol()[0] } },
-          { q: "¿Y la parte imaginaria $b$?", type: "numeric", answer: res[1], answerTex: tx(1), verify: { kind: "value", fn: () => pol()[1] } }
-        ],
+        prompt: `Sean $z = ${Z.tex(z)}$ y $w = ${Z.tex(w)}$. Calculá $${op === "mul" ? "z\\,w" : "\\dfrac{z}{w}"}$.`,
+        answer: res, answerTex: Z.cfrac(num, op === "mul" ? 1 : n2),
+        traps: [{ value: op === "mul" ? [bad, res[1]] : num, msg: op === "mul" ? "Ojo con $i^2 = -1$: el producto de las partes imaginarias entra **restando** en la parte real." : "Falta dividir por $|w|^2 = w\\,\\bar w$, que es lo que queda en el denominador." }].filter(t => Z.abs(Z.sub(t.value, res)) > 0.03 * Math.max(1, Z.abs(res))),
+        // verificación: en forma polar los módulos se multiplican (o dividen) y los argumentos se suman (o restan)
+        verify: { kind: "cvalue", fn: pol },
         solution: op === "mul" ? [
           `Se distribuye como con binomios y se usa $i^2 = -1$ ([[c3-complejos|álgebra de complejos]]): $(a + bi)(c + di) = (ac - bd) + (ad + bc)i$.`,
           `Parte real: $${H.par(z[0])}\\cdot${H.par(w[0])} - ${H.par(z[1])}\\cdot${H.par(w[1])} = ${num[0]}$. Parte imaginaria: $${H.par(z[0])}\\cdot${H.par(w[1])} + ${H.par(z[1])}\\cdot${H.par(w[0])} = ${num[1]}$.`,
@@ -362,9 +367,9 @@
     templates: T,
     units: [{
       id: "c3-complejos-u", order: 1, program: "Unidad 1", title: "Números complejos", icon: "rotate-ccw",
-      diagnostic: ["c3-algebra-multi", "c3-moivre-num", "c3-raices-multi"],
+      diagnostic: ["c3-algebra-cx", "c3-moivre-num", "c3-raices-multi"],
       lessons: [
-        { id: "c3-algebra", title: "Álgebra, conjugado y módulo", templates: ["c3-algebra-multi", "c3-lugar-mc"], theory: ["c3-complejos"],
+        { id: "c3-algebra", title: "Álgebra, conjugado y módulo", templates: ["c3-algebra-cx", "c3-lugar-mc"], theory: ["c3-complejos"],
           intro: R`$z\,\bar z = |z|^2$, y $|z - w|$ es la distancia entre $z$ y $w$. Para dividir, multiplicá por el conjugado del denominador.` },
         { id: "c3-polar", title: "Forma polar y De Moivre", templates: ["c3-modarg-num", "c3-moivre-num"], theory: ["c3-polar"],
           intro: R`$z = r\,e^{i\theta}$. Al multiplicar se multiplican los módulos y se suman los argumentos: $z^n = r^n e^{in\theta}$.` },
@@ -444,8 +449,8 @@
     }
   };
 
-  T["c3-deriv-multi"] = {
-    type: "multi", concepts: ["c3-derivada"], difficulty: 2,
+  T["c3-deriv-cx"] = {
+    type: "complex", concepts: ["c3-derivada"], difficulty: 2,
     generate(r) {
       const form = r.pick(["pol3", "pol2", "inv"]), a = r.nz(-4, 4), b = r.nz(-4, 4);
       let z0 = [r.nz(-2, 2), r.nz(-2, 2)], tex, f, dTex, num, den = 1, steps;
@@ -466,11 +471,10 @@
       // verificación: cociente incremental numérico en la dirección imaginaria (la derivada no depende de la dirección)
       const nd = () => Z.dz(f, z0, [0, 1e-5]);
       return {
-        prompt: `Sea $f(z) = ${tex}$. Calculá $f'(z_0)$ en $z_0 = ${Z.tex(z0)}$ y escribilo como $a + bi$.`,
-        parts: [
-          { q: "¿Cuánto vale la parte real de $f'(z_0)$?", type: "numeric", answer: res[0], answerTex: H.frac(num[0], den), verify: { kind: "value", tol: 1e-6, fn: () => nd()[0] } },
-          { q: "¿Y la parte imaginaria?", type: "numeric", answer: res[1], answerTex: H.frac(num[1], den), verify: { kind: "value", tol: 1e-6, fn: () => nd()[1] } }
-        ],
+        prompt: `Sea $f(z) = ${tex}$. Calculá $f'(z_0)$ en $z_0 = ${Z.tex(z0)}$.`,
+        lhs: "f'(z_0) = ", answer: res, answerTex: Z.cfrac(num, den),
+        // verificación: cociente incremental numérico en la dirección imaginaria (la derivada no depende de la dirección)
+        verify: { kind: "cvalue", tol: 1e-6, fn: nd },
         solution: [`Las reglas de derivación son las mismas que en variable real ([[c3-derivada|derivada compleja]]): $f'(z) = ${dTex}$.`, ...steps,
           `$f'(z_0) = ${H.frac(num[0], den)} ${num[1] < 0 ? "-" : "+"} ${H.frac(Math.abs(num[1]), den)}\\,i$.`]
       };
@@ -652,7 +656,7 @@
       lessons: [
         { id: "c3-limite", title: "Funciones, límites y continuidad", templates: ["c3-uv-multi", "c3-limite-vf"], theory: ["c3-limite"],
           intro: R`$f = u + iv$. El límite tiene que dar lo mismo por todos los caminos del plano.` },
-        { id: "c3-derivada", title: "Derivada y Cauchy-Riemann", templates: ["c3-deriv-multi", "c3-cr-donde-mc"], theory: ["c3-derivada", "c3-analitica"],
+        { id: "c3-derivada", title: "Derivada y Cauchy-Riemann", templates: ["c3-deriv-cx", "c3-cr-donde-mc"], theory: ["c3-derivada", "c3-analitica"],
           intro: R`Si $f$ es derivable, $u_x = v_y$ y $u_y = -v_x$. Analítica en $z_0$: derivable en todo un entorno.` },
         { id: "c3-armonicas", title: "Funciones armónicas", templates: ["c3-armonica-num", "c3-conj-armonica-expr"], theory: ["c3-armonicas"],
           intro: R`$u_{xx} + u_{yy} = 0$. La conjugada armónica sale de $v_y = u_x$, $v_x = -u_y$.` }
@@ -674,21 +678,18 @@
   const ANG = [[1, 6], [1, 4], [1, 3], [1, 2], [2, 3], [3, 4], [5, 6], [1, 1], [-1, 6], [-1, 4], [-1, 3], [-1, 2], [-2, 3], [-3, 4], [3, 2], [5, 4]];
   const imTex = (p, q, first) => `${p < 0 ? "-" : first ? "" : "+"}${first ? "" : " "}${pif(Math.abs(p), q)}\\,i`;
 
-  T["c3-exp-multi"] = {
-    type: "multi", concepts: ["c3-exponencial"], difficulty: 1,
+  T["c3-exp-cx"] = {
+    type: "complex", concepts: ["c3-exponencial"], difficulty: 1,
     generate(r) {
       const [p, q] = r.pick(ANG), k = r.int(2, 5), a0 = r.pick([0, 1, 2, -1, "ln", "ln"]), th = p * Math.PI / q;
       const a = a0 === "ln" ? Math.log(k) : a0, aT = a0 === "ln" ? `\\ln ${k}` : a0 === 0 ? "" : String(a0), eT = a0 === "ln" ? String(k) : a0 === 0 ? "1" : a0 === 1 ? "e" : `e^{${a0}}`;
       const res = Z.polar(Math.exp(a), th).map(x => (Math.abs(x) < 1e-12 ? 0 : x));
       return {
-        prompt: `Escribí $e^{z}$ como $a + bi$, para $z = ${aT}${aT ? " " : ""}${imTex(p, q, !aT)}$.`,
-        parts: [
-          { q: "¿Cuánto vale la parte real?", type: "numeric", answer: res[0],
-            traps: [{ value: Math.exp(a), msg: "Ese es el módulo, $e^x$. Falta multiplicar por $\\cos y$." }].filter(t => far(t.value, res[0])),
-            // verificación: la exponencial sumada como serie de potencias (sin senos ni cosenos)
-            verify: { kind: "value", tol: 1e-9, fn: () => Z.expS([a, th])[0] } },
-          { q: "¿Y la parte imaginaria?", type: "numeric", answer: res[1], verify: { kind: "value", tol: 1e-9, fn: () => Z.expS([a, th])[1] } }
-        ],
+        prompt: `Calculá $e^{z}$ para $z = ${aT}${aT ? " " : ""}${imTex(p, q, !aT)}$.`,
+        lhs: "e^z = ", answer: res,
+        traps: [{ value: [Math.exp(a), 0], msg: "Ese es el módulo, $e^x$. Falta el factor $\\cos y + i\\sin y$." }, { value: [Math.exp(a) * Math.cos(th), 0], msg: "Esa es solo la parte real: falta $i\\,e^x\\sin y$." }].filter(t => Z.abs(Z.sub(t.value, res)) > 0.03 * Math.max(1, Z.abs(res))),
+        // verificación: la exponencial sumada como serie de potencias (sin senos ni cosenos)
+        verify: { kind: "cvalue", tol: 1e-9, fn: () => Z.expS([a, th]) },
         solution: [`[[c3-exponencial|Exponencial compleja]]: $e^{x + iy} = e^x(\\cos y + i\\sin y)$. El módulo es $e^x$ y el argumento es $y$.`,
           `Acá $e^x = ${eT}$ y $y = ${pif(p, q)}$: $\\cos y = ${dn(Math.cos(th), 4)}$, $\\sin y = ${dn(Math.sin(th), 4)}$.`,
           `$e^z \\approx ${Z.tex(res, 4)}$.`]
@@ -927,9 +928,9 @@
     templates: T,
     units: [{
       id: "c3-elementales-u", order: 3, program: "Unidad 3", title: "Funciones elementales", icon: "zap",
-      diagnostic: ["c3-exp-multi", "c3-ecuacion-exp-multi", "c3-trig-num"],
+      diagnostic: ["c3-exp-cx", "c3-ecuacion-exp-multi", "c3-trig-num"],
       lessons: [
-        { id: "c3-exponencial", title: "La exponencial", templates: ["c3-exp-multi", "c3-elementales-vf"], theory: ["c3-exponencial"],
+        { id: "c3-exponencial", title: "La exponencial", templates: ["c3-exp-cx", "c3-elementales-vf"], theory: ["c3-exponencial"],
           intro: R`$e^{x + iy} = e^x(\cos y + i\sin y)$: módulo $e^x$, argumento $y$ y período $2\pi i$.` },
         { id: "c3-logaritmo", title: "El logaritmo y sus ramas", templates: ["c3-log-num", "c3-ecuacion-exp-multi", "c3-rama-mc"], theory: ["c3-logaritmo"],
           intro: R`$\log z = \ln|z| + i(\operatorname{Arg} z + 2k\pi)$. El principal, $\operatorname{Log}$, es analítico fuera del semieje real negativo.` },
@@ -950,8 +951,8 @@
   const far = (v, ans) => Math.abs(v - ans) > 0.03 * Math.max(1, Math.abs(ans));
   const clean = z => z.map(x => (Math.abs(x) < 1e-12 ? 0 : x));
 
-  T["c3-linea-multi"] = {
-    type: "multi", concepts: ["c3-contornos"], difficulty: 2,
+  T["c3-linea-cx"] = {
+    type: "complex", concepts: ["c3-contornos"], difficulty: 2,
     generate(r) {
       const fk = r.pick(["conj", "re", "im"]), pk = r.pick(["seg", "seg", "arc"]);
       const F = { conj: { tex: "\\bar z", f: Z.conj }, re: { tex: "\\operatorname{Re} z", f: z => [z[0], 0] }, im: { tex: "\\operatorname{Im} z", f: z => [z[1], 0] } }[fk];
@@ -978,10 +979,7 @@
       const numI = () => Z.path(F.f, g, 0, t1, 2000);
       return {
         prompt: `Calculá $\\displaystyle\\int_C ${F.tex}\\,dz$, donde $C$ es ${desc}.`,
-        parts: [
-          { q: "¿Cuánto vale la parte real de la integral?", type: "numeric", answer: res[0], verify: { kind: "value", tol: 1e-6, fn: () => numI()[0] } },
-          { q: "¿Y la parte imaginaria?", type: "numeric", answer: res[1], verify: { kind: "value", tol: 1e-6, fn: () => numI()[1] } }
-        ],
+        answer: res, verify: { kind: "cvalue", tol: 1e-6, fn: numI },
         solution: [`$${F.tex}$ no es analítica, así que no hay primitiva: se calcula con la definición, $\\int_C f\\,dz = \\int_a^b f(z(t))\\,z'(t)\\,dt$ ([[c3-contornos|integral de contorno]]).`, ...steps]
       };
     }
@@ -1015,8 +1013,8 @@
     }
   };
 
-  T["c3-primitiva-multi"] = {
-    type: "multi", concepts: ["c3-primitivas"], difficulty: 1,
+  T["c3-primitiva-cx"] = {
+    type: "complex", concepts: ["c3-primitivas"], difficulty: 1,
     generate(r) {
       const a = r.int(-3, 3), b = r.nz(-4, 4), form = r.pick(["cub", "cuar"]);
       const z1 = [r.int(-2, 2), r.int(-2, 2)], d = [r.nz(-2, 2), r.nz(-2, 2)], z2 = Z.add(z1, d);
@@ -1029,10 +1027,7 @@
       const numI = () => Z.path(f, t => Z.add(Z.add(z1, Z.sc(t, d)), Z.mul([0, 0.7 * t * (1 - t)], d)), 0, 1, 2000);
       return {
         prompt: `Calculá $\\displaystyle\\int_C \\left(${fT}\\right)dz$, donde $C$ es cualquier contorno que va de $${Z.tex(z1)}$ a $${Z.tex(z2)}$.`,
-        parts: [
-          { q: "¿Cuánto vale la parte real de la integral?", type: "numeric", answer: res[0], verify: { kind: "value", tol: 1e-6, fn: () => numI()[0] } },
-          { q: "¿Y la parte imaginaria?", type: "numeric", answer: res[1], verify: { kind: "value", tol: 1e-6, fn: () => numI()[1] } }
-        ],
+        answer: res, verify: { kind: "cvalue", tol: 1e-6, fn: numI },
         solution: [`El integrando es un polinomio: es entero y tiene [[c3-primitivas|primitiva]] $F(z) = ${FT}$. Por eso la integral no depende del camino: vale $F(z_2) - F(z_1)$.`,
           `$F(${Z.tex(z2)}) = ${Z.tex(P(z2))}$ y $F(${Z.tex(z1)}) = ${Z.tex(P(z1))}$.`,
           `$\\displaystyle\\int_C f\\,dz = ${Z.tex(res)}$.`]
@@ -1232,11 +1227,11 @@
     templates: T,
     units: [{
       id: "c3-integracion-u", order: 4, program: "Unidad 4", title: "Integración compleja", icon: "sigma",
-      diagnostic: ["c3-linea-multi", "c3-cauchy-goursat-vf", "c3-cauchy-formula-num"],
+      diagnostic: ["c3-linea-cx", "c3-cauchy-goursat-vf", "c3-cauchy-formula-num"],
       lessons: [
-        { id: "c3-contornos", title: "Integrales de contorno", templates: ["c3-linea-multi", "c3-cota-ml-num"], theory: ["c3-contornos"],
+        { id: "c3-contornos", title: "Integrales de contorno", templates: ["c3-linea-cx", "c3-cota-ml-num"], theory: ["c3-contornos"],
           intro: R`$\int_C f\,dz = \int_a^b f(z(t))\,z'(t)\,dt$, y $\left|\int_C f\,dz\right| \le ML$.` },
-        { id: "c3-cauchy-goursat", title: "Primitivas y Cauchy-Goursat", templates: ["c3-primitiva-multi", "c3-cauchy-goursat-vf"], theory: ["c3-primitivas", "c3-cauchy-goursat"],
+        { id: "c3-cauchy-goursat", title: "Primitivas y Cauchy-Goursat", templates: ["c3-primitiva-cx", "c3-cauchy-goursat-vf"], theory: ["c3-primitivas", "c3-cauchy-goursat"],
           intro: R`Si $f$ es analítica dentro y sobre $C$, $\oint_C f\,dz = 0$. Con primitiva, la integral es $F(z_2) - F(z_1)$.` },
         { id: "c3-cauchy-formula", title: "Fórmula integral de Cauchy", templates: ["c3-cauchy-formula-num", "c3-teoremas-vf"], theory: ["c3-cauchy-formula", "c3-liouville"],
           intro: R`$\oint_C \frac{f(z)}{(z - z_0)^{n+1}}\,dz = \frac{2\pi i}{n!}f^{(n)}(z_0)$ si $z_0$ está dentro de $C$.` }

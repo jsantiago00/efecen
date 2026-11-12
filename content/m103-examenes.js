@@ -211,7 +211,7 @@
           { title: "Ejercicio 3: potencias", parts: [{ pick: ["c3-potencia-multi", "c3-moivre-num", "c3-raices-multi"], pts: 10 }] },
           { title: "Ejercicio 4: ecuaciones y logaritmos", parts: [{ pick: ["c3-ecuacion-exp-multi", "c3-log-num", "c3-rama-mc"], pts: 10 }] },
           { title: "Ejercicio 5: límites y funciones", parts: [{ pick: ["c3-limite-vf", "c3-elementales-vf", "c3-conj-armonica-expr"], pts: 10 }] },
-          { title: "Ejercicio 6: una integral de contorno", parts: [{ pick: ["c3-linea-multi", "c3-primitiva-multi"], pts: 10 }] }
+          { title: "Ejercicio 6: una integral de contorno", parts: [{ pick: ["c3-linea-cx", "c3-primitiva-cx"], pts: 10 }] }
         ] },
       { id: "p2", kind: "parcial", title: "2.º parcial", topics: "Fórmula integral de Cauchy, series de Taylor y de Laurent, singularidades aisladas, residuos y teorema de los residuos.", minutes: 180, pass: 60,
         items: [

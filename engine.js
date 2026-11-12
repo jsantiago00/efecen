@@ -304,6 +304,81 @@
     return Math.abs(answer) < 1e-9 && Math.abs(user) < 1e-6;
   };
 
+  // ---------- respuestas complejas (type: "complex") ----------
+  // inst: { answer: [re, im], answerTex? }. Se escribe con la i: «3 - 2i», «(1 + 5i)/2», «2e^(i pi/3)», «i^2»…
+  // El árbol sale del mismo parser (con «i» como variable) y se evalúa con aritmética compleja.
+  const CX = {
+    mul: (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]],
+    div: (a, b) => { const d = b[0] * b[0] + b[1] * b[1]; return [(a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d]; },
+    exp: a => { const e = Math.exp(a[0]); return [e * Math.cos(a[1]), e * Math.sin(a[1])]; },
+    ln: a => [Math.log(Math.hypot(a[0], a[1])), Math.atan2(a[1], a[0])],
+    sin: a => [Math.sin(a[0]) * Math.cosh(a[1]), Math.cos(a[0]) * Math.sinh(a[1])],
+    cos: a => [Math.cos(a[0]) * Math.cosh(a[1]), -Math.sin(a[0]) * Math.sinh(a[1])],
+    sinh: a => [Math.sinh(a[0]) * Math.cos(a[1]), Math.cosh(a[0]) * Math.sin(a[1])],
+    cosh: a => [Math.cosh(a[0]) * Math.cos(a[1]), Math.sinh(a[0]) * Math.sin(a[1])]
+  };
+  CX.pow = (a, b) => {
+    if (a[0] === 0 && a[1] === 0) return b[0] > 0 ? [0, 0] : [NaN, NaN];
+    // exponente entero: multiplicando (así i^2 da −1 exacto)
+    if (b[1] === 0 && Number.isInteger(b[0]) && Math.abs(b[0]) <= 64) { let p = [1, 0]; for (let k = 0; k < Math.abs(b[0]); k++) p = CX.mul(p, a); return b[0] < 0 ? CX.div([1, 0], p) : p; }
+    return CX.exp(CX.mul(b, CX.ln(a)));
+  };
+  const CFN = {
+    sqrt: a => CX.pow(a, [0.5, 0]), exp: CX.exp, ln: CX.ln, log: a => CX.div(CX.ln(a), [Math.LN10, 0]), sin: CX.sin, cos: CX.cos, sinh: CX.sinh, cosh: CX.cosh,
+    tan: a => CX.div(CX.sin(a), CX.cos(a)), tanh: a => CX.div(CX.sinh(a), CX.cosh(a)), sec: a => CX.div([1, 0], CX.cos(a)), csc: a => CX.div([1, 0], CX.sin(a)), cot: a => CX.div(CX.cos(a), CX.sin(a))
+  };
+  E.evalComplex = function ev(a) {
+    switch (a[0]) {
+      case "n": return [a[1], 0];
+      case "c": return [a[1] === "pi" ? Math.PI : Math.E, 0];
+      case "v": return [0, 1];
+      case "neg": { const x = ev(a[1]); return [-x[0], -x[1]]; }
+      case "+": { const x = ev(a[1]), y = ev(a[2]); return [x[0] + y[0], x[1] + y[1]]; }
+      case "-": { const x = ev(a[1]), y = ev(a[2]); return [x[0] - y[0], x[1] - y[1]]; }
+      case "*": return CX.mul(ev(a[1]), ev(a[2]));
+      case "/": return CX.div(ev(a[1]), ev(a[2]));
+      case "^": return CX.pow(ev(a[1]), ev(a[2]));
+      case "f": return CFN[a[1]] ? CFN[a[1]](ev(a[2])) : [NaN, NaN];
+      case "abs": { const x = ev(a[1]); return [Math.hypot(x[0], x[1]), 0]; }
+    }
+    return [NaN, NaN];
+  };
+  // lo que se escribió → [re, im], o null si no se entiende
+  E.parseComplex = function (src) {
+    const a = E.parseExpr(src, ["i"]);
+    if (!a) return null;
+    const z = E.evalComplex(a);
+    return Number.isFinite(z[0]) && Number.isFinite(z[1]) ? z : null;
+  };
+  // ¿es la respuesta? tolerancia relativa al módulo, o cada parte redondeada a 2 decimales
+  E.checkComplexValue = function (u, A, tol = 0.01) {
+    if (!u || !Number.isFinite(u[0]) || !Number.isFinite(u[1])) return false;
+    const mod = Math.hypot(A[0], A[1]);
+    if (Math.hypot(u[0] - A[0], u[1] - A[1]) <= tol * mod + 1e-9) return true;
+    return mod >= 0.1 && [0, 1].every(k => Math.abs(u[k] - Math.round(A[k] * 100) / 100) < 1e-9);
+  };
+  E.checkComplex = (src, inst) => E.checkComplexValue(E.parseComplex(src), inst.answer, inst.tolerance ?? 0.01);
+  // a + bi en TeX, con coma decimal
+  E.complexTex = function (z, d = 3) {
+    const cm = x => String(H.num(x, d)).replace(".", "{,}"), re = +(+z[0]).toFixed(d) || 0, im = +(+z[1]).toFixed(d) || 0, a = Math.abs(im);
+    const it = (a === 1 ? "" : cm(a)) + "i";
+    if (im === 0) return cm(re);
+    if (re === 0) return (im < 0 ? "-" : "") + it;
+    return `${cm(re)} ${im < 0 ? "-" : "+"} ${it}`;
+  };
+  function complexHint(u, A, tol) {
+    const is = v => E.checkComplexValue(u, v, tol), mod = Math.hypot(A[0], A[1]);
+    if (!mod) return null;
+    if (A[1] !== 0 && is([A[0], -A[1]])) return "Te quedó el conjugado: revisá el signo de la parte imaginaria (¿un $i^2 = -1$ que se escapó, o el conjugado del lado equivocado?).";
+    if (is([-A[0], -A[1]])) return "El valor está bien, pero con el signo cambiado.";
+    if (A[0] !== 0 && A[1] !== 0 && is([-A[0], A[1]])) return "La parte imaginaria está bien, pero la parte real tiene el signo cambiado: acordate de que $i^2 = -1$.";
+    if (Math.abs(A[0] - A[1]) > 1e-9 && is([A[1], A[0]])) return "Parece que intercambiaste la parte real con la imaginaria.";
+    if (is([-A[1], A[0]]) || is([A[1], -A[0]])) return "Te difiere en un factor $i$ (un cuarto de vuelta): revisá si sobra o falta una $i$.";
+    if (Math.abs(Math.hypot(u[0], u[1]) - mod) <= tol * mod) return "El módulo está bien, pero el argumento no: revisá el ángulo (el cuadrante, o un múltiplo de $2\\pi$).";
+    if (is([2 * A[0], 2 * A[1]]) || is([A[0] / 2, A[1] / 2])) return "Te difiere en un factor 2: revisá las constantes.";
+    return null;
+  }
+
   // ---------- respuestas de tipo `expr` (se escribe una función) ----------
   // inst: { answer: "2x cos(x^2)" (con la sintaxis del parser), answerTex, vars: ["x"], domain: [[lo, hi], …],
   // constant?: true si alcanza con acertar salvo una constante (primitivas), lhs?: TeX que va antes, «f'(x) =» }.
@@ -401,6 +476,12 @@
     if (inst.type === "expr") {
       const t = traps.find(x => E.checkExpr(raw, Object.assign({}, inst, { answer: x.expr })));
       return t ? t.msg : exprHint(raw, inst);
+    }
+    if (inst.type === "complex") {
+      const z = E.parseComplex(raw), tolC = Math.max(inst.tolerance ?? 0.01, 1e-4);
+      if (!z) return null;
+      const t = traps.find(x => E.checkComplexValue(z, x.value, tolC));
+      return t ? t.msg : complexHint(z, inst.answer, tolC);
     }
     if (inst.type !== "numeric") return null;
     const u = E.parseNum(raw), tol = Math.max(inst.tolerance ?? 0.01, 1e-4);

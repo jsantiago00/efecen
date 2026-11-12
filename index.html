@@ -2019,7 +2019,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   }
 
   // ---------- SESIÓN: ejercicio ----------
-  const TYPE_LABEL = { mc: "Elegí la opción correcta", numeric: "Respuesta numérica", tf: "Verdadero o falso", order: "Ordená los pasos", match: "Uní los pares", error: "Encontrá el error", expr: "Escribí la expresión", multi: "Paso a paso" };
+  const TYPE_LABEL = { mc: "Elegí la opción correcta", numeric: "Respuesta numérica", tf: "Verdadero o falso", order: "Ordená los pasos", match: "Uní los pares", error: "Encontrá el error", expr: "Escribí la expresión", complex: "Respuesta compleja", multi: "Paso a paso" };
   // la parte que se está respondiendo: en un paso a paso, la actual; si no, el ejercicio entero
   const curInst = () => { const s = ui.session; return s.inst.type === "multi" ? E.subInst(s.inst, s.multi.k) : s.inst; };
   function renderExercise() {
@@ -2092,6 +2092,13 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
           ${done ? "" : `<div class="keys">${keys.map(k => `<button data-act="key" data-k="${k}" tabindex="-1">${k}</button>`).join("")}</div>`}
           <div class="muted small">Escribí la expresión en ${vars.map(v => `<i>${v}</i>`).join(" y ")}, por ejemplo <code>3x^2 - 2sen(x)</code> o <code>e^(2x)/x</code>. Abajo ves cómo la leyó la app.${inst.constant ? " La constante de integración podés ponerla o no." : ""}</div></div>`;
       }
+      case "complex":
+        return `<div class="numwrap">
+          ${inst.lhs ? `<div class="expr-lhs">${K(inst.lhs, false)}</div>` : ""}
+          <input class="numin expr ${done ? (s_ok() ? "right" : "wrong") : ""}" id="numin" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="a + bi" value="${esc(a.v || "")}" ${dis} aria-label="Respuesta">
+          <div class="preview" id="preview">${previewHtml(inst, a.v)}</div>
+          ${done ? "" : `<div class="keys">${["i", "+", "-", "/", "^", "(", ")", "√(", "π", "e^("].map(k => `<button data-act="key" data-k="${k}" tabindex="-1">${k}</button>`).join("")}</div>`}
+          <div class="muted small">Escribí el número complejo con la <i>i</i>, por ejemplo <code>3 - 2i</code>, <code>(1 + 5i)/2</code> o <code>2e^(i π/3)</code>. Abajo ves cuánto vale lo que escribiste. Se acepta ±1%.</div></div>`;
       case "multi": {
         const m = ui.session.multi, left = inst.parts.length - m.k - 1;
         const past = m.res.map((r, j) => partResultHtml(E.subInst(inst, j), r, j)).join("");
@@ -2147,6 +2154,12 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   }
   // vista previa de lo que se escribe: el número (numéricas) o la expresión como la entendió la app (expr)
   function previewHtml(inst, v) {
+    if (inst.type === "complex") {
+      if (!v) return "";
+      const z = E.parseComplex(v);
+      if (!z) return `<span class="muted">…</span>`;
+      try { return katex.renderToString("= " + E.complexTex(z, 4), { throwOnError: false, strict: false }); } catch (e) { return "…"; }
+    }
     if (inst.type !== "expr") return esc(previewText(v));
     if (!v) return "";
     const a = E.parseExpr(v, inst.vars || ["x"]);
@@ -2163,6 +2176,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
     switch (inst.type) {
       case "numeric": return isFinite(E.parseNum(a.v));
       case "expr": return !!a.v && !!E.parseExpr(a.v, inst.vars || ["x"]);
+      case "complex": return !!a.v && !!E.parseComplex(a.v);
       case "multi": return ready(curInst(), a);
       case "order": return a.placed.length === inst.steps.length;
       case "match": return Object.keys(a.pairs).length === inst.pairs.length;
@@ -2175,6 +2189,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "tf": return a.v === inst.answer;
       case "numeric": return E.checkNumeric(E.parseNum(a.v), inst.answer, inst.tolerance ?? 0.01);
       case "expr": return E.checkExpr(a.v, inst);
+      case "complex": return E.checkComplex(a.v, inst);
       case "multi": return ui.session.multi.res.length === inst.parts.length && ui.session.multi.res.every(r => r.ok);
       case "order": return a.placed.every((v, i) => v === i);
       case "match": return inst.pairs.every((_, i) => a.pairs[i] === i);
@@ -2199,6 +2214,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "tf": return `Era <b>${inst.answer ? "Verdadero" : "Falso"}</b>.`;
       case "numeric": return `Respuesta: ${tex("$" + (inst.answerTex || ansTex(inst.answer)) + "$")}${inst.answerTex && !Number.isInteger(inst.answer) ? ` ≈ ${H.num(inst.answer, 4)}` : ""}`;
       case "expr": return `Respuesta: ${K((inst.lhs || "") + inst.answerTex, false)}${inst.constant ? " (más una constante)" : ""}`;
+      case "complex": return `Respuesta: ${K((inst.lhs || "") + (inst.answerTex || E.complexTex(inst.answer, 4)), false)}${inst.answerTex && !inst.answer.every(Number.isInteger) ? ` ≈ ${K(E.complexTex(inst.answer, 4), false)}` : ""}`;
       case "multi": return "En cada paso que fallaste quedó la respuesta correcta.";
       case "order": return "Mirá el orden correcto en la resolución.";
       case "match": return "Los pares correctos quedaron en verde.";
@@ -3288,6 +3304,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "tf": return inst.answer ? "Verdadero" : "Falso";
       case "numeric": return "$" + (inst.answerTex || H.num(inst.answer, 4)) + "$";
       case "expr": return "$" + (inst.lhs || "") + inst.answerTex + "$" + (inst.constant ? " (más una constante)" : "");
+      case "complex": return "$" + (inst.lhs || "") + (inst.answerTex || E.complexTex(inst.answer, 4)) + "$";
       case "multi": return "\n" + inst.parts.map((p, i) => `${i + 1}. ${plainOf(p.q)} → ${answerPlain(E.subInst(inst, i))}`).join("\n");
       case "order": return "\n" + inst.steps.map((x, i) => `${i + 1}. ${plainOf(x)}`).join("\n");
       case "match": return "\n" + inst.pairs.map(([a, b]) => `${plainOf(t(a))} ↔ ${plainOf(t(b))}`).join("\n");
@@ -3329,7 +3346,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
   function userPlain(inst, a) {
     if (!a) return "—";
     switch (inst.type) {
-      case "numeric": case "expr": return a.v ? "`" + a.v + "`" : "—";
+      case "numeric": case "expr": case "complex": return a.v ? "`" + a.v + "`" : "—";
       case "mc": return a.v != null ? plainOf(inst.options[a.v]) : "—";
       case "tf": return a.v == null ? "—" : a.v ? "Verdadero" : "Falso";
       case "error": return a.v != null ? `el paso ${a.v + 1}` : "—";
@@ -3581,6 +3598,7 @@ ${examsCard(cid)}${gamesCard(cid)}</aside>
       case "tf": return a.v ? "Verdadero" : "Falso";
       case "numeric": return esc(a.v) + (isFinite(E.parseNum(a.v)) ? ` <span class="muted">(${previewText(a.v)})</span>` : "");
       case "expr": return previewHtml(inst, a.v);
+      case "complex": return esc(a.v) + ` <span class="muted">(${previewHtml(inst, a.v)})</span>`;
       case "error": return `paso ${a.v + 1}`;
       default: return "respondido";
     }

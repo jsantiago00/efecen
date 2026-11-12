@@ -93,6 +93,21 @@ ok(!E.checkNumeric(0, 1.8e-5) && !E.checkNumeric(0.01, 0.0144) && E.checkNumeric
   ok(E.diagnose({ type: "mc", options: ["a", "b"], correct: 0, traps: [{ option: "b", msg: "M" }] }, 1) === "M", w, "trampa en opción múltiple");
 }
 
+// ---------- 1d. respuestas complejas ----------
+{
+  const w = "parseComplex", C = [["3 - 2i", 3, -2], ["-i", 0, -1], ["2i", 0, 2], ["i^2", -1, 0], ["(1 + 5i)/2", 0.5, 2.5], ["(1+i)(1-i)", 2, 0], ["1/i", 0, -1], ["e^(i pi)", -1, 0],
+    ["2e^(i π/2)", 0, 2], ["sqrt(3)/2 + i/2", Math.sqrt(3) / 2, 0.5], ["4", 4, 0], ["1,5 - 0,5i", 1.5, -0.5], ["(1+i)^8", 16, 0], ["i sqrt(2)", 0, Math.SQRT2], ["3i - 2", -2, 3], ["cos(pi/3) + i sen(pi/3)", 0.5, Math.sqrt(3) / 2]];
+  for (const [src, re, im] of C) { const z = E.parseComplex(src); ok(!!z && Math.abs(z[0] - re) < 1e-9 && Math.abs(z[1] - im) < 1e-9, w, `"${src}" -> ${z}, esperaba ${re}, ${im}`); }
+  ok(E.parseComplex("3 +") === null && E.parseComplex("") === null && E.parseComplex("2x") === null && E.parseComplex("1/0") === null, w, "lo mal escrito tiene que dar null");
+  const I = { type: "complex", answer: [3, -2] };
+  ok(E.checkComplex("3-2i", I) && E.checkComplex("-2i + 3", I) && E.checkComplex("3,01 - 2i", I) && !E.checkComplex("3 + 2i", I) && !E.checkComplex("3", I) && !E.checkComplex("-2i", I) && !E.checkComplex("3,2 - 2i", I), "checkComplex", "3 − 2i");
+  ok(E.checkComplex("0,33 + 0,67i", { answer: [1 / 3, 2 / 3] }) && !E.checkComplex("0,3 + 0,7i", { answer: [1 / 3, 2 / 3] }) && E.checkComplex("0", { answer: [0, 0] }) && !E.checkComplex("0,1i", { answer: [0, 0] }), "checkComplex", "redondeo y cero");
+  const hint = raw => E.diagnose(I, raw) || "";
+  ok(/conjugado/.test(hint("3 + 2i")) && /signo cambiado/.test(hint("-3 + 2i")) && /intercambiaste/.test(hint("-2 + 3i")) && /un cuarto de vuelta/.test(hint("2 + 3i")) && hint("7 + i") === "", "diagnose", "pistas en respuestas complejas");
+  ok(E.diagnose({ type: "complex", answer: [1, 1], traps: [{ value: [2, 0], msg: "TRAMPA" }] }, "2") === "TRAMPA", "diagnose", "trampa en una respuesta compleja");
+  ok(E.complexTex([3, -2]) === "3 - 2i" && E.complexTex([0, 1]) === "i" && E.complexTex([0, -1.5]) === "-1{,}5i" && E.complexTex([2, 0]) === "2" && E.complexTex([-0.5, 1]) === "-0{,}5 + i", "complexTex", "formato de a + bi");
+}
+
 // ---------- 2. SRS ----------
 {
   let c = E.srs.newCard();
@@ -209,6 +224,7 @@ function checkTraps(inst, w) {
     if (inst.type === "numeric") ok(Number.isFinite(t.value) && !E.checkNumeric(t.value, inst.answer, inst.tolerance ?? 0.01), w, `la trampa ${t.value} se acepta como correcta (${inst.answer})`);
     else if (inst.type === "expr") ok(E.parseExpr(t.expr, inst.vars || ["x"]) && !E.checkExpr(t.expr, inst), w, `la trampa ${t.expr} no se entiende o se acepta como correcta`);
     else if (inst.type === "mc") ok(inst.options.includes(t.option) && inst.options.indexOf(t.option) !== inst.correct, w, "la trampa no es un distractor");
+    else if (inst.type === "complex") ok(Array.isArray(t.value) && t.value.every(Number.isFinite) && !E.checkComplexValue(t.value, inst.answer, inst.tolerance ?? 0.01), w, `la trampa ${t.value} se acepta como correcta (${inst.answer})`);
   }
 }
 // una respuesta numérica, de expresión o de opción múltiple (sola o como parte de un paso a paso)
@@ -229,6 +245,14 @@ function checkPart(p, w) {
     ok(!E.checkExpr(`(${p.answer})*1.1 + ${vars[0]}/10`, p), w, "una respuesta alterada se acepta como correcta");
     // la respuesta escrita en TeX por el parser compila
     checkTexStr(w + " vista previa", E.exprTex(E.parseExpr(p.answer, vars)));
+  }
+  else if (p.type === "complex") {
+    ok(Array.isArray(p.answer) && p.answer.length === 2 && p.answer.every(Number.isFinite), w, `respuesta compleja inválida: ${p.answer}`);
+    if (p.answerTex) checkTex(w + " answerTex", "$" + (p.lhs || "") + p.answerTex + "$");
+    // la respuesta, escrita como a + bi, tiene que aceptarse; corrida, no
+    const [re, im] = p.answer, sc = Math.max(1, Math.hypot(re, im));
+    ok(E.checkComplex(`${re} + (${im})i`, p), w, "la respuesta correcta no se acepta");
+    ok(!E.checkComplex(`${re + 0.2 * sc} + (${im - 0.15 * sc})i`, p), w, "una respuesta alterada se acepta como correcta");
   }
   checkTraps(p, w);
 }
@@ -348,6 +372,8 @@ function runVerify(v, answer, w) {
       ok(cnt >= 3, w, "verify: pocos puntos válidos en el dominio");
       break;
     }
+    // respuestas complejas: fn() devuelve [re, im], calculado por otro camino
+    case "cvalue": { const got = v.fn(), tol = v.tol || 1e-6, sc = Math.max(1, Math.hypot(...target)); ok(Array.isArray(got) && got.every(Number.isFinite) && Math.hypot(got[0] - target[0], got[1] - target[1]) <= tol * sc, w, `valor complejo recalculado: ${got} vs ${target}`); break; }
     case "all": for (const sub of v.list) runVerify(sub, answer, w); break;
     default: fail(w, "tipo de verify desconocido: " + v.kind);
   }
@@ -433,13 +459,13 @@ for (const cid of E.courseOrder) {
           answers.add(inst.pairs.map(p => p[0].tex || String(p[0].graph.fns ? p[0].graph.fns[0] : "")).join("|"));
           break;
         }
-        case "expr": checkPart(inst, w); answers.add(inst.prompt + "|" + inst.answer); break;
+        case "expr": case "complex": checkPart(inst, w); answers.add(inst.prompt + "|" + inst.answer); break;
         case "multi":
           ok(Array.isArray(inst.parts) && inst.parts.length >= 2, w, "un ejercicio paso a paso necesita al menos 2 partes");
           ok(!inst.verify, w, "en un paso a paso, el verify va en cada parte");
           inst.parts.forEach((p, j) => {
             const sub = E.subInst(inst, j), wj = `${w} parte ${j + 1}`;
-            ok(["numeric", "expr", "mc"].includes(sub.type), wj, "tipo de parte no soportado: " + sub.type);
+            ok(["numeric", "expr", "mc", "complex"].includes(sub.type), wj, "tipo de parte no soportado: " + sub.type);
             checkTex(wj, sub.q || "");
             ok(!!sub.q, wj, "parte sin pregunta");
             checkPart(sub, wj);
