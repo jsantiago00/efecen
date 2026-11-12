@@ -863,3 +863,301 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 5 · PRODUCTO INTERNO Y OPERADORES: RIESZ, ADJUNTO, AUTOADJUNTOS, NORMALES E ISOMETRÍAS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, A = E.a2;
+  const T = {};
+  // Simpson compuesta y evaluación de polinomios (coeficientes de menor a mayor grado), para las verificaciones
+  const simpson = (f, a, b, n = 200) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += (i % 2 ? 4 : 2) * f(a + i * h); return s * h / 3; };
+  const pev = (c, x) => c.reduce((s, k, i) => s + k * x ** i, 0);
+  // base ortonormal de R_deg[x] con ⟨p, q⟩ = ∫ p q en [a, b], por Gram-Schmidt numérico sobre 1, x, x², …
+  const onb = (a, b, deg) => {
+    const ip = (p, q) => simpson(x => pev(p, x) * pev(q, x), a, b), es = [];
+    for (let k = 0; k <= deg; k++) {
+      let w = Array(deg + 1).fill(0); w[k] = 1;
+      for (const e of es) { const c = ip(w, e); w = w.map((x, i) => x - c * e[i]); }
+      const nn = Math.sqrt(ip(w, w)); es.push(w.map(x => x / nn));
+    }
+    return { es, ip };
+  };
+  // espacios de polinomios con ⟨p, q⟩ = ∫_a^b p q: Gram de 1, x, x², … como Gn / gden, y su inversa como Ginv / den
+  const SP = {
+    "01-1": { a: 0, b: 1, deg: 1, Gn: [[6, 3], [3, 2]], gden: 6, Ginv: [[4, -6], [-6, 12]], den: 1, Gtex: R`\begin{pmatrix} 1 & \frac12 \\ \frac12 & \frac13 \end{pmatrix}` },
+    "11-1": { a: -1, b: 1, deg: 1, Gn: [[6, 0], [0, 2]], gden: 3, Ginv: [[1, 0], [0, 3]], den: 2, Gtex: R`\begin{pmatrix} 2 & 0 \\ 0 & \frac23 \end{pmatrix}` },
+    "11-2": { a: -1, b: 1, deg: 2, Ginv: [[9, 0, -15], [0, 12, 0], [-15, 0, 45]], den: 8, Gtex: R`\begin{pmatrix} 2 & 0 & \frac23 \\ 0 & \frac23 & 0 \\ \frac23 & 0 & \frac25 \end{pmatrix}` }
+  };
+  const ipPolTex = S => `\\langle p, q\\rangle = \\int_{${S.a}}^{${S.b}} p(x)\\,q(x)\\,dx`;
+  // polinomio de coeficientes nums / den (de menor a mayor grado): [texto para el parser, TeX]
+  const polTerms = (nums, den = 1) => H.terms(nums.map((p, i) => ({ p, q: den, ...H.pw(i) })).reverse());
+  const frTex = (p, q) => H.frac(p, q);
+  // producto interno en R² dado por una matriz de Gram G = PᵀP, con P de determinante 1 (así G⁻¹ es entera)
+  const gram = r => {
+    for (let t = 0; t < 40; t++) {
+      const P = A.unimod(r, 2, 3), G = A.mul(A.T(P), P);
+      if (G[0][1] !== 0 && Math.max(...G.flat().map(Math.abs)) <= 6) return { P, G, Gi: A.inv(G).map(row => row.map(x => Math.round(x))) };
+    }
+    return null;
+  };
+  const ipTex = G => `\\langle x, y\\rangle = ${H.poly([[G[0][0], "x_1y_1"], [G[0][1], "(x_1y_2 + x_2y_1)"], [G[1][1], "x_2y_2"]])}`;
+  const ipG = (G, x, y) => x.reduce((s, xi, i) => s + xi * y.reduce((t, yj, j) => t + G[i][j] * yj, 0), 0);
+  const isSym = M => M.every((row, i) => row.every((x, j) => Math.abs(x - M[j][i]) < 1e-9));
+  // normal ⇔ ‖Mx‖ = ‖Mᵀx‖ para todo x (se prueba en varios vectores fijos; es otro camino que comparar MMᵀ con MᵀM)
+  const TESTV = [[1, 2, -1], [3, -1, 2], [-2, 5, 1], [4, 1, -3], [1, -3, 5]];
+  const normalByNorms = M => { const n = M.length, Mt = A.T(M), nn = v => v.reduce((s, x) => s + x * x, 0); return TESTV.every(v0 => { const v = v0.slice(0, n); return Math.abs(nn(A.vec(M, v)) - nn(A.vec(Mt, v))) < 1e-9; }); };
+
+  T["a2-riesz-expr"] = {
+    type: "expr", concepts: ["a2-adjunto"], difficulty: 3,
+    generate(r) {
+      const key = r.pick(Object.keys(SP)), S = SP[key], n = S.deg + 1, kind = n === 3 ? r.pick(["ev", "ev", "der"]) : "ev", c = r.int(-2, 2);
+      // φ en la base 1, x, x²: p(c) o p'(c)
+      const phiB = Array.from({ length: n }, (_, k) => (kind === "ev" ? c ** k : k === 0 ? 0 : k * c ** (k - 1)));
+      const num = S.Ginv.map(row => row.reduce((s, g, k) => s + g * phiB[k], 0)), [ans, tex] = polTerms(num, S.den);
+      const naive = polTerms(phiB), differs = phiB.some((v, i) => Math.abs(v - num[i] / S.den) > 1e-9);
+      const phiTex = kind === "ev" ? `p(${c})` : `p'(${c})`, phiF = p => (kind === "ev" ? pev(p, c) : p.reduce((s, k, i) => s + (i ? i * k * c ** (i - 1) : 0), 0));
+      const basis = ["1", "x", "x^2"].slice(0, n);
+      let cache = null;
+      return {
+        prompt: `En $\\mathbb R_{${S.deg}}[x]$ con el producto interno $${ipPolTex(S)}$, el funcional $\\varphi(p) = ${phiTex}$ es lineal. Por el teorema de representación de Riesz, hay un único polinomio $q$ con $\\varphi(p) = \\langle p, q\\rangle$ para todo $p$. Escribí $q$.`,
+        lhs: "q(x) = ", answer: ans, answerTex: tex, vars: ["x"], domain: [[-2, 2]],
+        traps: differs ? [{ expr: naive[0], msg: `Ese polinomio funcionaría si $\\{${basis.join(", ")}\\}$ fuera una base ortonormal. Con la integral no lo es: hay que resolver el sistema con la matriz de Gram.` }] : [],
+        solution: [
+          `Por el [[a2-adjunto|teorema de Riesz]], $q$ queda determinado por $\\langle x^k, q\\rangle = \\varphi(x^k)$ para cada elemento de la base: ${basis.map((b, k) => `$\\varphi(${b}) = ${phiB[k]}$`).join(", ")}.`,
+          `Si $q$ tiene coordenadas $c$ en la base $\\{${basis.join(", ")}\\}$, esas condiciones forman el sistema $Gc = ${A.v(phiB)}$, con la [[al-producto-interno|matriz de Gram]] $G = ${S.Gtex}$.`,
+          `Resolviéndolo: $q(x) = ${tex}$. Se puede comprobar integrando $q$ contra cada elemento de la base.`
+        ],
+        // verificación: q = Σ φ(eᵢ) eᵢ con una base ortonormal hallada por Gram-Schmidt numérico (integrales por Simpson)
+        verify: { kind: "fnEq", dom: [[-2, 2]], tol: 1e-6, g: x => { cache = cache || onb(S.a, S.b, S.deg).es; return cache.reduce((s, e) => s + phiF(e) * pev(e, x), 0); } }
+      };
+    }
+  };
+
+  T["a2-adjunto-num"] = {
+    type: "numeric", concepts: ["a2-adjunto"], difficulty: 3,
+    generate(r) {
+      const g = gram(r); if (!g) return null;
+      const { P, G, Gi } = g, M = [[r.int(-3, 3), r.nz(-3, 3)], [r.int(-3, 3), r.int(-3, 3)]], Mt = A.T(M);
+      const B = A.mul(Gi, A.mul(Mt, G)).map(row => row.map(x => Math.round(x)));
+      const cells = [[0, 0], [0, 1], [1, 0], [1, 1]], diff = cells.filter(([i, j]) => B[i][j] !== Mt[i][j]);
+      if (!diff.length) return null;
+      const [i, j] = r.pick(diff);
+      return {
+        prompt: `En $\\mathbb R^2$ se usa el producto interno $${ipTex(G)}$, y $T(x) = Ax$ con $A = ${A.pm(M)}$. ¿Cuánto vale la entrada $(${i + 1}, ${j + 1})$ de la matriz de $T^*$ en la base canónica?`,
+        answer: B[i][j],
+        traps: [{ value: Mt[i][j], msg: "Esa es la entrada de $A^{\\mathsf T}$. La traspuesta da el adjunto solo en una base ortonormal, y la canónica no lo es para este producto interno." }],
+        solution: [
+          `El producto interno es $\\langle x, y\\rangle = x^{\\mathsf T}Gy$ con $G = ${A.pm(G)}$. Como $G \\ne I$, la base canónica no es ortonormal.`,
+          `El [[a2-adjunto|adjunto]] cumple $\\langle Ax, y\\rangle = \\langle x, By\\rangle$, o sea $x^{\\mathsf T}A^{\\mathsf T}Gy = x^{\\mathsf T}GBy$ para todos $x, y$. Entonces $GB = A^{\\mathsf T}G$ y $B = G^{-1}A^{\\mathsf T}G$.`,
+          `Con $G^{-1} = ${A.pm(Gi)}$: $B = ${A.pm(B)}$. La entrada $(${i + 1}, ${j + 1})$ es $${B[i][j]}$.`
+        ],
+        // verificación: P lleva este producto interno al usual (⟨x, y⟩ = Px·Py); ahí T es PAP⁻¹, su adjunto es la traspuesta, y se vuelve con P⁻¹
+        verify: { kind: "value", tol: 1e-9, fn: () => { const Pi = A.inv(P); return A.mul(Pi, A.mul(A.T(A.mul(P, A.mul(M, Pi))), P))[i][j]; } }
+      };
+    }
+  };
+
+  T["a2-adjunto-expr"] = {
+    type: "expr", concepts: ["a2-adjunto"], difficulty: 3,
+    generate(r) {
+      const key = r.pick(["01-1", "11-1"]), S = SP[key], deriv = r.int(0, 3) === 0;
+      const M = deriv ? [[0, 1], [0, 0]] : [[r.int(-2, 2), r.int(-2, 2)], [r.int(-2, 2), r.int(-2, 2)]];
+      if (M.flat().every(x => x === 0)) return null;
+      const c = [r.int(-3, 3), r.int(-3, 3)]; if (!c[0] && !c[1]) return null;
+      // coordenadas de T*(q): G⁻¹ Mᵀ G c, con G⁻¹ = Ginv/den y G = Gn/gden (den·gden = 6 en los dos espacios)
+      const Mt = A.T(M), Bn = A.mul(S.Ginv, A.mul(Mt, S.Gn)), D = S.den * S.gden, num = A.vec(Bn, c), [ans, tex] = polTerms(num, D);
+      if (num.every(x => x === 0) || (num[0] === 0 && num[1] === -D)) return null;
+      const naiveC = A.vec(Mt, c), naive = polTerms(naiveC), direct = polTerms(A.vec(M, c));
+      const same = (u, den) => u.every((x, k) => Math.abs(x / den - num[k] / D) < 1e-9);
+      const qTex = polTerms(c)[1], lin = (p, q) => H.poly([[p, "a_0"], [q, "a_1"]]);
+      const Tdesc = deriv ? `T(p) = p'$ (o sea, $T(a_0 + a_1x) = a_1$)` : `T(a_0 + a_1x) = (${lin(M[0][0], M[0][1])}) + (${lin(M[1][0], M[1][1])})\\,x$`;
+      const traps = [];
+      if (!same(naiveC, 1)) traps.push({ expr: naive[0], msg: "Eso es aplicar la traspuesta de $[T]$. Sirve solo si la base es ortonormal, y $\\{1, x\\}$ no lo es con esta integral: falta la matriz de Gram." });
+      if (!same(A.vec(M, c), 1) && direct[0] !== naive[0]) traps.push({ expr: direct[0], msg: "Eso es $T(q)$. Se pide el adjunto $T^*$, que en general es otro operador." });
+      let cache = null;
+      return {
+        prompt: `En $\\mathbb R_1[x]$ con $${ipPolTex(S)}$, sea $${Tdesc}. Escribí $T^*(q)$ para $q(x) = ${qTex}$.`,
+        lhs: "T^*(q)(x) = ", answer: ans, answerTex: tex, vars: ["x"], domain: [[-2, 2]], traps,
+        solution: [
+          `En la base $\\{1, x\\}$, $[T] = ${A.pm(M)}$ y la [[al-producto-interno|matriz de Gram]] es $G = ${S.Gtex}$. La base no es ortonormal, así que $[T^*]$ **no** es la traspuesta.`,
+          `Por la fórmula del [[a2-adjunto|adjunto]], $[T^*] = G^{-1}[T]^{\\mathsf T}G = ${A.pm(Bn.map(row => row.map(x => frTex(x, D))))}$.`,
+          `Aplicada a las coordenadas $${A.v(c)}$ de $q$: $T^*(q)(x) = ${tex}$.`
+        ],
+        // verificación: T*q = Σ ⟨T eᵢ, q⟩ eᵢ con una base ortonormal hallada por Gram-Schmidt numérico (integrales por Simpson)
+        verify: { kind: "fnEq", dom: [[-2, 2]], tol: 1e-6, g: x => { cache = cache || onb(S.a, S.b, 1); return cache.es.reduce((s, e) => s + cache.ip(A.vec(M, e), c) * pev(e, x), 0); } }
+      };
+    }
+  };
+
+  T["a2-proy-ort-num"] = {
+    type: "numeric", concepts: ["a2-adjunto"], difficulty: 2,
+    generate(r) {
+      const g = gram(r); if (!g) return null;
+      const { G } = g, u = [r.nz(-3, 3), r.int(-3, 3)], v = [r.int(-4, 4), r.int(-4, 4)];
+      const num = ipG(G, v, u), den = ipG(G, u, u), dot = v[0] * u[0] + v[1] * u[1], uu = u[0] * u[0] + u[1] * u[1];
+      if (num === 0 || (v[0] * u[1] - v[1] * u[0]) === 0) return null;
+      return {
+        prompt: `En $\\mathbb R^2$ con el producto interno $${ipTex(G)}$, la proyección ortogonal de $v = ${A.v(v)}$ sobre la recta generada por $u = ${A.v(u)}$ es $t\\,u$. ¿Cuánto vale $t$?`,
+        answer: num / den, answerTex: frTex(num, den),
+        traps: Math.abs(dot / uu - num / den) > 0.05 * Math.abs(num / den) + 0.02 ? [{ value: dot / uu, msg: "Eso es con el producto escalar usual. Ortogonal quiere decir ortogonal **para el producto interno dado**." }] : [],
+        solution: [
+          `La [[al-proyeccion|proyección]] $tu$ es el punto de la recta con $v - tu \\perp u$: $\\langle v - tu, u\\rangle = 0$, de donde $t = \\dfrac{\\langle v, u\\rangle}{\\langle u, u\\rangle}$.`,
+          `Con este producto interno: $\\langle v, u\\rangle = ${num}$ y $\\langle u, u\\rangle = ${den}$.`,
+          `$t = ${frTex(num, den)}$. Es el punto de la recta más cercano a $v$ medido con la norma $\\|w\\| = \\sqrt{\\langle w, w\\rangle}$, que no es la usual.`
+        ],
+        // verificación: se minimiza ‖v − tu‖² (con este producto interno) por búsqueda ternaria
+        verify: { kind: "value", tol: 1e-7, fn: () => { const f = t => { const w = [v[0] - t * u[0], v[1] - t * u[1]]; return ipG(G, w, w); }; let lo = -100, hi = 100; for (let k = 0; k < 300; k++) { const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3; if (f(m1) < f(m2)) hi = m2; else lo = m1; } return (lo + hi) / 2; } }
+      };
+    }
+  };
+
+  T["a2-autoadjunto-vf"] = {
+    type: "tf", concepts: ["a2-normal"], difficulty: 2,
+    generate(r) {
+      const g = gram(r); if (!g) return null;
+      const { G, Gi } = g, kind = r.pick(["gs", "gs", "sym", "pert"]), b = r.nz(-3, 3), S = [[r.int(-3, 3), b], [b, r.int(-3, 3)]];
+      let M = kind === "sym" ? S : A.mul(Gi, S).map(row => row.map(x => Math.round(x)));
+      if (kind === "pert") { M = M.map(row => row.slice()); M[r.int(0, 1)][r.int(0, 1)] += r.nz(-2, 2); }
+      if (Math.max(...M.flat().map(Math.abs)) > 15) return null;
+      const GM = A.mul(G, M), val = isSym(GM), symM = isSym(M);
+      const note = val && !symM ? " Fijate que $A$ no es simétrica y aun así $T$ es autoadjunto: la simetría de la matriz solo cuenta en una base ortonormal."
+        : !val && symM ? " Fijate que $A$ es simétrica, pero eso solo asegura que $T$ sea autoadjunto para el producto escalar usual." : "";
+      return {
+        prompt: `En $\\mathbb R^2$ con el producto interno $${ipTex(G)}$, sea $T(x) = Ax$ con $A = ${A.pm(M)}$. <b>Verdadero o falso:</b> $T$ es autoadjunto.`,
+        answer: val,
+        explanation: `Con $\\langle x, y\\rangle = x^{\\mathsf T}Gy$, $T$ es [[a2-normal|autoadjunto]] si y solo si $GA$ es simétrica. Acá $GA = ${A.pm(GM)}$, que ${val ? "es" : "no es"} simétrica.${note}`,
+        solution: [`$\\langle Ax, y\\rangle = x^{\\mathsf T}A^{\\mathsf T}Gy$ y $\\langle x, Ay\\rangle = x^{\\mathsf T}GAy$. Son iguales para todos $x, y$ si y solo si $A^{\\mathsf T}G = GA$, o sea, si $GA$ es simétrica (porque $G$ lo es).`],
+        // verificación: se compara ⟨Ax, y⟩ con ⟨x, Ay⟩ en pares de vectores fijos
+        verify: { kind: "truth", fn: () => [[[1, 2], [3, -1]], [[-2, 5], [4, 1]], [[2, -3], [-1, 4]]].every(([x, y]) => Math.abs(ipG(G, A.vec(M, x), y) - ipG(G, x, A.vec(M, y))) < 1e-9) }
+      };
+    }
+  };
+
+  T["a2-autoval-autoadj-num"] = {
+    type: "numeric", concepts: ["a2-normal"], difficulty: 3,
+    generate(r) {
+      const g = gram(r); if (!g) return null;
+      const { P, G } = g, a = r.int(-3, 3), shape = r.pick(["aa", "ab"]), b = r.nz(-3, 3);
+      // S' simétrica con autovalores enteros: [[a, b], [b, a]] → a ± b; [[a, 2], [2, a + 3]] → a − 1, a + 4
+      const Sp = shape === "aa" ? [[a, b], [b, a]] : [[a, 2], [2, a + 3]], eig = shape === "aa" ? [a - Math.abs(b), a + Math.abs(b)] : [a - 1, a + 4];
+      // A = P⁻¹S'P es autoadjunta para ⟨x, y⟩ = xᵀ(PᵀP)y, porque GA = PᵀS'P es simétrica
+      const M = A.mul(A.inv(P), A.mul(Sp, P)).map(row => row.map(x => Math.round(x)));
+      if (isSym(M) || Math.max(...M.flat().map(Math.abs)) > 15) return null;
+      const ask = r.pick(["max", "min"]), ans = ask === "max" ? eig[1] : eig[0];
+      return {
+        prompt: `En $\\mathbb R^2$ con el producto interno $${ipTex(G)}$, el operador $T(x) = Ax$ con $A = ${A.pm(M)}$ es autoadjunto (se puede comprobar que $GA$ es simétrica). ¿Cuál es su autovalor ${ask === "max" ? "mayor" : "menor"}?`,
+        answer: ans,
+        solution: [
+          `Aunque $A$ no es simétrica, $T$ es [[a2-normal|autoadjunto]] para este producto interno, así que sus autovalores son reales y hay una base ortonormal (para $\\langle\\cdot,\\cdot\\rangle$) de autovectores.`,
+          `$\\chi_A(x) = ${H.poly([[1, "x^{2}"], [-(M[0][0] + M[1][1]), "x"], [M[0][0] * M[1][1] - M[0][1] * M[1][0], ""]])}$, con raíces $${eig[0]}$ y $${eig[1]}$.`,
+          `El ${ask === "max" ? "mayor" : "menor"} es $${ans}$. También es el ${ask === "max" ? "máximo" : "mínimo"} del cociente de Rayleigh $\\dfrac{\\langle Ax, x\\rangle}{\\langle x, x\\rangle}$.`
+        ],
+        // verificación: extremo del cociente de Rayleigh ⟨Ax, x⟩/⟨x, x⟩ sobre la circunferencia, por barrido y sección áurea
+        verify: { kind: "value", tol: 1e-6, fn: () => {
+          const sg = ask === "max" ? 1 : -1, q = th => { const x = [Math.cos(th), Math.sin(th)]; return sg * ipG(G, A.vec(M, x), x) / ipG(G, x, x); };
+          let best = 0; for (let k = 1; k < 720; k++) if (q(k * Math.PI / 720) > q(best * Math.PI / 720)) best = k;
+          let lo = (best - 1) * Math.PI / 720, hi = (best + 1) * Math.PI / 720; const gr = (Math.sqrt(5) - 1) / 2;
+          for (let k = 0; k < 100; k++) { const m1 = hi - gr * (hi - lo), m2 = lo + gr * (hi - lo); if (q(m1) > q(m2)) hi = m2; else lo = m1; }
+          return sg * q((lo + hi) / 2);
+        } }
+      };
+    }
+  };
+
+  T["a2-normal-mc"] = {
+    type: "mc", concepts: ["a2-normal"], difficulty: 2,
+    generate(r) {
+      const n = r.pick([2, 3]), a = r.int(-2, 3);
+      let ok;
+      if (n === 2) { const b = r.nz(-3, 3); ok = [[a, -b], [b, a]]; }
+      else { const [p, q, s] = [r.int(-2, 2), r.int(-2, 2), r.nz(-2, 2)]; ok = [[a, p, q], [-p, a, s], [-q, -s, a]]; }
+      const randM = () => Array.from({ length: n }, () => Array.from({ length: n }, () => r.int(-3, 3)));
+      const sym = (() => { const M = randM(); return M.map((row, i) => row.map((x, j) => (j < i ? M[j][i] : x))); })();
+      const tri = (() => { const M = randM(); return M.map((row, i) => row.map((x, j) => (j < i ? 0 : i === 0 && j === 1 && x === 0 ? 1 : x))); })();
+      // antisimétrica más una diagonal no escalar: parece normal, pero no lo es
+      const d = r.distinct(n, -3, 3), kd = ok.map((row, i) => row.map((x, j) => (i === j ? d[i] : x)));
+      const gen = randM();
+      const pool = [sym, tri, kd, gen];
+      const good = M => normalByNorms(M) && !isSym(M);
+      if (!good(ok) || pool.some(good)) return null;
+      const opt = M => `$${A.pm(M)}$`, okT = opt(ok), bads = r.shuffle(pool).map(opt).filter(t => t !== okT);
+      if (new Set(bads).size < 3) return null;
+      return {
+        prompt: `¿Cuál de estas matrices reales es <b>normal</b> ($AA^{\\mathsf T} = A^{\\mathsf T}A$) pero <b>no</b> es simétrica?`,
+        ...H.mc(r, okT, bads, { text: true }),
+        solution: [
+          a === 0 ? `La correcta es $A = ${A.pm(ok)}$, que es antisimétrica: $A^{\\mathsf T} = -A$, así que $AA^{\\mathsf T} = -A^2 = A^{\\mathsf T}A$. Es [[a2-normal|normal]].`
+            : `La correcta es $${A.pm(ok)} = ${a === 1 ? "" : a === -1 ? "-" : a}I + K$ con $K$ antisimétrica. Como $I$ conmuta con todo, $AA^{\\mathsf T} = (${a === 1 ? "" : a === -1 ? "-" : a}I + K)(${a === 1 ? "" : a === -1 ? "-" : a}I - K) = ${a * a === 1 ? "" : a * a}I - K^2 = A^{\\mathsf T}A$: es [[a2-normal|normal]].`,
+          `Una simétrica es normal, pero no cumple la segunda condición. En las demás, $AA^{\\mathsf T} \\ne A^{\\mathsf T}A$. Para descartarlas rápido: en una normal, cada fila tiene la misma norma que la columna del mismo número, porque son las entradas diagonales de $AA^{\\mathsf T}$ y de $A^{\\mathsf T}A$.`,
+          `Ojo: una antisimétrica más una diagonal **no escalar** en general no es normal, porque la diagonal ya no conmuta con $K$.`
+        ],
+        // verificación: normalidad comparando ‖Ax‖ con ‖Aᵀx‖ en varios vectores; solo la correcta es normal y no simétrica
+        verify: { kind: "truth", target: true, fn: () => good(ok) && !pool.some(good) }
+      };
+    }
+  };
+
+  const cards = {
+    "a2-adjunto": {
+      title: "Teorema de Riesz y operador adjunto", aliases: ["teorema de representación de Riesz", "teorema de Riesz", "operador adjunto", "adjunto de un operador", "transformación adjunta"], concepts: ["a2-adjunto"],
+      summary: "En un espacio con producto interno de dimensión finita, todo funcional es φ(v) = ⟨q, v⟩ para un único q (Riesz). De ahí sale el adjunto T*, definido por ⟨Tv, w⟩ = ⟨v, T*w⟩. En una base ortonormal, [T*] es la traspuesta conjugada de [T]; con matriz de Gram G, [T*] = G⁻¹[T]*G.",
+      def: [R`Convención (la de [[al-pi-complejo|M104]]): $\langle\cdot,\cdot\rangle$ es lineal en la segunda variable y conjugado-lineal en la primera. En el caso real es bilineal y simétrico.`,
+        R`**Teorema de representación de Riesz.** Si $V$ tiene dimensión finita y producto interno, para cada [[a2-dual|funcional lineal]] $\varphi \in V^*$ hay un único $q \in V$ con $\varphi(v) = \langle q, v\rangle$ para todo $v$. Con una base ortonormal $\{e_i\}$: $q = \sum_i \overline{\varphi(e_i)}\,e_i$.`,
+        R`**Adjunto.** Para $T: V \to V$ hay un único operador $T^*$ con $$\langle Tv, w\rangle = \langle v, T^*w\rangle \quad \text{para todos } v, w.$$`,
+        R`**Su matriz.** En una base ortonormal, $[T^*] = \overline{[T]}^{\mathsf T}$. En una base cualquiera con matriz de Gram $G$ ($G_{ij} = \langle b_i, b_j\rangle$), $[T^*] = G^{-1}\,\overline{[T]}^{\mathsf T}\,G$.`,
+        R`**Propiedades.** $(T^*)^* = T$, $(S + T)^* = S^* + T^*$, $(\lambda T)^* = \bar\lambda T^*$, $(ST)^* = T^*S^*$, $\operatorname{Nu}(T^*) = \operatorname{Im}(T)^\perp$ e $\operatorname{Im}(T^*) = \operatorname{Nu}(T)^\perp$.`],
+      idea: [R`El producto interno da un isomorfismo natural $V \to V^*$, $q \mapsto \langle q, \cdot\rangle$: cada vector «es» un funcional. Bajo esa identificación, el adjunto es la [[a2-traspuesta|traspuesta]] de la unidad anterior, solo que ahora vive en $V$ y no en $V^*$.`,
+        R`El error más común: tomar la traspuesta de la matriz en una base que **no** es ortonormal. La fórmula $[T^*] = [T]^{\mathsf T}$ depende de la base. Por ejemplo, $1$ y $x$ no son ortogonales para $\int_0^1 pq$, y ahí la derivada y su adjunto no tienen matrices traspuestas.`,
+        R`Lo mismo pasa con «ortogonal» y «proyección»: dependen del producto interno. Cambiar el producto interno cambia qué vectores son perpendiculares.`],
+      demo: [R`**Paso 1 (Riesz, existencia).** Se toma una base ortonormal $\{e_i\}$, que existe por [[al-gram-schmidt|Gram-Schmidt]], y $q = \sum_i \overline{\varphi(e_i)}\,e_i$. Para $v = \sum_k v_ke_k$, $\langle q, v\rangle = \sum_i \varphi(e_i)\langle e_i, v\rangle = \sum_i \varphi(e_i)v_i = \varphi(v)$. Se usó que $\langle\cdot,\cdot\rangle$ conjuga los escalares de la primera variable y que $\langle e_i, v\rangle = v_i$ por ortonormalidad.`,
+        R`**Paso 2 (Riesz, unicidad).** Si $\langle q, v\rangle = \langle q', v\rangle$ para todo $v$, con $v = q - q'$ queda $\|q - q'\|^2 = 0$, así que $q = q'$.`,
+        R`**Paso 3 (existe el adjunto).** Fijado $w$, la función $v \mapsto \langle w, Tv\rangle$ es lineal en $v$ (composición de $T$ con algo lineal). Por Riesz hay un único vector, que se llama $T^*w$, con $\langle T^*w, v\rangle = \langle w, Tv\rangle$. Conjugando los dos lados: $\langle v, T^*w\rangle = \langle Tv, w\rangle$.`,
+        R`**Paso 4 ($T^*$ es lineal).** $\langle v, T^*(w + \lambda w')\rangle = \langle Tv, w + \lambda w'\rangle = \langle v, T^*w + \lambda T^*w'\rangle$ para todo $v$; por la unicidad del Paso 2, $T^*(w + \lambda w') = T^*w + \lambda T^*w'$.`,
+        R`**Paso 5 (la matriz con Gram).** En coordenadas, $\langle x, y\rangle = \bar x^{\mathsf T}Gy$. Si $A = [T]$ y $B = [T^*]$: $\langle Ax, y\rangle = \bar x^{\mathsf T}\bar A^{\mathsf T}Gy$ y $\langle x, By\rangle = \bar x^{\mathsf T}GBy$. Que coincidan para todos $x, y$ obliga a $\bar A^{\mathsf T}G = GB$, o sea $B = G^{-1}\bar A^{\mathsf T}G$. Si la base es ortonormal, $G = I$ y queda la traspuesta conjugada.`,
+        R`**Paso 6 (núcleo e imagen).** $w \in \operatorname{Nu}(T^*)$ si y solo si $\langle v, T^*w\rangle = 0$ para todo $v$, es decir $\langle Tv, w\rangle = 0$ para todo $v$, es decir $w \perp \operatorname{Im}(T)$. Aplicándolo a $T^*$ y tomando complementos se obtiene la otra igualdad. $\blacksquare$`],
+      examples: [{ q: R`En $\mathbb R_1[x]$ con $\langle p, q\rangle = \int_{-1}^1 pq$, hallar $q$ con $\langle p, q\rangle = p(1)$ para todo $p$.`, steps: [R`$q = c_0 + c_1x$. Condiciones: $\langle 1, q\rangle = 2c_0 = 1$ y $\langle x, q\rangle = \tfrac23c_1 = 1$.`, R`$q(x) = \tfrac12 + \tfrac32x$. Comprobación con $p = 1 + x$: $\int_{-1}^1 (1 + x)(\tfrac12 + \tfrac32x)\,dx = 1 + 1 = 2 = p(1)$.`] }],
+      tips: [R`Para calcular $T^*$ sin fórmulas: buscá una base ortonormal, trasponé (y conjugá) ahí, y volvé a la base original.`],
+      see: ["al-producto-interno", "al-pi-complejo", "a2-dual", "a2-traspuesta", "al-proyeccion", "a2-normal"]
+    },
+    "a2-normal": {
+      title: "Operadores autoadjuntos, normales e isometrías", aliases: ["operador autoadjunto", "operadores autoadjuntos", "operador normal", "operadores normales", "isometría lineal", "operador unitario", "proyector ortogonal", "teorema espectral para operadores normales"], concepts: ["a2-normal"],
+      summary: "Autoadjunto: T* = T. Normal: TT* = T*T. Isometría (unitario u ortogonal): T*T = I, o sea, conserva el producto interno. Teorema espectral: sobre ℂ, T tiene una base ortonormal de autovectores ⇔ es normal; sobre ℝ, ⇔ es autoadjunto.",
+      def: [R`Sea $V$ de dimensión finita con producto interno y $T: V \to V$. Se dice que $T$ es:`,
+        R`**autoadjunto** (hermítico, o simétrico si $F = \mathbb R$) si $T^* = T$; en una base ortonormal, su matriz es hermítica o simétrica;`,
+        R`**normal** si $TT^* = T^*T$; los autoadjuntos, los antiautoadjuntos ($T^* = -T$) y las isometrías son normales;`,
+        R`**isometría** (unitario si $F = \mathbb C$, ortogonal si $F = \mathbb R$) si $T^*T = I$. Equivale a conservar el producto interno, a conservar la norma, y a llevar bases ortonormales en bases ortonormales;`,
+        R`**proyector ortogonal** si $P^2 = P$ y $P^* = P$: un [[a2-nilpotente|proyector]] cuyo núcleo es perpendicular a su imagen.`,
+        R`**Teorema espectral.** Sobre $\mathbb C$, hay una base ortonormal de autovectores de $T$ si y solo si $T$ es normal. Sobre $\mathbb R$, si y solo si $T$ es autoadjunto (la versión con matrices está en [[al-espectral|M104]]).`],
+      idea: [R`Ser autoadjunto es una propiedad del operador **y** del producto interno, no de la matriz: una matriz que no es simétrica puede representar un operador autoadjunto en una base que no es ortonormal.`,
+        R`Los normales son exactamente los que se pueden «diagonalizar sin deformar»: con una base de autovectores perpendiculares entre sí. Los autoadjuntos son los normales con autovalores reales, y las isometrías, los normales con autovalores de módulo $1$.`,
+        R`El cociente de Rayleigh $\dfrac{\langle Tx, x\rangle}{\langle x, x\rangle}$ de un autoadjunto va del menor al mayor autovalor, y alcanza cada extremo en un autovector.`],
+      demo: [R`**Paso 1 (normal ⇒ misma norma).** $\|Tv\|^2 = \langle Tv, Tv\rangle = \langle v, T^*Tv\rangle = \langle v, TT^*v\rangle = \langle T^*v, T^*v\rangle = \|T^*v\|^2$. Se usó la definición de adjunto dos veces y $TT^* = T^*T$ en el medio.`,
+        R`**Paso 2 (autovectores de $T$ y de $T^*$).** Si $T$ es normal, $T - \lambda I$ también, porque su adjunto es $T^* - \bar\lambda I$ y los dos conmutan. Si $Tv = \lambda v$, por el Paso 1 aplicado a $T - \lambda I$: $\|(T^* - \bar\lambda I)v\| = \|(T - \lambda I)v\| = 0$. O sea, $T^*v = \bar\lambda v$.`,
+        R`**Paso 3 (autovalores distintos ⇒ ortogonales).** Si $Tv = \lambda v$ y $Tw = \mu w$ con $\lambda \ne \mu$: $\mu\langle v, w\rangle = \langle v, Tw\rangle = \langle T^*v, w\rangle = \langle \bar\lambda v, w\rangle = \lambda\langle v, w\rangle$. Como $\lambda \ne \mu$, $\langle v, w\rangle = 0$.`,
+        R`**Paso 4 (el complemento es invariante).** Sea $v$ un autovector, que existe sobre $\mathbb C$ porque $\chi_T$ tiene raíces. Si $w \perp v$: $\langle v, Tw\rangle = \langle T^*v, w\rangle = \lambda\langle v, w\rangle = 0$, así que $Tw \perp v$. Lo mismo con $T^*$. Entonces $v^\perp$ es [[a2-invariante|invariante]] por $T$ y $T^*$, y la restricción de $T$ ahí sigue siendo normal.`,
+        R`**Paso 5 (inducción).** Se normaliza $v$, se aplica lo mismo a $T$ restringido a $v^\perp$, que tiene una dimensión menos, y se juntan las bases ortonormales. La recíproca: en una base ortonormal de autovectores, $[T]$ y $[T^*]$ son diagonales, y las diagonales conmutan.`,
+        R`**Paso 6 (caso real).** Si $T = T^*$, por el Paso 2 $\lambda v = \bar\lambda v$, así que los autovalores son reales. La matriz de $T$ en una base ortonormal es simétrica real; vista en $\mathbb C^n$ tiene un autovalor $\lambda$, que es real, y $A - \lambda I$ es una matriz real singular, con un autovector real. Con eso, los Pasos 4 y 5 funcionan sobre $\mathbb R$.`,
+        R`**Paso 7 (proyectores ortogonales).** Si $P^2 = P = P^*$, para $v$ y $w$ cualesquiera $\langle Pv, w - Pw\rangle = \langle v, Pw - P^2w\rangle = 0$: la imagen es perpendicular al núcleo. $\blacksquare$`],
+      examples: [{ q: R`¿Es normal $A = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$?`, steps: [R`$AA^{\mathsf T} = \begin{pmatrix} 2 & 1 \\ 1 & 1 \end{pmatrix}$ y $A^{\mathsf T}A = \begin{pmatrix} 1 & 1 \\ 1 & 2 \end{pmatrix}$: no. Más rápido: la primera fila mide $\sqrt2$ y la primera columna mide $1$.`, R`Coincide con que no sea diagonalizable: una normal compleja siempre lo es.`] }],
+      tips: [R`Las rotaciones de $\mathbb R^2$ son normales y no tienen autovalores reales: sobre $\mathbb R$, normal no alcanza para diagonalizar. Hace falta autoadjunto.`],
+      see: ["a2-adjunto", "al-espectral", "al-unitarias", "al-matrices-especiales", "a2-minimal", "a2-invariante"]
+    }
+  };
+
+  E.extendCourse("m203", {
+    concepts: { "a2-adjunto": { name: "Riesz y operador adjunto" }, "a2-normal": { name: "Autoadjuntos, normales e isometrías" } },
+    templates: T,
+    units: [{
+      id: "a2-pi-u", order: 5, program: "Unidad 5", title: "Producto interno y operadores", icon: "axes",
+      diagnostic: ["a2-adjunto-num", "a2-autoadjunto-vf", "a2-normal-mc"],
+      lessons: [
+        { id: "a2-adjunto", title: "Riesz y el operador adjunto", templates: ["a2-riesz-expr", "a2-proy-ort-num", "a2-adjunto-num", "a2-adjunto-expr"], theory: ["a2-adjunto"],
+          intro: R`Con un producto interno, cada funcional es $\langle q, \cdot\rangle$, y cada operador tiene un adjunto: $\langle Tv, w\rangle = \langle v, T^*w\rangle$. Su matriz es la traspuesta solo en bases ortonormales.` },
+        { id: "a2-normal", title: "Autoadjuntos y normales", templates: ["a2-autoadjunto-vf", "a2-autoval-autoadj-num", "a2-normal-mc"], theory: ["a2-normal"],
+          intro: R`Autoadjunto: $T^* = T$. Normal: $TT^* = T^*T$. Los normales (sobre $\mathbb C$) y los autoadjuntos (sobre $\mathbb R$) tienen una base ortonormal de autovectores.` }
+      ]
+    }],
+    cards
+  });
+})();
