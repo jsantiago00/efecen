@@ -661,3 +661,282 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 3 · FUNCIONES ELEMENTALES: EXPONENCIAL, LOGARITMO, POTENCIAS Y TRIGONOMÉTRICAS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Z = E.c3, dn = Z.dn, pif = Z.pif;
+  const T = {};
+  const far = (v, ans) => Math.abs(v - ans) > 0.03 * Math.max(1, Math.abs(ans));
+  // Log z como integral de 1/ζ desde 1: primero por el eje real hasta |z| y después por un arco hasta z (no cruza el corte)
+  const logInt = z => { const rho = Z.abs(z), th = Z.arg(z), inv = w => Z.div([1, 0], w); return Z.add(Z.path(inv, t => [1 + t * (rho - 1), 0], 0, 1, 400), Z.path(inv, t => Z.polar(rho, t * th), 0, 1, 400)); };
+  const ANG = [[1, 6], [1, 4], [1, 3], [1, 2], [2, 3], [3, 4], [5, 6], [1, 1], [-1, 6], [-1, 4], [-1, 3], [-1, 2], [-2, 3], [-3, 4], [3, 2], [5, 4]];
+  const imTex = (p, q, first) => `${p < 0 ? "-" : first ? "" : "+"}${first ? "" : " "}${pif(Math.abs(p), q)}\\,i`;
+
+  T["c3-exp-multi"] = {
+    type: "multi", concepts: ["c3-exponencial"], difficulty: 1,
+    generate(r) {
+      const [p, q] = r.pick(ANG), k = r.int(2, 5), a0 = r.pick([0, 1, 2, -1, "ln", "ln"]), th = p * Math.PI / q;
+      const a = a0 === "ln" ? Math.log(k) : a0, aT = a0 === "ln" ? `\\ln ${k}` : a0 === 0 ? "" : String(a0), eT = a0 === "ln" ? String(k) : a0 === 0 ? "1" : a0 === 1 ? "e" : `e^{${a0}}`;
+      const res = Z.polar(Math.exp(a), th).map(x => (Math.abs(x) < 1e-12 ? 0 : x));
+      return {
+        prompt: `Escribí $e^{z}$ como $a + bi$, para $z = ${aT}${aT ? " " : ""}${imTex(p, q, !aT)}$.`,
+        parts: [
+          { q: "¿Cuánto vale la parte real?", type: "numeric", answer: res[0],
+            traps: [{ value: Math.exp(a), msg: "Ese es el módulo, $e^x$. Falta multiplicar por $\\cos y$." }].filter(t => far(t.value, res[0])),
+            // verificación: la exponencial sumada como serie de potencias (sin senos ni cosenos)
+            verify: { kind: "value", tol: 1e-9, fn: () => Z.expS([a, th])[0] } },
+          { q: "¿Y la parte imaginaria?", type: "numeric", answer: res[1], verify: { kind: "value", tol: 1e-9, fn: () => Z.expS([a, th])[1] } }
+        ],
+        solution: [`[[c3-exponencial|Exponencial compleja]]: $e^{x + iy} = e^x(\\cos y + i\\sin y)$. El módulo es $e^x$ y el argumento es $y$.`,
+          `Acá $e^x = ${eT}$ y $y = ${pif(p, q)}$: $\\cos y = ${dn(Math.cos(th), 4)}$, $\\sin y = ${dn(Math.sin(th), 4)}$.`,
+          `$e^z \\approx ${Z.tex(res, 4)}$.`]
+      };
+    }
+  };
+
+  const FACTS = [
+    { t: R`$e^{z + 2\pi i} = e^z$ para todo $z$`, why: R`$e^{2\pi i} = \cos 2\pi + i\sin 2\pi = 1$: la exponencial es periódica, de período $2\pi i$.`, test: P => P.every(z => Z.abs(Z.sub(Z.expS(Z.add(z, [0, 2 * Math.PI])), Z.expS(z))) < 1e-9 * (1 + Z.abs(Z.exp(z)))) },
+    { t: R`$|\sin z| \le 1$ para todo complejo $z$`, why: R`Sobre el eje imaginario, $\sin(iy) = i\sinh y$, que crece sin límite. Por ejemplo, $|\sin(2i)| \approx 3{,}63$.`, test: P => P.every(z => Z.abs(Z.sin(z)) <= 1) },
+    { t: R`$e^z$ nunca vale $0$`, why: R`$|e^z| = e^x > 0$ para todo $z = x + iy$.`, test: () => { for (let x = -20; x <= 20; x += 0.5) for (let y = -7; y <= 7; y += 0.5) if (!(Z.abs(Z.exp([x, y])) > 0)) return false; return true; } },
+    { t: R`$\operatorname{Log}(z_1z_2) = \operatorname{Log} z_1 + \operatorname{Log} z_2$ para todo par de complejos no nulos`, why: R`Con $z_1 = -1$ y $z_2 = i$: $\operatorname{Log}(-i) = -\frac{\pi}{2}i$, pero $\operatorname{Log}(-1) + \operatorname{Log}(i) = \frac{3\pi}{2}i$. La igualdad vale para los conjuntos $\log$, no para la rama principal.`, test: P => P.every(z => P.every(w => Z.abs(Z.sub(Z.log(Z.mul(z, w)), Z.add(Z.log(z), Z.log(w)))) < 1e-9)) },
+    { t: R`$e^{\operatorname{Log} z} = z$ para todo $z \ne 0$`, why: R`$e^{\ln|z| + i\operatorname{Arg} z} = |z|\,e^{i\operatorname{Arg} z} = z$: el logaritmo se define justamente para que esto valga.`, test: P => P.every(z => Z.abs(Z.sub(Z.expS(Z.log(z)), z)) < 1e-9) },
+    { t: R`$\operatorname{Log}(e^z) = z$ para todo $z$`, why: R`Solo vale si $-\pi < \operatorname{Im} z \le \pi$. Por ejemplo, $\operatorname{Log}(e^{2\pi i}) = \operatorname{Log} 1 = 0 \ne 2\pi i$.`, test: P => P.every(z => Z.abs(Z.sub(Z.log(Z.exp(z)), z)) < 1e-9) },
+    { t: R`$|e^z| = e^{\operatorname{Re} z}$ para todo $z$`, why: R`$e^z = e^x(\cos y + i\sin y)$ y el factor entre paréntesis tiene módulo 1.`, test: P => P.every(z => Math.abs(Z.abs(Z.expS(z)) - Math.exp(z[0])) < 1e-9 * (1 + Math.exp(z[0]))) },
+    { t: R`$\overline{e^z} = e^{\bar z}$ para todo $z$`, why: R`$\overline{e^x(\cos y + i\sin y)} = e^x(\cos y - i\sin y) = e^x(\cos(-y) + i\sin(-y)) = e^{x - iy}$.`, test: P => P.every(z => Z.abs(Z.sub(Z.conj(Z.expS(z)), Z.expS(Z.conj(z)))) < 1e-9 * (1 + Math.exp(z[0]))) },
+    { t: R`todos los ceros de $\sin z$ son reales`, why: R`$|\sin z|^2 = \sin^2x + \sinh^2y$ se anula solo si $y = 0$ y $\sin x = 0$: los ceros son $z = n\pi$, los mismos que en variable real.`, test: () => { for (let x = -4; x <= 4; x += 0.8) for (let y = -3; y <= 3; y += 0.6) { let z = [x, y]; for (let i = 0; i < 60; i++) { const c = Z.cos(z); if (Z.abs(c) < 1e-9) break; z = Z.sub(z, Z.div(Z.sin(z), c)); } if (Z.abs(Z.sin(z)) < 1e-10 && Math.abs(z[1]) > 1e-7) return false; } return true; } },
+    { t: R`$\cosh(iz) = \cos z$ para todo $z$`, why: R`$\cosh(iz) = \frac{e^{iz} + e^{-iz}}{2}$, que es la definición de $\cos z$.`, test: P => P.every(z => Z.abs(Z.sub(Z.cosh(Z.mul([0, 1], z)), Z.cos(z))) < 1e-9 * (1 + Z.abs(Z.cos(z)))) },
+    { t: R`$\sin(iz) = i\sinh z$ para todo $z$`, why: R`$\sin(iz) = \frac{e^{-z} - e^{z}}{2i} = i\,\frac{e^z - e^{-z}}{2}$, porque $\frac1i = -i$.`, test: P => P.every(z => Z.abs(Z.sub(Z.sin(Z.mul([0, 1], z)), Z.mul([0, 1], Z.sinh(z)))) < 1e-9 * (1 + Z.abs(Z.sinh(z)))) },
+    { t: R`la ecuación $e^z = -1$ no tiene solución`, why: R`$e^{i\pi} = -1$. La exponencial compleja toma todos los valores salvo el $0$; las soluciones son $z = (2k + 1)\pi i$.`, test: () => !(Z.abs(Z.add(Z.expS([0, Math.PI]), [1, 0])) < 1e-9) },
+    { t: R`$\cos^2z + \sin^2z = 1$ para todo complejo $z$`, why: R`Sale de las definiciones con exponenciales: los términos $e^{2iz}$ y $e^{-2iz}$ se cancelan y queda $\frac{2 + 2}{4} = 1$.`, test: P => P.every(z => Z.abs(Z.sub(Z.add(Z.ipow(Z.cos(z), 2), Z.ipow(Z.sin(z), 2)), [1, 0])) < 1e-8 * (1 + Z.abs(Z.cos(z)) ** 2)) },
+    { t: R`$\operatorname{Log} z$ es continua en $z = -1$`, why: R`Justo arriba del semieje real negativo, $\operatorname{Arg} z \approx \pi$; justo abajo, $\approx -\pi$. Hay un salto de $2\pi i$ en todo el corte.`, test: () => Z.abs(Z.sub(Z.log([-1, 1e-9]), Z.log([-1, -1e-9]))) < 1e-3 }
+  ];
+  T["c3-elementales-vf"] = {
+    type: "tf", concepts: ["c3-exponencial", "c3-logaritmo", "c3-trig"], difficulty: 2,
+    generate(r) {
+      const F = r.pick(FACTS);
+      const P = [[0.3, 1.1], [-1.2, 2.5], [2, -0.7], [-0.5, -3], [1.5, 4], [-1, 0], [0, 1], [0, 2], [-2, 0.4], [0.2, -5]];
+      const val = F.test(P);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${F.t}.`,
+        answer: val,
+        explanation: `${val ? "Verdadero" : "Falso"}. ${F.why}`,
+        solution: [`Las funciones elementales complejas extienden a las reales, pero no todas las propiedades sobreviven: mirá las fichas de la [[c3-exponencial|exponencial]], el [[c3-logaritmo|logaritmo]] y las [[c3-trig|trigonométricas]].`],
+        // verificación: cada afirmación se prueba numéricamente en puntos del plano, con otra muestra de puntos
+        verify: { kind: "truth", fn: () => F.test([[0.7, -2.2], [-1, 0], [0, 1], [-0.3, 3.5], [1.1, 0.4], [0, 2], [-2.5, -1], [0.9, 6]]) }
+      };
+    }
+  };
+
+  T["c3-log-num"] = {
+    type: "numeric", concepts: ["c3-logaritmo"], difficulty: 1,
+    generate(r) {
+      const N = Z.nice(r), ask = r.pick(["real", "imaginaria"]);
+      if (N.mod === 1 && ask === "real" && r.bool(0.7)) return null;
+      const ans = ask === "real" ? Math.log(N.mod) : N.ap * Math.PI / N.aq;
+      return {
+        prompt: `Calculá la parte ${ask} de $\\operatorname{Log}\\left(${N.tex}\\right)$, el logaritmo principal.`,
+        answer: Math.abs(ans) < 1e-12 ? 0 : ans, ...(ask === "real" ? {} : { answerTex: pif(N.ap, N.aq) }),
+        traps: ask === "real" ? [{ value: N.mod, msg: "La parte real no es el módulo, sino su logaritmo natural: $\\ln|z|$." }].filter(t => far(t.value, ans)) : [],
+        solution: [`[[c3-logaritmo|Logaritmo principal]]: $\\operatorname{Log} z = \\ln|z| + i\\operatorname{Arg} z$.`,
+          `$|z| = ${N.modTex}$ y $\\operatorname{Arg} z = ${pif(N.ap, N.aq)}$, así que $\\operatorname{Log} z = \\ln ${N.modTex} ${N.ap < 0 ? "-" : "+"} ${pif(Math.abs(N.ap), N.aq)}\\,i \\approx ${Z.tex([Math.log(N.mod), N.ap * Math.PI / N.aq], 4)}$.`],
+        // verificación: Log z = ∫ dζ/ζ desde 1 hasta z, por un camino que no cruza el semieje real negativo
+        verify: { kind: "value", tol: 1e-6, fn: () => logInt(N.z)[ask === "real" ? 0 : 1] }
+      };
+    }
+  };
+
+  T["c3-ecuacion-exp-multi"] = {
+    type: "multi", concepts: ["c3-logaritmo"], difficulty: 2,
+    generate(r) {
+      const N = Z.nice(r), m = r.pick([1, 2, -1, -2]), re = Math.log(N.mod), im = (N.ap / N.aq + 2 * m) * Math.PI;
+      if (N.mod === 1 && r.bool(0.6)) return null;
+      const lo = pif(2 * m - 1), hi = pif(2 * m + 1);
+      return {
+        prompt: `Resolvé la ecuación $e^z = ${N.tex}$.`,
+        parts: [
+          { q: "Todas las soluciones tienen la misma parte real. ¿Cuál es?", type: "numeric", answer: re,
+            verify: { kind: "zero", tol: 1e-9, fn: a => [Z.abs(Z.expS([a, 1.3])) - N.mod] } },
+          { q: `¿Cuánto vale la parte imaginaria de la solución que cumple $${lo} < \\operatorname{Im} z \\le ${hi}$?`, type: "numeric", answer: im, answerTex: pif(N.ap + 2 * m * N.aq, N.aq),
+            traps: [{ value: N.ap * Math.PI / N.aq, msg: "Esa es la solución principal. Las demás se obtienen sumando múltiplos de $2\\pi$: buscá la que cae en el intervalo pedido." }],
+            // verificación: con esa parte imaginaria, la exponencial (por su serie) tiene que dar el número pedido
+            verify: { kind: "zero", tol: 1e-8, scale: N.mod, fn: b => { const w = Z.expS([re, b]); return [w[0] - N.z[0], w[1] - N.z[1], Math.max(0, (2 * m - 1) * Math.PI - b, b - (2 * m + 1) * Math.PI)]; } } }
+        ],
+        solution: [`$e^z = w$ se resuelve con el [[c3-logaritmo|logaritmo complejo]]: $z = \\ln|w| + i(\\operatorname{Arg} w + 2k\\pi)$, con $k$ entero. Hay infinitas soluciones, una arriba de otra.`,
+          `$|w| = ${N.modTex}$: la parte real es $\\ln ${N.modTex} \\approx ${dn(re, 4)}$.`,
+          `$\\operatorname{Arg} w = ${pif(N.ap, N.aq)}$. Con $k = ${m}$ queda $${pif(N.ap + 2 * m * N.aq, N.aq)}$, que está en el intervalo pedido.`]
+      };
+    }
+  };
+
+  T["c3-rama-mc"] = {
+    type: "mc", concepts: ["c3-logaritmo"], difficulty: 3,
+    generate(r) {
+      const k = r.nz(-3, 3), b = r.nz(-6, 6), imag = r.bool(0.4), a = imag ? [0, k] : [k, 0];
+      const cN = imag ? [b, k] : [-b, k], c = cN[0] / cN[1], cT = H.frac(cN[0], cN[1]);
+      const opts = [`Los $z$ reales con $x \\le ${cT}$`, `Los $z$ reales con $x \\ge ${cT}$`, `Los $z = iy$ del eje imaginario con $y \\ge ${cT}$`, `Los $z = iy$ del eje imaginario con $y \\le ${cT}$`];
+      const idx = imag ? (k > 0 ? 2 : 3) : (k > 0 ? 0 : 1);
+      const aT = imag ? `${H.cf(k)}i\\,z` : H.kx(k, "z");
+      const F = z => Z.log(Z.add(Z.mul(a, z), [b, 0]))[1];
+      return {
+        prompt: `La función $f(z) = \\operatorname{Log}(${aT} ${b < 0 ? "-" : "+"} ${Math.abs(b)})$ es analítica en todo el plano salvo sobre una semirrecta. ¿Cuál?`,
+        ...H.mc(r, opts[idx], opts.filter((_, i) => i !== idx), { text: true }),
+        solution: [`$\\operatorname{Log} w$ es analítica salvo en el **corte**: los $w$ reales con $w \\le 0$ ([[c3-logaritmo|rama principal]]). Entonces $f$ falla donde $w = ${aT} ${b < 0 ? "-" : "+"} ${Math.abs(b)}$ es real y $\\le 0$.`,
+          imag ? `Con $z = x + iy$: $w = (${b}${H.term(-k, "y", false)})${H.term(k, "x", false)}\\,i$. Es real si $x = 0$, y es $\\le 0$ si $${H.kx(k, "y")} \\ge ${b}$, o sea $y ${k > 0 ? "\\ge" : "\\le"} ${cT}$.`
+            : `$w$ es real solo si $z$ es real ($y = 0$), y entonces $${H.kx(k, "x")} ${b < 0 ? "-" : "+"} ${Math.abs(b)} \\le 0$ da $x ${k > 0 ? "\\le" : "\\ge"} ${cT}$${k < 0 ? " (al dividir por un negativo se da vuelta la desigualdad)" : ""}.`,
+          `El extremo de la semirrecta (${imag ? `$y = ${cT}$, sobre el eje imaginario` : `$x = ${cT}$`}) es el punto de ramificación: ahí $w = 0$.`],
+        // verificación: se busca numéricamente en cuál de las cuatro semirrectas la parte imaginaria de f pega un salto
+        verify: { kind: "truth", target: true, fn: () => {
+          const rays = [[[c - 1.5, 0], [0, 1]], [[c + 1.5, 0], [0, 1]], [[0, c + 1.5], [1, 0]], [[0, c - 1.5], [1, 0]]];
+          const jump = ([p, n]) => Math.abs(F([p[0] + 1e-7 * n[0], p[1] + 1e-7 * n[1]]) - F([p[0] - 1e-7 * n[0], p[1] - 1e-7 * n[1]])) > 1;
+          return rays.every((ry, i) => jump(ry) === (i === idx));
+        } }
+      };
+    }
+  };
+
+  const EXPO = [{ w: [0, 1], t: "i" }, { w: [0, -1], t: "-i" }, { w: [0, 2], t: "2i" }, { w: [1, 1], t: "1 + i" }, { w: [1, -1], t: "1 - i" }, { w: [2, 1], t: "2 + i" }, { w: [-1, 1], t: "-1 + i" }];
+  T["c3-potencia-multi"] = {
+    type: "multi", concepts: ["c3-potencias"], difficulty: 3,
+    generate(r) {
+      const N = Z.nice(r, 2), X = r.pick(EXPO), w = X.w;
+      if (N.z[1] === 0 && N.z[0] > 0) return null;
+      const L = [Math.log(N.mod), N.ap * Math.PI / N.aq], wL = Z.mul(w, L), mod = Math.exp(wL[0]);
+      const base = /[+-]/.test(N.tex.slice(1)) ? `\\left(${N.tex}\\right)` : N.tex.startsWith("-") ? `(${N.tex})` : N.tex;
+      return {
+        prompt: `Considerá el valor principal de $${base}^{${X.t}}$, es decir, $e^{c\\operatorname{Log} z}$ con $z = ${N.tex}$ y $c = ${X.t}$.`,
+        parts: [
+          { q: "¿Cuánto vale la parte imaginaria de $c\\operatorname{Log} z$? (Es un argumento del resultado.)", type: "numeric", answer: wL[1],
+            verify: { kind: "value", tol: 1e-6, fn: () => Z.mul(w, logInt(N.z))[1] } },
+          { q: "¿Cuál es el módulo del valor principal?", type: "numeric", answer: mod,
+            traps: [{ value: N.mod ** w[0], msg: "Con exponente complejo el módulo no es $|z|^{\\operatorname{Re} c}$: el argumento de $z$ también aporta, a través de $-\\operatorname{Im} c\\cdot\\operatorname{Arg} z$." }].filter(t => far(t.value, mod)),
+            // verificación: Log z como integral de 1/ζ y la exponencial como serie
+            verify: { kind: "value", tol: 1e-6, fn: () => Z.abs(Z.expS(Z.mul(w, logInt(N.z)))) } }
+        ],
+        solution: [`[[c3-potencias|Potencia compleja]]: $z^c = e^{c\\log z}$, y el valor principal usa $\\operatorname{Log} z = \\ln ${N.modTex} ${N.ap < 0 ? "-" : "+"} ${pif(Math.abs(N.ap), N.aq)}\\,i$.`,
+          `$c\\operatorname{Log} z = (${X.t})\\left(${Z.tex(L, 4)}\\right) \\approx ${Z.tex(wL, 4)}$.`,
+          `El módulo del resultado es $e$ elevado a la parte real, $e^{${dn(wL[0], 4)}} \\approx ${dn(mod, 4)}$, y un argumento es la parte imaginaria, $${dn(wL[1], 4)}$.`]
+      };
+    }
+  };
+
+  T["c3-trig-num"] = {
+    type: "numeric", concepts: ["c3-trig"], difficulty: 2,
+    generate(r) {
+      const fn = r.pick(["sin", "cos", "sinh", "cosh"]), circ = fn === "sin" || fn === "cos", ask = r.pick(["real", "imaginaria"]);
+      const [p, q] = r.pick([[0, 1], [1, 6], [1, 4], [1, 3], [1, 2], [2, 3], [1, 1], [-1, 6], [-1, 3], [-1, 2]]), k = r.int(2, 4), s = r.sign();
+      const th = p * Math.PI / q, lk = s * Math.log(k), z = circ ? [th, lk] : [lk, th];
+      const ch = (k + 1 / k) / 2, sh = s * (k - 1 / k) / 2;
+      const zT = circ ? (p === 0 ? `${s < 0 ? "-" : ""}i\\ln ${k}` : `${pif(p, q)} ${s < 0 ? "-" : "+"} i\\ln ${k}`) : (p === 0 ? `${s < 0 ? "-" : ""}\\ln ${k}` : `${s < 0 ? "-" : ""}\\ln ${k} ${imTex(p, q, false)}`);
+      const res = Z[fn](z), ans = res[ask === "real" ? 0 : 1];
+      const formula = { sin: "\\sin(x + iy) = \\sin x\\cosh y + i\\cos x\\sinh y", cos: "\\cos(x + iy) = \\cos x\\cosh y - i\\sin x\\sinh y", sinh: "\\sinh(x + iy) = \\sinh x\\cos y + i\\cosh x\\sin y", cosh: "\\cosh(x + iy) = \\cosh x\\cos y + i\\sinh x\\sin y" }[fn];
+      // verificación: con las definiciones por exponenciales, sumadas como series
+      const viaExp = () => {
+        const u = circ ? Z.mul([0, 1], z) : z, ep = Z.expS(u), em = Z.expS(Z.sc(-1, u));
+        return fn === "sin" ? Z.div(Z.sub(ep, em), [0, 2]) : fn === "sinh" ? Z.sc(0.5, Z.sub(ep, em)) : Z.sc(0.5, Z.add(ep, em));
+      };
+      return {
+        prompt: `Calculá la parte ${ask} de $\\${fn}\\left(${zT}\\right)$.`,
+        answer: Math.abs(ans) < 1e-12 ? 0 : ans,
+        solution: [`[[c3-trig|Funciones trigonométricas e hiperbólicas complejas]]: $${formula}$.`,
+          `Con $t = \\ln ${k}$: $\\cosh t = \\dfrac{${k} + \\frac{1}{${k}}}{2} = ${dn(ch, 4)}$ y $\\sinh t = \\dfrac{${k} - \\frac{1}{${k}}}{2} = ${dn((k - 1 / k) / 2, 4)}$ (y $\\sinh(-t) = -\\sinh t$).`,
+          `$\\${fn}\\left(${zT}\\right) \\approx ${Z.tex(res.map(x => (Math.abs(x) < 1e-12 ? 0 : x)), 4)}$: la parte ${ask} es $${dn(ans, 4)}$.`],
+        verify: { kind: "value", tol: 1e-9, fn: () => viaExp()[ask === "real" ? 0 : 1] }
+      };
+    }
+  };
+
+  const cards = {
+    "c3-exponencial": {
+      title: "La exponencial compleja", aliases: ["exponencial compleja", "función exponencial compleja", "fórmula de Euler"], concepts: ["c3-exponencial"],
+      summary: "e^z = e^x (cos y + i sen y). Es entera, con (e^z)' = e^z; |e^z| = e^x, nunca vale 0, cumple e^{z+w} = e^z e^w y es periódica de período 2πi.",
+      def: [R`Para $z = x + iy$ se define $$e^z = e^x(\cos y + i\sin y).$$ Con $x = 0$ queda la **fórmula de Euler**, $e^{iy} = \cos y + i\sin y$, y con $y = 0$, la [[exp-log-func|exponencial real]].`,
+        R`**Propiedades.** Es **entera** y $(e^z)' = e^z$. Además: $e^{z + w} = e^z e^w$; $\ |e^z| = e^x$ y $\arg e^z = y + 2k\pi$; $\ e^z \ne 0$ para todo $z$; y $e^{z + 2\pi i} = e^z$ (**período** $2\pi i$).`,
+        R`$e^z = 1$ si y solo si $z = 2k\pi i$, con $k$ entero.`],
+      idea: [R`La parte real de $z$ controla el **módulo** de $e^z$ y la parte imaginaria, el **ángulo**. Una recta vertical ($x$ fijo) se enrolla infinitas veces sobre una circunferencia de radio $e^x$; una horizontal ($y$ fijo) va a una semirrecta que sale del origen.`,
+        R`Por eso $e^z$ repite sus valores cada $2\pi i$: toda la información está en una franja horizontal de ancho $2\pi$, por ejemplo $-\pi < y \le \pi$. Esa franja se transforma en todo el plano menos el origen.`,
+        R`A diferencia de la real, la exponencial compleja toma valores negativos: $e^{i\pi} = -1$.`],
+      demo: [R`**Paso 1 (es entera).** $u = e^x\cos y$, $v = e^x\sin y$. Entonces $u_x = e^x\cos y = v_y$ y $u_y = -e^x\sin y = -v_x$: se cumple [[c3-derivada|Cauchy-Riemann]] en todo el plano, con parciales continuas.`,
+        R`**Paso 2 (su derivada).** $f' = u_x + i\,v_x = e^x\cos y + i\,e^x\sin y = e^z$.`,
+        R`**Paso 3 (suma de exponentes).** Con $z = x + iy$, $w = s + it$: $e^ze^w = e^xe^s\,(\cos y + i\sin y)(\cos t + i\sin t)$. Por el producto en [[c3-polar|forma polar]], el último factor es $\cos(y + t) + i\sin(y + t)$, y queda $e^{x + s}\,[\cos(y + t) + i\sin(y + t)] = e^{z + w}$.`,
+        R`**Paso 4 (nunca es cero y es periódica).** $|e^z| = e^x\sqrt{\cos^2y + \sin^2y} = e^x > 0$. Y por el paso 3, $e^{z + 2\pi i} = e^z e^{2\pi i} = e^z(\cos 2\pi + i\sin 2\pi) = e^z$. $\blacksquare$`],
+      examples: [{ q: R`Calculá $e^{2 + i\pi/2}$ y $e^{\ln 3 + i\pi}$.`, steps: [R`$e^{2 + i\pi/2} = e^2(\cos\frac\pi2 + i\sin\frac\pi2) = e^2\,i$.`, R`$e^{\ln 3 + i\pi} = 3(\cos\pi + i\sin\pi) = -3$.`] }],
+      tips: [R`$e^{\bar z} = \overline{e^z}$, así que $e^{\bar z}$ **no** es analítica: una función analítica no puede depender de $\bar z$.`],
+      see: ["exp-log-func", "c3-polar", "c3-logaritmo", "c3-trig"]
+    },
+    "c3-logaritmo": {
+      title: "El logaritmo complejo y sus ramas", aliases: ["logaritmo complejo", "logaritmo principal", "rama principal", "corte de rama", "punto de ramificación", "función multivaluada"], concepts: ["c3-logaritmo"],
+      summary: "log z = ln|z| + i(Arg z + 2kπ): infinitos valores. El principal es Log z = ln|z| + i Arg z, analítico fuera del semieje real negativo, con derivada 1/z. Las identidades del logaritmo valen entre conjuntos.",
+      def: [R`Para $z \ne 0$, las soluciones de $e^w = z$ son $$\log z = \ln|z| + i\,(\operatorname{Arg} z + 2k\pi),\qquad k \in \mathbb Z.$$ Es una función **multivaluada**: infinitos valores, uno arriba de otro, separados $2\pi i$.`,
+        R`El **logaritmo principal** es $\operatorname{Log} z = \ln|z| + i\operatorname{Arg} z$, con $-\pi < \operatorname{Arg} z \le \pi$. Es analítico en el plano sin el semieje real negativo ni el origen, y ahí $$\frac{d}{dz}\operatorname{Log} z = \frac1z.$$`,
+        R`Una **rama** del logaritmo se obtiene restringiendo el argumento a un intervalo $\alpha < \theta < \alpha + 2\pi$. La semirrecta $\theta = \alpha$ es el **corte de rama**, y el origen, común a todos los cortes, es el **punto de ramificación**.`,
+        R`**Identidades (entre conjuntos).** $\log(z_1z_2) = \log z_1 + \log z_2$ y $\log\frac{z_1}{z_2} = \log z_1 - \log z_2$. Con $\operatorname{Log}$ pueden fallar por un múltiplo de $2\pi i$. Siempre vale $e^{\log z} = z$; en cambio $\operatorname{Log}(e^z) = z$ solo si $-\pi < \operatorname{Im} z \le \pi$.`],
+      idea: [R`Como $e^w$ repite sus valores cada $2\pi i$, no tiene una inversa única: hay que elegir una franja. Elegir la franja $-\pi < \operatorname{Im} w \le \pi$ da el logaritmo principal.`,
+        R`El corte es inevitable: al dar una vuelta completa alrededor del origen, el argumento aumenta $2\pi$ y el logaritmo no vuelve al valor de partida. Ninguna elección continua de $\log z$ funciona en un dominio que rodee al origen.`,
+        R`Para $\operatorname{Log}(g(z))$, el corte está donde $g(z)$ es real y $\le 0$. Para ubicarlo se resuelve esa condición.`],
+      demo: [R`**Paso 1 (resolver $e^w = z$).** Con $w = u + iv$ y $z = r\,e^{i\theta}$: $e^ue^{iv} = r\,e^{i\theta}$. Igualando módulos, $e^u = r$, o sea $u = \ln r$. Igualando argumentos (que coinciden salvo vueltas), $v = \theta + 2k\pi$.`,
+        R`**Paso 2 (analítico: Cauchy-Riemann en polares).** $\operatorname{Log} z = \ln r + i\theta$, con $u = \ln r$, $v = \theta$. Entonces $r\,u_r = 1 = v_\theta$ y $u_\theta = 0 = -r\,v_r$: se cumplen las [[c3-derivada|ecuaciones en polares]], con parciales continuas mientras $\theta$ sea continua, es decir, fuera del corte.`,
+        R`**Paso 3 (la derivada).** $f' = e^{-i\theta}(u_r + i\,v_r) = e^{-i\theta}\,\frac1r = \frac{1}{r\,e^{i\theta}} = \frac1z$.`,
+        R`**Paso 4 (el producto, entre conjuntos).** $\ln|z_1z_2| = \ln|z_1| + \ln|z_2|$, y $\arg(z_1z_2) = \arg z_1 + \arg z_2$ como conjuntos ([[c3-polar|forma polar]]). Sumando, cada valor de $\log(z_1z_2)$ es suma de un valor de $\log z_1$ y uno de $\log z_2$, y al revés. $\blacksquare$`],
+      examples: [{ q: R`Hallá $\log(-1 - i)$ y $\operatorname{Log}(-1 - i)$.`, steps: [R`$|-1 - i| = \sqrt2$ y $\operatorname{Arg}(-1 - i) = -\frac{3\pi}{4}$.`, R`$\operatorname{Log}(-1 - i) = \frac12\ln2 - \frac{3\pi}{4}i$, y $\log(-1 - i) = \frac12\ln 2 + i\left(-\frac{3\pi}{4} + 2k\pi\right)$.`] },
+        { q: R`Resolvé $e^z = 1 - i$.`, steps: [R`$z = \log(1 - i) = \frac12\ln2 + i\left(-\frac\pi4 + 2k\pi\right)$, $k \in \mathbb Z$.`] }],
+      tips: [R`$\operatorname{Log}$ está definido en el semieje real negativo ($\operatorname{Log}(-1) = \pi i$), pero ahí no es continuo, y por eso no es analítico.`, R`$\operatorname{Log}(z^2) \ne 2\operatorname{Log} z$ en general: probá con $z = -1$.`],
+      see: ["exp-log-func", "c3-exponencial", "c3-polar", "c3-potencias"]
+    },
+    "c3-potencias": {
+      title: "Potencias complejas", aliases: ["potencia compleja", "potencias complejas", "exponente complejo", "valor principal de una potencia"], concepts: ["c3-potencias"],
+      summary: "z^c = e^{c log z}: en general, infinitos valores. El valor principal usa Log z. Con c entero hay un solo valor; con c = p/q irreducible, q valores (las raíces); en otro caso, infinitos.",
+      def: [R`Para $z \ne 0$ y $c$ complejo, $$z^c = e^{c\log z}.$$ Como $\log z$ tiene infinitos valores, $z^c$ en general también. El **valor principal** es $e^{c\operatorname{Log} z}$.`,
+        R`**Cuántos valores hay.** Si $c$ es entero, uno solo (la potencia de siempre). Si $c = \frac pq$ es una fracción irreducible, exactamente $q$ (son las [[c3-raices|raíces q-ésimas]] de $z^p$). Si $c$ es irracional o no real, infinitos.`,
+        R`Fijada una rama de $\log z$, la función $z^c$ es analítica en el dominio de esa rama y $\dfrac{d}{dz}z^c = c\,z^{c - 1}$. La **exponencial de base $c$** es $c^z = e^{z\log c}$; con $c = e$ y el valor principal se recupera $e^z$.`],
+      idea: [R`Es la misma idea que en variable real, donde $a^b = e^{b\ln a}$; lo nuevo es que el logaritmo no es único.`,
+        R`Resultado sorprendente: $i^i = e^{i\log i} = e^{i\cdot i(\pi/2 + 2k\pi)} = e^{-\pi/2 - 2k\pi}$. Todos los valores son **reales**; el principal es $e^{-\pi/2} \approx 0{,}208$.`,
+        R`Las reglas $(z_1z_2)^c = z_1^c z_2^c$ y $(z^c)^d = z^{cd}$ pueden fallar con valores principales, por lo mismo que fallan las del logaritmo.`],
+      demo: [R`**Paso 1 (todos los valores).** $z^c = e^{c[\operatorname{Log} z + 2k\pi i]} = e^{c\operatorname{Log} z}\cdot e^{2k\pi i\,c}$. Los distintos valores se obtienen multiplicando el principal por $e^{2k\pi i\,c}$, con $k$ entero.`,
+        R`**Paso 2 ($c$ entero).** $2k\pi i\,c$ es múltiplo entero de $2\pi i$, así que $e^{2k\pi ic} = 1$ ([[c3-exponencial|período de la exponencial]]): hay un único valor.`,
+        R`**Paso 3 ($c = p/q$ irreducible).** $e^{2\pi i\,kp/q}$ depende solo del resto de $kp$ al dividir por $q$. Como $p$ y $q$ no tienen factores comunes, al variar $k = 0, \dots, q - 1$ esos restos recorren los $q$ valores posibles: hay exactamente $q$ valores.`,
+        R`**Paso 4 (los demás casos).** $e^{2k\pi ic} = e^{2m\pi ic}$ exige que $(k - m)c$ sea entero. Si $c$ no es racional (o no es real), eso solo pasa con $k = m$: todos los valores son distintos. $\blacksquare$`],
+      examples: [{ q: R`Valor principal de $(1 + i)^i$.`, steps: [R`$\operatorname{Log}(1 + i) = \frac12\ln2 + \frac\pi4 i$. Entonces $i\operatorname{Log}(1 + i) = -\frac\pi4 + \frac{\ln 2}{2}i$.`, R`$(1 + i)^i = e^{-\pi/4}\left[\cos\frac{\ln 2}{2} + i\sin\frac{\ln 2}{2}\right] \approx 0{,}429 + 0{,}155\,i$.`] }],
+      tips: [R`Con exponente no real, el módulo de $z^c$ **no** es $|z|^{\operatorname{Re} c}$: también entra el argumento de $z$.`],
+      see: ["c3-logaritmo", "c3-raices", "c3-exponencial"]
+    },
+    "c3-trig": {
+      title: "Funciones trigonométricas e hiperbólicas complejas", aliases: ["seno complejo", "coseno complejo", "seno hiperbólico complejo", "funciones trigonométricas complejas"], concepts: ["c3-trig"],
+      summary: "sen z = (e^{iz} − e^{−iz})/2i, cos z = (e^{iz} + e^{−iz})/2. Son enteras, valen las identidades de siempre, y sus ceros son los reales; pero no están acotadas: |sen z|² = sen²x + senh²y.",
+      def: [R`$$\sin z = \frac{e^{iz} - e^{-iz}}{2i},\qquad \cos z = \frac{e^{iz} + e^{-iz}}{2},\qquad \sinh z = \frac{e^z - e^{-z}}{2},\qquad \cosh z = \frac{e^z + e^{-z}}{2}.$$ Las cuatro son **enteras**, con las derivadas de siempre: $(\sin z)' = \cos z$, $(\cos z)' = -\sin z$, $(\sinh z)' = \cosh z$, $(\cosh z)' = \sinh z$.`,
+        R`**Partes real e imaginaria.** $$\sin(x + iy) = \sin x\cosh y + i\cos x\sinh y,\qquad \cos(x + iy) = \cos x\cosh y - i\sin x\sinh y.$$`,
+        R`**Relación entre ambas familias.** $\sin(iz) = i\sinh z$, $\ \cos(iz) = \cosh z$, $\ \sinh(iz) = i\sin z$, $\ \cosh(iz) = \cos z$.`,
+        R`**Módulos y ceros.** $|\sin z|^2 = \sin^2x + \sinh^2y$ y $|\cos z|^2 = \cos^2x + \sinh^2y$. Los ceros de $\sin z$ son $z = n\pi$ y los de $\cos z$, $z = \frac\pi2 + n\pi$: todos reales. Los de $\sinh z$ son $z = n\pi i$.`],
+      idea: [R`Las definiciones salen de despejar el seno y el coseno de la [[c3-exponencial|fórmula de Euler]] y dejar que el ángulo sea complejo.`,
+        R`Las [[identidades-trig|identidades]] ($\sin^2z + \cos^2z = 1$, suma de ángulos, ángulo doble) siguen valiendo. Lo que se pierde es la cota: sobre el eje imaginario, $\cos(iy) = \cosh y$ crece como $\frac{e^{|y|}}{2}$. Por eso $\sin z = 2$ **tiene** solución.`,
+        R`El seno y el seno hiperbólico son «la misma función» mirada en direcciones perpendiculares: girar la variable un cuarto de vuelta transforma una en la otra.`],
+      demo: [R`**Paso 1 (son enteras).** $e^{iz}$ y $e^{-iz}$ son composiciones de funciones enteras, y las sumas y los múltiplos de enteras son enteras. Derivando con la regla de la cadena: $(\sin z)' = \frac{ie^{iz} + ie^{-iz}}{2i} = \cos z$.`,
+        R`**Paso 2 (parte real e imaginaria del seno).** Con $z = x + iy$: $e^{iz} = e^{-y}(\cos x + i\sin x)$ y $e^{-iz} = e^{y}(\cos x - i\sin x)$. Restando y dividiendo por $2i$ (o sea, multiplicando por $-\frac i2$): $\sin z = \sin x\,\frac{e^y + e^{-y}}{2} + i\cos x\,\frac{e^y - e^{-y}}{2}$.`,
+        R`**Paso 3 (el módulo).** $|\sin z|^2 = \sin^2x\cosh^2y + \cos^2x\sinh^2y$. Reemplazando $\cosh^2y = 1 + \sinh^2y$: $\sin^2x + \sinh^2y\,(\sin^2x + \cos^2x) = \sin^2x + \sinh^2y$.`,
+        R`**Paso 4 (los ceros).** Una suma de cuadrados reales es cero solo si los dos lo son: $\sinh y = 0$ da $y = 0$, y $\sin x = 0$ da $x = n\pi$. Además, como $\sinh^2 y \to \infty$ cuando $|y| \to \infty$, $\sin z$ no está acotada. $\blacksquare$`],
+      examples: [{ q: R`Calculá $\cos(i\ln 2)$.`, steps: [R`$\cos(iy) = \cosh y$, y $\cosh(\ln 2) = \frac{2 + \frac12}{2} = \frac54$. Un coseno mayor que 1.`] },
+        { q: R`Resolvé $\sin z = 0$ y $\cosh z = 0$.`, steps: [R`$\sin z = 0$: $z = n\pi$.`, R`$\cosh z = \cos(iz) = 0$: $iz = \frac\pi2 + n\pi$, o sea $z = \left(\frac\pi2 + n\pi\right)i$ (después de renombrar $n$).`] }],
+      tips: [R`$|\sin z| \le 1$ es falso en los complejos. Para acotar integrales usá $|\sin z|^2 = \sin^2x + \sinh^2y$.`],
+      see: ["funciones-trig", "identidades-trig", "c3-exponencial"]
+    }
+  };
+
+  E.extendCourse("m103", {
+    concepts: { "c3-exponencial": { name: "Exponencial compleja" }, "c3-logaritmo": { name: "Logaritmo y ramas" }, "c3-potencias": { name: "Potencias complejas" }, "c3-trig": { name: "Trigonométricas e hiperbólicas" } },
+    templates: T,
+    units: [{
+      id: "c3-elementales-u", order: 3, program: "Unidad 3", title: "Funciones elementales", icon: "zap",
+      diagnostic: ["c3-exp-multi", "c3-ecuacion-exp-multi", "c3-trig-num"],
+      lessons: [
+        { id: "c3-exponencial", title: "La exponencial", templates: ["c3-exp-multi", "c3-elementales-vf"], theory: ["c3-exponencial"],
+          intro: R`$e^{x + iy} = e^x(\cos y + i\sin y)$: módulo $e^x$, argumento $y$ y período $2\pi i$.` },
+        { id: "c3-logaritmo", title: "El logaritmo y sus ramas", templates: ["c3-log-num", "c3-ecuacion-exp-multi", "c3-rama-mc"], theory: ["c3-logaritmo"],
+          intro: R`$\log z = \ln|z| + i(\operatorname{Arg} z + 2k\pi)$. El principal, $\operatorname{Log}$, es analítico fuera del semieje real negativo.` },
+        { id: "c3-potencias", title: "Potencias y funciones trigonométricas", templates: ["c3-potencia-multi", "c3-trig-num"], theory: ["c3-potencias", "c3-trig"],
+          intro: R`$z^c = e^{c\log z}$. $\sin z$ y $\cos z$ se definen con exponenciales y no están acotadas.` }
+      ]
+    }],
+    cards
+  });
+})();
