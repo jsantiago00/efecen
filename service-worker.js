@@ -1,6 +1,6 @@
 // Service worker de efecen: precachea todo para funcionar offline.
 // Al publicar cambios, subí CACHE para que los clientes descarguen la versión nueva.
-const CACHE = "efecen-v109";
+const CACHE = "efecen-v110";
 const AVISOS = "efecen-avisos"; // la lista de avisos que deja la app (no se borra al actualizar)
 const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "Fraktur-Bold", "Fraktur-Regular",
   "Main-Bold", "Main-BoldItalic", "Main-Italic", "Main-Regular", "Math-BoldItalic", "Math-Italic",

@@ -1245,3 +1245,237 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 5 · SERIES DE TAYLOR Y DE LAURENT
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Z = E.c3, dn = Z.dn;
+  const T = {};
+  const far = (v, ans) => Math.abs(v - ans) > 0.03 * Math.max(1, Math.abs(ans));
+  const fact = n => { let p = 1; for (let i = 2; i <= n; i++) p *= i; return p; };
+  const I2 = [0, 2 * Math.PI];
+  // coeficiente c_n del desarrollo de f en potencias de (z − z0), por su fórmula integral sobre |z − z0| = rho
+  const coef = (f, z0, rho, n, N = 2000) => Z.div(Z.circ(z => Z.mul(f(z), Z.ipow(Z.sub(z, z0), -n - 1)), z0, rho, N), I2);
+  const rad = d2 => { const s = Math.round(Math.sqrt(d2)); return s * s === d2 ? String(s) : `\\sqrt{${d2}}`; };
+  const zmin = z0 => (z0[0] === 0 && z0[1] === 0 ? "z" : z0[1] === 0 ? `z ${z0[0] < 0 ? "+" : "-"} ${Math.abs(z0[0])}` : z0[0] === 0 ? `z ${z0[1] < 0 ? "+" : "-"} ${Math.abs(z0[1]) === 1 ? "" : Math.abs(z0[1])}i` : `z - (${Z.tex(z0)})`);
+
+  T["c3-radio-num"] = {
+    type: "numeric", concepts: ["c3-taylor"], difficulty: 2, testN: 30,
+    generate(r) {
+      const form = r.int(0, 2), a = r.int(1, 4), b = r.nz(-4, 4), p = r.int(-2, 2), q = r.int(1, 3), z0 = [r.int(-3, 3), r.int(-3, 3)];
+      const F = [
+        { tex: `\\dfrac{1}{z^2 + ${a * a}}`, poles: [[0, a], [0, -a]], num: () => [1, 0] },
+        { tex: `\\dfrac{z}{(z - ${a})(${zmin([0, b])})}`, poles: [[a, 0], [0, b]], num: z => z },
+        { tex: `\\dfrac{e^z}{${H.poly([[1, "z^{2}"], [-2 * p, "z"], [p * p + q * q, ""]])}}`, poles: [[p, q], [p, -q]], num: Z.exp }
+      ][form];
+      const d2s = F.poles.map(s => (s[0] - z0[0]) ** 2 + (s[1] - z0[1]) ** 2), d2 = Math.min(...d2s);
+      if (d2 === 0) return null;
+      const near = F.poles[d2s.indexOf(d2)], Rr = Math.sqrt(d2);
+      const f = z => Z.div(F.num(z), F.poles.reduce((m, s) => Z.mul(m, Z.sub(z, s)), [1, 0]));
+      return {
+        prompt: `¿Cuál es el radio de convergencia de la serie de Taylor de $f(z) = ${F.tex}$ alrededor de $z_0 = ${Z.tex(z0)}$?`,
+        answer: Rr, answerTex: rad(d2),
+        traps: [{ value: Math.sqrt(Math.max(...d2s)), msg: "Manda el punto singular **más cercano** a $z_0$, no el más lejano." }].filter(t => far(t.value, Rr)),
+        solution: [`La [[c3-taylor|serie de Taylor]] converge en el mayor disco centrado en $z_0$ donde $f$ es analítica: el radio es la distancia de $z_0$ al punto singular más cercano.`,
+          `Los puntos singulares son los ceros del denominador: ${F.poles.map(s => `$${Z.tex(s)}$`).join(" y ")}. Sus distancias a $z_0$ son ${d2s.map(x => `$${rad(x)}$`).join(" y ")}.`,
+          `El más cercano es $${Z.tex(near)}$: $R = ${rad(d2)}${Number.isInteger(Rr) ? "" : ` \\approx ${dn(Rr, 3)}`}$.`],
+        // verificación: se calculan coeficientes de Taylor altos con su fórmula integral y se estima el radio con el criterio de la raíz
+        verify: { kind: "value", tol: 0.03, fn: () => {
+          const big = n0 => Math.max(...Array.from({ length: 8 }, (_, k) => Z.abs(coef(f, z0, 0.9 * Rr, n0 + k, 1200))));
+          return (big(60) / big(160)) ** (1 / 100);
+        } }
+      };
+    }
+  };
+
+  T["c3-taylor-coef-num"] = {
+    type: "numeric", concepts: ["c3-taylor"], difficulty: 2,
+    generate(r) {
+      const form = r.pick(["exp", "geo", "par", "sinc", "cuad"]), k = r.pick([1, 2, -1, 3]), a = r.pick([2, 3, -2, 4, -3]), c = r.pick([1, 2, 3, 4, -2]), m = r.int(0, 2);
+      let n = r.int(0, 5), tex, f, rho, num, den = 1, steps;
+      if (form === "exp") {
+        n = m + r.int(0, 4); tex = `${m === 0 ? "" : m === 1 ? "z\\," : "z^2"}e^{${H.kx(k, "z")}}`; f = z => Z.mul(Z.ipow(z, m), Z.exp(Z.sc(k, z))); rho = 1; num = k ** (n - m); den = fact(n - m);
+        steps = [`$e^w = \\sum \\frac{w^j}{j!}$ con $w = ${H.kx(k, "z")}$: $e^{${H.kx(k, "z")}} = \\sum \\frac{${k === 1 ? "" : `${H.par(k)}^j`}z^j}{j!}$.`, m ? `Al multiplicar por $z^{${m}}$, la potencia $z^{${n}}$ viene del término $j = ${n - m}$.` : `El coeficiente de $z^{${n}}$ es el término $j = ${n}$.`];
+      } else if (form === "geo") {
+        n = r.int(0, 4); tex = `\\dfrac{1}{${a} - z}`; f = z => Z.div([1, 0], Z.sub([a, 0], z)); rho = Math.abs(a) / 2; num = 1; den = a ** (n + 1);
+        steps = [`Se saca factor común $${a}$ para llegar a la serie geométrica: $\\dfrac{1}{${a} - z} = \\dfrac{1}{${a}}\\cdot\\dfrac{1}{1 - \\frac{z}{${a}}} = \\sum \\dfrac{z^n}{${H.par(a)}^{n+1}}$, para $|z| < ${Math.abs(a)}$.`];
+      } else if (form === "par") {
+        n = r.int(0, 6); tex = `\\dfrac{1}{1 ${c < 0 ? "-" : "+"} ${H.kx(Math.abs(c), "z^2")}}`; f = z => Z.div([1, 0], Z.add([1, 0], Z.sc(c, Z.mul(z, z)))); rho = 0.5 / Math.sqrt(Math.abs(c)); num = n % 2 ? 0 : (-c) ** (n / 2);
+        steps = [`Serie geométrica con razón $w = ${H.kx(-c, "z^2")}$: $\\dfrac{1}{1 - w} = \\sum w^j = \\sum ${H.par(-c)}^j z^{2j}$.`, n % 2 ? `Solo hay potencias pares: el coeficiente de $z^{${n}}$ es $0$.` : `$z^{${n}}$ corresponde a $j = ${n / 2}$.`];
+      } else if (form === "sinc") {
+        n = r.int(0, 5); tex = `\\dfrac{\\sin(${H.kx(Math.abs(k), "z")})}{z}`; const kk = Math.abs(k); f = z => Z.div(Z.sin(Z.sc(kk, z)), z); rho = 1; num = n % 2 ? 0 : (-1) ** (n / 2) * kk ** (n + 1); den = n % 2 ? 1 : fact(n + 1);
+        steps = [`$\\sin w = \\sum \\frac{(-1)^j w^{2j+1}}{(2j+1)!}$ con $w = ${H.kx(kk, "z")}$, y se divide por $z$: quedan solo potencias pares, $\\sum \\frac{(-1)^j ${kk === 1 ? "" : `${kk}^{2j+1}`}z^{2j}}{(2j+1)!}$. (La singularidad en $0$ es evitable.)`, n % 2 ? `El coeficiente de una potencia impar es $0$.` : `$z^{${n}}$ corresponde a $j = ${n / 2}$.`];
+      } else {
+        n = r.int(0, 6); tex = `\\dfrac{1}{(1 - z)^2}`; f = z => Z.div([1, 0], Z.ipow(Z.sub([1, 0], z), 2)); rho = 0.5; num = n + 1;
+        steps = [`Derivando término a término la serie geométrica $\\frac{1}{1 - z} = \\sum z^n$: $\\dfrac{1}{(1 - z)^2} = \\sum n\\,z^{n-1} = \\sum (n + 1)z^n$.`];
+      }
+      return {
+        prompt: `¿Cuál es el coeficiente de $z^{${n}}$ en la serie de Maclaurin de $f(z) = ${tex}$?`,
+        answer: num / den, answerTex: H.frac(num, den),
+        solution: [`Conviene partir de un [[c3-taylor|desarrollo conocido]] en lugar de derivar $${n}$ veces.`, ...steps, `Coeficiente: $${H.frac(num, den)}$.`],
+        // verificación: a_n = (1/2πi) ∮ f(z)/z^{n+1} dz, calculada numéricamente sobre una circunferencia chica
+        verify: { kind: "value", tol: 1e-7, fn: () => coef(f, [0, 0], rho, n)[0] }
+      };
+    }
+  };
+
+  const SER = [
+    { t: R`la serie de Maclaurin de $\frac{1}{1 + z^2}$ converge para todo $z$ real, porque la función es derivable en toda la recta`, v: false, why: R`Converge solo si $|z| < 1$: los puntos singulares $\pm i$ están a distancia $1$ del origen, aunque no se vean desde la recta real.`,
+      test: () => { let s = 0; for (let n = 0; n < 200; n++) s += (-1) ** n * 1.5 ** (2 * n); return Math.abs(s) < 10; } },
+    { t: R`la serie de Taylor de $e^z$ alrededor de cualquier punto converge en todo el plano`, v: true, why: R`$e^z$ es entera: no hay puntos singulares y el radio de convergencia es infinito.`,
+      test: () => { const z = [8, -9]; let s = [0, 0], t = [1, 0]; for (let n = 1; n < 200; n++) { s = Z.add(s, t); t = Z.sc(1 / n, Z.mul(t, z)); } return Z.abs(Z.sub(s, Z.exp(z))) < 1e-6 * Z.abs(Z.exp(z)); } },
+    { t: R`dentro de su círculo de convergencia, una serie de potencias se puede derivar término a término`, v: true, why: R`La serie derivada tiene el mismo radio de convergencia y representa a la derivada de la suma.`,
+      test: () => { const z = [0.3, 0.4]; let s = [0, 0], p = [1, 0]; for (let n = 1; n < 400; n++) { s = Z.add(s, Z.sc(n, p)); p = Z.mul(p, z); } return Z.abs(Z.sub(s, Z.div([1, 0], Z.ipow(Z.sub([1, 0], z), 2)))) < 1e-9; } },
+    { t: R`la serie geométrica $\sum z^n$ converge en todos los puntos de la circunferencia $|z| = 1$`, v: false, why: R`Sobre $|z| = 1$ el término general tiene módulo $1$: no tiende a cero, así que la serie diverge en todos esos puntos.`,
+      test: () => Z.abs(Z.ipow(Z.polar(1, 1), 500)) < 0.5 },
+    { t: R`el desarrollo de Laurent de una función en un anillo dado es único`, v: true, why: R`Cualquier serie de potencias positivas y negativas que converja a $f$ en el anillo tiene los coeficientes $c_n = \frac{1}{2\pi i}\oint \frac{f(z)}{(z - z_0)^{n+1}}dz$. Por eso vale cualquier método para hallarla.`,
+      test: () => { const f = z => Z.div([1, 0], Z.mul(Z.sub(z, [1, 0]), Z.sub(z, [2, 0]))); return [-2, -1, 0, 1].every(n => Z.abs(Z.sub(coef(f, [0, 0], 1.2, n), coef(f, [0, 0], 1.8, n))) < 1e-8); } },
+    { t: R`una misma función puede tener desarrollos de Laurent distintos, alrededor del mismo punto, en anillos distintos`, v: true, why: R`Por ejemplo, $\frac{1}{(z - 1)(z - 2)}$ tiene un desarrollo para $|z| < 1$, otro para $1 < |z| < 2$ y otro para $|z| > 2$. La unicidad vale dentro de cada anillo.`,
+      test: () => { const f = z => Z.div([1, 0], Z.mul(Z.sub(z, [1, 0]), Z.sub(z, [2, 0]))); return [-1, 0].some(n => Z.abs(Z.sub(coef(f, [0, 0], 0.5, n), coef(f, [0, 0], 1.5, n))) > 1e-3); } },
+    { t: R`si $f$ es analítica en el disco $|z - z_0| < R$, su serie de Taylor alrededor de $z_0$ converge a $f$ en todo ese disco`, v: true, why: R`Es el teorema de Taylor. En variable real no pasa: hay funciones infinitamente derivables cuya serie de Taylor no converge a la función.`,
+      test: () => { const z = Z.polar(1.9, 1); let s = [0, 0], p = [1, 0]; for (let n = 0; n < 2000; n++) { s = Z.add(s, Z.sc(-0.5, p)); p = Z.mul(p, Z.sc(0.5, z)); } return Z.abs(Z.sub(s, Z.div([1, 0], Z.sub(z, [2, 0])))) < 1e-6; } },
+    { t: R`si $\sum a_nz^n$ converge en $z = 3$, también converge en $z = -2 + 2i$`, v: true, why: R`Una serie de potencias que converge en un punto converge absolutamente en todo punto más cercano al centro, y $|-2 + 2i| = \sqrt8 < 3$.`,
+      test: () => { const z = Z.sc(1 / 3, [-2, 2]); let s = [0, 0], p = z, prev = 0; for (let n = 1; n < 400; n++) { s = Z.add(s, Z.sc(1 / n, p)); p = Z.mul(p, z); if (n === 300) prev = s; } return Z.abs(Z.sub(s, prev)) < 1e-6; } },
+    { t: R`si $\sum a_nz^n$ converge en $z = 3$, también converge en $z = -3$`, v: false, why: R`Sobre el borde del círculo de convergencia puede pasar cualquier cosa. Con $a_n = \frac{(-1)^n}{n\,3^n}$, en $z = 3$ queda la serie armónica alternada (converge) y en $z = -3$, la armónica (diverge).`,
+      test: () => { let s3 = 0, sm3 = 0, mid = 0; for (let n = 1; n <= 1e5; n++) { s3 += (-1) ** n / n; sm3 += 1 / n; if (n === 1000) mid = sm3; } return Math.abs(s3 + Math.LN2) < 1e-4 && sm3 - mid < 0.5; } }
+  ];
+  T["c3-series-vf"] = {
+    type: "tf", concepts: ["c3-series", "c3-taylor"], difficulty: 2,
+    generate(r) {
+      const S = r.pick(SER);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${S.t}.`,
+        answer: S.v,
+        explanation: `${S.v ? "Verdadero" : "Falso"}. ${S.why}`,
+        solution: [`Ver [[c3-series-potencias|series de potencias complejas]], [[c3-taylor|teorema de Taylor]] y [[c3-laurent|series de Laurent]].`],
+        // verificación: cada afirmación se pone a prueba sumando la serie o calculando coeficientes con integrales de contorno
+        verify: { kind: "truth", fn: S.test }
+      };
+    }
+  };
+
+  T["c3-laurent-coef-num"] = {
+    type: "numeric", concepts: ["c3-laurent"], difficulty: 3,
+    generate(r) {
+      const a = r.int(1, 2), b = a + r.int(1, 2), reg = r.pick(["in", "mid", "mid", "out"]), n = r.int(-3, 2), D = a - b, m = -n;
+      const val = { in: n >= 0 ? [a ** (n + 1) - b ** (n + 1), D * (a * b) ** (n + 1)] : [0, 1], mid: n >= 0 ? [1, D * b ** (n + 1)] : [a ** (m - 1), D], out: n >= 0 ? [0, 1] : [a ** (m - 1) - b ** (m - 1), D] };
+      const [num, den] = val[reg], ans = num / den;
+      const regT = { in: `|z| < ${a}`, mid: `${a} < |z| < ${b}`, out: `|z| > ${b}` }[reg], rho = { in: a / 2, mid: (a + b) / 2, out: b + 1 }[reg];
+      const f = z => Z.div([1, 0], Z.mul(Z.sub(z, [a, 0]), Z.sub(z, [b, 0])));
+      const eA = reg === "in" ? `-\\sum_{k\\ge0} \\dfrac{z^k}{${a === 1 ? "1" : `${a}^{k+1}`}}` : `\\sum_{k\\ge0} \\dfrac{${a === 1 ? "1" : `${a}^k`}}{z^{k+1}}`, eB = reg === "out" ? `\\sum_{k\\ge0} \\dfrac{${b}^k}{z^{k+1}}` : `-\\sum_{k\\ge0} \\dfrac{z^k}{${b}^{k+1}}`;
+      return {
+        prompt: `Sea $f(z) = \\dfrac{1}{(z - ${a})(z - ${b})}$. En su desarrollo de Laurent en potencias de $z$, válido en la región $${regT}$, ¿cuál es el coeficiente de $z^{${n}}$?`,
+        answer: ans, answerTex: H.frac(num, den),
+        traps: Object.entries(val).filter(([k]) => k !== reg).map(([k, [p, q]]) => ({ value: p / q, msg: `Ese es el coeficiente del desarrollo válido en $${{ in: `|z| < ${a}`, mid: `${a} < |z| < ${b}`, out: `|z| > ${b}` }[k]}$. En cada región, cada fracción simple se desarrolla de la manera que converge ahí.` })).filter((t, i, arr) => far(t.value, ans) && arr.findIndex(u => Math.abs(u.value - t.value) < 1e-12) === i),
+        solution: [`Fracciones simples: $f(z) = \\dfrac{1}{${D}}\\left(\\dfrac{1}{z - ${a}} - \\dfrac{1}{z - ${b}}\\right)$ ([[c3-laurent|serie de Laurent]]).`,
+          `En $${regT}$: $\\dfrac{1}{z - ${a}} = ${eA}$ (porque $|z| ${reg === "in" ? "<" : ">"} ${a}$) y $\\dfrac{1}{z - ${b}} = ${eB}$ (porque $|z| ${reg === "out" ? ">" : "<"} ${b}$).`,
+          `Juntando los términos con $z^{${n}}$ y multiplicando por $\\frac{1}{${D}}$: el coeficiente es $${H.frac(num, den)}$.`],
+        // verificación: c_n = (1/2πi) ∮ f(z)/z^{n+1} dz sobre una circunferencia contenida en la región
+        verify: { kind: "value", tol: 1e-7, fn: () => coef(f, [0, 0], rho, n)[0] }
+      };
+    }
+  };
+
+  T["c3-laurent-region-mc"] = {
+    type: "mc", concepts: ["c3-laurent"], difficulty: 2, testN: 60,
+    generate(r) {
+      const [p1, p2] = r.distinct(2, -3, 4), z0 = r.pick([[0, 0], [p1, 0], [r.int(-3, 3), 0], [0, r.nz(-3, 3)], [p2, 0]]);
+      const d2 = [p1, p2].map(p => (p - z0[0]) ** 2 + z0[1] ** 2).sort((x, y) => x - y);
+      if (d2[0] === d2[1]) return null;
+      const zc = `|${zmin(z0)}|`, [ra, rb] = d2.map(rad), atPole = d2[0] === 0;
+      const three = (u, v) => `Tres: $${zc} < ${u}$, $\\ ${u} < ${zc} < ${v}\\ $ y $\\ ${zc} > ${v}$`, two = v => `Dos: $0 < ${zc} < ${v}\\ $ y $\\ ${zc} > ${v}$`;
+      const ok = atPole ? two(rb) : three(ra, rb);
+      const alt = [Math.abs(p1), Math.abs(p2)].sort((x, y) => x - y).map(String);
+      const bads = [atPole ? three(Z.dn(Math.sqrt(d2[1]) / 2), rb) : two(rb), `Una sola, válida en todo el plano salvo los puntos singulares`, atPole ? `Dos: $${zc} < ${rb}\\ $ y $\\ ${zc} > ${rb}$` : `Dos: $${zc} < ${ra}\\ $ y $\\ ${zc} > ${rb}$`,
+        ...(alt[0] !== alt[1] && alt[0] !== "0" && (alt[0] !== ra || alt[1] !== rb) ? [three(alt[0], alt[1])] : [])].filter(b => b !== ok);
+      const f = z => Z.div([1, 0], Z.mul(Z.sub(z, [p1, 0]), Z.sub(z, [p2, 0])));
+      const fT = `\\dfrac{1}{(${zmin([p1, 0])})(${zmin([p2, 0])})}`.replace("(z)", "z");
+      return {
+        prompt: `¿Cuántos desarrollos de Laurent distintos tiene $f(z) = ${fT}$ en potencias de $${zmin(z0) === "z" ? "z" : `(${zmin(z0)})`}$, y en qué regiones vale cada uno?`,
+        ...H.mc(r, ok, r.shuffle(bads).slice(0, 3), { text: true }),
+        solution: [`Los puntos singulares son $${p1}$ y $${p2}$. Las regiones son los anillos centrados en $z_0 = ${Z.tex(z0)}$ que no contienen puntos singulares: los límites son las circunferencias que pasan por ellos ([[c3-laurent|serie de Laurent]]).`,
+          atPole ? `$z_0$ es uno de los puntos singulares. El otro está a distancia $${rb}$: hay un desarrollo en el disco pinchado $0 < ${zc} < ${rb}$ y otro en el exterior, $${zc} > ${rb}$.`
+            : `Las distancias de $z_0$ a los puntos singulares son $${ra}$ y $${rb}$: hay un disco (ahí el desarrollo es una serie de Taylor), un anillo y un exterior.`],
+        // verificación: los coeficientes de Laurent calculados con integrales de contorno coinciden a dos radios de una misma región y cambian al pasar a la siguiente
+        verify: { kind: "truth", target: true, fn: () => {
+          const s0 = Math.sqrt(d2[0]), s1 = Math.sqrt(d2[1]);
+          const cs = rho => [-2, -1, 0, 1].map(n => coef(f, z0, rho, n, 3000)), same = (u, v) => u.every((c, i) => Z.abs(Z.sub(c, v[i])) < 1e-6);
+          const rings = atPole ? [[0.3 * s1, 0.7 * s1], [1.4 * s1, 2.2 * s1]] : [[0.3 * s0, 0.7 * s0], [s0 + 0.3 * (s1 - s0), s0 + 0.7 * (s1 - s0)], [1.4 * s1, 2.2 * s1]];
+          const C = rings.map(([u, v]) => [cs(u), cs(v)]);
+          return C.every(([u, v]) => same(u, v)) && C.slice(1).every((c, i) => !same(c[0], C[i][0]));
+        } }
+      };
+    }
+  };
+
+  const cards = {
+    "c3-series-potencias": {
+      title: "Series de potencias complejas", aliases: ["serie de potencias compleja", "círculo de convergencia", "convergencia absoluta de series complejas"], concepts: ["c3-series"],
+      summary: "Σ aₙ(z − z₀)ⁿ converge absolutamente dentro de un círculo |z − z₀| < R y diverge afuera. Adentro, la suma es analítica y la serie se puede derivar e integrar término a término.",
+      def: [R`Una serie de complejos $\sum z_n$ converge si convergen las series de sus partes reales e imaginarias. Si $\sum |z_n|$ converge (**convergencia absoluta**), $\sum z_n$ converge. Si converge, $z_n \to 0$.`,
+        R`Una **serie de potencias** $\displaystyle\sum_{n=0}^\infty a_n(z - z_0)^n$ tiene un **radio de convergencia** $R$ (de $0$ a $\infty$): converge absolutamente si $|z - z_0| < R$ y diverge si $|z - z_0| > R$. Sobre la circunferencia $|z - z_0| = R$ puede pasar cualquier cosa.`,
+        R`Dentro del **círculo de convergencia**, la suma $S(z)$ es una función analítica, y la serie se puede **derivar e integrar término a término**: $S'(z) = \sum n\,a_n(z - z_0)^{n-1}$, con el mismo radio.`,
+        R`El radio se calcula como en variable real: $R = \lim\left|\dfrac{a_n}{a_{n+1}}\right|$ o $\dfrac1R = \lim\sqrt[n]{|a_n|}$, cuando esos límites existen.`],
+      idea: [R`Es lo mismo que las [[c2-series-potencias|series de potencias]] de Cálculo II, pero ahora el «intervalo» de convergencia se ve como lo que realmente es: un **disco**. El intervalo real era la sombra de ese disco sobre la recta.`,
+        R`La serie madre es la **geométrica**: $\dfrac{1}{1 - w} = \sum_{n\ge0} w^n$ para $|w| < 1$. Casi todos los desarrollos de la materia salen de ella, eligiendo bien $w$.`],
+      demo: [R`**Paso 1 (si converge en un punto, converge más adentro).** Supongamos que $\sum a_n(z_1 - z_0)^n$ converge. Entonces sus términos tienden a cero y están acotados: $|a_n(z_1 - z_0)^n| \le M$.`,
+        R`**Paso 2 (comparar con una geométrica).** Si $|z - z_0| < |z_1 - z_0|$, llamando $\rho = \frac{|z - z_0|}{|z_1 - z_0|} < 1$: $|a_n(z - z_0)^n| = |a_n(z_1 - z_0)^n|\,\rho^n \le M\rho^n$. Como $\sum M\rho^n$ converge ([[series|serie geométrica]]), por comparación la serie converge absolutamente en $z$.`,
+        R`**Paso 3 (existe el radio).** Sea $R$ el supremo de los $|z_1 - z_0|$ en los que la serie converge. Por el paso 2, converge absolutamente en todo punto con $|z - z_0| < R$; y si convergiera en un punto con $|z - z_0| > R$, se contradiría la definición de $R$. $\blacksquare$`],
+      examples: [{ q: R`Radio de convergencia de $\sum \dfrac{z^n}{n\,2^n}$.`, steps: [R`$\left|\dfrac{a_n}{a_{n+1}}\right| = \dfrac{(n + 1)2^{n+1}}{n\,2^n} \to 2$. Converge en $|z| < 2$.`] }],
+      see: ["c2-series-potencias", "series", "criterios-series", "c3-taylor"]
+    },
+    "c3-taylor": {
+      title: "Teorema de Taylor y desarrollos conocidos", aliases: ["teorema de Taylor complejo", "serie de Taylor compleja", "serie de Maclaurin compleja", "desarrollos de Maclaurin"], concepts: ["c3-taylor"],
+      summary: "Si f es analítica en |z − z₀| < R₀, ahí f(z) = Σ f⁽ⁿ⁾(z₀)(z − z₀)ⁿ/n!. El radio de convergencia es la distancia de z₀ al punto singular más cercano. El desarrollo es único.",
+      def: [R`**Teorema de Taylor.** Si $f$ es analítica en el disco $|z - z_0| < R_0$, entonces en todo ese disco $$f(z) = \sum_{n=0}^\infty a_n(z - z_0)^n,\qquad a_n = \frac{f^{(n)}(z_0)}{n!} = \frac{1}{2\pi i}\oint_C\frac{f(s)}{(s - z_0)^{n+1}}\,ds.$$ Con $z_0 = 0$ se llama **serie de Maclaurin**.`,
+        R`El disco de convergencia llega hasta el **punto singular más cercano** a $z_0$. El desarrollo es **único**: cualquier serie de potencias de $(z - z_0)$ que converja a $f$ es su serie de Taylor.`,
+        R`**Desarrollos para saber** (los tres primeros, para todo $z$; los otros, para $|z| < 1$): $$e^z = \sum_{n\ge0}\frac{z^n}{n!},\quad \sin z = \sum_{n\ge0}\frac{(-1)^nz^{2n+1}}{(2n+1)!},\quad \cos z = \sum_{n\ge0}\frac{(-1)^nz^{2n}}{(2n)!},\quad \frac{1}{1 - z} = \sum_{n\ge0}z^n,\quad \operatorname{Log}(1 + z) = \sum_{n\ge1}\frac{(-1)^{n+1}z^n}{n}.$$`],
+      idea: [R`En variable real, la [[c2-taylor|serie de Taylor]] puede no converger a la función. En los complejos, ser derivable en un disco **garantiza** que la serie converge a $f$ en todo el disco. «Analítica» y «desarrollable en serie de potencias» son lo mismo.`,
+        R`Esto explica un misterio de Cálculo II: $\frac{1}{1 + x^2}$ es suave en toda la recta, pero su serie solo converge para $|x| < 1$. El motivo está fuera de la recta: los puntos singulares $\pm i$.`,
+        R`Como el desarrollo es único, para hallarlo vale cualquier truco: sustituir en un desarrollo conocido, multiplicar series, derivar o integrar término a término. Casi nunca conviene calcular $f^{(n)}(z_0)$.`],
+      demo: [R`**Paso 1 (fórmula de Cauchy).** Sea $z$ con $|z - z_0| = r < R_0$ y $C$ la circunferencia $|s - z_0| = r_0$ con $r < r_0 < R_0$. Por la [[c3-cauchy-formula|fórmula integral de Cauchy]], $f(z) = \frac{1}{2\pi i}\oint_C \frac{f(s)}{s - z}\,ds$.`,
+        R`**Paso 2 (serie geométrica en el núcleo).** $\dfrac{1}{s - z} = \dfrac{1}{s - z_0}\cdot\dfrac{1}{1 - \frac{z - z_0}{s - z_0}}$. Sobre $C$, la razón $w = \frac{z - z_0}{s - z_0}$ tiene módulo $\frac{r}{r_0} < 1$, así que $\dfrac{1}{s - z} = \sum_{n=0}^{N-1}\dfrac{(z - z_0)^n}{(s - z_0)^{n+1}} + \dfrac{w^N}{s - z}$ (suma geométrica finita con su resto).`,
+        R`**Paso 3 (integrar).** Multiplicando por $\frac{f(s)}{2\pi i}$ e integrando sobre $C$: $f(z) = \sum_{n=0}^{N-1} a_n(z - z_0)^n + \rho_N$, donde $a_n = \frac{1}{2\pi i}\oint_C \frac{f(s)}{(s - z_0)^{n+1}}ds = \frac{f^{(n)}(z_0)}{n!}$ por la fórmula para las derivadas.`,
+        R`**Paso 4 (el resto tiende a cero).** $\rho_N = \frac{1}{2\pi i}\oint_C \frac{f(s)\,w^N}{s - z}\,ds$. Sobre $C$, $|f| \le M$, $|w|^N = (r/r_0)^N$ y $|s - z| \ge r_0 - r$. Por la cota ML, $|\rho_N| \le \frac{M r_0}{r_0 - r}\left(\frac{r}{r_0}\right)^N \to 0$. $\blacksquare$`],
+      examples: [{ q: R`Desarrollá $\dfrac{1}{z}$ alrededor de $z_0 = 1$.`, steps: [R`$\dfrac1z = \dfrac{1}{1 + (z - 1)} = \sum_{n\ge0}(-1)^n(z - 1)^n$, por la geométrica con $w = -(z - 1)$.`, R`Vale para $|z - 1| < 1$: el radio es la distancia de $1$ al punto singular $0$.`] },
+        { q: R`Maclaurin de $z^2e^{3z}$.`, steps: [R`$e^{3z} = \sum\frac{3^nz^n}{n!}$, así que $z^2e^{3z} = \sum\frac{3^nz^{n+2}}{n!}$, para todo $z$.`] }],
+      tips: [R`Para el radio no hace falta calcular ningún coeficiente: alcanza con ubicar los puntos singulares y medir distancias.`],
+      see: ["c2-taylor", "c3-series-potencias", "c3-cauchy-formula", "c3-laurent"]
+    },
+    "c3-laurent": {
+      title: "Series de Laurent", aliases: ["serie de Laurent", "series de Laurent", "desarrollo de Laurent", "teorema de Laurent"], concepts: ["c3-laurent"],
+      summary: "Si f es analítica en el anillo R₁ < |z − z₀| < R₂, ahí f(z) = Σ cₙ(z − z₀)ⁿ con n de −∞ a ∞. Es único en cada anillo, pero cambia de un anillo a otro. Se obtiene con la geométrica, eligiendo en cada término la forma que converge.",
+      def: [R`**Teorema de Laurent.** Si $f$ es analítica en el anillo $R_1 < |z - z_0| < R_2$, entonces ahí $$f(z) = \sum_{n=-\infty}^{\infty} c_n(z - z_0)^n,\qquad c_n = \frac{1}{2\pi i}\oint_C\frac{f(s)}{(s - z_0)^{n+1}}\,ds,$$ con $C$ cualquier contorno cerrado simple positivo, dentro del anillo, que rodee a $z_0$.`,
+        R`El desarrollo es **único en cada anillo**. La parte con potencias negativas se llama **parte principal**. Si $f$ es analítica en todo el disco $|z - z_0| < R_2$, los $c_n$ con $n < 0$ se anulan y queda la serie de Taylor.`,
+        R`**La geométrica, en sus dos formas.** Para un polo en $a$: $$\frac{1}{z - a} = -\sum_{k\ge0}\frac{z^k}{a^{k+1}}\ \ (|z| < |a|),\qquad \frac{1}{z - a} = \sum_{k\ge0}\frac{a^k}{z^{k+1}}\ \ (|z| > |a|).$$`],
+      idea: [R`Taylor describe una función cerca de un punto donde es analítica. Laurent la describe **alrededor de un punto singular** o en un anillo que rodea singularidades, a costa de admitir potencias negativas.`,
+        R`Los puntos singulares cortan el plano en anillos concéntricos alrededor de $z_0$, y en cada uno hay un desarrollo distinto. Antes de desarrollar, preguntate siempre: **¿en qué región?**`,
+        R`El coeficiente $c_{-1}$ es especial: por la fórmula, $\oint_C f(z)\,dz = 2\pi i\,c_{-1}$. Ese coeficiente es la clave de la unidad que sigue: con él se calculan integrales sin integrar.`],
+      demo: [R`**Paso 1 (fórmula de Cauchy en el anillo).** Sea $z$ en el anillo y $C_1$, $C_2$ dos circunferencias centradas en $z_0$, con radios $r_1 < |z - z_0| < r_2$, dentro del anillo. Por [[c3-cauchy-goursat|Cauchy-Goursat para dominios con agujeros]] y la fórmula de Cauchy: $f(z) = \frac{1}{2\pi i}\oint_{C_2}\frac{f(s)}{s - z}\,ds - \frac{1}{2\pi i}\oint_{C_1}\frac{f(s)}{s - z}\,ds$.`,
+        R`**Paso 2 (sobre el círculo de afuera).** En $C_2$, $|z - z_0| < |s - z_0|$: se desarrolla $\frac{1}{s - z} = \sum_{n\ge0}\frac{(z - z_0)^n}{(s - z_0)^{n+1}}$, igual que en el [[c3-taylor|teorema de Taylor]]. Da las potencias $n \ge 0$.`,
+        R`**Paso 3 (sobre el círculo de adentro).** En $C_1$, $|s - z_0| < |z - z_0|$: ahora se saca factor común al revés, $-\frac{1}{s - z} = \frac{1}{z - z_0}\cdot\frac{1}{1 - \frac{s - z_0}{z - z_0}} = \sum_{m\ge1}\frac{(s - z_0)^{m-1}}{(z - z_0)^m}$. Da las potencias negativas, con $c_{-m} = \frac{1}{2\pi i}\oint_{C_1} f(s)(s - z_0)^{m-1}ds$.`,
+        R`**Paso 4 (un solo contorno).** Los integrandos de los coeficientes son analíticos en el anillo, así que por deformación de contornos $C_1$ y $C_2$ se pueden reemplazar por un mismo contorno $C$. Los restos tienden a cero por la cota ML, como en Taylor. $\blacksquare$`],
+      examples: [{ q: R`Laurent de $\dfrac{1}{z(z - 1)}$ en $0 < |z| < 1$ y en $|z| > 1$.`, steps: [R`En $0 < |z| < 1$: $\dfrac1z\cdot\dfrac{-1}{1 - z} = -\dfrac1z - 1 - z - z^2 - \dots$`, R`En $|z| > 1$: $\dfrac{1}{z^2}\cdot\dfrac{1}{1 - \frac1z} = \dfrac{1}{z^2} + \dfrac{1}{z^3} + \dfrac{1}{z^4} + \dots$`] },
+        { q: R`Laurent de $e^{1/z}$ alrededor de $0$.`, steps: [R`Se sustituye $w = \frac1z$ en la serie de $e^w$: $e^{1/z} = \sum_{n\ge0}\dfrac{1}{n!\,z^n}$, para $|z| > 0$. Infinitas potencias negativas.`] }],
+      tips: [R`El desarrollo válido en $|z| > b$ **no** sirve para calcular el residuo en un punto singular: para eso hace falta el del disco pinchado alrededor de ese punto.`],
+      see: ["c3-taylor", "c3-series-potencias", "c3-cauchy-goursat", "fracciones-simples"]
+    }
+  };
+
+  E.extendCourse("m103", {
+    concepts: { "c3-series": { name: "Series de potencias" }, "c3-taylor": { name: "Series de Taylor" }, "c3-laurent": { name: "Series de Laurent" } },
+    templates: T,
+    units: [{
+      id: "c3-series-u", order: 5, program: "Unidad 5", title: "Series de Taylor y de Laurent", icon: "chart-column",
+      diagnostic: ["c3-radio-num", "c3-taylor-coef-num", "c3-laurent-coef-num"],
+      lessons: [
+        { id: "c3-taylor", title: "Series de potencias y de Taylor", templates: ["c3-radio-num", "c3-taylor-coef-num", "c3-series-vf"], theory: ["c3-series-potencias", "c3-taylor"],
+          intro: R`$f(z) = \sum \frac{f^{(n)}(z_0)}{n!}(z - z_0)^n$ hasta el punto singular más cercano.` },
+        { id: "c3-laurent", title: "Series de Laurent", templates: ["c3-laurent-coef-num", "c3-laurent-region-mc"], theory: ["c3-laurent"],
+          intro: R`En un anillo, $f(z) = \sum_{n=-\infty}^{\infty} c_n(z - z_0)^n$. Cada anillo tiene su desarrollo.` }
+      ]
+    }],
+    cards
+  });
+})();
