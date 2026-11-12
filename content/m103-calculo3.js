@@ -312,7 +312,7 @@
     },
     "c3-polar": {
       title: "Forma polar y exponencial: argumento, Euler y De Moivre", aliases: ["forma exponencial", "argumento principal", "argumento de un complejo", "fórmula de De Moivre", "De Moivre"], concepts: ["c3-polar"],
-      summary: "z = r(cos θ + i sen θ) = r e^{iθ}, con r = |z| y θ un argumento. Arg z es el argumento en (−π, π]. Al multiplicar se multiplican los módulos y se suman los argumentos; por eso zⁿ = rⁿ e^{inθ}.",
+      summary: "z = r(cos θ + i sen θ) = r e^(iθ), con r = |z| y θ un argumento. Arg z es el argumento en (−π, π]. Al multiplicar se multiplican los módulos y se suman los argumentos; por eso zⁿ = rⁿ e^(inθ).",
       def: [R`Todo $z \ne 0$ se escribe en **forma polar**: $$z = r(\cos\theta + i\sin\theta),\qquad r = |z|.$$ El ángulo $\theta$ es un **argumento** de $z$, y está definido salvo múltiplos de $2\pi$: $\arg z$ es el conjunto de todos ellos. El **argumento principal** $\operatorname{Arg} z$ es el único que cumple $-\pi < \theta \le \pi$.`,
         R`Con la notación $e^{i\theta} = \cos\theta + i\sin\theta$ (**fórmula de Euler**) queda la **forma exponencial** $z = r\,e^{i\theta}$.`,
         R`**Producto y cociente.** Si $z = r\,e^{i\theta}$ y $w = s\,e^{i\varphi}$, $$zw = rs\,e^{i(\theta + \varphi)},\qquad \frac zw = \frac rs\,e^{i(\theta - \varphi)}.$$ **Fórmula de De Moivre:** $z^n = r^n e^{in\theta}$ para todo entero $n$.`],
@@ -329,7 +329,7 @@
     },
     "c3-raices": {
       title: "Raíces n-ésimas de un complejo", aliases: ["raíces n-ésimas", "raíz n-ésima", "raíces de la unidad", "raíz principal"], concepts: ["c3-raices"],
-      summary: "Todo z₀ ≠ 0 tiene exactamente n raíces n-ésimas: w_k = ⁿ√r · e^{i(θ + 2kπ)/n}, k = 0, …, n − 1. Son los vértices de un polígono regular de n lados centrado en el origen.",
+      summary: "Todo z₀ ≠ 0 tiene exactamente n raíces n-ésimas: wₖ = ⁿ√r · e^(i(θ + 2kπ)/n), k = 0, …, n − 1. Son los vértices de un polígono regular de n lados centrado en el origen.",
       def: [R`Si $z_0 = r\,e^{i\theta} \ne 0$, las soluciones de $w^n = z_0$ son exactamente $n$: $$w_k = \sqrt[n]{r}\;e^{i(\theta + 2k\pi)/n},\qquad k = 0, 1, \dots, n - 1.$$ Con $\theta = \operatorname{Arg} z_0$ y $k = 0$ se obtiene la **raíz principal**.`,
         R`Las **raíces n-ésimas de la unidad** son $\omega^k$ con $\omega = e^{2\pi i/n}$. Si $w_0$ es una raíz de $z_0$, las demás son $w_0\,\omega^k$.`],
       idea: [R`Elevar a la $n$ multiplica el ángulo por $n$. Entonces hay $n$ ángulos distintos que, multiplicados por $n$, caen en el mismo lugar: los que difieren en $\frac{2\pi}{n}$. Por eso las raíces quedan repartidas en una circunferencia de radio $\sqrt[n]{r}$, formando un polígono regular.`,
@@ -850,7 +850,7 @@
   const cards = {
     "c3-exponencial": {
       title: "La exponencial compleja", aliases: ["exponencial compleja", "función exponencial compleja", "fórmula de Euler"], concepts: ["c3-exponencial"],
-      summary: "e^z = e^x (cos y + i sen y). Es entera, con (e^z)' = e^z; |e^z| = e^x, nunca vale 0, cumple e^{z+w} = e^z e^w y es periódica de período 2πi.",
+      summary: "e^z = e^x (cos y + i sen y). Es entera, con (e^z)' = e^z; |e^z| = e^x, nunca vale 0, cumple e^(z+w) = e^z e^w y es periódica de período 2πi.",
       def: [R`Para $z = x + iy$ se define $$e^z = e^x(\cos y + i\sin y).$$ Con $x = 0$ queda la **fórmula de Euler**, $e^{iy} = \cos y + i\sin y$, y con $y = 0$, la [[exp-log-func|exponencial real]].`,
         R`**Propiedades.** Es **entera** y $(e^z)' = e^z$. Además: $e^{z + w} = e^z e^w$; $\ |e^z| = e^x$ y $\arg e^z = y + 2k\pi$; $\ e^z \ne 0$ para todo $z$; y $e^{z + 2\pi i} = e^z$ (**período** $2\pi i$).`,
         R`$e^z = 1$ si y solo si $z = 2k\pi i$, con $k$ entero.`],
@@ -886,7 +886,7 @@
     },
     "c3-potencias": {
       title: "Potencias complejas", aliases: ["potencia compleja", "potencias complejas", "exponente complejo", "valor principal de una potencia"], concepts: ["c3-potencias"],
-      summary: "z^c = e^{c log z}: en general, infinitos valores. El valor principal usa Log z. Con c entero hay un solo valor; con c = p/q irreducible, q valores (las raíces); en otro caso, infinitos.",
+      summary: "z^c = e^(c log z): en general, infinitos valores. El valor principal usa Log z. Con c entero hay un solo valor; con c = p/q irreducible, q valores (las raíces); en otro caso, infinitos.",
       def: [R`Para $z \ne 0$ y $c$ complejo, $$z^c = e^{c\log z}.$$ Como $\log z$ tiene infinitos valores, $z^c$ en general también. El **valor principal** es $e^{c\operatorname{Log} z}$.`,
         R`**Cuántos valores hay.** Si $c$ es entero, uno solo (la potencia de siempre). Si $c = \frac pq$ es una fracción irreducible, exactamente $q$ (son las [[c3-raices|raíces q-ésimas]] de $z^p$). Si $c$ es irracional o no real, infinitos.`,
         R`Fijada una rama de $\log z$, la función $z^c$ es analítica en el dominio de esa rama y $\dfrac{d}{dz}z^c = c\,z^{c - 1}$. La **exponencial de base $c$** es $c^z = e^{z\log c}$; con $c = e$ y el valor principal se recupera $e^z$.`],
@@ -903,7 +903,7 @@
     },
     "c3-trig": {
       title: "Funciones trigonométricas e hiperbólicas complejas", aliases: ["seno complejo", "coseno complejo", "seno hiperbólico complejo", "funciones trigonométricas complejas"], concepts: ["c3-trig"],
-      summary: "sen z = (e^{iz} − e^{−iz})/2i, cos z = (e^{iz} + e^{−iz})/2. Son enteras, valen las identidades de siempre, y sus ceros son los reales; pero no están acotadas: |sen z|² = sen²x + senh²y.",
+      summary: "sen z = (e^(iz) − e^(−iz))/2i, cos z = (e^(iz) + e^(−iz))/2. Son enteras, valen las identidades de siempre, y sus ceros son los reales; pero no están acotadas: |sen z|² = sen²x + senh²y.",
       def: [R`$$\sin z = \frac{e^{iz} - e^{-iz}}{2i},\qquad \cos z = \frac{e^{iz} + e^{-iz}}{2},\qquad \sinh z = \frac{e^z - e^{-z}}{2},\qquad \cosh z = \frac{e^z + e^{-z}}{2}.$$ Las cuatro son **enteras**, con las derivadas de siempre: $(\sin z)' = \cos z$, $(\cos z)' = -\sin z$, $(\sinh z)' = \cosh z$, $(\cosh z)' = \sinh z$.`,
         R`**Partes real e imaginaria.** $$\sin(x + iy) = \sin x\cosh y + i\cos x\sinh y,\qquad \cos(x + iy) = \cos x\cosh y - i\sin x\sinh y.$$`,
         R`**Relación entre ambas familias.** $\sin(iz) = i\sinh z$, $\ \cos(iz) = \cosh z$, $\ \sinh(iz) = i\sin z$, $\ \cosh(iz) = \cos z$.`,
@@ -1169,7 +1169,7 @@
     },
     "c3-cauchy-goursat": {
       title: "Teorema de Cauchy-Goursat y deformación de contornos", aliases: ["teorema de Cauchy-Goursat", "Cauchy-Goursat", "deformación de contornos", "dominio simplemente conexo", "dominio múltiplemente conexo"], concepts: ["c3-cauchy-goursat"],
-      summary: "Si f es analítica dentro y sobre un contorno cerrado simple C, ∮_C f dz = 0. Consecuencia: un contorno se puede deformar sin cambiar la integral, mientras no cruce puntos donde f no es analítica.",
+      summary: "Si f es analítica dentro y sobre un contorno cerrado simple C, ∮ f dz = 0. Consecuencia: un contorno se puede deformar sin cambiar la integral, mientras no cruce puntos donde f no es analítica.",
       def: [R`**Teorema de Cauchy-Goursat.** Si $f$ es analítica en todos los puntos interiores a un contorno cerrado simple $C$ y sobre $C$, $$\oint_C f(z)\,dz = 0.$$`,
         R`Un dominio es **simplemente conexo** si todo contorno cerrado simple en él encierra solo puntos del dominio (no tiene agujeros). En un dominio así, toda función analítica tiene [[c3-primitivas|primitiva]].`,
         R`**Dominios con agujeros.** Si $C$ es un contorno cerrado simple positivo, $C_1, \dots, C_n$ son contornos cerrados simples positivos interiores a $C$, sin puntos comunes, y $f$ es analítica en la región entre ellos y sobre todos, entonces $$\oint_C f\,dz = \sum_{k=1}^n \oint_{C_k} f\,dz.$$ En particular (**deformación de contornos**), $\oint_{C} f = \oint_{C_1} f$ si $f$ es analítica entre $C$ y $C_1$.`],
@@ -1730,7 +1730,7 @@
     },
     "c3-residuo": {
       title: "Residuos y teorema de los residuos", aliases: ["teorema de los residuos", "residuo de una función", "residuo en un polo", "cálculo de residuos"], concepts: ["c3-residuo"],
-      summary: "El residuo de f en una singularidad aislada z₀ es el coeficiente c₋₁ de su Laurent. Teorema: ∮_C f dz = 2πi Σ Res, sobre las singularidades dentro de C. Polo simple: lím (z − z₀)f(z) = p(z₀)/q'(z₀). Polo de orden m: g⁽ᵐ⁻¹⁾(z₀)/(m − 1)!.",
+      summary: "El residuo de f en una singularidad aislada z₀ es el coeficiente c₋₁ de su Laurent. Teorema: ∮ f dz = 2πi Σ Res, sobre las singularidades dentro de C. Polo simple: lím (z − z₀)f(z) = p(z₀)/q'(z₀). Polo de orden m: g⁽ᵐ⁻¹⁾(z₀)/(m − 1)!.",
       def: [R`Si $z_0$ es una [[c3-singularidades|singularidad aislada]] de $f$, su **residuo** es el coeficiente de $\frac{1}{z - z_0}$ en el desarrollo de Laurent válido en $0 < |z - z_0| < \varepsilon$: $$\operatorname*{Res}_{z = z_0} f = c_{-1} = \frac{1}{2\pi i}\oint_{|z - z_0| = \rho} f(z)\,dz.$$`,
         R`**Teorema de los residuos.** Si $f$ es analítica dentro y sobre un contorno cerrado simple positivo $C$, salvo en un número finito de puntos singulares $z_1, \dots, z_n$ interiores a $C$, $$\oint_C f(z)\,dz = 2\pi i\sum_{k=1}^n \operatorname*{Res}_{z = z_k} f.$$`,
         R`**Cómo calcularlos.** Polo simple: $\operatorname{Res} = \lim_{z\to z_0}(z - z_0)f(z)$. Si $f = \frac pq$ con $p(z_0) \ne 0$, $q(z_0) = 0$ y $q'(z_0) \ne 0$: $$\operatorname*{Res}_{z = z_0}\frac pq = \frac{p(z_0)}{q'(z_0)}.$$ Polo de orden $m$, con $g(z) = (z - z_0)^mf(z)$: $$\operatorname*{Res}_{z = z_0} f = \frac{g^{(m-1)}(z_0)}{(m - 1)!}.$$ Singularidad esencial (o cuando las derivadas son pesadas): se busca el coeficiente de $\frac{1}{z - z_0}$ directamente en el desarrollo de Laurent. Evitable: $0$.`],
@@ -2010,7 +2010,7 @@
     },
     "c3-jordan": {
       title: "Integrales de Fourier, lema de Jordan y polos sobre el eje real", aliases: ["lema de Jordan", "integrales de Fourier por residuos", "desigualdad de Jordan", "contorno con indentación"], concepts: ["c3-jordan"],
-      summary: "Para ∫ f(x) cos(kx) o sen(kx) dx (k > 0) se integra f(z)e^{ikz} cerrando por arriba y se toma la parte real o imaginaria. Lema de Jordan: alcanza con que f → 0. Un polo simple sobre el eje real, esquivado por arriba, aporta πi·Res.",
+      summary: "Para ∫ f(x) cos(kx) o sen(kx) dx (k > 0) se integra f(z)e^(ikz) cerrando por arriba y se toma la parte real o imaginaria. Lema de Jordan: alcanza con que f → 0. Un polo simple sobre el eje real, esquivado por arriba, aporta πi·Res.",
       def: [R`Para $k > 0$ y $f$ racional sin polos reales: $$\int_{-\infty}^{\infty} f(x)\,e^{ikx}\,dx = 2\pi i\sum_{\operatorname{Im} z_j > 0}\operatorname{Res}\big[f(z)\,e^{ikz}\big].$$ Las integrales con $\cos kx$ y $\sin kx$ son su parte real y su parte imaginaria (si $f$ es real sobre el eje).`,
         R`**Lema de Jordan.** Si $|f(z)| \le M_R$ sobre la semicircunferencia superior $C_R$, con $M_R \to 0$ cuando $R \to \infty$, y $k > 0$, entonces $\displaystyle\int_{C_R} f(z)\,e^{ikz}\,dz \to 0$. Alcanza con $\operatorname{gr} q \ge \operatorname{gr} p + 1$.`,
         R`**Polos sobre el eje real.** Si $f(z)e^{ikz}$ tiene un polo **simple** en $x_0$ real, se lo esquiva con una semicircunferencia chica por arriba. En el límite, ese polo aporta **la mitad**: $$\text{v.p.}\int_{-\infty}^{\infty} f(x)\,e^{ikx}\,dx = 2\pi i\sum_{\text{arriba}}\operatorname{Res} + \pi i\sum_{\text{eje}}\operatorname{Res}.$$`],
@@ -2027,8 +2027,8 @@
       see: ["c3-impropias-residuos", "c3-residuo", "c3-trig", "c2-fourier"]
     },
     "c3-trig-residuos": {
-      title: "Integrales trigonométricas entre 0 y 2π", aliases: ["integrales trigonométricas por residuos", "sustitución z = e^{iθ}"], concepts: ["c3-trig-res"],
-      summary: "Con z = e^{iθ}: cos θ = (z + 1/z)/2, sen θ = (z − 1/z)/2i, dθ = dz/(iz). La integral de 0 a 2π pasa a ser una integral sobre |z| = 1 de una función racional: 2πi por los residuos de adentro.",
+      title: "Integrales trigonométricas entre 0 y 2π", aliases: ["integrales trigonométricas por residuos", "sustitución z = e^(iθ)"], concepts: ["c3-trig-res"],
+      summary: "Con z = e^(iθ): cos θ = (z + 1/z)/2, sen θ = (z − 1/z)/2i, dθ = dz/(iz). La integral de 0 a 2π pasa a ser una integral sobre |z| = 1 de una función racional: 2πi por los residuos de adentro.",
       def: [R`Para $\displaystyle\int_0^{2\pi} F(\cos\theta, \sin\theta)\,d\theta$, con $F$ racional, se sustituye $z = e^{i\theta}$: $$\cos\theta = \frac{z + z^{-1}}{2},\qquad \sin\theta = \frac{z - z^{-1}}{2i},\qquad d\theta = \frac{dz}{iz}.$$ Cuando $\theta$ va de $0$ a $2\pi$, $z$ recorre la circunferencia $|z| = 1$ en sentido positivo, y la integral vale $2\pi i$ por la suma de los residuos **dentro** del círculo unidad.`,
         R`Resultado típico, para $a > |b|$: $$\int_0^{2\pi}\frac{d\theta}{a + b\cos\theta} = \int_0^{2\pi}\frac{d\theta}{a + b\sin\theta} = \frac{2\pi}{\sqrt{a^2 - b^2}}.$$`],
       idea: [R`Es recorrer el camino al revés: en lugar de parametrizar una integral de contorno, se reconoce que una integral en $\theta$ **ya es** una integral de contorno parametrizada.`,
