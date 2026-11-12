@@ -1764,3 +1764,332 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 7 · APLICACIONES DE LOS RESIDUOS: INTEGRALES REALES, SUMAS DE SERIES Y CONTEO DE CEROS
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, Z = E.c3, dn = Z.dn, pif = Z.pif;
+  const T = {};
+  const far = (v, ans) => Math.abs(v - ans) > 0.03 * Math.max(1, Math.abs(ans));
+  const one = [1, 0], I2 = [0, 2 * Math.PI], inv = z => Z.div(one, z);
+  const zm = (a, v = "z") => (a === 0 ? v : `${v} ${a < 0 ? "+" : "-"} ${Math.abs(a)}`);
+  // ∫ f(x) dx sobre toda la recta (o sobre [0, ∞)) con x = tan u y la regla del punto medio: no usa residuos
+  const realLine = (f, half = false, N = 40000) => { const lo = half ? 0 : -Math.PI / 2, h = (Math.PI / 2 - lo) / N; let s = 0; for (let k = 0; k < N; k++) { const u = lo + (k + 0.5) * h, c = Math.cos(u); s += f(Math.tan(u)) / (c * c); } return s * h; };
+  const simpson = (f, a, b, n) => { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; };
+
+  T["c3-impropia-num"] = {
+    type: "numeric", concepts: ["c3-impropias-res"], difficulty: 2, testN: 60,
+    generate(r) {
+      const form = r.pick(["A", "C", "D", "E", "F", "G"]), [a, b] = r.distinct(2, 1, 4), p = r.nz(-3, 3), q = r.int(1, 4), half = form !== "F" && r.bool(0.3), h = half ? 2 : 1, a2 = a * a, b2 = b * b;
+      const D = {
+        A: { tex: `\\dfrac{1}{x^{2} + ${a2}}`, f: x => 1 / (x * x + a2), val: Math.PI / a, aT: pif(1, a * h), how: [`Polo simple en $z = ${a === 1 ? "" : a}i$ (el otro, $-${a === 1 ? "" : a}i$, está abajo). $\\operatorname{Res} = \\dfrac{1}{2z}\\Big|_{z = ${a === 1 ? "" : a}i} = \\dfrac{1}{${2 * a}i}$.`, `$2\\pi i\\cdot\\dfrac{1}{${2 * a}i} = ${pif(1, a)}$.`] },
+        C: { tex: `\\dfrac{1}{(x^{2} + ${a2})^{2}}`, f: x => 1 / (x * x + a2) ** 2, val: Math.PI / (2 * a ** 3), aT: pif(1, 2 * a ** 3 * h), how: [`Polo **doble** en $z = ${a === 1 ? "" : a}i$. Con $g(z) = \\dfrac{1}{(z + ${a === 1 ? "" : a}i)^2}$: $\\operatorname{Res} = g'(${a === 1 ? "" : a}i) = \\dfrac{-2}{(${2 * a}i)^3} = \\dfrac{1}{${4 * a ** 3}i}$.`, `$2\\pi i\\cdot\\dfrac{1}{${4 * a ** 3}i} = ${pif(1, 2 * a ** 3)}$.`] },
+        D: { tex: `\\dfrac{x^{2}}{(x^{2} + ${a2})(x^{2} + ${b2})}`, f: x => x * x / ((x * x + a2) * (x * x + b2)), val: Math.PI / (a + b), aT: pif(1, (a + b) * h), how: [`Polos simples en $${a === 1 ? "" : a}i$ y $${b === 1 ? "" : b}i$. Con $\\frac{p}{q'}$: $\\operatorname{Res}_{${a === 1 ? "" : a}i} = \\dfrac{${-a2}}{${2 * a}i\\,(${b2 - a2})}$ y $\\operatorname{Res}_{${b === 1 ? "" : b}i} = \\dfrac{${-b2}}{${2 * b}i\\,(${a2 - b2})}$.`, `La suma es $\\dfrac{1}{${2 * (a + b)}i}$, y $2\\pi i\\cdot\\dfrac{1}{${2 * (a + b)}i} = ${pif(1, a + b)}$.`] },
+        E: { tex: `\\dfrac{1}{x^{4} + ${a ** 4}}`, f: x => 1 / (x ** 4 + a ** 4), val: Math.PI / (Math.SQRT2 * a ** 3), aT: `\\frac{\\pi}{${a ** 3 * h === 1 ? "" : a ** 3 * h}\\sqrt{2}}`, how: [`$z^4 = -${a ** 4}$ tiene dos raíces arriba: $z_1 = ${a === 1 ? "" : a}e^{i\\pi/4}$ y $z_2 = ${a === 1 ? "" : a}e^{3i\\pi/4}$. En cada una, $\\operatorname{Res} = \\dfrac{1}{4z^3} = -\\dfrac{z}{${4 * a ** 4}}$ (porque $z^4 = -${a ** 4}$).`, `$z_1 + z_2 = ${a === 1 ? "" : a}\\sqrt2\\,i$, así que la suma es $-\\dfrac{\\sqrt2\\,i}{${4 * a ** 3}}$ y la integral, $2\\pi i$ por eso: $\\dfrac{\\pi\\sqrt2}{${2 * a ** 3}}$.`] },
+        F: { tex: `\\dfrac{1}{${H.poly([[1, "x^{2}"], [2 * p, "x"], [p * p + q * q, ""]])}}`, f: x => 1 / ((x + p) ** 2 + q * q), val: Math.PI / q, aT: pif(1, q), how: [`Completando cuadrados, el denominador es $(z ${p < 0 ? "-" : "+"} ${Math.abs(p)})^2 + ${q * q}$: polos en $${-p} \\pm ${q === 1 ? "" : q}i$. Arriba queda $z_0 = ${Z.tex([-p, q])}$.`, `$\\operatorname{Res} = \\dfrac{1}{q'(z_0)} = \\dfrac{1}{2(z_0 ${p < 0 ? "-" : "+"} ${Math.abs(p)})} = \\dfrac{1}{${2 * q}i}$, y $2\\pi i\\cdot\\dfrac{1}{${2 * q}i} = ${pif(1, q)}$.`] },
+        G: { tex: `\\dfrac{x^{2}}{(x^{2} + ${a2})^{2}}`, f: x => x * x / (x * x + a2) ** 2, val: Math.PI / (2 * a), aT: pif(1, 2 * a * h), how: [`Polo doble en $z = ${a === 1 ? "" : a}i$. Con $g(z) = \\dfrac{z^2}{(z + ${a === 1 ? "" : a}i)^2}$, $g'(z) = \\dfrac{${2 * a}i\\,z}{(z + ${a === 1 ? "" : a}i)^3}$ y $g'(${a === 1 ? "" : a}i) = \\dfrac{1}{${4 * a}i}$.`, `$2\\pi i\\cdot\\dfrac{1}{${4 * a}i} = ${pif(1, 2 * a)}$.`] }
+      }[form];
+      const ans = D.val / h;
+      return {
+        prompt: `Calculá $\\displaystyle\\int_{${half ? "0" : "-\\infty"}}^{\\infty} ${D.tex}\\,dx$.`,
+        answer: ans, answerTex: D.aT,
+        traps: half ? [{ value: D.val, msg: "Ese es el valor sobre toda la recta. Como el integrando es par, de $0$ a $\\infty$ es la mitad." }] : [],
+        solution: [`El grado del denominador supera en 2 o más al del numerador y no hay polos reales: $\\int_{-\\infty}^{\\infty} f(x)\\,dx = 2\\pi i\\sum\\operatorname{Res}$ en los polos del **semiplano superior** ([[c3-impropias-residuos|integrales impropias por residuos]]).`, ...D.how,
+          ...(half ? [`El integrando es par: de $0$ a $\\infty$ es la mitad, $${D.aT}$.`] : [])],
+        // verificación: cuadratura numérica directa sobre la recta, con x = tan u
+        verify: { kind: "value", tol: 1e-6, fn: () => realLine(D.f, half) }
+      };
+    }
+  };
+
+  T["c3-impropia-multi"] = {
+    type: "multi", concepts: ["c3-impropias-res"], difficulty: 3, testN: 60,
+    generate(r) {
+      const form = r.int(0, 3), [a, b] = r.distinct(2, 1, 3).sort((x, y) => x - y), p = r.nz(-2, 2), q = r.int(1, 3), a2 = a * a, b2 = b * b;
+      // denominador como polinomio (coeficientes reales, del grado mayor al menor) y polos del semiplano superior con su orden
+      const F = [
+        { tex: `\\dfrac{1}{(z^{2} + ${a2})(z^{2} + ${b2})}`, den: [1, 0, a2 + b2, 0, a2 * b2], up: 2, note: `Polos simples en $\\pm ${a === 1 ? "" : a}i$ y $\\pm ${b === 1 ? "" : b}i$; arriba quedan $${a === 1 ? "" : a}i$ y $${b === 1 ? "" : b}i$.` },
+        { tex: `\\dfrac{1}{(z^{2} + ${a2})^{2}}`, den: [1, 0, 2 * a2, 0, a2 * a2], up: 1, note: `Polos dobles en $\\pm ${a === 1 ? "" : a}i$; arriba queda solo $${a === 1 ? "" : a}i$ (un punto, aunque el polo sea doble).` },
+        { tex: `\\dfrac{1}{z^{4} + ${a ** 4}}`, den: [1, 0, 0, 0, a ** 4], up: 2, note: `Las cuatro raíces cuartas de $-${a ** 4}$ son $${a === 1 ? "" : a}e^{i\\pi/4}$, $${a === 1 ? "" : a}e^{3i\\pi/4}$, $${a === 1 ? "" : a}e^{5i\\pi/4}$ y $${a === 1 ? "" : a}e^{7i\\pi/4}$; arriba quedan las dos primeras.` },
+        { tex: `\\dfrac{1}{(z^{2} + ${a2})(${H.poly([[1, "z^{2}"], [2 * p, "z"], [p * p + q * q, ""]])})}`, den: [1, 2 * p, p * p + q * q + a2, 2 * p * a2, a2 * (p * p + q * q)], up: 2, note: `Polos simples en $\\pm ${a === 1 ? "" : a}i$ y en $${-p} \\pm ${q === 1 ? "" : q}i$; arriba quedan $${a === 1 ? "" : a}i$ y $${Z.tex([-p, q])}$.` }
+      ][form];
+      const pol = z => F.den.reduce((s, c) => Z.add(Z.mul(s, z), [c, 0]), [0, 0]), f = z => inv(pol(z)), fx = x => 1 / F.den.reduce((s, c) => s * x + c, 0);
+      // suma de residuos del semiplano superior: en cada raíz z_k (simple) es 1/q'(z_k); en la doble de la forma 1, 1/(4a³ i)
+      const dpol = z => F.den.slice(0, -1).reduce((s, c, i) => Z.add(Z.mul(s, z), [c * (F.den.length - 1 - i), 0]), [0, 0]);
+      const ups = form === 0 ? [[0, a], [0, b]] : form === 1 ? [[0, a]] : form === 2 ? [Z.polar(a, Math.PI / 4), Z.polar(a, 3 * Math.PI / 4)] : [[0, a], [-p, q]];
+      const sum = form === 1 ? [0, -1 / (4 * a ** 3)] : ups.map(z => inv(dpol(z))).reduce(Z.add), S = -sum[1];
+      return {
+        prompt: `Para calcular $\\displaystyle\\int_{-\\infty}^{\\infty} ${F.tex.replace(/z/g, "x")}\\,dx$ por residuos, se integra $f(z) = ${F.tex}$ sobre el segmento $[-R, R]$ cerrado con la semicircunferencia superior de radio $R$.`,
+        parts: [
+          { q: "¿Cuántos puntos singulares de $f$ quedan dentro del contorno, cuando $R$ es grande?", type: "numeric", answer: F.up,
+            // verificación: se buscan las raíces del denominador (Durand-Kerner) y se cuentan las distintas con parte imaginaria positiva
+            verify: { kind: "value", fn: () => { const rs = Z.roots(F.den.map(c => [c, 0])).filter(z => z[1] > 0); return rs.filter((z, i) => rs.findIndex(w => Z.abs(Z.sub(w, z)) < 1e-3) === i).length; } } },
+          { q: "La suma de los residuos en esos puntos es $-i\\,S$, con $S$ real. ¿Cuánto vale $S$?", type: "numeric", answer: S,
+            traps: [{ value: 2 * Math.PI * S, msg: "Ese ya es el valor de la integral. Se pide solo la suma de los residuos, sin el $2\\pi i$." }],
+            // verificación: (1/2πi) ∮ f sobre una circunferencia grande apoyada casi sobre el eje real, que rodea solo los polos de arriba
+            verify: { kind: "value", tol: 1e-6, fn: () => -Z.div(Z.circ(f, [0, 6], 5.9, 8000), I2)[1] } },
+          { q: "¿Cuánto vale la integral?", type: "numeric", answer: 2 * Math.PI * S,
+            verify: { kind: "value", tol: 1e-6, fn: () => realLine(fx) } }
+        ],
+        solution: [F.note, `Sobre la semicircunferencia, $|f(z)| \\le \\dfrac{C}{R^4}$ y la longitud es $\\pi R$: por la [[c3-contornos|cota ML]] esa parte tiende a $0$, y queda $\\int_{-\\infty}^{\\infty} f(x)\\,dx = 2\\pi i\\sum\\operatorname{Res}$ ([[c3-impropias-residuos|integrales impropias por residuos]]).`,
+          `Calculando cada [[c3-residuo|residuo]] y sumando: $\\sum\\operatorname{Res} \\approx ${Z.tex(sum, 5)}$, es decir, $S \\approx ${dn(S, 5)}$.`,
+          `La integral vale $2\\pi i\\cdot(-iS) = 2\\pi S \\approx ${dn(2 * Math.PI * S, 5)}$. Tiene que dar un número real: si queda una parte imaginaria, hay un error de cuentas.`]
+      };
+    }
+  };
+
+  T["c3-fourier-num"] = {
+    type: "numeric", concepts: ["c3-jordan"], difficulty: 3, testN: 40,
+    generate(r) {
+      const form = r.pick(["A", "B", "C", "D"]), k = r.int(1, 3), a = r.int(1, 3), b = a + r.int(1, 2), a2 = a * a, b2 = b * b, kx = H.kx(k, "x");
+      if (k * a > 4) return null;
+      const ea = Math.exp(-k * a), eb = Math.exp(-k * b);
+      const D = {
+        A: { tex: `\\dfrac{\\cos ${kx}}{x^{2} + ${a2}}`, f: x => Math.cos(k * x) / (x * x + a2), val: Math.PI * ea / a, sin: false, how: [`Se integra $\\dfrac{e^{${k === 1 ? "" : k}iz}}{z^2 + ${a2}}$. Arriba hay un polo simple en $${a === 1 ? "" : a}i$, con $\\operatorname{Res} = \\dfrac{e^{${k === 1 ? "" : k}i\\cdot ${a === 1 ? "" : a}i}}{${2 * a}i} = \\dfrac{e^{-${k * a}}}{${2 * a}i}$.`, `$2\\pi i\\cdot\\dfrac{e^{-${k * a}}}{${2 * a}i} = \\dfrac{\\pi e^{-${k * a}}}{${a}}$, que es real: es la integral del coseno (la del seno da $0$ por imparidad).`] },
+        B: { tex: `\\dfrac{x\\sin ${kx}}{x^{2} + ${a2}}`, f: x => x * Math.sin(k * x) / (x * x + a2), val: Math.PI * ea, sin: true, how: [`Se integra $\\dfrac{z\\,e^{${k === 1 ? "" : k}iz}}{z^2 + ${a2}}$ (acá hace falta el lema de Jordan: el integrando decae solo como $\\frac1R$). $\\operatorname{Res}_{${a === 1 ? "" : a}i} = \\dfrac{${a === 1 ? "" : a}i\\,e^{-${k * a}}}{${2 * a}i} = \\dfrac{e^{-${k * a}}}{2}$.`, `$2\\pi i\\cdot\\dfrac{e^{-${k * a}}}{2} = \\pi i\\,e^{-${k * a}}$. La integral pedida es la **parte imaginaria**: $\\pi e^{-${k * a}}$.`] },
+        C: { tex: `\\dfrac{\\cos ${kx}}{(x^{2} + ${a2})(x^{2} + ${b2})}`, f: x => Math.cos(k * x) / ((x * x + a2) * (x * x + b2)), val: Math.PI / (b2 - a2) * (ea / a - eb / b), sin: false, how: [`Se integra $\\dfrac{e^{${k === 1 ? "" : k}iz}}{(z^2 + ${a2})(z^2 + ${b2})}$. Residuos arriba: $\\dfrac{e^{-${k * a}}}{${2 * a}i\\,(${b2 - a2})}$ en $${a === 1 ? "" : a}i$ y $\\dfrac{e^{-${k * b}}}{${2 * b}i\\,(${a2 - b2})}$ en $${b}i$.`, `$2\\pi i$ por la suma: $\\dfrac{\\pi}{${b2 - a2}}\\left(\\dfrac{e^{-${k * a}}}{${a}} - \\dfrac{e^{-${k * b}}}{${b}}\\right)$.`] },
+        D: { tex: `\\dfrac{\\cos ${kx}}{x^{2} + ${a2}}`, f: x => Math.cos(k * x) / (x * x + a2), val: Math.PI * ea / (2 * a), sin: false, half: true, how: [`Sobre toda la recta, integrando $\\dfrac{e^{${k === 1 ? "" : k}iz}}{z^2 + ${a2}}$: $2\\pi i\\cdot\\dfrac{e^{-${k * a}}}{${2 * a}i} = \\dfrac{\\pi e^{-${k * a}}}{${a}}$.`, `El integrando es par: de $0$ a $\\infty$ es la mitad.`] }
+      }[form];
+      return {
+        prompt: `Calculá $\\displaystyle\\int_{${D.half ? "0" : "-\\infty"}}^{\\infty} ${D.tex}\\,dx$.`,
+        answer: D.val,
+        traps: [{ value: D.val * Math.exp(2 * k * a), msg: "Revisá el signo del exponente: en el semiplano superior, $e^{ikz}$ evaluado en $z = ai$ da $e^{-ka}$, que es chico." }].filter(t => far(t.value, D.val)),
+        solution: [`Con senos o cosenos en el numerador se integra $f(z)\\,e^{ikz}$ (no $\\cos kz$, que crece en el semiplano superior) y al final se toma la parte real o la imaginaria ([[c3-jordan|integrales de Fourier y lema de Jordan]]).`, ...D.how, `Resultado: $\\approx ${dn(D.val, 5)}$.`],
+        // verificación: Simpson sobre [0, X] (por dos, o no, según el caso), con X elegido para que el primer término de la cola se anule
+        verify: { kind: "value", tol: 1e-3, fn: () => { const M = 200, X = (2 * Math.PI * M + (D.sin ? Math.PI / 2 : 0)) / k; return (D.half ? 1 : 2) * simpson(D.f, 0, X, M * 80); } }
+      };
+    }
+  };
+
+  const APP = [
+    { t: R`para calcular $\int_{-\infty}^{\infty}\frac{p(x)}{q(x)}\,dx$ cerrando con una semicircunferencia, alcanza con que el grado de $q$ supere al de $p$ en $1$`, v: false, why: R`Hace falta que lo supere en $2$ o más: con diferencia $1$, el integrando decae como $\frac1R$ y la integral sobre el arco (de longitud $\pi R$) no tiende a cero. De hecho $\int_{-\infty}^{\infty}\frac{x}{x^2 + 1}dx$ ni siquiera converge.`,
+      test: () => { const g = X => simpson(x => x / (x * x + 1), 0, X, 20000); return Math.abs(g(1e4) - g(1e2)) < 0.1; } },
+    { t: R`$|e^{iz}| \le 1$ en todo el semiplano superior $\operatorname{Im} z \ge 0$`, v: true, why: R`$|e^{iz}| = |e^{ix}e^{-y}| = e^{-y} \le 1$ si $y \ge 0$. Por eso con $e^{ikz}$ ($k > 0$) se cierra el contorno por arriba.`,
+      test: () => { for (let x = -30; x <= 30; x += 1.7) for (let y = 0; y <= 30; y += 0.9) if (Z.abs(Z.exp(Z.mul([0, 1], [x, y]))) > 1 + 1e-12) return false; return true; } },
+    { t: R`$|\cos z| \le 1$ en todo el semiplano superior`, v: false, why: R`$\cos z = \frac{e^{iz} + e^{-iz}}{2}$ y $|e^{-iz}| = e^{y}$ crece sin límite hacia arriba. Por eso en las integrales de Fourier se usa $e^{iz}$ y no $\cos z$.`,
+      test: () => { for (let y = 0; y <= 30; y += 0.9) if (Z.abs(Z.cos([0.3, y])) > 1 + 1e-12) return false; return true; } },
+    { t: R`$\displaystyle\int_{-\infty}^{\infty}\frac{\sin x}{x}\,dx = \pi$`, v: true, why: R`Se integra $\frac{e^{iz}}{z}$ esquivando el polo simple del origen con una semicircunferencia chica, que aporta $-\pi i\operatorname{Res} = -\pi i$. Queda $\text{v.p.}\int\frac{e^{ix}}{x}dx = \pi i$, y su parte imaginaria es $\pi$.`,
+      test: () => Math.abs(2 * simpson(x => (x === 0 ? 1 : Math.sin(x) / x), 0, (2 * Math.PI * 400 + Math.PI / 2), 400 * 80) - Math.PI) < 1e-3 },
+    { t: R`si $|g(z)| < |f(z)|$ sobre un contorno cerrado simple $C$ (con $f$ y $g$ analíticas dentro y sobre $C$), entonces $f$ y $f + g$ tienen la misma cantidad de ceros dentro de $C$`, v: true, why: R`Es el teorema de Rouché: una perturbación más chica que $f$ sobre el borde no puede sacar ni meter ceros.`,
+      test: () => [[[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [5, 0], [1, 0]], [[1, 0], [0, 0], [0, 0], [-7, 0], [0, 0], [2, 0]]].every(c => { const n = c.length - 1, dom = c.findIndex((x, i) => i > 0 && Math.abs(x[0]) >= 5); return Z.roots(c).filter(z => Z.abs(z) < 1).length === n - dom; }) },
+    { t: R`si $f$ es analítica y sin ceros sobre $C$, $\frac{1}{2\pi i}\oint_C\frac{f'(z)}{f(z)}\,dz$ es la cantidad de ceros de $f$ dentro de $C$, contados con su multiplicidad`, v: true, why: R`Es el principio del argumento (sin polos): en un cero de orden $m$, $\frac{f'}{f}$ tiene un polo simple con residuo $m$.`,
+      test: () => { const f = z => Z.mul(Z.ipow(Z.sub(z, [0.5, 0]), 3), Z.mul(Z.add(z, [0, 0.4]), Z.sub(z, [4, 0]))); return Math.abs(Z.div(Z.circ(z => Z.div(Z.dz(f, z), f(z)), [0, 0], 2, 4000), I2)[0] - 4) < 1e-4; } },
+    { t: R`el valor principal de $\displaystyle\int_{-1}^{1}\frac{dx}{x}$ es $0$, aunque la integral impropia no converge`, v: true, why: R`Sacando un intervalo **simétrico** $(-\varepsilon, \varepsilon)$, las dos mitades se cancelan por imparidad. Por separado, cada una diverge como $\ln\varepsilon$.`,
+      test: () => [1e-2, 1e-4].every(e => Math.abs(simpson(x => 1 / x, -1, -e, 20000) + simpson(x => 1 / x, e, 1, 20000)) < 1e-6) && Math.abs(simpson(x => 1 / x, 1e-4, 1, 200000)) > 5 },
+    { t: R`para calcular $\int_0^{2\pi}F(\cos\theta, \sin\theta)\,d\theta$ con $z = e^{i\theta}$ se suman los residuos de todos los polos del integrando en $z$`, v: false, why: R`Solo los que quedan **dentro** de la circunferencia unidad. En $\int_0^{2\pi}\frac{d\theta}{5 + 3\cos\theta}$ los polos son $z = -\frac13$ (adentro) y $z = -3$ (afuera): con los dos, daría $0$.`,
+      test: () => { const g = z => Z.div([0, -2], Z.add(Z.add(Z.sc(3, Z.mul(z, z)), Z.sc(10, z)), [3, 0])), all = Z.circ(g, [0, 0], 10), real = simpson(t => 1 / (5 + 3 * Math.cos(t)), 0, 2 * Math.PI, 2000); return Z.abs(Z.sub(all, [real, 0])) < 1e-6; } }
+  ];
+  T["c3-aplicaciones-vf"] = {
+    type: "tf", concepts: ["c3-impropias-res", "c3-jordan", "c3-argumento"], difficulty: 2,
+    generate(r) {
+      const S = r.pick(APP);
+      return {
+        prompt: `<b>Verdadero o falso:</b> ${S.t}.`,
+        answer: S.v,
+        explanation: `${S.v ? "Verdadero" : "Falso"}. ${S.why}`,
+        solution: [`Ver [[c3-impropias-residuos|integrales impropias por residuos]], [[c3-jordan|lema de Jordan]] y [[c3-argumento|principio del argumento]].`],
+        // verificación: un experimento numérico por afirmación (cuadraturas reales, raíces de polinomios, integrales de contorno)
+        verify: { kind: "truth", fn: S.test }
+      };
+    }
+  };
+
+  T["c3-trig-integral-num"] = {
+    type: "numeric", concepts: ["c3-trig-res"], difficulty: 2,
+    generate(r) {
+      const [a, b] = r.pick([[5, 3], [5, 4], [13, 5], [13, 12], [2, 1], [3, 1], [3, 2], [5, -3], [5, -4], [2, -1], [10, 6], [10, 8]]), form = r.pick(["A", "A", "B", "C", "D"]), s = Math.sqrt(a * a - b * b), B = Math.abs(b);
+      const sT = Number.isInteger(s) ? String(s) : `\\sqrt{${a * a - b * b}}`, den = t => `${a} ${b < 0 ? "-" : "+"} ${B === 1 ? "" : B}\\${t}\\theta`;
+      const D = {
+        A: { tex: `\\dfrac{d\\theta}{${den("cos")}}`, f: t => 1 / (a + b * Math.cos(t)), val: 2 * Math.PI / s, vT: `\\dfrac{2\\pi}{${sT}}` },
+        B: { tex: `\\dfrac{d\\theta}{${den("sin")}}`, f: t => 1 / (a + b * Math.sin(t)), val: 2 * Math.PI / s, vT: `\\dfrac{2\\pi}{${sT}}` },
+        C: { tex: `\\dfrac{d\\theta}{(${den("cos")})^{2}}`, f: t => 1 / (a + b * Math.cos(t)) ** 2, val: 2 * Math.PI * a / s ** 3, vT: `\\dfrac{2\\pi\\cdot ${a}}{${Number.isInteger(s) ? `${s}^3` : `(${sT})^3`}}` },
+        D: { tex: `\\dfrac{\\cos\\theta\\,d\\theta}{${den("cos")}}`, f: t => Math.cos(t) / (a + b * Math.cos(t)), val: 2 * Math.PI / b * (1 - a / s), vT: `\\dfrac{2\\pi}{${b}}\\left(1 - \\dfrac{${a}}{${sT}}\\right)` }
+      }[form];
+      const zin = (-a + s) / b;
+      return {
+        prompt: `Calculá $\\displaystyle\\int_0^{2\\pi} ${D.tex}$.`,
+        answer: D.val,
+        solution: [`Con $z = e^{i\\theta}$: $\\cos\\theta = \\dfrac{z + z^{-1}}{2}$, $\\sin\\theta = \\dfrac{z - z^{-1}}{2i}$ y $d\\theta = \\dfrac{dz}{iz}$. La integral pasa a ser una integral sobre $|z| = 1$ de una función racional ([[c3-trig-residuos|integrales trigonométricas]]).`,
+          form === "B" ? `El denominador queda proporcional a $${B === 1 ? "" : B}z^2 ${b < 0 ? "-" : "+"} ${2 * a}i\\,z - ${B}$, con raíces imaginarias puras; dentro de la circunferencia queda solo una, la de módulo $\\frac{${a} - ${sT}}{${B}}$.`
+            : `El denominador queda proporcional a $${B === 1 ? "" : B}z^2 ${b < 0 ? "-" : "+"} ${2 * a}z ${b < 0 ? "-" : "+"} ${B}$, con raíces $z = \\dfrac{-${a} \\pm ${sT}}{${b}}$. Su producto es $1$, así que una sola queda adentro: $z \\approx ${dn(zin, 4)}$.`,
+          `Aplicando el teorema de los residuos${form === "C" ? " (acá el polo de adentro es doble)" : form === "D" ? " (también hay un polo simple en $z = 0$)" : ""}: $${D.vT} \\approx ${dn(D.val, 5)}$.`],
+        // verificación: Simpson directo sobre [0, 2π]
+        verify: { kind: "integral", f: D.f, a: 0, b: 2 * Math.PI, tol: 1e-7 }
+      };
+    }
+  };
+
+  T["c3-suma-serie-num"] = {
+    type: "numeric", concepts: ["c3-sumas"], difficulty: 3, testN: 30,
+    generate(r) {
+      const form = r.pick(["A", "A", "B", "B", "C", "C", "D"]), [a, a2T] = r.pick([[1, "1"], [2, "4"], [3, "9"], [0.5, "\\frac{1}{4}"]]), a2 = a * a, pa = Math.PI * a, coth = 1 / Math.tanh(pa), aT = a === 0.5 ? "\\frac12" : String(a);
+      const pw = r.pick([2, 4]);
+      const D = {
+        A: { tex: `\\displaystyle\\sum_{n=-\\infty}^{\\infty}\\frac{1}{n^{2} + ${a2T}}`, val: Math.PI * coth / a, term: n => 2 / (n * n + a2) + (n === 1 ? 1 / a2 : 0), vT: `\\dfrac{\\pi}{a}\\coth(\\pi a)`, how: `Los polos de $f(z) = \\frac{1}{z^2 + a^2}$ son $\\pm ai$. En cada uno, el residuo de $\\pi\\cot(\\pi z)f(z)$ es $\\dfrac{\\pi\\cot(\\pm\\pi ai)}{\\pm 2ai} = -\\dfrac{\\pi\\coth(\\pi a)}{2a}$ (porque $\\cot(iy) = -i\\coth y$).` },
+        B: { tex: `\\displaystyle\\sum_{n=1}^{\\infty}\\frac{1}{n^{2} + ${a2T}}`, val: (pa * coth - 1) / (2 * a2), term: n => 1 / (n * n + a2), vT: `\\dfrac{\\pi a\\coth(\\pi a) - 1}{2a^2}`, how: `La suma sobre todos los enteros es $\\frac{\\pi}{a}\\coth(\\pi a)$. Los términos con $n$ y $-n$ son iguales, y el de $n = 0$ vale $\\frac{1}{a^2}$: $\\sum_{n\\ge1} = \\frac12\\left[\\frac{\\pi}{a}\\coth(\\pi a) - \\frac{1}{a^2}\\right]$.` },
+        C: { tex: `\\displaystyle\\sum_{n=-\\infty}^{\\infty}\\frac{(-1)^n}{n^{2} + ${a2T}}`, val: Math.PI / (a * Math.sinh(pa)), term: n => 2 * (-1) ** n / (n * n + a2) + (n === 1 ? 1 / a2 : 0), vT: `\\dfrac{\\pi}{a\\sinh(\\pi a)}`, how: `Para series alternadas se usa $\\dfrac{\\pi}{\\sin(\\pi z)}$, cuyo residuo en cada entero $n$ es $(-1)^n$. En $\\pm ai$, el residuo de $\\frac{\\pi}{\\sin(\\pi z)}\\cdot\\frac{1}{z^2 + a^2}$ es $-\\dfrac{\\pi}{2a\\sinh(\\pi a)}$.` },
+        D: { tex: `\\displaystyle\\sum_{n=1}^{\\infty}\\frac{1}{n^{${pw}}}`, val: pw === 2 ? Math.PI ** 2 / 6 : Math.PI ** 4 / 90, term: n => 1 / n ** pw, vT: pw === 2 ? `\\dfrac{\\pi^2}{6}` : `\\dfrac{\\pi^4}{90}`, how: `$f(z) = \\frac{1}{z^{${pw}}}$ tiene su único polo en $0$, que hay que tratar aparte. Con $\\pi\\cot(\\pi z) = \\frac1z - \\frac{\\pi^2z}{3} - \\frac{\\pi^4z^3}{45} - \\dots$, el residuo de $\\frac{\\pi\\cot(\\pi z)}{z^{${pw}}}$ en $0$ es $${pw === 2 ? "-\\frac{\\pi^2}{3}" : "-\\frac{\\pi^4}{45}"}$. La suma sobre $n \\ne 0$ es su opuesto, y la mitad corresponde a $n \\ge 1$.` }
+      }[form];
+      return {
+        prompt: `Calculá $${D.tex}$${form === "D" ? "" : ` (es decir, con $a = ${aT}$ en $n^2 + a^2$)`}.`,
+        answer: D.val,
+        solution: [`[[c3-sumas-series|Suma de series por residuos]]: si $f$ decae al menos como $\\frac{1}{|z|^2}$, $\\displaystyle\\sum_{n=-\\infty}^{\\infty} f(n) = -\\sum\\operatorname{Res}\\big[\\pi\\cot(\\pi z)\\,f(z)\\big]$, sumando sobre los polos de $f$.`, D.how,
+          `Resultado: $${D.vT}$${form === "D" ? "" : ` con $a = ${aT}$`}, o sea $\\approx ${dn(D.val, 5)}$.`],
+        // verificación: suma parcial directa de 200.000 términos
+        verify: { kind: "sum", from: 1, inf: true, N: 2e5, term: D.term, tol: 1e-4 }
+      };
+    }
+  };
+
+  T["c3-rouche-num"] = {
+    type: "numeric", concepts: ["c3-argumento"], difficulty: 3,
+    generate(r) {
+      const n = r.int(4, 7), m = r.int(1, 3), mode = r.pick(["a", "a", "b", "R2", "ring"]);
+      let a, b;
+      if (mode === "b") { a = r.nz(-2, 2); b = r.sign() * (Math.abs(a) + r.int(2, 4)); } else { b = r.nz(-2, 2); a = r.sign() * (Math.abs(b) + r.int(2, 5)); }
+      const big2 = 2 ** n > Math.abs(a) * 2 ** m + Math.abs(b);
+      if ((mode === "R2" || mode === "ring") && !big2) return null;
+      const pT = H.poly([[1, `z^{${n}}`], [a, m === 1 ? "z" : `z^{${m}}`], [b, ""]]), aT = `${H.cf(a)}z${m === 1 ? "" : `^{${m}}`}`;
+      const [reg, ans, test] = { a: ["el disco $|z| < 1$", m, z => Z.abs(z) < 1], b: ["el disco $|z| < 1$", 0, z => Z.abs(z) < 1], R2: ["el disco $|z| < 2$", n, z => Z.abs(z) < 2], ring: ["el anillo $1 < |z| < 2$", n - m, z => Z.abs(z) > 1 && Z.abs(z) < 2] }[mode];
+      const s1 = mode === "b" ? `Sobre $|z| = 1$ domina el término constante: $|${b}| = ${Math.abs(b)} > 1 + ${Math.abs(a)} \\ge |z^{${n}} ${a < 0 ? "-" : "+"} ${H.cf(Math.abs(a))}z${m === 1 ? "" : `^{${m}}`}|$. Una constante no nula no tiene ceros: $p$ tampoco tiene ninguno en $|z| < 1$.`
+        : `Sobre $|z| = 1$ domina $${aT}$: $|${aT}| = ${Math.abs(a)} > 1 + ${Math.abs(b)} \\ge |z^{${n}} ${b < 0 ? "-" : "+"} ${Math.abs(b)}|$. Como $${aT}$ tiene $${m}$ cero${m === 1 ? "" : "s"} en $|z| < 1$ (el origen, con multiplicidad $${m}$), $p$ también.`;
+      const s2 = `Sobre $|z| = 2$ domina $z^{${n}}$: $2^{${n}} = ${2 ** n} > ${Math.abs(a)}\\cdot ${2 ** m} + ${Math.abs(b)} = ${Math.abs(a) * 2 ** m + Math.abs(b)}$. Entonces $p$ tiene $${n}$ ceros en $|z| < 2$, todos.`;
+      const c = Array.from({ length: n + 1 }, () => [0, 0]); c[0] = [1, 0]; c[n - m] = [a, 0]; c[n] = [b, 0];
+      return {
+        prompt: `¿Cuántos ceros, contados con su multiplicidad, tiene $p(z) = ${pT}$ en ${reg}?`,
+        answer: ans,
+        traps: mode === "ring" ? [{ value: n, msg: "Esos son los que hay en todo el disco $|z| < 2$. Falta restar los que están en $|z| < 1$." }] : [],
+        solution: [`[[c3-argumento|Teorema de Rouché]]: si $|g| < |f|$ sobre $C$, entonces $f$ y $f + g$ tienen la misma cantidad de ceros dentro de $C$. Se elige como $f$ el término que domina sobre el borde.`,
+          ...(mode === "R2" ? [s2] : mode === "ring" ? [s1, s2, `En el anillo quedan $${n} - ${m} = ${n - m}$ (sobre $|z| = 1$ no hay ceros, porque ahí $|p| > 0$).`] : [s1])],
+        // verificación: se buscan todas las raíces del polinomio (Durand-Kerner) y se cuentan las de la región
+        verify: { kind: "value", fn: () => Z.roots(c).filter(test).length }
+      };
+    }
+  };
+
+  T["c3-arg-principio-num"] = {
+    type: "numeric", concepts: ["c3-argumento"], difficulty: 2, testN: 120,
+    generate(r) {
+      const Rr = r.pick([2, 3]), pts = r.distinct(3, -5, 5, { exclude: [Rr, -Rr] }), m1 = r.int(1, 3), m2 = r.int(1, 2), n1 = r.int(1, 3);
+      const [z1, z2, p1] = pts, ins = x => Math.abs(x) < Rr, K = (ins(z1) ? m1 : 0) + (ins(z2) ? m2 : 0) - (ins(p1) ? n1 : 0);
+      const pw = (a, e) => (e === 1 ? `(${zm(a)})` : `(${zm(a)})^{${e}}`).replace("(z)", "z");
+      const f = z => Z.div(Z.mul(Z.ipow(Z.sub(z, [z1, 0]), m1), Z.ipow(Z.sub(z, [z2, 0]), m2)), Z.ipow(Z.sub(z, [p1, 0]), n1));
+      const lst = [[z1, m1, "cero"], [z2, m2, "cero"], [p1, n1, "polo"]].map(([x, e, t]) => `${t} de orden $${e}$ en $z = ${x}$ (${ins(x) ? "adentro" : "afuera"})`).join("; ");
+      return {
+        prompt: `Sea $f(z) = \\dfrac{${pw(z1, m1)}${pw(z2, m2)}}{${pw(p1, n1)}}$. ¿Cuánto vale $\\dfrac{1}{2\\pi i}\\displaystyle\\oint_{|z| = ${Rr}}\\frac{f'(z)}{f(z)}\\,dz$?`,
+        answer: K,
+        traps: [{ value: (ins(z1) ? 1 : 0) + (ins(z2) ? 1 : 0) - (ins(p1) ? 1 : 0), msg: "Los ceros y los polos se cuentan con su **orden**: un cero doble vale 2." },
+          { value: (ins(z1) ? m1 : 0) + (ins(z2) ? m2 : 0) + (ins(p1) ? n1 : 0), msg: "Los polos **restan**: la integral da $Z - P$." }].filter((t, i, arr) => far(t.value, K) && arr.findIndex(u => u.value === t.value) === i),
+        solution: [`[[c3-argumento|Principio del argumento]]: $\\dfrac{1}{2\\pi i}\\oint_C\\dfrac{f'}{f}\\,dz = Z - P$, la cantidad de ceros menos la de polos dentro de $C$, contados con su orden.`,
+          `Acá: ${lst}.`, `$Z - P = ${K}$.`],
+        // verificación: la integral de f'/f sobre la circunferencia, con f' calculada numéricamente
+        verify: { kind: "value", tol: 1e-5, fn: () => Z.div(Z.circ(z => Z.div(Z.dz(f, z), f(z)), [0, 0], Rr, 6000), I2)[0] }
+      };
+    }
+  };
+
+  const cards = {
+    "c3-impropias-residuos": {
+      title: "Integrales impropias de funciones racionales por residuos", aliases: ["integrales impropias por residuos", "integral por residuos", "cierre del contorno"], concepts: ["c3-impropias-res"],
+      summary: "Si p/q es racional, sin polos reales y con grado q ≥ grado p + 2: ∫ de −∞ a ∞ de p/q = 2πi Σ Res en los polos del semiplano superior. Si el integrando es par, de 0 a ∞ es la mitad.",
+      def: [R`Sea $f(x) = \dfrac{p(x)}{q(x)}$ racional, con $q$ sin raíces reales y $\operatorname{gr} q \ge \operatorname{gr} p + 2$. Entonces $$\int_{-\infty}^{\infty} f(x)\,dx = 2\pi i\sum_{\operatorname{Im} z_k > 0}\operatorname*{Res}_{z = z_k} f(z).$$`,
+        R`Si $f$ es par, $\displaystyle\int_0^\infty f(x)\,dx = \frac12\int_{-\infty}^{\infty} f(x)\,dx$.`,
+        R`**Valor principal.** $\text{v.p.}\displaystyle\int_{-\infty}^{\infty} f = \lim_{R\to\infty}\int_{-R}^{R} f$. Coincide con la [[impropias|integral impropia]] cuando esta converge, pero puede existir aunque no converja (por ejemplo, para funciones impares). El método de los residuos calcula siempre el valor principal.`],
+      idea: [R`La integral sobre el eje real es difícil; la integral sobre una curva **cerrada** es fácil (residuos). Entonces se cierra el camino con una semicircunferencia grande y se muestra que ese agregado no aporta nada.`,
+        R`También se puede cerrar por abajo: da lo mismo, con $-2\pi i\sum\operatorname{Res}$ en los polos del semiplano inferior (el sentido de recorrido queda horario).`,
+        R`Control rápido: el resultado tiene que ser **real** (y positivo, si el integrando lo es). Los residuos son complejos, pero sus partes imaginarias sobrantes se cancelan.`],
+      demo: [R`**Paso 1 (el contorno).** Sea $C_R$ la semicircunferencia superior $z = Re^{it}$, $0 \le t \le \pi$, con $R$ mayor que el módulo de todos los polos. El segmento $[-R, R]$ seguido de $C_R$ es un contorno cerrado simple positivo que encierra todos los polos del semiplano superior.`,
+        R`**Paso 2 (residuos).** Por el [[c3-residuo|teorema de los residuos]]: $\int_{-R}^{R} f(x)\,dx + \int_{C_R} f(z)\,dz = 2\pi i\sum\operatorname{Res}$.`,
+        R`**Paso 3 (el arco no aporta).** Como $\operatorname{gr} q \ge \operatorname{gr} p + 2$, para $|z| = R$ grande vale $|f(z)| \le \frac{K}{R^2}$. Por la [[c3-contornos|cota ML]], $\left|\int_{C_R} f\,dz\right| \le \frac{K}{R^2}\cdot\pi R = \frac{K\pi}{R} \to 0$.`,
+        R`**Paso 4 (límite).** Haciendo $R \to \infty$ en el paso 2 queda la fórmula. La integral impropia converge (el integrando decae como $\frac{1}{x^2}$), así que coincide con su valor principal. $\blacksquare$`],
+      examples: [{ q: R`$\displaystyle\int_{-\infty}^{\infty}\frac{dx}{x^2 + 1}$.`, steps: [R`Polo simple en $i$ (arriba): $\operatorname{Res} = \frac{1}{2i}$.`, R`$2\pi i\cdot\frac{1}{2i} = \pi$. (Coincide con $\arctan x\big|_{-\infty}^{\infty}$.)`] },
+        { q: R`$\displaystyle\int_0^{\infty}\frac{dx}{(x^2 + 1)^2}$.`, steps: [R`Polo doble en $i$: $\operatorname{Res} = \frac{d}{dz}(z + i)^{-2}\big|_{i} = \frac{-2}{(2i)^3} = \frac{1}{4i}$.`, R`Sobre toda la recta: $2\pi i\cdot\frac{1}{4i} = \frac\pi2$. Por paridad, de $0$ a $\infty$: $\frac\pi4$.`] }],
+      tips: [R`Solo los polos de **arriba**. Sumar los cuatro de $\frac{1}{x^4 + 1}$ da cero.`, R`Si la diferencia de grados es 1, este método no alcanza: ver el [[c3-jordan|lema de Jordan]].`],
+      see: ["impropias", "c3-residuo", "c3-contornos", "c3-jordan"]
+    },
+    "c3-jordan": {
+      title: "Integrales de Fourier, lema de Jordan y polos sobre el eje real", aliases: ["lema de Jordan", "integrales de Fourier por residuos", "desigualdad de Jordan", "contorno con indentación"], concepts: ["c3-jordan"],
+      summary: "Para ∫ f(x) cos(kx) o sen(kx) dx (k > 0) se integra f(z)e^{ikz} cerrando por arriba y se toma la parte real o imaginaria. Lema de Jordan: alcanza con que f → 0. Un polo simple sobre el eje real, esquivado por arriba, aporta πi·Res.",
+      def: [R`Para $k > 0$ y $f$ racional sin polos reales: $$\int_{-\infty}^{\infty} f(x)\,e^{ikx}\,dx = 2\pi i\sum_{\operatorname{Im} z_j > 0}\operatorname{Res}\big[f(z)\,e^{ikz}\big].$$ Las integrales con $\cos kx$ y $\sin kx$ son su parte real y su parte imaginaria (si $f$ es real sobre el eje).`,
+        R`**Lema de Jordan.** Si $|f(z)| \le M_R$ sobre la semicircunferencia superior $C_R$, con $M_R \to 0$ cuando $R \to \infty$, y $k > 0$, entonces $\displaystyle\int_{C_R} f(z)\,e^{ikz}\,dz \to 0$. Alcanza con $\operatorname{gr} q \ge \operatorname{gr} p + 1$.`,
+        R`**Polos sobre el eje real.** Si $f(z)e^{ikz}$ tiene un polo **simple** en $x_0$ real, se lo esquiva con una semicircunferencia chica por arriba. En el límite, ese polo aporta **la mitad**: $$\text{v.p.}\int_{-\infty}^{\infty} f(x)\,e^{ikx}\,dx = 2\pi i\sum_{\text{arriba}}\operatorname{Res} + \pi i\sum_{\text{eje}}\operatorname{Res}.$$`],
+      idea: [R`Por qué $e^{ikz}$ y no $\cos kz$: en el semiplano superior $|e^{ikz}| = e^{-ky} \le 1$, pero $\cos kz$ contiene $e^{-ikz}$, que crece como $e^{ky}$. El coseno arruina el arco; la exponencial lo ayuda.`,
+        R`Si $k < 0$, la exponencial decae hacia **abajo**: se cierra por el semiplano inferior.`,
+        R`Un polo simple sobre el camino queda «cortado al medio»: medio giro a su alrededor aporta medio residuo. Así sale la integral de Dirichlet, $\int_{-\infty}^{\infty}\frac{\sin x}{x}dx = \pi$.`],
+      demo: [R`**Paso 1 (parametrizar el arco).** Con $z = Re^{it}$: $|e^{ikz}| = e^{-kR\sin t}$ y $|dz| = R\,dt$. Entonces $\left|\int_{C_R} f\,e^{ikz}dz\right| \le M_RR\int_0^\pi e^{-kR\sin t}\,dt = 2M_RR\int_0^{\pi/2} e^{-kR\sin t}\,dt$, por la simetría de $\sin t$ respecto de $\frac\pi2$.`,
+        R`**Paso 2 (desigualdad de Jordan).** En $[0, \frac\pi2]$ el seno es cóncavo, así que su gráfico queda por arriba de la cuerda: $\sin t \ge \frac{2t}{\pi}$. Entonces $e^{-kR\sin t} \le e^{-2kRt/\pi}$.`,
+        R`**Paso 3 (integrar).** $\int_0^{\pi/2} e^{-2kRt/\pi}\,dt = \frac{\pi}{2kR}\left(1 - e^{-kR}\right) < \frac{\pi}{2kR}$. Queda $\left|\int_{C_R}\right| < 2M_RR\cdot\frac{\pi}{2kR} = \frac{\pi M_R}{k} \to 0$. El factor $R$ de la longitud se canceló: por eso alcanza con que $M_R \to 0$.`,
+        R`**Paso 4 (medio residuo).** Cerca de un polo simple, $g(z) = \frac{B}{z - x_0} + h(z)$ con $h$ analítica. Sobre $z = x_0 + \rho e^{it}$, recorrida de $t = \pi$ a $t = 0$ (por arriba, en sentido horario): $\int\frac{B}{z - x_0}dz = B\int_\pi^0 i\,dt = -\pi iB$, y la parte de $h$ tiende a $0$ con $\rho$ (cota ML). Pasando ese $-\pi i B$ al otro lado de la igualdad queda el $+\pi i\operatorname{Res}$. $\blacksquare$`],
+      examples: [{ q: R`$\displaystyle\int_{-\infty}^{\infty}\frac{\cos x}{x^2 + 1}\,dx$.`, steps: [R`Se integra $\frac{e^{iz}}{z^2 + 1}$: $\operatorname{Res}_{z = i} = \frac{e^{-1}}{2i}$.`, R`$2\pi i\cdot\frac{e^{-1}}{2i} = \frac\pi e$, real: es la integral pedida.`] },
+        { q: R`$\displaystyle\int_{-\infty}^{\infty}\frac{\sin x}{x}\,dx$.`, steps: [R`$\frac{e^{iz}}{z}$ tiene un polo simple en $0$, sobre el eje, con residuo $1$, y ninguno arriba.`, R`$\text{v.p.}\int\frac{e^{ix}}{x}dx = \pi i$. Su parte imaginaria: $\pi$.`] }],
+      tips: [R`Tomá la parte real o imaginaria **al final**, no antes de calcular los residuos.`],
+      see: ["c3-impropias-residuos", "c3-residuo", "c3-trig", "c2-fourier"]
+    },
+    "c3-trig-residuos": {
+      title: "Integrales trigonométricas entre 0 y 2π", aliases: ["integrales trigonométricas por residuos", "sustitución z = e^{iθ}"], concepts: ["c3-trig-res"],
+      summary: "Con z = e^{iθ}: cos θ = (z + 1/z)/2, sen θ = (z − 1/z)/2i, dθ = dz/(iz). La integral de 0 a 2π pasa a ser una integral sobre |z| = 1 de una función racional: 2πi por los residuos de adentro.",
+      def: [R`Para $\displaystyle\int_0^{2\pi} F(\cos\theta, \sin\theta)\,d\theta$, con $F$ racional, se sustituye $z = e^{i\theta}$: $$\cos\theta = \frac{z + z^{-1}}{2},\qquad \sin\theta = \frac{z - z^{-1}}{2i},\qquad d\theta = \frac{dz}{iz}.$$ Cuando $\theta$ va de $0$ a $2\pi$, $z$ recorre la circunferencia $|z| = 1$ en sentido positivo, y la integral vale $2\pi i$ por la suma de los residuos **dentro** del círculo unidad.`,
+        R`Resultado típico, para $a > |b|$: $$\int_0^{2\pi}\frac{d\theta}{a + b\cos\theta} = \int_0^{2\pi}\frac{d\theta}{a + b\sin\theta} = \frac{2\pi}{\sqrt{a^2 - b^2}}.$$`],
+      idea: [R`Es recorrer el camino al revés: en lugar de parametrizar una integral de contorno, se reconoce que una integral en $\theta$ **ya es** una integral de contorno parametrizada.`,
+        R`El denominador suele quedar cuadrático en $z$, con dos raíces de producto 1: una adentro y una afuera del círculo. Solo cuenta la de adentro.`],
+      demo: [R`**Paso 1 (sustituir).** $\int_0^{2\pi}\frac{d\theta}{a + b\cos\theta} = \oint_{|z|=1}\frac{1}{a + \frac b2(z + z^{-1})}\cdot\frac{dz}{iz} = \oint_{|z|=1}\frac{2}{i\,(bz^2 + 2az + b)}\,dz$, multiplicando numerador y denominador por $2z$.`,
+        R`**Paso 2 (polos).** $bz^2 + 2az + b = 0$ da $z_\pm = \frac{-a \pm\sqrt{a^2 - b^2}}{b}$, reales y distintos porque $a > |b|$. Su producto es $\frac bb = 1$, así que exactamente uno tiene módulo menor que 1: $z_+$.`,
+        R`**Paso 3 (residuo).** Con $\frac{p}{q'}$: $\operatorname{Res}_{z_+} = \frac{2}{i\,(2bz_+ + 2a)} = \frac{2}{i\cdot2\sqrt{a^2 - b^2}} = \frac{1}{i\sqrt{a^2 - b^2}}$.`,
+        R`**Paso 4 (resultado).** $2\pi i\cdot\frac{1}{i\sqrt{a^2 - b^2}} = \frac{2\pi}{\sqrt{a^2 - b^2}}$. Con el seno la cuenta es análoga (o se corre $\theta$ en $\frac\pi2$, lo que no cambia una integral sobre un período completo). $\blacksquare$`],
+      examples: [{ q: R`$\displaystyle\int_0^{2\pi}\frac{d\theta}{5 + 4\cos\theta}$.`, steps: [R`Queda $\oint\frac{dz}{i(2z^2 + 5z + 2)}$, con polos en $-\frac12$ (adentro) y $-2$ (afuera).`, R`$\operatorname{Res}_{-1/2} = \frac{1}{i(4z + 5)}\Big|_{-1/2} = \frac{1}{3i}$. Integral: $\frac{2\pi}{3}$.`] }],
+      tips: [R`Si los límites son $0$ y $\pi$, usá la paridad del integrando para llevarlos a $0$ y $2\pi$ antes de sustituir.`],
+      see: ["c3-residuo", "c3-contornos", "integrales-trig"]
+    },
+    "c3-sumas-series": {
+      title: "Suma de series con residuos", aliases: ["suma de series por residuos", "sumas con cotangente", "problema de Basilea"], concepts: ["c3-sumas"],
+      summary: "π cot(πz) tiene un polo simple con residuo 1 en cada entero. Si f decae como 1/|z|², Σ f(n) (sobre todos los enteros que no son polos de f) = −Σ Res[π cot(πz) f(z)] en los polos de f. Para series alternadas, π/sen(πz).",
+      def: [R`Sea $f$ analítica salvo en un número finito de polos $z_1, \dots, z_m$ (ninguno entero), con $|f(z)| \le \frac{K}{|z|^2}$ para $|z|$ grande. Entonces $$\sum_{n=-\infty}^{\infty} f(n) = -\sum_{j=1}^m\operatorname*{Res}_{z = z_j}\big[\pi\cot(\pi z)\,f(z)\big],\qquad \sum_{n=-\infty}^{\infty}(-1)^nf(n) = -\sum_{j=1}^m\operatorname*{Res}_{z = z_j}\left[\frac{\pi}{\sin(\pi z)}\,f(z)\right].$$`,
+        R`Si $f$ tiene un polo en un entero (típicamente $n = 0$), ese entero se saca de la suma y su residuo pasa al lado derecho con los demás.`],
+      idea: [R`$\pi\cot(\pi z) = \frac{\pi\cos(\pi z)}{\sin(\pi z)}$ es una «máquina de enteros»: tiene un polo simple con residuo exactamente 1 en cada entero. Al multiplicarla por $f$, el residuo en $n$ es $f(n)$: la suma de la serie es una suma de residuos.`,
+        R`Se integra sobre cuadrados cada vez más grandes, que pasan entre los enteros. Sobre ellos la cotangente está acotada y $f$ decae: la integral tiende a cero. Entonces **todos** los residuos suman cero, y los de los enteros (la serie) son el opuesto de los demás.`,
+        R`Así se obtiene $\sum\frac{1}{n^2} = \frac{\pi^2}{6}$ (el problema de Basilea) y fórmulas como $\sum_{n=-\infty}^\infty\frac{1}{(n - z)^2} = \frac{\pi^2}{\sin^2(\pi z)}$.`],
+      demo: [R`**Paso 1 (residuo en los enteros).** $\sin(\pi z)$ tiene ceros simples en los enteros, con derivada $\pi\cos(\pi n)$. Por la fórmula $\frac{p}{q'}$: $\operatorname{Res}_{z = n}\pi\cot(\pi z)f(z) = \frac{\pi\cos(\pi n)f(n)}{\pi\cos(\pi n)} = f(n)$.`,
+        R`**Paso 2 (el contorno).** Sea $C_N$ el cuadrado de lados $x = \pm(N + \frac12)$, $y = \pm(N + \frac12)$. Por el [[c3-residuo|teorema de los residuos]]: $\oint_{C_N}\pi\cot(\pi z)f(z)\,dz = 2\pi i\left[\sum_{n=-N}^{N} f(n) + \sum_j\operatorname{Res}_{z_j}\right]$.`,
+        R`**Paso 3 (la cotangente está acotada).** Sobre los lados verticales, $|\cot(\pi z)| = |\tanh(\pi y)| \le 1$. Sobre los horizontales, $|\cot(\pi z)| \le \coth\left(\pi(N + \tfrac12)\right) \le \coth\frac\pi2$. Hay una constante $M$ que sirve para todos los $N$.`,
+        R`**Paso 4 (la integral tiende a cero).** Sobre $C_N$, $|f| \le \frac{K}{N^2}$ y la longitud es $8N + 4$. Por la cota ML, el módulo de la integral no supera $\pi M\frac{K}{N^2}(8N + 4) \to 0$. Tomando límite en el paso 2: $\sum f(n) + \sum_j\operatorname{Res} = 0$. $\blacksquare$`],
+      examples: [{ q: R`$\displaystyle\sum_{n=1}^{\infty}\frac{1}{n^2}$.`, steps: [R`$f(z) = \frac{1}{z^2}$ tiene su polo en $0$. Como $\pi\cot(\pi z) = \frac1z - \frac{\pi^2z}{3} - \dots$, el residuo de $\frac{\pi\cot(\pi z)}{z^2}$ en $0$ es $-\frac{\pi^2}{3}$.`, R`$\sum_{n\ne0}\frac{1}{n^2} = \frac{\pi^2}{3}$, y por simetría $\sum_{n\ge1}\frac{1}{n^2} = \frac{\pi^2}{6}$.`] }],
+      see: ["c3-residuo", "series", "c3-trig", "c3-impropias-residuos"]
+    },
+    "c3-argumento": {
+      title: "Principio del argumento y teorema de Rouché", aliases: ["principio del argumento", "teorema de Rouché", "derivada logarítmica", "función meromorfa"], concepts: ["c3-argumento"],
+      summary: "Si f es analítica dentro y sobre C salvo polos adentro, y no se anula sobre C: (1/2πi)∮ f'/f dz = Z − P (ceros menos polos, con su orden). Rouché: si |g| < |f| sobre C, f y f + g tienen la misma cantidad de ceros dentro de C.",
+      def: [R`Una función es **meromorfa** en un dominio si es analítica salvo polos. Sea $f$ meromorfa dentro de un contorno cerrado simple positivo $C$, analítica y no nula sobre $C$. **Principio del argumento:** $$\frac{1}{2\pi i}\oint_C\frac{f'(z)}{f(z)}\,dz = Z - P,$$ donde $Z$ y $P$ son las cantidades de ceros y de polos de $f$ dentro de $C$, contados con su orden. Ese número es también la cantidad de vueltas que da $f(z)$ alrededor del origen cuando $z$ recorre $C$: $\frac{1}{2\pi}\Delta_C\arg f(z)$.`,
+        R`**Teorema de Rouché.** Si $f$ y $g$ son analíticas dentro y sobre $C$ y $|g(z)| < |f(z)|$ en todos los puntos de $C$, entonces $f$ y $f + g$ tienen la misma cantidad de ceros dentro de $C$ (contados con su multiplicidad).`],
+      idea: [R`$\frac{f'}{f}$ es la derivada de $\log f$. Al dar una vuelta por $C$, el módulo de $f$ vuelve a su valor, pero el **argumento** puede haber aumentado en varias vueltas: una por cada cero rodeado y una menos por cada polo.`,
+        R`Rouché es «el paseo del perro»: si alguien da vueltas a un árbol llevando un perro con una correa más corta que su distancia al árbol, el perro da la misma cantidad de vueltas. $f(z)$ es la persona, $f(z) + g(z)$ el perro, y el árbol es el origen.`,
+        R`Uso típico: para contar los ceros de un polinomio en un disco, se elige como $f$ el término que **domina** sobre el borde, cuyos ceros son obvios.`],
+      demo: [R`**Paso 1 (cerca de un cero).** Si $f(z) = (z - z_0)^mg(z)$ con $g(z_0) \ne 0$ ([[c3-ceros-polos|cero de orden m]]), derivando el producto y dividiendo: $\frac{f'}{f} = \frac{m}{z - z_0} + \frac{g'}{g}$. El segundo término es analítico en $z_0$: $\frac{f'}{f}$ tiene un polo simple con residuo $m$.`,
+        R`**Paso 2 (cerca de un polo).** Si $f(z) = \frac{g(z)}{(z - z_0)^n}$, la misma cuenta da $\frac{f'}{f} = \frac{-n}{z - z_0} + \frac{g'}{g}$: residuo $-n$.`,
+        R`**Paso 3 (sumar).** $\frac{f'}{f}$ es analítica en el resto del interior de $C$. Por el [[c3-residuo|teorema de los residuos]], $\oint_C\frac{f'}{f}dz = 2\pi i\,(\sum m_j - \sum n_k) = 2\pi i\,(Z - P)$.`,
+        R`**Paso 4 (Rouché).** Sobre $C$, $|f| > |g| \ge 0$, así que $f \ne 0$, y $|f + g| \ge |f| - |g| > 0$. Sea $F = \frac{f + g}{f} = 1 + \frac gf$. Sobre $C$, $|F - 1| < 1$: los valores de $F$ quedan en el disco de centro $1$ y radio $1$, que no contiene al origen, así que $F$ no puede dar ninguna vuelta alrededor de él: $\Delta_C\arg F = 0$.`,
+        R`**Paso 5 (concluir).** Como $f + g = fF$, $\Delta_C\arg(f + g) = \Delta_C\arg f + \Delta_C\arg F = \Delta_C\arg f$. Ninguna de las dos tiene polos, así que por el paso 3 tienen la misma cantidad de ceros. $\blacksquare$`],
+      examples: [{ q: R`¿Cuántos ceros tiene $z^7 - 4z^3 + z - 1$ en $|z| < 1$?`, steps: [R`Sobre $|z| = 1$: $|-4z^3| = 4 > 3 \ge |z^7 + z - 1|$.`, R`$-4z^3$ tiene 3 ceros en el disco (el origen, triple): el polinomio también tiene 3.`] }],
+      tips: [R`La desigualdad de Rouché tiene que ser **estricta** y valer en **todo** el contorno.`],
+      see: ["c3-residuo", "c3-ceros-polos", "c3-liouville", "c3-logaritmo"]
+    }
+  };
+
+  E.extendCourse("m103", {
+    concepts: { "c3-impropias-res": { name: "Integrales impropias por residuos" }, "c3-jordan": { name: "Integrales de Fourier y lema de Jordan" }, "c3-trig-res": { name: "Integrales trigonométricas" }, "c3-sumas": { name: "Suma de series" }, "c3-argumento": { name: "Principio del argumento y Rouché" } },
+    templates: T,
+    units: [{
+      id: "c3-aplicaciones-u", order: 7, program: "Unidad 7", title: "Aplicaciones de los residuos", icon: "flame",
+      diagnostic: ["c3-impropia-num", "c3-trig-integral-num", "c3-rouche-num"],
+      lessons: [
+        { id: "c3-impropias", title: "Integrales impropias", templates: ["c3-impropia-num", "c3-impropia-multi", "c3-fourier-num", "c3-aplicaciones-vf"], theory: ["c3-impropias-residuos", "c3-jordan"],
+          intro: R`$\int_{-\infty}^{\infty} f(x)\,dx = 2\pi i\sum\operatorname{Res}$ en los polos del semiplano superior. Con senos y cosenos, se integra $f(z)e^{ikz}$.` },
+        { id: "c3-trig-series", title: "Integrales trigonométricas y sumas de series", templates: ["c3-trig-integral-num", "c3-suma-serie-num"], theory: ["c3-trig-residuos", "c3-sumas-series"],
+          intro: R`Con $z = e^{i\theta}$, una integral entre $0$ y $2\pi$ es una integral sobre $|z| = 1$. Para sumar series: $\pi\cot(\pi z)$.` },
+        { id: "c3-argumento", title: "Principio del argumento y Rouché", templates: ["c3-arg-principio-num", "c3-rouche-num"], theory: ["c3-argumento"],
+          intro: R`$\frac{1}{2\pi i}\oint\frac{f'}{f}\,dz = Z - P$. Si $|g| < |f|$ sobre $C$, $f$ y $f + g$ tienen los mismos ceros adentro.` }
+      ]
+    }],
+    cards
+  });
+})();
