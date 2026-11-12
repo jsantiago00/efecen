@@ -685,3 +685,181 @@
     cards
   });
 })();
+
+/* =====================================================================
+ *  UNIDAD 4 · DIAGONALIZACIÓN, POLINOMIO MINIMAL, CAYLEY-HAMILTON Y SUBESPACIOS INVARIANTES
+ * ===================================================================== */
+(function () {
+  const E = window.Efecen, H = E.H, R = String.raw, A = E.a2;
+  const T = {};
+  // matriz en bloques de Jordan: spec = [[autovalor, tamaño], …]
+  const jordan = spec => { const n = spec.reduce((s, b) => s + b[1], 0), J = Array.from({ length: n }, () => Array(n).fill(0)); let o = 0; for (const [l, k] of spec) { for (let i = 0; i < k; i++) { J[o + i][o + i] = l; if (i < k - 1) J[o + i][o + i + 1] = 1; } o += k; } return J; };
+  const conj = (r, J) => { const n = J.length, P = A.unimod(r, n, n + 1); return A.mul(A.mul(P, J), A.inv(P)).map(row => row.map(x => Math.round(x))); };
+  // grado del minimal: suma, sobre los autovalores distintos, del bloque más grande
+  const minDeg = spec => { const m = {}; for (const [l, k] of spec) m[l] = Math.max(m[l] || 0, k); return Object.values(m).reduce((s, x) => s + x, 0); };
+  const SPECS = r => { const [a, b, c] = r.distinct(3, -3, 4); return r.pick([[[a, 1], [b, 1], [c, 1]], [[a, 1], [a, 1], [b, 1]], [[a, 2], [b, 1]], [[a, 3]], [[a, 2], [a, 1]], [[a, 1], [a, 1], [a, 1]], [[a, 2], [b, 2]], [[a, 2], [b, 1], [b, 1]], [[a, 1], [a, 1], [b, 1], [b, 1]], [[a, 3], [b, 1]]]); };
+  const add = (P, Q, k = 1) => P.map((row, i) => row.map((x, j) => x + k * Q[i][j]));
+  const isZero = M => M.every(row => row.every(x => Math.abs(x) < 1e-7));
+  // p(M) para p = Π (x − l)^e
+  const evalFac = (M, fac) => { const n = M.length; let Pw = A.eye(n); for (const [l, e] of fac) for (let k = 0; k < e; k++) Pw = A.mul(Pw, add(M, A.eye(n), -l)); return Pw; };
+  const facTex = fac => fac.map(([l, e]) => { const b = l === 0 ? "x" : `(x ${l < 0 ? "+" : "-"} ${Math.abs(l)})`; return e === 1 ? b : `${b}^{${e}}`; }).join("");
+
+  T["a2-minimal-num"] = {
+    type: "numeric", concepts: ["a2-minimal"], difficulty: 3,
+    generate(r) {
+      const spec = SPECS(r), M = conj(r, jordan(spec)), n = M.length, d = minDeg(spec);
+      const eig = {}; for (const [l, k] of spec) (eig[l] = eig[l] || []).push(k);
+      const chi = Object.entries(eig).map(([l, ks]) => [+l, ks.reduce((s, x) => s + x, 0)]), mn = Object.entries(eig).map(([l, ks]) => [+l, Math.max(...ks)]);
+      return {
+        prompt: `El polinomio característico de $A = ${A.pm(M)}$ es $\\chi_A(x) = ${facTex(chi)}$. ¿Cuál es el grado de su polinomio minimal?`,
+        answer: d,
+        traps: [{ value: n, msg: "Ese es el grado del característico. El minimal lo divide, pero puede tener grado menor: hay que probar con exponentes más chicos." }, { value: chi.length, msg: "Con cada factor a la primera potencia solo alcanza si $A$ es diagonalizable. Verificá si ese producto realmente anula a $A$." }].filter(t => t.value !== d),
+        solution: [`El [[a2-minimal|polinomio minimal]] divide al característico y tiene las mismas raíces: es $${chi.map(([l], i) => `${l === 0 ? "x" : `(x ${l < 0 ? "+" : "-"} ${Math.abs(l)})`}^{e_{${i + 1}}}`).join("")}$ con $1 \\le ${chi.map((c, i) => `e_{${i + 1}} \\le ${c[1]}`).join(",\\ ")}$.`,
+          `Se prueban los candidatos de menor a mayor grado, evaluándolos en $A$. El primero que da la matriz nula es $m_A(x) = ${facTex(mn)}$.`,
+          `Grado: $${d}$. ${d === chi.length ? "Como todas sus raíces son simples, $A$ es diagonalizable." : "Como tiene una raíz múltiple, $A$ no es diagonalizable."}`],
+        // verificación: el grado del minimal es el menor d para el que I, A, …, A^d son linealmente dependientes (rango de las potencias, vistas como vectores)
+        verify: { kind: "value", fn: () => { const pw = [A.eye(n)]; for (let k = 1; k <= n; k++) { pw.push(A.mul(pw[k - 1], M)); if (A.rank(pw.map(P => P.flat())) <= k) return k; } return -1; } }
+      };
+    }
+  };
+
+  T["a2-minimal-mc"] = {
+    type: "mc", concepts: ["a2-minimal"], difficulty: 2,
+    generate(r) {
+      const [a, b] = r.distinct(2, -3, 4), spec = r.pick([[[a, 2], [b, 1]], [[a, 1], [a, 1], [b, 1]], [[a, 2], [a, 1], [b, 1]], [[a, 2], [b, 2]], [[a, 1], [a, 1], [b, 2]], [[a, 3], [b, 1]], [[a, 2], [a, 2]], [[a, 1], [a, 1], [b, 1], [b, 1]]]);
+      const J = jordan(spec), n = J.length, eig = {}; for (const [l, k] of spec) (eig[l] = eig[l] || []).push(k);
+      const ls = Object.keys(eig).map(Number), mn = ls.map(l => [l, Math.max(...eig[l])]), chi = ls.map(l => [l, eig[l].reduce((s, x) => s + x, 0)]);
+      const cands = [];
+      const rec = (i, cur) => { if (i === ls.length) { cands.push(cur); return; } for (let e = 1; e <= chi[i][1] + 1; e++) rec(i + 1, [...cur, [ls[i], e]]); };
+      rec(0, []);
+      const ok = `$${facTex(mn)}$`, bads = r.shuffle(cands.map(c => `$${facTex(c)}$`).filter(t => t !== ok));
+      if (bads.length < 3) return null;
+      return {
+        prompt: `¿Cuál es el polinomio minimal de $A = ${A.pm(J)}$?`,
+        ...H.mc(r, ok, bads.slice(0, 3), { text: true }),
+        solution: [`$A$ está en bloques: ${spec.map(([l, k]) => `un bloque de tamaño $${k}$ con $${l}$ en la diagonal`).join(", ")}.`,
+          `En el [[a2-minimal|polinomio minimal]], el exponente de $(x - \\lambda)$ es el tamaño del **bloque más grande** con ese autovalor: un bloque de tamaño $k$ necesita $(x - \\lambda)^k$ para anularse.`,
+          `$m_A(x) = ${facTex(mn)}$ (el característico es $${facTex(chi)}$).`],
+        // verificación: el elegido anula a A y, bajando en uno cualquiera de sus exponentes, deja de anularla
+        verify: { kind: "truth", target: true, fn: () => isZero(evalFac(J, mn)) && mn.every((f, i) => f[1] === 1 ? !isZero(evalFac(J, mn.filter((_, k) => k !== i))) : !isZero(evalFac(J, mn.map((g, k) => (k === i ? [g[0], g[1] - 1] : g))))) }
+      };
+    }
+  };
+
+  T["a2-diagonalizable-vf"] = {
+    type: "tf", concepts: ["a2-minimal"], difficulty: 2,
+    generate(r) {
+      const kind = r.pick(["jordan", "jordan", "jordan", "rot"]);
+      let M, val, why, eigs;
+      if (kind === "rot") {
+        const a = r.int(-2, 3), b = r.nz(-3, 3), c = r.int(-3, 3), J = [[a, -b, 0], [b, a, 0], [0, 0, c]];
+        M = conj(r, J); val = false; eigs = [c];
+        why = `Su polinomio característico es $(x ${c < 0 ? "+" : "-"} ${Math.abs(c)})\\left[(x ${a < 0 ? "+" : "-"} ${Math.abs(a)})^2 + ${b * b}\\right]$, y el segundo factor no tiene raíces reales: sobre $\\mathbb R$ no hay suficientes autovalores. (Sobre $\\mathbb C$ sí sería diagonalizable, con autovalores $${a} \\pm ${Math.abs(b)}i$.)`;
+      } else {
+        const spec = SPECS(r); M = conj(r, jordan(spec)); val = spec.every(b => b[1] === 1); eigs = [...new Set(spec.map(b => b[0]))];
+        const eig = {}; for (const [l, k] of spec) (eig[l] = eig[l] || []).push(k);
+        why = `Autovalores: ${Object.entries(eig).map(([l, ks]) => `$${l}$ (multiplicidad algebraica $${ks.reduce((s, x) => s + x, 0)}$, geométrica $${ks.length}$)`).join("; ")}. ${val ? "Las multiplicidades coinciden en todos" : "En alguno la geométrica es menor que la algebraica"}.`;
+      }
+      const n = M.length;
+      return {
+        prompt: `<b>Verdadero o falso:</b> la matriz $A = ${A.pm(M)}$ es diagonalizable sobre $\\mathbb R$.`,
+        answer: val,
+        explanation: `${why} ${val ? "Es diagonalizable." : "No es diagonalizable sobre $\\mathbb R$."} Ver [[al-diagonalizacion|diagonalización]] y [[a2-minimal|polinomio minimal]].`,
+        solution: [`$A$ es diagonalizable sobre $F$ si y solo si su polinomio característico se factoriza en $F$ en factores lineales y, para cada autovalor, la multiplicidad geométrica es igual a la algebraica. Equivale a que el minimal sea un producto de factores lineales **distintos**.`],
+        // verificación: se suman las dimensiones de los autoespacios reales (núcleos de A − λI por eliminación) y se compara con n
+        verify: { kind: "truth", fn: () => eigs.reduce((s, l) => s + A.kernel(add(M, A.eye(n), -l)).length, 0) === n }
+      };
+    }
+  };
+
+  T["a2-cayley-num"] = {
+    type: "numeric", concepts: ["a2-minimal"], difficulty: 2,
+    generate(r) {
+      const M = [[r.int(-3, 4), r.nz(-3, 3)], [r.nz(-3, 3), r.int(-3, 4)]], t = M[0][0] + M[1][1], d = M[0][0] * M[1][1] - M[0][1] * M[1][0], ask = r.pick(["inv", "cubo"]), which = r.int(0, 1);
+      if (d === 0 || (ask === "cubo" && t === 0)) return null;
+      // A² = tA − dI.  A⁻¹ = −(1/d)A + (t/d)I.  A³ = (t² − d)A − t d I
+      const [al, be] = ask === "inv" ? [-1 / d, t / d] : [t * t - d, -t * d], ans = which ? be : al;
+      return {
+        prompt: `Sea $A = ${A.pm(M)}$. Por el teorema de Cayley-Hamilton, $${ask === "inv" ? "A^{-1}" : "A^3"} = \\alpha A + \\beta I$. ¿Cuánto vale $${which ? "\\beta" : "\\alpha"}$?`,
+        answer: ans, ...(ask === "inv" ? { answerTex: which ? H.frac(t, d) : H.frac(-1, d) } : {}),
+        solution: [`El polinomio característico de una matriz de $2\\times2$ es $x^2 - \\operatorname{tr}(A)\\,x + \\det A = x^2 ${-t < 0 ? "-" : "+"} ${Math.abs(t)}x ${d < 0 ? "-" : "+"} ${Math.abs(d)}$. Por [[al-cayley|Cayley-Hamilton]], $A^2 = ${t}A ${-d < 0 ? "-" : "+"} ${Math.abs(d)}I$.`,
+          ask === "inv" ? `Multiplicando por $A^{-1}$: $A = ${t}I ${-d < 0 ? "-" : "+"} ${Math.abs(d)}A^{-1}$, así que $A^{-1} = ${H.frac(-1, d)}\\,A ${t / d < 0 ? "-" : "+"} ${H.frac(Math.abs(t), Math.abs(d))}\\,I$.`
+            : `Multiplicando por $A$ y volviendo a reemplazar $A^2$: $A^3 = ${t}A^2 ${-d < 0 ? "-" : "+"} ${Math.abs(d)}A = ${t}(${t}A ${-d < 0 ? "-" : "+"} ${Math.abs(d)}I) ${-d < 0 ? "-" : "+"} ${Math.abs(d)}A = ${t * t - d}A ${-t * d < 0 ? "-" : "+"} ${Math.abs(t * d)}I$.`],
+        // verificación: la igualdad de matrices, con la inversa o el cubo calculados directamente
+        verify: { kind: "zero", tol: 1e-9, scale: Math.abs(t * t * t) + 10, fn: () => { const L = ask === "inv" ? A.inv(M) : A.mul(M, A.mul(M, M)), Rr = add(M.map(row => row.map(x => al * x)), A.eye(2), be); return L.flatMap((row, i) => row.map((x, j) => x - Rr[i][j])); } }
+      };
+    }
+  };
+
+  T["a2-invariante-vf"] = {
+    type: "tf", concepts: ["a2-invariante"], difficulty: 2,
+    generate(r) {
+      const [a, b, c] = r.distinct(3, -2, 3), P = A.unimod(r, 3, 4), M = A.mul(A.mul(P, [[a, 1, 0], [0, a, 0], [0, 0, c]]), A.inv(P)).map(row => row.map(x => Math.round(x))), cols = A.T(P);
+      // con J = bloque 2×2 de a y un 1×1 de c: ⟨p1⟩, ⟨p3⟩, ⟨p1, p2⟩ y ⟨p1, p3⟩ son invariantes; ⟨p2⟩ y ⟨p2, p3⟩ no
+      const pick = r.pick([[[0], true], [[2], true], [[0, 1], true], [[0, 2], true], [[1], false], [[1, 2], false], [[1], false], [[1, 2], false]]);
+      const S = pick[0].map(i => cols[i]), img = S.map(s => A.vec(M, s));
+      return {
+        prompt: `Sea $A = ${A.pm(M)}$ y $S = \\langle ${S.map(A.v).join(",\\ ")}\\rangle \\subseteq \\mathbb R^3$. <b>Verdadero o falso:</b> $S$ es un subespacio invariante por $A$.`,
+        answer: pick[1],
+        explanation: `Se aplica $A$ a cada generador: ${S.map((s, i) => `$A${A.v(s)} = ${A.v(img[i])}$`).join(" y ")}. ${pick[1] ? "Los resultados vuelven a caer en $S$" : "Algún resultado se sale de $S$"}: se ve agregándolos a los generadores y mirando si el rango aumenta ([[a2-invariante|subespacios invariantes]]).`,
+        solution: [`$S$ es invariante por $A$ si $A(S) \\subseteq S$; alcanza con chequearlo en un conjunto de generadores. Un subespacio de dimensión 1 es invariante exactamente cuando su generador es un autovector.`],
+        // verificación: el rango de los generadores junto con sus imágenes es igual al de los generadores solos
+        verify: { kind: "truth", fn: () => A.rank([...S, ...img]) === A.rank(S) }
+      };
+    }
+  };
+
+  const cards = {
+    "a2-minimal": {
+      title: "Polinomio minimal y criterio de diagonalización", aliases: ["polinomio mínimo", "polinomio anulador", "criterio de diagonalización por el minimal"], concepts: ["a2-minimal"],
+      summary: "El minimal m_A es el polinomio mónico de menor grado con m_A(A) = 0. Divide a todo polinomio que anule a A (en particular al característico) y tiene sus mismas raíces. A es diagonalizable ⇔ m_A es producto de factores lineales distintos.",
+      def: [R`Un polinomio $p$ **anula** a $A$ si $p(A) = 0$. El **polinomio minimal** $m_A$ es el polinomio mónico de menor grado que anula a $A$. Existe y es único.`,
+        R`**Propiedades.** (1) $m_A$ divide a todo polinomio que anule a $A$. (2) Por [[al-cayley|Cayley-Hamilton]], $m_A$ divide al característico $\chi_A$. (3) $m_A$ y $\chi_A$ tienen las mismas raíces: los autovalores. (4) Matrices [[a2-matriz-tl|semejantes]] tienen el mismo minimal.`,
+        R`**Criterio de diagonalización.** $A$ es diagonalizable sobre $F$ si y solo si $$m_A(x) = (x - \lambda_1)(x - \lambda_2)\cdots(x - \lambda_r)$$ con los $\lambda_i \in F$ **distintos**.`,
+        R`En la [[al-jordan|forma de Jordan]], el exponente de $(x - \lambda)$ en $m_A$ es el tamaño del bloque más grande con autovalor $\lambda$; en $\chi_A$, la suma de los tamaños.`],
+      idea: [R`El característico dice **qué** autovalores hay y cuántas veces; el minimal dice **qué tan lejos** está la matriz de ser diagonal. Si es diagonalizable, alcanza con un factor por autovalor.`,
+        R`Para hallarlo: se factoriza $\chi_A$ y se prueban, de menor a mayor grado, los productos con las mismas raíces y exponentes entre $1$ y los de $\chi_A$.`,
+        R`Ejemplos rápidos: un proyector ($p^2 = p$) tiene minimal que divide a $x(x - 1)$, así que es diagonalizable con autovalores $0$ y $1$. Una involución ($j^2 = \operatorname{id}$) es diagonalizable con autovalores $\pm1$. Un [[a2-nilpotente|nilpotente]] no nulo tiene minimal $x^s$ con $s \ge 2$: nunca es diagonalizable.`],
+      demo: [R`**Paso 1 (existe).** Las $n^2 + 1$ matrices $I, A, A^2, \dots, A^{n^2}$ son linealmente dependientes en $F^{n\times n}$, que tiene dimensión $n^2$. Una relación de dependencia es un polinomio no nulo que anula a $A$. Entre todos los que la anulan se toma uno de grado mínimo y se lo hace mónico.`,
+        R`**Paso 2 (divide a todo anulador).** Si $p(A) = 0$, se divide: $p = q\,m_A + r$ con $\operatorname{gr}r < \operatorname{gr}m_A$. Evaluando en $A$: $r(A) = p(A) - q(A)m_A(A) = 0$. Por la minimalidad del grado, $r = 0$. (De acá sale también la unicidad: dos minimales se dividen mutuamente y son mónicos.)`,
+        R`**Paso 3 (los autovalores son raíces).** Si $Av = \lambda v$ con $v \ne 0$, entonces $p(A)v = p(\lambda)v$ para todo polinomio. Con $p = m_A$: $0 = m_A(\lambda)v$, así que $m_A(\lambda) = 0$. Y como $m_A$ divide a $\chi_A$, no tiene otras raíces.`,
+        R`**Paso 4 (diagonalizable ⇒ factores simples).** Si $A$ es diagonalizable con autovalores distintos $\lambda_1, \dots, \lambda_r$, el producto $\prod(A - \lambda_iI)$ anula a cada vector de una base de autovectores (el factor que le corresponde lo mata, y los factores conmutan). Luego ese producto es $0$, y $m_A$ lo divide.`,
+        R`**Paso 5 (factores simples ⇒ diagonalizable, idea).** Si $m_A = \prod(x - \lambda_i)$ con raíces distintas, los polinomios $q_i = \prod_{j\ne i}(x - \lambda_j)$ no tienen raíz común, así que hay polinomios $h_i$ con $\sum h_iq_i = 1$. Evaluando en $A$: $v = \sum h_i(A)q_i(A)v$, y cada sumando es un autovector de $\lambda_i$, porque $(A - \lambda_iI)q_i(A) = m_A(A) = 0$. Todo vector es suma de autovectores. $\blacksquare$`],
+      examples: [{ q: R`Minimal de $A = \begin{pmatrix} 2 & 1 & 0 \\ 0 & 2 & 0 \\ 0 & 0 & 2\end{pmatrix}$.`, steps: [R`$\chi_A = (x - 2)^3$. Candidatos: $(x - 2)$, $(x - 2)^2$, $(x - 2)^3$.`, R`$A - 2I \ne 0$ pero $(A - 2I)^2 = 0$: $m_A = (x - 2)^2$. No es diagonalizable.`] }],
+      tips: [R`Que el característico tenga raíces múltiples **no** impide diagonalizar (la identidad tiene $\chi = (x - 1)^n$). Lo que lo impide es una raíz múltiple en el **minimal**.`],
+      see: ["al-cayley", "al-diagonalizacion", "al-multiplicidades", "al-jordan", "a2-invariante"]
+    },
+    "a2-invariante": {
+      title: "Subespacios invariantes y triangulación", aliases: ["subespacio invariante", "subespacios invariantes", "operador triangulable", "triangulación de un operador"], concepts: ["a2-invariante"],
+      summary: "S es invariante por T si T(S) ⊆ S. En una base adaptada, la matriz queda triangular por bloques. Los autoespacios, el núcleo y la imagen son invariantes. Sobre ℂ, todo operador es triangulable.",
+      def: [R`Un subespacio $S$ es **invariante** por el operador $T: V \to V$ si $T(S) \subseteq S$. Alcanza con verificarlo en un conjunto de generadores de $S$.`,
+        R`Si se extiende una base de $S$ a una base de $V$, la matriz de $T$ queda **triangular por bloques**: $\begin{pmatrix} A_1 & * \\ 0 & A_2\end{pmatrix}$, donde $A_1$ es la matriz de $T$ restringida a $S$. Si además $V = S \oplus S'$ con $S'$ también invariante, queda **diagonal por bloques**. En los dos casos $\chi_T = \chi_{A_1}\chi_{A_2}$.`,
+        R`**Ejemplos.** $\{0\}$ y $V$; $\operatorname{Nu}(T)$ e $\operatorname{Im}(T)$; cada [[al-autovalores|autoespacio]]; $\operatorname{Nu}(p(T))$ para cualquier polinomio $p$. Una recta $\langle v\rangle$ es invariante si y solo si $v$ es un autovector.`,
+        R`$T$ es **triangulable** (tiene matriz triangular superior en alguna base) si y solo si $\chi_T$ se factoriza en factores lineales en $F$. En particular, sobre $\mathbb C$ todo operador es triangulable.`],
+      idea: [R`Un subespacio invariante es un pedazo del espacio donde el operador «vive por su cuenta». Encontrar subespacios invariantes que sumen todo $V$ es partir el problema en problemas más chicos: diagonalizar es partir $V$ en rectas invariantes.`,
+        R`Cuando no hay suficientes rectas invariantes, lo mejor que se puede hacer es una cadena $S_1 \subset S_2 \subset \dots \subset S_n = V$ de invariantes con $\dim S_k = k$: eso es triangular.`],
+      demo: [R`**Paso 1 (la forma en bloques).** Sea $\{v_1, \dots, v_k\}$ base de $S$, extendida a $\{v_1, \dots, v_n\}$. Para $j \le k$, $T(v_j) \in S$, así que sus coordenadas en $v_{k+1}, \dots, v_n$ son cero: las primeras $k$ columnas de la matriz tienen ceros debajo de la fila $k$.`,
+        R`**Paso 2 (triangulación, por inducción).** Si $\chi_T$ se factoriza, tiene una raíz $\lambda_1$ y un autovector $v_1$. Con $S = \langle v_1\rangle$ y una base que empieza en $v_1$, la matriz es $\begin{pmatrix} \lambda_1 & * \\ 0 & A_2\end{pmatrix}$ y $\chi_T = (x - \lambda_1)\chi_{A_2}$.`,
+        R`**Paso 3 (el paso inductivo).** $\chi_{A_2}$ también se factoriza, y $A_2$ es de tamaño $n - 1$: por hipótesis inductiva hay $Q$ con $Q^{-1}A_2Q$ triangular. Conjugando con $\begin{pmatrix} 1 & 0 \\ 0 & Q\end{pmatrix}$, toda la matriz queda triangular. $\blacksquare$`,
+        R`**Paso 4 (recíproca).** Si la matriz es triangular con diagonal $\lambda_1, \dots, \lambda_n$, su característico es $\prod(x - \lambda_i)$, que es un producto de factores lineales.`],
+      examples: [{ q: R`Para $D(p) = p'$ en $\mathbb R_3[x]$, ¿es invariante $\mathbb R_1[x]$?`, steps: [R`Sí: derivar un polinomio de grado $\le 1$ da una constante. De hecho todos los $\mathbb R_k[x]$ son invariantes: forman una cadena, y por eso la matriz de $D$ en $\{1, x, x^2, x^3\}$ es triangular.`] }],
+      see: ["al-autovalores", "a2-minimal", "a2-matriz-tl", "a2-suma"]
+    }
+  };
+
+  E.extendCourse("m203", {
+    concepts: { "a2-minimal": { name: "Polinomio minimal y diagonalización" }, "a2-invariante": { name: "Subespacios invariantes" } },
+    templates: T,
+    units: [{
+      id: "a2-diag-u", order: 4, program: "Unidad 4", title: "Diagonalización y polinomio minimal", icon: "sparkles",
+      diagnostic: ["a2-minimal-mc", "a2-diagonalizable-vf", "a2-cayley-num"],
+      lessons: [
+        { id: "a2-minimal", title: "Polinomio minimal", templates: ["a2-minimal-mc", "a2-minimal-num", "a2-cayley-num"], theory: ["a2-minimal"],
+          intro: R`$m_A$ divide a $\chi_A$ y tiene sus mismas raíces. $A$ es diagonalizable si y solo si $m_A$ no tiene raíces múltiples.` },
+        { id: "a2-invariante", title: "Diagonalizables e invariantes", templates: ["a2-diagonalizable-vf", "a2-invariante-vf"], theory: ["a2-invariante"],
+          intro: R`$S$ es invariante si $T(S) \subseteq S$. Con una base adaptada, la matriz queda triangular por bloques.` }
+      ]
+    }],
+    cards
+  });
+})();
